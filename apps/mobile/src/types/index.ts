@@ -18,6 +18,16 @@ export interface Couple {
     created_at: string;
 }
 
+// Category for grouping packs
+export interface Category {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    sort_order: number;
+    created_at: string;
+}
+
 // Question pack
 export interface QuestionPack {
     id: string;
@@ -27,6 +37,9 @@ export interface QuestionPack {
     is_premium: boolean;
     is_public: boolean;
     sort_order: number;
+    category_id: string | null;
+    category?: Category;
+    questions?: { count: number }[];
     created_at: string;
 }
 
@@ -77,4 +90,54 @@ export interface PackProgress {
     total_questions: number;
     answered_questions: number;
     matches_count: number;
+}
+
+// Feedback types
+export type FeedbackType = 'bug' | 'feature_request' | 'general' | 'question';
+export type FeedbackStatus = 'new' | 'reviewed' | 'in_progress' | 'resolved' | 'closed';
+
+export interface DeviceInfo {
+    platform: 'ios' | 'android' | 'web';
+    osVersion: string;
+    appVersion: string;
+    buildNumber?: string;
+    deviceModel?: string;
+    screenWidth: number;
+    screenHeight: number;
+}
+
+export interface Feedback {
+    id: string;
+    user_id: string;
+    type: FeedbackType;
+    title: string;
+    description: string;
+    screenshot_url: string | null;
+    device_info: DeviceInfo;
+    status: FeedbackStatus;
+    admin_notes: string | null;
+    question_id: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+// Subscription types
+export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'billing_issue' | 'paused';
+
+export interface Subscription {
+    id: string;
+    user_id: string;
+    revenuecat_app_user_id: string;
+    product_id: string;
+    status: SubscriptionStatus;
+    entitlement_ids: string[];
+    purchased_at: string;
+    expires_at: string | null;
+    original_transaction_id: string;
+    store: string;
+    is_sandbox: boolean;
+    cancel_reason: string | null;
+    grace_period_expires_at: string | null;
+    created_at: string;
+    updated_at: string;
 }

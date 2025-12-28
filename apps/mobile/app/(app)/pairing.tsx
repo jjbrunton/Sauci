@@ -18,7 +18,7 @@ import { supabase } from "../../src/lib/supabase";
 import { router } from "expo-router";
 
 export default function PairingScreen() {
-    const { user, fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
+    const { user, fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading, signOut } = useAuthStore();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,6 +28,41 @@ export default function PairingScreen() {
             router.replace("/(app)/");
         }
     }, [couple, partner]);
+
+    // Subscribe to real-time updates for partner joining + polling fallback
+    useEffect(() => {
+        if (!couple || partner) return;
+
+        // Poll every 5 seconds as fallback
+        const pollInterval = setInterval(() => {
+            fetchCouple();
+        }, 5000);
+
+        // Listen for new profiles joining this couple
+        const subscription = supabase
+            .channel(`couple-${couple.id}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "profiles",
+                    filter: `couple_id=eq.${couple.id}`,
+                },
+                async (payload) => {
+                    // Someone updated their profile to join this couple
+                    if (payload.new.id !== user?.id) {
+                        await fetchCouple();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            clearInterval(pollInterval);
+            subscription.unsubscribe();
+        };
+    }, [couple, partner, user?.id, fetchCouple]);
 
     const handleCreateCouple = async () => {
         setIsSubmitting(true);
@@ -103,6 +138,21 @@ export default function PairingScreen() {
         }
     };
 
+    const handleSignOut = () => {
+        Alert.alert(
+            "Sign Out",
+            "Are you sure you want to sign out?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: signOut,
+                },
+            ]
+        );
+    };
+
     if (isAuthLoading) {
         return (
             <View style={[styles.container, styles.centerContent]}>
@@ -138,6 +188,11 @@ export default function PairingScreen() {
                         Waiting for your partner to join...
                     </Text>
                     <ActivityIndicator size="small" color="#e94560" style={{ marginTop: 16 }} />
+
+                    <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+                        <Ionicons name="log-out-outline" size={20} color="#888" />
+                        <Text style={styles.signOutText}>Sign Out</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         );
@@ -191,6 +246,11 @@ export default function PairingScreen() {
                     <Text style={styles.secondaryButtonText}>
                         {isSubmitting ? "Creating..." : "Create New Code"}
                     </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+                    <Ionicons name="log-out-outline" size={20} color="#888" />
+                    <Text style={styles.signOutText}>Sign Out</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -333,5 +393,16 @@ const styles = StyleSheet.create({
         marginTop: 48,
         color: "#666",
         fontSize: 14,
+    },
+    signOutButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginTop: 48,
+        padding: 12,
+    },
+    signOutText: {
+        color: "#888",
+        fontSize: 16,
+        marginLeft: 8,
     },
 });

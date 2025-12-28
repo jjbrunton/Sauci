@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, Dimensions, Platform } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useState } from "react";
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from "react-native";
+import { Gesture, GestureDetector, TouchableOpacity } from "react-native-gesture-handler";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
@@ -14,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
+import { QuestionFeedbackModal } from "./QuestionFeedbackModal";
 
 // Haptics helper - not supported on web
 const triggerHaptic = async (style: 'light' | 'medium' | 'heavy' = 'medium') => {
@@ -27,8 +29,8 @@ const triggerHaptic = async (style: 'light' | 'medium' | 'heavy' = 'medium') => 
     await Haptics.impactAsync(feedbackStyle);
 };
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const MAX_CARD_WIDTH = 400;
+const SWIPE_THRESHOLD = 100;
 
 interface Props {
     question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean };
@@ -38,6 +40,10 @@ interface Props {
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 export default function SwipeCard({ question, onSwipe }: Props) {
+    const { width: screenWidth } = useWindowDimensions();
+    const cardWidth = Math.min(screenWidth - 48, MAX_CARD_WIDTH);
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
     const rotation = useSharedValue(0);
@@ -57,7 +63,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
             translateY.value = event.translationY + context.value.y;
             rotation.value = interpolate(
                 translateX.value,
-                [-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2],
+                [-cardWidth / 2, cardWidth / 2],
                 [-12, 12],
                 Extrapolate.CLAMP
             );
@@ -69,13 +75,13 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                 const direction = translateX.value > 0 ? "right" : "left";
                 runOnJS(triggerHaptic)('medium');
                 translateX.value = withSpring(
-                    direction === "right" ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5,
+                    direction === "right" ? screenWidth * 1.5 : -screenWidth * 1.5,
                     animations.springGentle
                 );
                 runOnJS(onSwipe)(direction);
             } else if (translateY.value < -SWIPE_THRESHOLD) {
                 runOnJS(triggerHaptic)('medium');
-                translateY.value = withSpring(-SCREEN_WIDTH * 1.5, animations.springGentle);
+                translateY.value = withSpring(-screenWidth * 1.5, animations.springGentle);
                 runOnJS(onSwipe)("up");
             } else {
                 translateX.value = withSpring(0, animations.spring);
@@ -134,34 +140,49 @@ export default function SwipeCard({ question, onSwipe }: Props) {
 
     const useBlur = Platform.OS === 'ios';
 
+    const handleFeedbackPress = () => {
+        setShowFeedbackModal(true);
+    };
+
     return (
-        <View style={styles.cardWrapper}>
-            <GestureDetector gesture={gesture}>
-                <Animated.View style={[styles.cardOuter, animatedStyle, shadows.xl]}>
-                    {useBlur ? (
-                        <BlurView
-                            intensity={blur.medium}
-                            tint="dark"
-                            style={styles.blurContainer}
-                        >
-                            <CardContent
-                                question={question}
-                                overlayStyle={overlayStyle}
-                                handleButtonPress={handleButtonPress}
-                            />
-                        </BlurView>
-                    ) : (
-                        <View style={styles.fallbackContainer}>
-                            <CardContent
-                                question={question}
-                                overlayStyle={overlayStyle}
-                                handleButtonPress={handleButtonPress}
-                            />
-                        </View>
-                    )}
-                </Animated.View>
-            </GestureDetector>
-        </View>
+        <>
+            <View style={[styles.cardWrapper, { width: cardWidth }]}>
+                <GestureDetector gesture={gesture}>
+                    <Animated.View style={[styles.cardOuter, animatedStyle, shadows.xl]}>
+                        {useBlur ? (
+                            <BlurView
+                                intensity={blur.medium}
+                                tint="dark"
+                                style={styles.blurContainer}
+                            >
+                                <CardContent
+                                    question={question}
+                                    overlayStyle={overlayStyle}
+                                    handleButtonPress={handleButtonPress}
+                                    onFeedbackPress={handleFeedbackPress}
+                                />
+                            </BlurView>
+                        ) : (
+                            <View style={styles.fallbackContainer}>
+                                <CardContent
+                                    question={question}
+                                    overlayStyle={overlayStyle}
+                                    handleButtonPress={handleButtonPress}
+                                    onFeedbackPress={handleFeedbackPress}
+                                />
+                            </View>
+                        )}
+                    </Animated.View>
+                </GestureDetector>
+            </View>
+
+            <QuestionFeedbackModal
+                visible={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+                questionId={question.id}
+                questionText={question.text}
+            />
+        </>
     );
 }
 
@@ -169,10 +190,12 @@ function CardContent({
     question,
     overlayStyle,
     handleButtonPress,
+    onFeedbackPress,
 }: {
     question: Props['question'];
     overlayStyle: (direction: "left" | "right" | "up") => any;
     handleButtonPress: (direction: "left" | "right" | "up") => void;
+    onFeedbackPress: () => void;
 }) {
     return (
         <>
@@ -182,20 +205,31 @@ function CardContent({
                 style={styles.highlight}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
+                pointerEvents="none"
             />
 
+            {/* Feedback Button */}
+            <View style={styles.feedbackButton}>
+                <Ionicons
+                    name="flag-outline"
+                    size={18}
+                    color={colors.textTertiary}
+                    onPress={onFeedbackPress}
+                />
+            </View>
+
             {/* Overlays */}
-            <Animated.View style={[styles.overlay, overlayStyle("right")]}>
+            <Animated.View style={[styles.overlay, overlayStyle("right")]} pointerEvents="none">
                 <View style={[styles.overlayBadge, { backgroundColor: colors.success }]}>
                     <Text style={styles.overlayText}>YES</Text>
                 </View>
             </Animated.View>
-            <Animated.View style={[styles.overlay, overlayStyle("left")]}>
+            <Animated.View style={[styles.overlay, overlayStyle("left")]} pointerEvents="none">
                 <View style={[styles.overlayBadge, { backgroundColor: colors.error }]}>
                     <Text style={styles.overlayText}>NO</Text>
                 </View>
             </Animated.View>
-            <Animated.View style={[styles.overlay, overlayStyle("up")]}>
+            <Animated.View style={[styles.overlay, overlayStyle("up")]} pointerEvents="none">
                 <View style={[styles.overlayBadge, { backgroundColor: colors.warning }]}>
                     <Text style={styles.overlayText}>MAYBE</Text>
                 </View>
@@ -250,7 +284,7 @@ function ActionButton({
     small?: boolean;
 }) {
     return (
-        <Animated.View>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
             <LinearGradient
                 colors={buttonColors}
                 style={[
@@ -267,17 +301,16 @@ function ActionButton({
                     size={small ? 20 : 28}
                     color={colors.text}
                     style={styles.buttonIcon}
-                    onPress={onPress}
                 />
             </LinearGradient>
-        </Animated.View>
+        </TouchableOpacity>
     );
 }
 
 const styles = StyleSheet.create({
     cardWrapper: {
         position: "absolute",
-        width: SCREEN_WIDTH - 48,
+        maxWidth: MAX_CARD_WIDTH,
         height: 480,
     },
     cardOuter: {
@@ -308,6 +341,21 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: 80,
+    },
+    feedbackButton: {
+        position: 'absolute',
+        top: spacing.md,
+        right: spacing.md,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.glass.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+        elevation: 10,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
     },
     content: {
         flex: 1,

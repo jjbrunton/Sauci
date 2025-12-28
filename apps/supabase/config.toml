@@ -1,7 +1,3 @@
-[project]
-id = "REPLACE_WITH_YOUR_PROJECT_ID"
-name = "Sauci"
-
 [api]
 enabled = true
 port = 54321
@@ -47,5 +43,8 @@ enable_confirmations = false
 enable_signup = false
 enable_confirmations = false
 
-[functions]
-verify_jwt = true
+[functions.revenuecat-webhook]
+verify_jwt = false
+
+[functions.sync-subscription]
+verify_jwt = false

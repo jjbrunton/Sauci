@@ -1,20 +1,28 @@
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions } from "react-native";
 import { useMatchStore, useAuthStore } from "../../src/store";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
-import { colors, spacing, typography, radius } from "../../src/theme";
+import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
+
+const MAX_CONTENT_WIDTH = 500;
 
 export default function MatchesScreen() {
     const { matches, fetchMatches, markAllAsSeen } = useMatchStore();
     const { user } = useAuthStore();
     const router = useRouter();
+    const { width } = useWindowDimensions();
+    const isWideScreen = width > MAX_CONTENT_WIDTH;
 
-    useEffect(() => {
-        fetchMatches();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchMatches();
+        }, [])
+    );
 
     useEffect(() => {
         if (matches.length > 0) {
@@ -45,38 +53,52 @@ export default function MatchesScreen() {
             <Animated.View entering={FadeInRight.delay(index * 50).duration(300)}>
                 <TouchableOpacity
                     onPress={() => router.push(`/chat/${item.id}`)}
-                    activeOpacity={0.7}
+                    activeOpacity={0.8}
                 >
                     <GlassCard style={styles.matchCard}>
-                        <View style={styles.iconContainer}>
-                            <Ionicons
-                                name={isYesYes ? "heart" : "heart-half"}
-                                size={24}
-                                color={colors.primary}
-                            />
-                        </View>
-                        <View style={styles.content}>
-                            <Text style={styles.questionText} numberOfLines={2}>
-                                {userText}
-                            </Text>
-                            {item.question.partner_text && (
-                                <Text style={styles.partnerText} numberOfLines={1}>
-                                    Partner: {partnerText}
+                        <View style={styles.matchRow}>
+                            <LinearGradient
+                                colors={isYesYes ? gradients.primary as [string, string] : [colors.glass.background, colors.glass.background]}
+                                style={styles.iconContainer}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Ionicons
+                                    name={isYesYes ? "heart" : "heart-half"}
+                                    size={22}
+                                    color={isYesYes ? colors.text : colors.primary}
+                                />
+                            </LinearGradient>
+                            <View style={styles.content}>
+                                <Text style={styles.questionText} numberOfLines={2}>
+                                    {userText}
                                 </Text>
-                            )}
-                            <View style={styles.metaContainer}>
-                                <View style={[styles.tag, isYesYes && styles.tagHighlight]}>
-                                    <Text style={[styles.tagText, isYesYes && styles.tagTextHighlight]}>
-                                        {isYesYes ? "YES + YES" : "YES + MAYBE"}
+                                {item.question.partner_text && (
+                                    <Text style={styles.partnerText} numberOfLines={1}>
+                                        Partner: {partnerText}
+                                    </Text>
+                                )}
+                                <View style={styles.metaRow}>
+                                    <View style={[styles.tag, isYesYes && styles.tagHighlight]}>
+                                        <Text style={[styles.tagText, isYesYes && styles.tagTextHighlight]}>
+                                            {isYesYes ? "YES + YES" : "YES + MAYBE"}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.date}>
+                                        {new Date(item.created_at).toLocaleDateString()}
                                     </Text>
                                 </View>
-                                <Text style={styles.date}>
-                                    {new Date(item.created_at).toLocaleDateString()}
-                                </Text>
                             </View>
-                        </View>
-                        <View style={styles.chevronContainer}>
-                            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                            <View style={styles.rightSection}>
+                                {item.unreadCount > 0 && (
+                                    <View style={styles.unreadBadge}>
+                                        <Ionicons name="chatbubble" size={12} color={colors.text} />
+                                    </View>
+                                )}
+                                <View style={styles.chevronContainer}>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                </View>
+                            </View>
                         </View>
                     </GlassCard>
                 </TouchableOpacity>
@@ -99,11 +121,17 @@ export default function MatchesScreen() {
             <View style={styles.container}>
                 <Animated.View
                     entering={FadeInDown.duration(400)}
-                    style={styles.header}
+                    style={[styles.header, isWideScreen && styles.headerWide]}
                 >
-                    <Text style={styles.title}>Your Matches</Text>
+                    <View style={styles.headerTop}>
+                        <Text style={styles.title}>Matches</Text>
+                        <View style={styles.countBadge}>
+                            <Ionicons name="heart" size={14} color={colors.primary} />
+                            <Text style={styles.countText}>{matches.length}</Text>
+                        </View>
+                    </View>
                     <Text style={styles.subtitle}>
-                        {matches.length} {matches.length === 1 ? 'match' : 'matches'} found
+                        Discover what you both enjoy together
                     </Text>
                 </Animated.View>
 
@@ -111,7 +139,7 @@ export default function MatchesScreen() {
                     data={matches}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.list}
+                    contentContainerStyle={[styles.list, isWideScreen && styles.listWide]}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl
@@ -126,13 +154,35 @@ export default function MatchesScreen() {
                             entering={FadeInDown.delay(200).duration(400)}
                             style={styles.emptyContainer}
                         >
-                            <View style={styles.emptyIconContainer}>
-                                <Ionicons name="heart-outline" size={48} color={colors.textTertiary} />
-                            </View>
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.emptyIconGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <View style={styles.emptyIconInner}>
+                                    <Ionicons name="heart-outline" size={40} color={colors.primary} />
+                                </View>
+                            </LinearGradient>
                             <Text style={styles.emptyTitle}>No matches yet</Text>
                             <Text style={styles.emptyText}>
                                 Keep swiping to find things you both enjoy!
                             </Text>
+                            <TouchableOpacity
+                                style={styles.emptyButton}
+                                onPress={() => router.push("/(app)/swipe")}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    style={styles.emptyButtonGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Ionicons name="play" size={18} color={colors.text} />
+                                    <Text style={styles.emptyButtonText}>Start Swiping</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
                         </Animated.View>
                     }
                 />
@@ -153,11 +203,35 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.md,
+        paddingBottom: spacing.lg,
+    },
+    headerWide: {
+        alignSelf: 'center',
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     title: {
         ...typography.title1,
         color: colors.text,
+    },
+    countBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primaryLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+        gap: spacing.xs,
+    },
+    countText: {
+        ...typography.subhead,
+        color: colors.text,
+        fontWeight: '600',
     },
     subtitle: {
         ...typography.subhead,
@@ -166,18 +240,25 @@ const styles = StyleSheet.create({
     },
     list: {
         padding: spacing.lg,
+        paddingTop: 0,
         paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
+    listWide: {
+        alignSelf: 'center',
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+    },
     matchCard: {
+        marginBottom: spacing.sm,
+    },
+    matchRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: spacing.sm,
     },
     iconContainer: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: colors.primaryLight,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
@@ -190,14 +271,15 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontWeight: "600",
         marginBottom: spacing.xs,
+        lineHeight: 22,
     },
     partnerText: {
-        ...typography.subhead,
+        ...typography.caption1,
         color: colors.textSecondary,
         fontStyle: "italic",
         marginBottom: spacing.sm,
     },
-    metaContainer: {
+    metaRow: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
@@ -205,8 +287,8 @@ const styles = StyleSheet.create({
     tag: {
         backgroundColor: colors.glass.background,
         paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.xs,
+        paddingVertical: 4,
+        borderRadius: radius.sm,
     },
     tagHighlight: {
         backgroundColor: colors.primaryLight,
@@ -214,39 +296,86 @@ const styles = StyleSheet.create({
     tagText: {
         ...typography.caption2,
         color: colors.textSecondary,
-        fontWeight: "600",
+        fontWeight: "700",
+        letterSpacing: 0.5,
     },
     tagTextHighlight: {
         color: colors.primary,
     },
     date: {
-        ...typography.caption1,
+        ...typography.caption2,
         color: colors.textTertiary,
     },
-    chevronContainer: {
+    rightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
         marginLeft: spacing.sm,
+    },
+    unreadBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    chevronContainer: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: colors.glass.background,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyContainer: {
         alignItems: "center",
         paddingVertical: spacing.xxl,
+        paddingHorizontal: spacing.lg,
     },
-    emptyIconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: colors.glass.background,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: spacing.md,
+    emptyIconGradient: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+        ...shadows.lg,
+    },
+    emptyIconInner: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        backgroundColor: colors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     emptyTitle: {
-        ...typography.title3,
+        ...typography.title2,
         color: colors.text,
-        marginBottom: spacing.xs,
+        marginBottom: spacing.sm,
     },
     emptyText: {
         ...typography.body,
         color: colors.textSecondary,
         textAlign: "center",
+        marginBottom: spacing.xl,
+    },
+    emptyButton: {
+        borderRadius: radius.full,
+        overflow: 'hidden',
+        ...shadows.md,
+    },
+    emptyButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        gap: spacing.sm,
+    },
+    emptyButtonText: {
+        ...typography.body,
+        color: colors.text,
+        fontWeight: '600',
     },
 });

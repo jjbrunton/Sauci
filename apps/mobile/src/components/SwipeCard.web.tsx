@@ -1,9 +1,10 @@
 import { useState, useRef } from "react";
-import { View, Text, StyleSheet, Dimensions, Animated, PanResponder, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Animated, PanResponder, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { QuestionFeedbackModal } from "./QuestionFeedbackModal";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
+const MAX_CARD_WIDTH = 400;
+const SWIPE_THRESHOLD = 100;
 
 interface Props {
     question: { id: string; text: string; intensity: number; partner_text?: string | null };
@@ -15,15 +16,19 @@ interface Props {
  * instead of react-native-gesture-handler which doesn't work on web.
  */
 export default function SwipeCard({ question, onSwipe }: Props) {
+    const { width: screenWidth } = useWindowDimensions();
+    const cardWidth = Math.min(screenWidth - 48, MAX_CARD_WIDTH);
+
     const [dismissed, setDismissed] = useState(false);
     const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
     const translateX = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(0)).current;
     const scale = useRef(new Animated.Value(1)).current;
 
     const rotation = translateX.interpolate({
-        inputRange: [-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2],
+        inputRange: [-cardWidth / 2, cardWidth / 2],
         outputRange: ["-15deg", "15deg"],
         extrapolate: "clamp",
     });
@@ -81,7 +86,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                 if (Math.abs(gestureState.dx) > SWIPE_THRESHOLD) {
                     // Horizontal swipe
                     const direction = gestureState.dx > 0 ? "right" : "left";
-                    const targetX = direction === "right" ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5;
+                    const targetX = direction === "right" ? screenWidth * 1.5 : -screenWidth * 1.5;
 
                     Animated.spring(translateX, {
                         toValue: targetX,
@@ -93,7 +98,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                 } else if (gestureState.dy < -SWIPE_THRESHOLD) {
                     // Vertical swipe up
                     Animated.spring(translateY, {
-                        toValue: -SCREEN_WIDTH * 1.5,
+                        toValue: -screenWidth * 1.5,
                         useNativeDriver: true,
                     }).start(() => {
                         setDismissed(true);
@@ -121,112 +126,131 @@ export default function SwipeCard({ question, onSwipe }: Props) {
     }
 
     return (
-        <Animated.View
-            style={[
-                styles.card,
-                {
-                    transform: [
-                        { translateX },
-                        { translateY },
-                        { rotate: rotation },
-                        { scale },
-                    ],
-                },
-            ]}
-            {...panResponder.panHandlers}
-        >
-            {/* Overlays */}
+        <>
             <Animated.View
                 style={[
-                    styles.overlay,
-                    { opacity: rightOverlayOpacity, backgroundColor: "rgba(76, 175, 80, 0.4)" },
+                    styles.card,
+                    {
+                        width: cardWidth,
+                        transform: [
+                            { translateX },
+                            { translateY },
+                            { rotate: rotation },
+                            { scale },
+                        ],
+                    },
                 ]}
+                {...panResponder.panHandlers}
             >
-                <Text style={styles.overlayText}>YES</Text>
-            </Animated.View>
-            <Animated.View
-                style={[
-                    styles.overlay,
-                    { opacity: leftOverlayOpacity, backgroundColor: "rgba(244, 67, 54, 0.4)" },
-                ]}
-            >
-                <Text style={styles.overlayText}>NO</Text>
-            </Animated.View>
-            <Animated.View
-                style={[
-                    styles.overlay,
-                    { opacity: upOverlayOpacity, backgroundColor: "rgba(255, 152, 0, 0.4)" },
-                ]}
-            >
-                <Text style={styles.overlayText}>MAYBE</Text>
-            </Animated.View>
+                {/* Feedback Button */}
+                <TouchableOpacity
+                    style={styles.feedbackButton}
+                    onPress={() => setShowFeedbackModal(true)}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="flag-outline" size={18} color="#888" />
+                </TouchableOpacity>
 
-            <View style={styles.content}>
-                <View style={styles.intensityContainer}>
-                    {[...Array(question.intensity)].map((_, i) => (
-                        <Ionicons key={i} name="flame" size={16} color="#e94560" />
-                    ))}
+                {/* Overlays */}
+                <Animated.View
+                    style={[
+                        styles.overlay,
+                        { opacity: rightOverlayOpacity, backgroundColor: "rgba(76, 175, 80, 0.4)" },
+                    ]}
+                >
+                    <Text style={styles.overlayText}>YES</Text>
+                </Animated.View>
+                <Animated.View
+                    style={[
+                        styles.overlay,
+                        { opacity: leftOverlayOpacity, backgroundColor: "rgba(244, 67, 54, 0.4)" },
+                    ]}
+                >
+                    <Text style={styles.overlayText}>NO</Text>
+                </Animated.View>
+                <Animated.View
+                    style={[
+                        styles.overlay,
+                        { opacity: upOverlayOpacity, backgroundColor: "rgba(255, 152, 0, 0.4)" },
+                    ]}
+                >
+                    <Text style={styles.overlayText}>MAYBE</Text>
+                </Animated.View>
+
+                <View style={styles.content}>
+                    <View style={styles.intensityContainer}>
+                        {[...Array(question.intensity)].map((_, i) => (
+                            <Ionicons key={i} name="flame" size={16} color="#e94560" />
+                        ))}
+                    </View>
+                    <Text style={[styles.text, question.is_two_part ? styles.twoPartText : null]}>{question.text}</Text>
                 </View>
-                <Text style={[styles.text, question.is_two_part ? styles.twoPartText : null]}>{question.text}</Text>
-            </View>
 
-            <View style={styles.footer}>
-                <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={[
-                            styles.actionButton,
-                            styles.noButton,
-                            hoveredButton === "no" && styles.buttonHovered,
-                        ]}
-                        onPress={() => onSwipe("left")}
-                        onMouseEnter={() => setHoveredButton("no")}
-                        onMouseLeave={() => setHoveredButton(null)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="thumbs-down" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
+                <View style={styles.footer}>
+                    <View style={styles.buttonContainer}>
+                        <TouchableOpacity
+                            style={[
+                                styles.actionButton,
+                                styles.noButton,
+                                hoveredButton === "no" && styles.buttonHovered,
+                            ]}
+                            onPress={() => onSwipe("left")}
+                            onMouseEnter={() => setHoveredButton("no")}
+                            onMouseLeave={() => setHoveredButton(null)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.buttonInnerGlow} />
+                            <Ionicons name="thumbs-down" size={24} color="#fff" style={styles.buttonIcon} />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[
-                            styles.actionButton,
-                            styles.maybeButton,
-                            hoveredButton === "maybe" && styles.buttonHovered,
-                        ]}
-                        onPress={() => onSwipe("up")}
-                        onMouseEnter={() => setHoveredButton("maybe")}
-                        onMouseLeave={() => setHoveredButton(null)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="help-circle" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.actionButton,
+                                styles.maybeButton,
+                                hoveredButton === "maybe" && styles.buttonHovered,
+                            ]}
+                            onPress={() => onSwipe("up")}
+                            onMouseEnter={() => setHoveredButton("maybe")}
+                            onMouseLeave={() => setHoveredButton(null)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.buttonInnerGlow} />
+                            <Ionicons name="help-circle" size={24} color="#fff" style={styles.buttonIcon} />
+                        </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[
-                            styles.actionButton,
-                            styles.yesButton,
-                            hoveredButton === "yes" && styles.buttonHovered,
-                        ]}
-                        onPress={() => onSwipe("right")}
-                        onMouseEnter={() => setHoveredButton("yes")}
-                        onMouseLeave={() => setHoveredButton(null)}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="thumbs-up" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[
+                                styles.actionButton,
+                                styles.yesButton,
+                                hoveredButton === "yes" && styles.buttonHovered,
+                            ]}
+                            onPress={() => onSwipe("right")}
+                            onMouseEnter={() => setHoveredButton("yes")}
+                            onMouseLeave={() => setHoveredButton(null)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.buttonInnerGlow} />
+                            <Ionicons name="thumbs-up" size={24} color="#fff" style={styles.buttonIcon} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
-        </Animated.View>
+            </Animated.View>
+
+            <QuestionFeedbackModal
+                visible={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+                questionId={question.id}
+                questionText={question.text}
+            />
+        </>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
         position: "absolute",
-        width: SCREEN_WIDTH - 48,
         height: 500,
+        maxWidth: MAX_CARD_WIDTH,
         backgroundColor: "#16213e",
         borderRadius: 24,
         borderWidth: 1,
@@ -241,6 +265,20 @@ const styles = StyleSheet.create({
         elevation: 8,
         overflow: "hidden",
         cursor: "grab",
+    },
+    feedbackButton: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 5,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
     content: {
         flex: 1,

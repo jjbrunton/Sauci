@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     View,
     Text,
@@ -17,6 +17,16 @@ import Animated, {
     FadeInUp,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+// Safely import Apple Authentication - may not be available in Expo Go
+let AppleAuthentication: typeof import("expo-apple-authentication") | null = null;
+
+if (Platform.OS === "ios") {
+    try {
+        AppleAuthentication = require("expo-apple-authentication");
+    } catch {
+        AppleAuthentication = null;
+    }
+}
 import { supabase } from "../../src/lib/supabase";
 import { useAuthStore } from "../../src/store";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
@@ -24,15 +34,70 @@ import { colors, spacing, radius, typography } from "../../src/theme";
 
 type AuthMode = "magic-link" | "password";
 
+interface PendingVerification {
+    email: string;
+    password: string;
+}
+
 export default function LoginScreen() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
+    const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
+    const [isCheckingVerification, setIsCheckingVerification] = useState(false);
     const [authMode, setAuthMode] = useState<AuthMode>("magic-link");
     const [isSignUp, setIsSignUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
     const { isAuthenticated } = useAuthStore();
+
+    // Check Apple Auth availability asynchronously
+    useEffect(() => {
+        if (Platform.OS === "ios" && AppleAuthentication) {
+            AppleAuthentication.isAvailableAsync().then((available) => {
+                setIsAppleAuthAvailable(available);
+            }).catch(() => {
+                setIsAppleAuthAvailable(false);
+            });
+        }
+    }, []);
+
+    // Check if user has verified their email
+    const checkVerificationStatus = useCallback(async () => {
+        if (!pendingVerification) return;
+
+        setIsCheckingVerification(true);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: pendingVerification.email,
+            password: pendingVerification.password,
+        });
+        setIsCheckingVerification(false);
+
+        if (signInError) {
+            if (signInError.message.includes("Email not confirmed")) {
+                // Still not verified - show a message
+                if (Platform.OS !== 'web') {
+                    Alert.alert("Not yet verified", "Please check your email and click the verification link.");
+                }
+            } else {
+                Alert.alert("Error", signInError.message);
+            }
+        }
+        // If successful, the auth state change will handle the redirect
+    }, [pendingVerification]);
+
+    // Listen for auth state changes (e.g., when user verifies in another tab/browser)
+    useEffect(() => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN' && session) {
+                // User verified and signed in - clear pending state
+                setPendingVerification(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
 
     const showError = (message: string) => {
         setError(message);
@@ -100,20 +165,11 @@ export default function LoginScreen() {
             if (signUpError) {
                 showError(signUpError.message);
             } else {
-                // Show success message
-                if (Platform.OS === 'web') {
-                    setError(null);
-                    Alert.alert(
-                        "Check your email",
-                        "We sent you a confirmation link to verify your email address."
-                    );
-                } else {
-                    Alert.alert(
-                        "Check your email",
-                        "We sent you a confirmation link to verify your email address.",
-                        [{ text: "OK" }]
-                    );
-                }
+                // Show the verification pending screen
+                setPendingVerification({
+                    email: email.trim(),
+                    password,
+                });
             }
         } else {
             const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -124,44 +180,78 @@ export default function LoginScreen() {
             setIsLoading(false);
 
             if (signInError) {
-                showError(signInError.message);
+                // Check if the error is due to unverified email
+                if (signInError.message.includes("Email not confirmed")) {
+                    // Show the verification pending screen
+                    setPendingVerification({
+                        email: email.trim(),
+                        password,
+                    });
+                } else {
+                    showError(signInError.message);
+                }
             }
         }
     };
 
-    const handleGoogleSignIn = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-                redirectTo: Linking.createURL("/(auth)/login"),
-            },
-        });
-
-        if (error) {
-            Alert.alert("Error", error.message);
-        }
-    };
-
     const handleAppleSignIn = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: "apple",
-            options: {
-                redirectTo: Linking.createURL("/(auth)/login"),
-            },
-        });
+        console.log("[Apple Sign In] Starting, isAppleAuthAvailable:", isAppleAuthAvailable, "AppleAuthentication:", !!AppleAuthentication);
 
-        if (error) {
-            Alert.alert("Error", error.message);
+        if (isAppleAuthAvailable && AppleAuthentication) {
+            try {
+                console.log("[Apple Sign In] Calling signInAsync...");
+                const credential = await AppleAuthentication.signInAsync({
+                    requestedScopes: [
+                        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                    ],
+                });
+                console.log("[Apple Sign In] Got credential:", !!credential, "identityToken:", !!credential?.identityToken);
+
+                if (credential.identityToken) {
+                    const { error } = await supabase.auth.signInWithIdToken({
+                        provider: "apple",
+                        token: credential.identityToken,
+                    });
+
+                    if (error) {
+                        console.log("[Apple Sign In] Supabase error:", error.message);
+                        Alert.alert("Error", error.message);
+                    }
+                } else {
+                    Alert.alert("Error", "No identity token received from Apple");
+                }
+            } catch (e: any) {
+                console.log("[Apple Sign In] Caught error:", e.code, e.message);
+                if (e.code === "ERR_REQUEST_CANCELED") {
+                    // User canceled - do nothing
+                } else {
+                    Alert.alert("Apple Sign In Error", `${e.code || 'Unknown'}: ${e.message || "Apple sign in failed"}`);
+                }
+            }
+        } else {
+            console.log("[Apple Sign In] Falling back to OAuth");
+            // Fallback to web OAuth when native module unavailable
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: "apple",
+                options: {
+                    redirectTo: Linking.createURL("/(auth)/login"),
+                },
+            });
+
+            if (error) {
+                Alert.alert("Error", error.message);
+            }
         }
     };
 
     if (isMagicLinkSent) {
         return (
             <GradientBackground showAccent>
-                <View style={styles.container}>
+                <View style={styles.centeredContainer}>
                     <Animated.View
                         entering={FadeInUp.duration(600).springify()}
-                        style={styles.content}
+                        style={styles.centeredContent}
                     >
                         <View style={styles.iconContainer}>
                             <Ionicons name="mail" size={48} color={colors.primary} />
@@ -177,6 +267,51 @@ export default function LoginScreen() {
                             style={{ marginTop: spacing.lg }}
                         >
                             Try a different email
+                        </GlassButton>
+                    </Animated.View>
+                </View>
+            </GradientBackground>
+        );
+    }
+
+    // Email verification pending screen
+    if (pendingVerification) {
+        return (
+            <GradientBackground showAccent>
+                <View style={styles.centeredContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.centeredContent}
+                    >
+                        <View style={styles.iconContainer}>
+                            <Ionicons name="mail-unread" size={48} color={colors.primary} />
+                        </View>
+                        <Text style={styles.title}>Verify your email</Text>
+                        <Text style={styles.subtitle}>
+                            We sent a verification link to{'\n'}
+                            <Text style={styles.emailHighlight}>{pendingVerification.email}</Text>
+                        </Text>
+                        <Text style={styles.verificationHint}>
+                            Click the link in your email to verify your account, then tap the button below.
+                        </Text>
+                        <GlassButton
+                            onPress={checkVerificationStatus}
+                            loading={isCheckingVerification}
+                            disabled={isCheckingVerification}
+                            style={{ marginTop: spacing.lg }}
+                        >
+                            I've verified my email
+                        </GlassButton>
+                        <GlassButton
+                            variant="ghost"
+                            onPress={() => {
+                                setPendingVerification(null);
+                                setEmail(pendingVerification.email);
+                                setPassword("");
+                            }}
+                            style={{ marginTop: spacing.sm }}
+                        >
+                            Use a different email
                         </GlassButton>
                     </Animated.View>
                 </View>
@@ -335,23 +470,24 @@ export default function LoginScreen() {
                             </View>
 
                             <View style={styles.socialButtons}>
-                                <GlassButton
-                                    variant="secondary"
-                                    onPress={handleGoogleSignIn}
-                                    icon={<Ionicons name="logo-google" size={20} color={colors.text} />}
-                                    style={styles.socialButton}
-                                >
-                                    Google
-                                </GlassButton>
-
-                                <GlassButton
-                                    variant="secondary"
-                                    onPress={handleAppleSignIn}
-                                    icon={<Ionicons name="logo-apple" size={20} color={colors.text} />}
-                                    style={styles.socialButton}
-                                >
-                                    Apple
-                                </GlassButton>
+                                {isAppleAuthAvailable && AppleAuthentication ? (
+                                    <AppleAuthentication.AppleAuthenticationButton
+                                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                                        cornerRadius={12}
+                                        style={styles.appleButton}
+                                        onPress={handleAppleSignIn}
+                                    />
+                                ) : (
+                                    <GlassButton
+                                        variant="secondary"
+                                        onPress={handleAppleSignIn}
+                                        icon={<Ionicons name="logo-apple" size={20} color={colors.text} />}
+                                        style={styles.socialButton}
+                                    >
+                                        Apple
+                                    </GlassButton>
+                                )}
                             </View>
                         </Animated.View>
                     </View>
@@ -364,6 +500,15 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    centeredContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    centeredContent: {
+        alignItems: "center",
+        paddingHorizontal: spacing.lg,
     },
     scrollContent: {
         flexGrow: 1,
@@ -400,6 +545,13 @@ const styles = StyleSheet.create({
     emailHighlight: {
         color: colors.primary,
         fontWeight: "600",
+    },
+    verificationHint: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        textAlign: "center",
+        marginTop: spacing.md,
+        paddingHorizontal: spacing.md,
     },
     iconContainer: {
         width: 100,
@@ -486,5 +638,9 @@ const styles = StyleSheet.create({
     },
     socialButton: {
         flex: 1,
+    },
+    appleButton: {
+        flex: 1,
+        height: 48,
     },
 });

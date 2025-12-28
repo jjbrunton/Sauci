@@ -14,6 +14,33 @@ export type Database = {
     }
     public: {
         Tables: {
+            categories: {
+                Row: {
+                    id: string
+                    name: string
+                    description: string | null
+                    icon: string | null
+                    sort_order: number | null
+                    created_at: string | null
+                }
+                Insert: {
+                    id?: string
+                    name: string
+                    description?: string | null
+                    icon?: string | null
+                    sort_order?: number | null
+                    created_at?: string | null
+                }
+                Update: {
+                    id?: string
+                    name?: string
+                    description?: string | null
+                    icon?: string | null
+                    sort_order?: number | null
+                    created_at?: string | null
+                }
+                Relationships: []
+            }
             couple_packs: {
                 Row: {
                     couple_id: string
@@ -114,6 +141,7 @@ export type Database = {
                 Row: {
                     content: string | null
                     created_at: string | null
+                    delivered_at: string | null
                     id: string
                     match_id: string
                     media_path: string | null
@@ -124,6 +152,7 @@ export type Database = {
                 Insert: {
                     content?: string | null
                     created_at?: string | null
+                    delivered_at?: string | null
                     id?: string
                     match_id: string
                     media_path?: string | null
@@ -134,6 +163,7 @@ export type Database = {
                 Update: {
                     content?: string | null
                     created_at?: string | null
+                    delivered_at?: string | null
                     id?: string
                     match_id?: string
                     media_path?: string | null
@@ -197,39 +227,47 @@ export type Database = {
             }
             question_packs: {
                 Row: {
-                    created_at: string | null
-                    description: string | null
-                    display_order: number
                     id: string
-                    image_url: string | null
-                    is_explicit: boolean | null
-                    is_pro: boolean | null
+                    name: string
+                    description: string | null
+                    icon: string | null
+                    is_premium: boolean | null
                     is_public: boolean | null
-                    title: string
+                    sort_order: number | null
+                    category_id: string | null
+                    created_at: string | null
                 }
                 Insert: {
-                    created_at?: string | null
-                    description?: string | null
-                    display_order?: number
                     id?: string
-                    image_url?: string | null
-                    is_explicit?: boolean | null
-                    is_pro?: boolean | null
+                    name: string
+                    description?: string | null
+                    icon?: string | null
+                    is_premium?: boolean | null
                     is_public?: boolean | null
-                    title: string
+                    sort_order?: number | null
+                    category_id?: string | null
+                    created_at?: string | null
                 }
                 Update: {
-                    created_at?: string | null
-                    description?: string | null
-                    display_order?: number
                     id?: string
-                    image_url?: string | null
-                    is_explicit?: boolean | null
-                    is_pro?: boolean | null
+                    name?: string
+                    description?: string | null
+                    icon?: string | null
+                    is_premium?: boolean | null
                     is_public?: boolean | null
-                    title?: string
+                    sort_order?: number | null
+                    category_id?: string | null
+                    created_at?: string | null
                 }
-                Relationships: []
+                Relationships: [
+                    {
+                        foreignKeyName: "question_packs_category_id_fkey"
+                        columns: ["category_id"]
+                        isOneToOne: false
+                        referencedRelation: "categories"
+                        referencedColumns: ["id"]
+                    }
+                ]
             }
             questions: {
                 Row: {

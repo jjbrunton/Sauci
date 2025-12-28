@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
+import { usePacksStore } from "../../src/store";
 import SwipeCard from "../../src/components/SwipeCard";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { colors, spacing, typography, radius, shadows } from "../../src/theme";
@@ -13,9 +14,10 @@ export default function SwipeScreen() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const { enabledPackIds, fetchPacks } = usePacksStore();
 
     useEffect(() => {
-        fetchQuestions();
+        fetchPacks().then(() => fetchQuestions());
     }, [packId]);
 
     const fetchQuestions = async () => {
@@ -78,6 +80,34 @@ export default function SwipeScreen() {
             <GradientBackground>
                 <View style={styles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </GradientBackground>
+        );
+    }
+
+    // Show "no packs enabled" message when not viewing a specific pack and no packs are enabled
+    if (!packId && enabledPackIds.length === 0) {
+        return (
+            <GradientBackground showAccent>
+                <View style={styles.centerContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.emptyContent}
+                    >
+                        <View style={styles.noPacksIconContainer}>
+                            <Ionicons name="layers-outline" size={64} color={colors.textTertiary} />
+                        </View>
+                        <Text style={styles.emptyTitle}>No packs enabled</Text>
+                        <Text style={styles.emptySubtitle}>
+                            Enable at least one question pack to start playing.
+                        </Text>
+                        <GlassButton
+                            onPress={() => router.push("/packs")}
+                            style={{ marginTop: spacing.lg }}
+                        >
+                            Choose Packs
+                        </GlassButton>
+                    </Animated.View>
                 </View>
             </GradientBackground>
         );
@@ -232,6 +262,15 @@ const styles = StyleSheet.create({
         height: 120,
         borderRadius: 60,
         backgroundColor: colors.primaryLight,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.lg,
+    },
+    noPacksIconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: colors.glass.background,
         justifyContent: "center",
         alignItems: "center",
         marginBottom: spacing.lg,
