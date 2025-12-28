@@ -1,7 +1,22 @@
 import { Tabs, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
+import { BlurView } from "expo-blur";
 import { useAuthStore, useMatchStore } from "../../src/store";
+import { colors, blur } from "../../src/theme";
+
+function TabBarBackground() {
+    if (Platform.OS === 'ios') {
+        return (
+            <BlurView
+                intensity={blur.medium}
+                tint="dark"
+                style={StyleSheet.absoluteFill}
+            />
+        );
+    }
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass.backgroundLight }]} />;
+}
 
 export default function AppLayout() {
     const { isAuthenticated, isLoading } = useAuthStore();
@@ -11,7 +26,7 @@ export default function AppLayout() {
     if (isLoading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#e94560" />
+                <ActivityIndicator size="large" color={colors.primary} />
             </View>
         );
     }
@@ -25,19 +40,22 @@ export default function AppLayout() {
         <Tabs
             screenOptions={{
                 headerShown: false,
+                tabBarBackground: () => <TabBarBackground />,
                 tabBarStyle: {
-                    backgroundColor: "#16213e",
-                    borderTopColor: "#0f3460",
+                    position: 'absolute',
+                    backgroundColor: 'transparent',
+                    borderTopColor: colors.glass.border,
                     borderTopWidth: 1,
                     paddingTop: 8,
-                    paddingBottom: 8,
-                    height: 60,
+                    paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+                    height: Platform.OS === 'ios' ? 88 : 64,
+                    elevation: 0,
                 },
-                tabBarActiveTintColor: "#e94560",
-                tabBarInactiveTintColor: "#666",
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textTertiary,
                 tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: "500",
+                    fontSize: 11,
+                    fontWeight: "600",
                 },
             }}
         >
@@ -77,8 +95,9 @@ export default function AppLayout() {
                     ),
                     tabBarBadge: newMatchesCount > 0 ? newMatchesCount : undefined,
                     tabBarBadgeStyle: {
-                        backgroundColor: "#e94560",
+                        backgroundColor: colors.primary,
                         fontSize: 10,
+                        fontWeight: '600',
                     },
                 }}
             />
@@ -112,6 +131,6 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#1a1a2e",
+        backgroundColor: colors.background,
     },
 });

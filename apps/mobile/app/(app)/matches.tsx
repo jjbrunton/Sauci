@@ -1,27 +1,28 @@
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { useMatchStore, useAuthStore } from "../../src/store";
 import { useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import { GradientBackground, GlassCard } from "../../src/components/ui";
+import { colors, spacing, typography, radius } from "../../src/theme";
 
 export default function MatchesScreen() {
     const { matches, fetchMatches, markAllAsSeen } = useMatchStore();
     const { user } = useAuthStore();
+    const router = useRouter();
 
     useEffect(() => {
         fetchMatches();
     }, []);
 
-    // Mark all matches as seen when matches are loaded
     useEffect(() => {
         if (matches.length > 0) {
             markAllAsSeen();
         }
     }, [matches.length]);
 
-    const router = useRouter();
-
-    const renderItem = ({ item }: { item: any }) => {
+    const renderItem = ({ item, index }: { item: any; index: number }) => {
         const userResponse = item.responses?.find((r: any) => r.user_id === user?.id);
         const partnerResponse = item.responses?.find((r: any) => r.user_id !== user?.id);
 
@@ -32,161 +33,220 @@ export default function MatchesScreen() {
             const userTime = new Date(userResponse.created_at).getTime();
             const partnerTime = new Date(partnerResponse.created_at).getTime();
 
-            // If user answered after partner, they saw the partner_text
             if (userTime > partnerTime) {
                 userText = item.question.partner_text;
                 partnerText = item.question.text;
             }
         }
 
+        const isYesYes = item.match_type === "yes_yes";
+
         return (
-            <TouchableOpacity
-                style={styles.matchCard}
-                onPress={() => router.push(`/chat/${item.id}`)}
-                activeOpacity={0.7}
-            >
-                <View style={styles.iconContainer}>
-                    <Ionicons name="sparkles" size={24} color="#e94560" />
-                </View>
-                <View style={styles.content}>
-                    <Text style={styles.questionText}>{userText}</Text>
-                    {item.question.partner_text && (
-                        <Text style={styles.partnerText}>Partner: {partnerText}</Text>
-                    )}
-                    <View style={styles.tagContainer}>
-                        <View style={styles.tag}>
-                            <Text style={styles.tagText}>
-                                {item.match_type === "yes_yes" ? "Review: YES + YES" : "Review: YES + MAYBE"}
-                            </Text>
+            <Animated.View entering={FadeInRight.delay(index * 50).duration(300)}>
+                <TouchableOpacity
+                    onPress={() => router.push(`/chat/${item.id}`)}
+                    activeOpacity={0.7}
+                >
+                    <GlassCard style={styles.matchCard}>
+                        <View style={styles.iconContainer}>
+                            <Ionicons
+                                name={isYesYes ? "heart" : "heart-half"}
+                                size={24}
+                                color={colors.primary}
+                            />
                         </View>
-                        <Text style={styles.date}>
-                            {new Date(item.created_at).toLocaleDateString()}
-                        </Text>
-                    </View>
-                </View>
-            </TouchableOpacity>
+                        <View style={styles.content}>
+                            <Text style={styles.questionText} numberOfLines={2}>
+                                {userText}
+                            </Text>
+                            {item.question.partner_text && (
+                                <Text style={styles.partnerText} numberOfLines={1}>
+                                    Partner: {partnerText}
+                                </Text>
+                            )}
+                            <View style={styles.metaContainer}>
+                                <View style={[styles.tag, isYesYes && styles.tagHighlight]}>
+                                    <Text style={[styles.tagText, isYesYes && styles.tagTextHighlight]}>
+                                        {isYesYes ? "YES + YES" : "YES + MAYBE"}
+                                    </Text>
+                                </View>
+                                <Text style={styles.date}>
+                                    {new Date(item.created_at).toLocaleDateString()}
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={styles.chevronContainer}>
+                            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                        </View>
+                    </GlassCard>
+                </TouchableOpacity>
+            </Animated.View>
         );
     };
 
     if (!user) {
         return (
-            <View style={styles.container}>
+            <GradientBackground>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator color="#e94560" />
+                    <ActivityIndicator color={colors.primary} size="large" />
                 </View>
-            </View>
+            </GradientBackground>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Your Matches</Text>
-            </View>
+        <GradientBackground>
+            <View style={styles.container}>
+                <Animated.View
+                    entering={FadeInDown.duration(400)}
+                    style={styles.header}
+                >
+                    <Text style={styles.title}>Your Matches</Text>
+                    <Text style={styles.subtitle}>
+                        {matches.length} {matches.length === 1 ? 'match' : 'matches'} found
+                    </Text>
+                </Animated.View>
 
-            <FlatList
-                data={matches}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
-                refreshControl={
-                    <RefreshControl refreshing={false} onRefresh={fetchMatches} tintColor="#e94560" />
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>No matches yet. Keep swiping!</Text>
-                    </View>
-                }
-            />
-        </View>
+                <FlatList
+                    data={matches}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.list}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={false}
+                            onRefresh={fetchMatches}
+                            tintColor={colors.primary}
+                            colors={[colors.primary]}
+                        />
+                    }
+                    ListEmptyComponent={
+                        <Animated.View
+                            entering={FadeInDown.delay(200).duration(400)}
+                            style={styles.emptyContainer}
+                        >
+                            <View style={styles.emptyIconContainer}>
+                                <Ionicons name="heart-outline" size={48} color={colors.textTertiary} />
+                            </View>
+                            <Text style={styles.emptyTitle}>No matches yet</Text>
+                            <Text style={styles.emptyText}>
+                                Keep swiping to find things you both enjoy!
+                            </Text>
+                        </Animated.View>
+                    }
+                />
+            </View>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#1a1a2e",
-    },
-    header: {
-        paddingTop: 60,
-        paddingHorizontal: 24,
-        paddingBottom: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: "#16213e",
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#fff",
-    },
-    list: {
-        padding: 24,
-    },
-    matchCard: {
-        flexDirection: "row",
-        backgroundColor: "#16213e",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#0f3460",
-    },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "rgba(233, 69, 96, 0.1)",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 16,
-    },
-    content: {
-        flex: 1,
-    },
-    questionText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#fff",
-        marginBottom: 8,
-        lineHeight: 22,
-    },
-    tagContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    tag: {
-        backgroundColor: "rgba(233, 69, 96, 0.2)",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    tagText: {
-        color: "#e94560",
-        fontSize: 12,
-        fontWeight: "bold",
-    },
-    date: {
-        color: "#666",
-        fontSize: 12,
-    },
-    emptyContainer: {
-        padding: 40,
-        alignItems: "center",
-    },
-    emptyText: {
-        color: "#666",
-        fontSize: 16,
-    },
-    partnerText: {
-        fontSize: 14,
-        color: "#aaa",
-        fontStyle: "italic",
-        marginBottom: 8,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
+    },
+    header: {
+        paddingTop: 60,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
+    },
+    title: {
+        ...typography.title1,
+        color: colors.text,
+    },
+    subtitle: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        marginTop: spacing.xs,
+    },
+    list: {
+        padding: spacing.lg,
+        paddingBottom: Platform.OS === 'ios' ? 120 : 100,
+    },
+    matchCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: spacing.sm,
+    },
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: colors.primaryLight,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: spacing.md,
+    },
+    content: {
+        flex: 1,
+    },
+    questionText: {
+        ...typography.body,
+        color: colors.text,
+        fontWeight: "600",
+        marginBottom: spacing.xs,
+    },
+    partnerText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        fontStyle: "italic",
+        marginBottom: spacing.sm,
+    },
+    metaContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    tag: {
+        backgroundColor: colors.glass.background,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.xs,
+    },
+    tagHighlight: {
+        backgroundColor: colors.primaryLight,
+    },
+    tagText: {
+        ...typography.caption2,
+        color: colors.textSecondary,
+        fontWeight: "600",
+    },
+    tagTextHighlight: {
+        color: colors.primary,
+    },
+    date: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    chevronContainer: {
+        marginLeft: spacing.sm,
+    },
+    emptyContainer: {
+        alignItems: "center",
+        paddingVertical: spacing.xxl,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.md,
+    },
+    emptyTitle: {
+        ...typography.title3,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    emptyText: {
+        ...typography.body,
+        color: colors.textSecondary,
+        textAlign: "center",
     },
 });

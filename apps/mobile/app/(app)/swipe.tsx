@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, StyleSheet, Text, ActivityIndicator } from "react-native";
+import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
 import SwipeCard from "../../src/components/SwipeCard";
+import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { colors, spacing, typography, radius, shadows } from "../../src/theme";
 
 export default function SwipeScreen() {
     const { packId } = useLocalSearchParams();
@@ -26,11 +29,6 @@ export default function SwipeScreen() {
                 throw error;
             }
 
-            // Smart Shuffle
-            // Priority:
-            // 1. Completion of Two-Part Match (Partner answered, is_two_part = true) -> +1.5
-            // 2. Partner Answered (Any) -> +0.7
-            // 3. New Two-Part (Get someone to start) -> +0.4
             const sorted = (data || []).sort((a: any, b: any) => {
                 let scoreA = Math.random();
                 let scoreB = Math.random();
@@ -58,23 +56,18 @@ export default function SwipeScreen() {
         const question = questions[currentIndex];
         const answer = direction === "right" ? "yes" : direction === "left" ? "no" : "maybe";
 
-        // Optimistic update
         setCurrentIndex(prev => prev + 1);
 
         try {
-            // DEBUG: Check if we have a valid session
             const { data: { session } } = await supabase.auth.getSession();
             console.log("DEBUG - Session exists:", !!session);
-            console.log("DEBUG - Access token exists:", !!session?.access_token);
-            console.log("DEBUG - Token preview:", session?.access_token?.substring(0, 50) + "...");
 
-            const result = await supabase.functions.invoke("submit-response", {
+            await supabase.functions.invoke("submit-response", {
                 body: {
                     question_id: question.id,
                     answer,
                 },
             });
-            console.log("DEBUG - Function result:", result);
         } catch (error) {
             console.error("Failed to submit response", error);
         }
@@ -82,94 +75,178 @@ export default function SwipeScreen() {
 
     if (isLoading) {
         return (
-            <View style={styles.container}>
-                <ActivityIndicator size="large" color="#e94560" />
-            </View>
+            <GradientBackground>
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </GradientBackground>
         );
     }
 
     if (currentIndex >= questions.length) {
         return (
-            <View style={styles.container}>
-                <Ionicons name="checkmark-circle-outline" size={80} color="#e94560" />
-                <Text style={styles.emptyTitle}>All caught up!</Text>
-                <Text style={styles.emptySubtitle}>
-                    Check back later for more questions or try a different pack.
-                </Text>
-            </View>
+            <GradientBackground showAccent>
+                <View style={styles.centerContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.emptyContent}
+                    >
+                        <View style={styles.emptyIconContainer}>
+                            <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
+                        </View>
+                        <Text style={styles.emptyTitle}>All caught up!</Text>
+                        <Text style={styles.emptySubtitle}>
+                            Check back later for more questions or try a different pack.
+                        </Text>
+                        <GlassButton
+                            variant="secondary"
+                            onPress={fetchQuestions}
+                            style={{ marginTop: spacing.lg }}
+                        >
+                            Refresh Questions
+                        </GlassButton>
+                    </Animated.View>
+                </View>
+            </GradientBackground>
         );
     }
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.progress}>
-                    Question {currentIndex + 1} of {questions.length}
-                </Text>
-            </View>
+        <GradientBackground>
+            <View style={styles.container}>
+                {/* Header */}
+                <Animated.View
+                    entering={FadeIn.duration(400)}
+                    style={styles.header}
+                >
+                    <View style={styles.progressContainer}>
+                        <Text style={styles.progressText}>
+                            {currentIndex + 1} of {questions.length}
+                        </Text>
+                        <View style={styles.progressBar}>
+                            <Animated.View
+                                style={[
+                                    styles.progressFill,
+                                    { width: `${((currentIndex + 1) / questions.length) * 100}%` }
+                                ]}
+                            />
+                        </View>
+                    </View>
+                </Animated.View>
 
-            <View style={styles.cardContainer}>
-                {/* Render next card in background for smoothness */}
-                {questions[currentIndex + 1] && (
-                    <View style={[styles.backgroundCard]} />
-                )}
+                {/* Card Stack */}
+                <View style={styles.cardContainer}>
+                    {/* Background card (next) */}
+                    {questions[currentIndex + 1] && (
+                        <View style={styles.backgroundCard} />
+                    )}
 
-                {/* Active card */}
-                <SwipeCard
-                    key={questions[currentIndex].id}
-                    question={questions[currentIndex]}
-                    onSwipe={handleSwipe}
-                />
+                    {/* Active card */}
+                    <SwipeCard
+                        key={questions[currentIndex].id}
+                        question={questions[currentIndex]}
+                        onSwipe={handleSwipe}
+                    />
+                </View>
+
+                {/* Hint */}
+                <Animated.View
+                    entering={FadeIn.delay(500).duration(400)}
+                    style={styles.hintContainer}
+                >
+                    <Text style={styles.hintText}>Swipe or tap to answer</Text>
+                </Animated.View>
+
+                {/* Bottom spacing for tab bar */}
+                <View style={styles.bottomSpacer} />
             </View>
-        </View>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#1a1a2e",
+    },
+    centerContainer: {
+        flex: 1,
         justifyContent: "center",
         alignItems: "center",
     },
     header: {
-        position: "absolute",
-        top: 60,
-        zIndex: 1,
+        paddingTop: 60,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
     },
-    progress: {
-        color: "#666",
-        fontSize: 16,
-        fontWeight: "600",
+    progressContainer: {
+        alignItems: "center",
+    },
+    progressText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        marginBottom: spacing.sm,
+    },
+    progressBar: {
+        width: 120,
+        height: 4,
+        backgroundColor: colors.glass.background,
+        borderRadius: 2,
+        overflow: "hidden",
+    },
+    progressFill: {
+        height: "100%",
+        backgroundColor: colors.primary,
+        borderRadius: 2,
     },
     cardContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        marginTop: 40,
     },
     backgroundCard: {
         position: "absolute",
-        width: "100%", // Match SwipeCard width logic
-        height: 500,
-        backgroundColor: "#16213e",
-        borderRadius: 24,
+        width: "85%",
+        height: 480,
+        backgroundColor: colors.glass.backgroundLight,
+        borderRadius: radius.xxl,
         borderWidth: 1,
-        borderColor: "#0f3460",
-        transform: [{ scale: 0.95 }, { translateY: 10 }],
+        borderColor: colors.glass.border,
+        transform: [{ scale: 0.95 }, { translateY: 12 }],
         opacity: 0.5,
+        ...shadows.md,
+    },
+    hintContainer: {
+        alignItems: "center",
+        paddingBottom: spacing.md,
+    },
+    hintText: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    emptyContent: {
+        alignItems: "center",
+        paddingHorizontal: spacing.xl,
+    },
+    emptyIconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: colors.primaryLight,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.lg,
     },
     emptyTitle: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#fff",
-        marginTop: 24,
-        marginBottom: 8,
+        ...typography.title2,
+        color: colors.text,
+        marginBottom: spacing.sm,
     },
     emptySubtitle: {
-        fontSize: 16,
-        color: "#888",
+        ...typography.body,
+        color: colors.textSecondary,
         textAlign: "center",
-        paddingHorizontal: 40,
+    },
+    bottomSpacer: {
+        height: Platform.OS === 'ios' ? 100 : 80,
     },
 });

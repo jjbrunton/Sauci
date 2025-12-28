@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, AppState } from "react-native";
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { supabase } from "../../../src/lib/supabase";
 import { useAuthStore } from "../../../src/store";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { Database } from "../../../src/types/supabase";
+import { GradientBackground, GlassCard } from "../../../src/components/ui";
+import { colors, gradients, spacing, radius, typography, blur, shadows } from "../../../src/theme";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -27,7 +32,6 @@ export default function ChatScreen() {
     useEffect(() => {
         if (!matchId) return;
 
-        // Fetch match context (question and responses)
         const fetchMatch = async () => {
             const { data } = await supabase
                 .from("matches")
@@ -36,7 +40,6 @@ export default function ChatScreen() {
                 .single();
 
             if (data) {
-                // Fetch responses for both users in this couple for this question
                 const { data: responses } = await supabase
                     .from("responses")
                     .select("*, profiles(name)")
@@ -48,9 +51,8 @@ export default function ChatScreen() {
         };
         fetchMatch();
 
-        // Fetch initial messages and mark as read
         const fetchMessagesAndMarkRead = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from("messages")
                 .select("*")
                 .eq("match_id", matchId)
@@ -59,7 +61,6 @@ export default function ChatScreen() {
             if (data) {
                 setMessages(data);
 
-                // Identify unread messages from partner
                 const unreadIds = data
                     .filter(m => m.user_id !== user?.id && !m.read_at)
                     .map(m => m.id);
@@ -70,7 +71,6 @@ export default function ChatScreen() {
                         .update({ read_at: new Date().toISOString() })
                         .in("id", unreadIds);
 
-                    // Optimistically update local state
                     setMessages(prev => prev.map(m =>
                         unreadIds.includes(m.id) ? { ...m, read_at: new Date().toISOString() } : m
                     ));
@@ -80,7 +80,6 @@ export default function ChatScreen() {
 
         fetchMessagesAndMarkRead();
 
-        // Subscribe to new messages, updates (read receipts), and typing
         const channel = supabase
             .channel(`chat:${matchId}`)
             .on(
@@ -94,7 +93,6 @@ export default function ChatScreen() {
                 async (payload) => {
                     const newMessage = payload.new as Message;
 
-                    // If receiving a message from partner, mark as read immediately since we are in the chat
                     if (newMessage.user_id !== user?.id) {
                         await supabase
                             .from("messages")
@@ -104,7 +102,7 @@ export default function ChatScreen() {
                     }
 
                     setMessages((prev) => [newMessage, ...prev]);
-                    setPartnerTyping(false); // Stop typing indicator if they sent a message
+                    setPartnerTyping(false);
                 }
             )
             .on(
@@ -126,7 +124,6 @@ export default function ChatScreen() {
                 if (payload.payload.userId !== user?.id) {
                     setPartnerTyping(true);
 
-                    // Auto-hide typing indicator after 3s
                     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                     typingTimeoutRef.current = setTimeout(() => {
                         setPartnerTyping(false);
@@ -242,92 +239,48 @@ export default function ChatScreen() {
     };
 
     const revealMessage = async (messageId: string) => {
-        // Optimistic update
         setMessages(prev => prev.map(m =>
             m.id === messageId ? { ...m, media_viewed_at: new Date().toISOString() } : m
         ));
 
-        const { error } = await supabase
+        await supabase
             .from("messages")
             .update({ media_viewed_at: new Date().toISOString() })
             .eq("id", messageId);
-
-        if (error) {
-            console.error("Failed to mark as viewed", error);
-        }
     };
 
-
-    const renderMessage = ({ item }: { item: Message }) => {
+    const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isMe = item.user_id === user?.id;
         return (
-            <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.theirMessageRow]}>
-                <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble]}>
-                    {item.media_path ? (
-                        <View>
-                            <Image
-                                source={{ uri: item.media_path }}
-                                style={styles.messageImage}
-                                blurRadius={(!isMe && !item.media_viewed_at) ? 20 : 0}
-                            />
-                            {(!isMe && !item.media_viewed_at) && (
-                                <TouchableOpacity
-                                    style={styles.revealOverlay}
-                                    activeOpacity={0.8}
-                                    onPress={() => revealMessage(item.id)}
-                                >
-                                    <View style={styles.revealContent}>
-                                        <Ionicons name="eye-off-outline" size={32} color="#fff" />
-                                        <Text style={styles.revealText}>Tap to reveal</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    ) : (
-                        <Text style={styles.messageText}>{item.content}</Text>
-                    )}
-                    <View style={styles.metaContainer}>
-                        <Text style={[styles.timestamp, isMe ? styles.myTimestamp : styles.theirTimestamp]}>
-                            {new Date(item.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                        {isMe && (
-                            <Ionicons
-                                name={item.read_at ? "checkmark-done-outline" : "checkmark-outline"}
-                                size={14}
-                                color={item.read_at ? "#4cd137" : "rgba(255,255,255,0.7)"}
-                                style={styles.readIcon}
-                            />
-                        )}
+            <Animated.View
+                entering={FadeInUp.delay(index * 30).duration(200)}
+                style={[styles.messageRow, isMe ? styles.myMessageRow : styles.theirMessageRow]}
+            >
+                {isMe ? (
+                    <LinearGradient
+                        colors={gradients.primary as [string, string]}
+                        style={[styles.bubble, styles.myBubble]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    >
+                        <MessageContent item={item} isMe={isMe} revealMessage={revealMessage} />
+                    </LinearGradient>
+                ) : (
+                    <View style={[styles.bubble, styles.theirBubble]}>
+                        <MessageContent item={item} isMe={isMe} revealMessage={revealMessage} />
                     </View>
-                </View>
-            </View>
+                )}
+            </Animated.View>
         );
     };
 
     return (
-        <View style={styles.container}>
+        <GradientBackground>
             <Stack.Screen options={{
                 title: "Chat",
-                headerTitle: match?.question?.text ? () => (
-                    <View style={styles.headerTitleContainer}>
-                        <Text style={styles.headerTitle} numberOfLines={2}>
-                            {match.question.text}
-                            {match.question.partner_text ? ` & ${match.question.partner_text}` : ""}
-                        </Text>
-                        {match.responses && match.responses.length > 0 && (
-                            <View style={styles.answersContainer}>
-                                {match.responses.map((response) => (
-                                    <Text key={response.user_id} style={styles.answerText}>
-                                        {response.profiles?.name || 'You'}: {response.answer}
-                                    </Text>
-                                ))}
-                            </View>
-                        )}
-                    </View>
-                ) : "Chat",
-                headerStyle: { backgroundColor: "#16213e" },
-                headerTintColor: "#fff",
-                headerBackTitleVisible: false,
+                headerStyle: { backgroundColor: colors.backgroundLight },
+                headerTintColor: colors.text,
+                headerShadowVisible: false,
             }} />
 
             <KeyboardAvoidingView
@@ -337,21 +290,25 @@ export default function ChatScreen() {
             >
                 {/* Sticky top bar with question and answers */}
                 {match?.question && (
-                    <View style={styles.stickyTopBar}>
-                        <Text style={styles.stickyQuestionText}>
-                            {match.question.text}
-                            {match.question.partner_text ? ` & ${match.question.partner_text}` : ""}
-                        </Text>
-                        {match.responses && match.responses.length > 0 && (
-                            <View style={styles.stickyAnswersContainer}>
-                                {match.responses.map((response) => (
-                                    <Text key={response.user_id} style={styles.stickyAnswerText}>
-                                        {response.user_id === user?.id ? 'You' : (response.profiles?.name || 'Partner')}: {response.answer}
-                                    </Text>
-                                ))}
-                            </View>
-                        )}
-                    </View>
+                    <GlassCard style={styles.stickyTopBar} noPadding>
+                        <View style={styles.stickyContent}>
+                            <Text style={styles.stickyQuestionText} numberOfLines={2}>
+                                {match.question.text}
+                                {match.question.partner_text ? ` & ${match.question.partner_text}` : ""}
+                            </Text>
+                            {match.responses && match.responses.length > 0 && (
+                                <View style={styles.stickyAnswersContainer}>
+                                    {match.responses.map((response: any) => (
+                                        <View key={response.user_id} style={styles.answerBadge}>
+                                            <Text style={styles.stickyAnswerText}>
+                                                {response.user_id === user?.id ? 'You' : (response.profiles?.name || 'Partner')}: {response.answer}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </GlassCard>
                 )}
 
                 <FlatList
@@ -362,59 +319,165 @@ export default function ChatScreen() {
                     inverted
                     contentContainerStyle={styles.listContent}
                     keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                     ListHeaderComponent={
                         partnerTyping ? (
-                            <View style={styles.typingContainer}>
+                            <Animated.View
+                                entering={FadeIn.duration(200)}
+                                style={styles.typingContainer}
+                            >
                                 <Text style={styles.typingText}>Partner is typing...</Text>
-                            </View>
+                            </Animated.View>
                         ) : null
                     }
                 />
 
-                <View style={styles.inputContainer}>
-                    <TouchableOpacity onPress={handlePickImage} disabled={uploading} style={styles.attachButton}>
-                        {uploading ? (
-                            <ActivityIndicator color="#e94560" size="small" />
-                        ) : (
-                            <Ionicons name="image-outline" size={24} color="#e94560" />
-                        )}
-                    </TouchableOpacity>
-
-                    <TextInput
-                        style={styles.input}
-                        value={inputText}
-                        onChangeText={handleTyping}
-                        placeholder="Type a message..."
-                        placeholderTextColor="#666"
-                        multiline
-                    />
-
-                    <TouchableOpacity onPress={handleSend} disabled={!inputText.trim()} style={styles.sendButton}>
-                        <Ionicons
-                            name="send"
-                            size={24}
-                            color={inputText.trim() ? "#e94560" : "#666"}
+                {/* Input bar with glass effect */}
+                {Platform.OS === 'ios' ? (
+                    <BlurView intensity={blur.medium} tint="dark" style={styles.inputWrapper}>
+                        <InputBar
+                            inputText={inputText}
+                            uploading={uploading}
+                            onChangeText={handleTyping}
+                            onSend={handleSend}
+                            onPickImage={handlePickImage}
                         />
-                    </TouchableOpacity>
-                </View>
+                    </BlurView>
+                ) : (
+                    <View style={[styles.inputWrapper, styles.inputWrapperAndroid]}>
+                        <InputBar
+                            inputText={inputText}
+                            uploading={uploading}
+                            onChangeText={handleTyping}
+                            onSend={handleSend}
+                            onPickImage={handlePickImage}
+                        />
+                    </View>
+                )}
             </KeyboardAvoidingView>
+        </GradientBackground>
+    );
+}
+
+function MessageContent({
+    item,
+    isMe,
+    revealMessage,
+}: {
+    item: Message;
+    isMe: boolean;
+    revealMessage: (id: string) => void;
+}) {
+    if (item.media_path) {
+        return (
+            <View>
+                <Image
+                    source={{ uri: item.media_path }}
+                    style={styles.messageImage}
+                    blurRadius={(!isMe && !item.media_viewed_at) ? 20 : 0}
+                />
+                {(!isMe && !item.media_viewed_at) && (
+                    <TouchableOpacity
+                        style={styles.revealOverlay}
+                        activeOpacity={0.8}
+                        onPress={() => revealMessage(item.id)}
+                    >
+                        <View style={styles.revealContent}>
+                            <Ionicons name="eye-off-outline" size={28} color={colors.text} />
+                            <Text style={styles.revealText}>Tap to reveal</Text>
+                        </View>
+                    </TouchableOpacity>
+                )}
+                <MessageMeta item={item} isMe={isMe} />
+            </View>
+        );
+    }
+
+    return (
+        <>
+            <Text style={styles.messageText}>{item.content}</Text>
+            <MessageMeta item={item} isMe={isMe} />
+        </>
+    );
+}
+
+function MessageMeta({ item, isMe }: { item: Message; isMe: boolean }) {
+    return (
+        <View style={styles.metaContainer}>
+            <Text style={styles.timestamp}>
+                {new Date(item.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+            {isMe && (
+                <Ionicons
+                    name={item.read_at ? "checkmark-done" : "checkmark"}
+                    size={14}
+                    color={item.read_at ? colors.success : "rgba(255,255,255,0.6)"}
+                    style={styles.readIcon}
+                />
+            )}
+        </View>
+    );
+}
+
+function InputBar({
+    inputText,
+    uploading,
+    onChangeText,
+    onSend,
+    onPickImage,
+}: {
+    inputText: string;
+    uploading: boolean;
+    onChangeText: (text: string) => void;
+    onSend: () => void;
+    onPickImage: () => void;
+}) {
+    return (
+        <View style={styles.inputContainer}>
+            <TouchableOpacity onPress={onPickImage} disabled={uploading} style={styles.attachButton}>
+                {uploading ? (
+                    <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                    <Ionicons name="image-outline" size={24} color={colors.primary} />
+                )}
+            </TouchableOpacity>
+
+            <View style={styles.inputFieldWrapper}>
+                <TextInput
+                    style={styles.input}
+                    value={inputText}
+                    onChangeText={onChangeText}
+                    placeholder="Type a message..."
+                    placeholderTextColor={colors.textTertiary}
+                    multiline
+                />
+            </View>
+
+            <TouchableOpacity
+                onPress={onSend}
+                disabled={!inputText.trim()}
+                style={[styles.sendButton, inputText.trim() && styles.sendButtonActive]}
+            >
+                <Ionicons
+                    name="send"
+                    size={20}
+                    color={inputText.trim() ? colors.text : colors.textTertiary}
+                />
+            </TouchableOpacity>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#1a1a2e",
-    },
     keyboardAvoiding: {
         flex: 1,
     },
     listContent: {
-        padding: 16,
+        padding: spacing.md,
+        paddingBottom: spacing.lg,
     },
     messageRow: {
-        marginBottom: 16,
+        marginBottom: spacing.sm,
         flexDirection: "row",
     },
     myMessageRow: {
@@ -424,148 +487,143 @@ const styles = StyleSheet.create({
         justifyContent: "flex-start",
     },
     bubble: {
-        maxWidth: "75%",
-        padding: 12,
-        borderRadius: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 2,
+        maxWidth: "78%",
+        padding: spacing.md,
+        borderRadius: radius.xl,
+        ...shadows.sm,
     },
     myBubble: {
-        backgroundColor: "#e94560",
-        borderBottomRightRadius: 4,
+        borderBottomRightRadius: radius.xs,
     },
     theirBubble: {
-        backgroundColor: "#16213e",
+        backgroundColor: colors.glass.backgroundLight,
         borderWidth: 1,
-        borderColor: "#0f3460",
-        borderBottomLeftRadius: 4,
+        borderColor: colors.glass.border,
+        borderBottomLeftRadius: radius.xs,
     },
     messageText: {
-        color: "#fff",
-        fontSize: 16,
-        lineHeight: 22,
+        ...typography.body,
+        color: colors.text,
     },
     messageImage: {
         width: 200,
         height: 200,
-        borderRadius: 12,
-        backgroundColor: "rgba(0,0,0,0.2)",
+        borderRadius: radius.md,
+        backgroundColor: colors.glass.background,
     },
     metaContainer: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "flex-end",
-        marginTop: 4,
+        marginTop: spacing.xs,
     },
     timestamp: {
-        fontSize: 10,
-    },
-    myTimestamp: {
-        color: "rgba(255, 255, 255, 0.7)",
-    },
-    theirTimestamp: {
-        color: "rgba(255, 255, 255, 0.4)",
+        ...typography.caption2,
+        color: "rgba(255, 255, 255, 0.6)",
     },
     readIcon: {
-        marginLeft: 4,
+        marginLeft: spacing.xs,
+    },
+    inputWrapper: {
+        borderTopWidth: 1,
+        borderTopColor: colors.glass.border,
+    },
+    inputWrapperAndroid: {
+        backgroundColor: colors.glass.backgroundLight,
     },
     inputContainer: {
         flexDirection: "row",
-        alignItems: "center",
-        padding: 12,
-        paddingBottom: Platform.OS === "ios" ? 34 : 12,
-        backgroundColor: "#16213e",
-        borderTopWidth: 1,
-        borderTopColor: "#0f3460",
+        alignItems: "flex-end",
+        padding: spacing.sm,
+        paddingBottom: Platform.OS === "ios" ? spacing.xl : spacing.sm,
     },
     attachButton: {
-        padding: 10,
+        padding: spacing.sm,
+        marginBottom: spacing.xs,
+    },
+    inputFieldWrapper: {
+        flex: 1,
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        marginHorizontal: spacing.sm,
     },
     input: {
-        flex: 1,
-        backgroundColor: "#0f3460",
-        borderRadius: 24,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        color: "#fff",
-        maxHeight: 120,
-        marginHorizontal: 8,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        color: colors.text,
         fontSize: 16,
+        maxHeight: 100,
     },
     sendButton: {
-        padding: 10,
-    },
-    headerTitleContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
         alignItems: "center",
-        maxWidth: 200,
+        marginBottom: spacing.xs,
     },
-    headerTitle: {
-        color: "#fff",
-        fontWeight: "bold",
-        fontSize: 16,
-        textAlign: "center",
-    },
-    answersContainer: {
-        marginTop: 4,
-        alignItems: "center",
-    },
-    answerText: {
-        color: "rgba(255,255,255,0.8)",
-        fontSize: 12,
-        marginBottom: 2,
+    sendButtonActive: {
+        backgroundColor: colors.primary,
     },
     typingContainer: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
     },
     typingText: {
-        color: "#666",
+        ...typography.caption1,
+        color: colors.textTertiary,
         fontStyle: "italic",
-        fontSize: 12,
     },
     revealOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.3)",
-        borderRadius: 12,
+        backgroundColor: "rgba(0,0,0,0.4)",
+        borderRadius: radius.md,
     },
     revealContent: {
         alignItems: "center",
         backgroundColor: "rgba(0,0,0,0.6)",
-        padding: 12,
-        borderRadius: 12,
+        padding: spacing.md,
+        borderRadius: radius.md,
     },
     revealText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "bold",
-        marginTop: 4,
+        ...typography.caption1,
+        color: colors.text,
+        fontWeight: "600",
+        marginTop: spacing.xs,
     },
     stickyTopBar: {
-        backgroundColor: "#16213e",
-        borderBottomWidth: 1,
-        borderBottomColor: "#0f3460",
-        padding: 16,
-        paddingTop: 12,
-        paddingBottom: 12,
+        marginHorizontal: spacing.md,
+        marginTop: spacing.sm,
+        marginBottom: spacing.xs,
+    },
+    stickyContent: {
+        padding: spacing.md,
     },
     stickyQuestionText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "bold",
+        ...typography.subhead,
+        color: colors.text,
+        fontWeight: "600",
         textAlign: "center",
-        marginBottom: 8,
+        marginBottom: spacing.sm,
     },
     stickyAnswersContainer: {
-        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: spacing.sm,
+    },
+    answerBadge: {
+        backgroundColor: colors.primaryLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.sm,
     },
     stickyAnswerText: {
-        color: "rgba(255,255,255,0.8)",
-        fontSize: 14,
-        marginBottom: 4,
-    }
+        ...typography.caption1,
+        color: colors.text,
+    },
 });

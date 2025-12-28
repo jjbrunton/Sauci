@@ -1,5 +1,7 @@
-import { View, Text, StyleSheet, Image, Dimensions, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Dimensions, Platform } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -8,16 +10,32 @@ import Animated, {
     interpolate,
     Extrapolate,
     withTiming,
+    interpolateColor,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
+
+// Haptics helper - not supported on web
+const triggerHaptic = async (style: 'light' | 'medium' | 'heavy' = 'medium') => {
+    if (Platform.OS === 'web') return;
+    const Haptics = await import('expo-haptics');
+    const feedbackStyle = style === 'light'
+        ? Haptics.ImpactFeedbackStyle.Light
+        : style === 'heavy'
+            ? Haptics.ImpactFeedbackStyle.Heavy
+            : Haptics.ImpactFeedbackStyle.Medium;
+    await Haptics.impactAsync(feedbackStyle);
+};
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 interface Props {
-    question: { id: string; text: string; intensity: number; partner_text?: string | null };
+    question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean };
     onSwipe: (direction: "left" | "right" | "up") => void;
 }
+
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 export default function SwipeCard({ question, onSwipe }: Props) {
     const translateX = useSharedValue(0);
@@ -32,7 +50,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         .activeOffsetY([-15, 15])
         .onStart(() => {
             context.value = { x: translateX.value, y: translateY.value };
-            scale.value = withTiming(1.05);
+            scale.value = withTiming(1.02, { duration: animations.timing.fast });
         })
         .onUpdate((event) => {
             translateX.value = event.translationX + context.value.x;
@@ -40,27 +58,29 @@ export default function SwipeCard({ question, onSwipe }: Props) {
             rotation.value = interpolate(
                 translateX.value,
                 [-SCREEN_WIDTH / 2, SCREEN_WIDTH / 2],
-                [-15, 15],
+                [-12, 12],
                 Extrapolate.CLAMP
             );
         })
         .onEnd(() => {
-            scale.value = withTiming(1);
+            scale.value = withTiming(1, { duration: animations.timing.fast });
 
             if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
-                // Horizontal swipe (YES/NO)
                 const direction = translateX.value > 0 ? "right" : "left";
-                translateX.value = withSpring(direction === "right" ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5);
+                runOnJS(triggerHaptic)('medium');
+                translateX.value = withSpring(
+                    direction === "right" ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5,
+                    animations.springGentle
+                );
                 runOnJS(onSwipe)(direction);
             } else if (translateY.value < -SWIPE_THRESHOLD) {
-                // Vertical swipe up (MAYBE)
-                translateY.value = withSpring(-SCREEN_WIDTH * 1.5);
+                runOnJS(triggerHaptic)('medium');
+                translateY.value = withSpring(-SCREEN_WIDTH * 1.5, animations.springGentle);
                 runOnJS(onSwipe)("up");
             } else {
-                // Reset
-                translateX.value = withSpring(0);
-                translateY.value = withSpring(0);
-                rotation.value = withSpring(0);
+                translateX.value = withSpring(0, animations.spring);
+                translateY.value = withSpring(0, animations.spring);
+                rotation.value = withSpring(0, animations.spring);
             }
         });
 
@@ -73,80 +93,184 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         ],
     }));
 
-    const overlayStyle = (direction: "left" | "right" | "up", color: string) =>
+    const overlayStyle = (direction: "left" | "right" | "up") =>
         useAnimatedStyle(() => {
             let opacity = 0;
+            let backgroundColor = 'transparent';
+
             if (direction === "right") {
-                opacity = interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 1]);
+                opacity = interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 0.9]);
+                backgroundColor = interpolateColor(
+                    opacity,
+                    [0, 0.9],
+                    ['transparent', 'rgba(46, 204, 113, 0.4)']
+                ) as string;
             } else if (direction === "left") {
-                opacity = interpolate(translateX.value, [0, -SWIPE_THRESHOLD], [0, 1]);
+                opacity = interpolate(translateX.value, [0, -SWIPE_THRESHOLD], [0, 0.9]);
+                backgroundColor = interpolateColor(
+                    opacity,
+                    [0, 0.9],
+                    ['transparent', 'rgba(231, 76, 60, 0.4)']
+                ) as string;
             } else {
-                opacity = interpolate(translateY.value, [0, -SWIPE_THRESHOLD], [0, 1]);
+                opacity = interpolate(translateY.value, [0, -SWIPE_THRESHOLD], [0, 0.9]);
+                backgroundColor = interpolateColor(
+                    opacity,
+                    [0, 0.9],
+                    ['transparent', 'rgba(243, 156, 18, 0.4)']
+                ) as string;
             }
 
             return {
                 opacity,
-                backgroundColor: color,
+                backgroundColor,
             };
         });
+
+    const handleButtonPress = async (direction: "left" | "right" | "up") => {
+        await triggerHaptic('light');
+        onSwipe(direction);
+    };
+
+    const useBlur = Platform.OS === 'ios';
 
     return (
         <View style={styles.cardWrapper}>
             <GestureDetector gesture={gesture}>
-                <Animated.View style={[styles.card, animatedStyle]}>
-                    {/* Overlays */}
-                    <Animated.View style={[styles.overlay, overlayStyle("right", "rgba(76, 175, 80, 0.4)")]}>
-                        <Text style={styles.overlayText}>YES</Text>
-                    </Animated.View>
-                    <Animated.View style={[styles.overlay, overlayStyle("left", "rgba(244, 67, 54, 0.4)")]}>
-                        <Text style={styles.overlayText}>NO</Text>
-                    </Animated.View>
-                    <Animated.View style={[styles.overlay, overlayStyle("up", "rgba(255, 152, 0, 0.4)")]}>
-                        <Text style={styles.overlayText}>MAYBE</Text>
-                    </Animated.View>
-
-                    <View style={styles.content}>
-                        <View style={styles.intensityContainer}>
-                            {[...Array(question.intensity)].map((_, i) => (
-                                <Ionicons key={i} name="flame" size={16} color="#e94560" />
-                            ))}
+                <Animated.View style={[styles.cardOuter, animatedStyle, shadows.xl]}>
+                    {useBlur ? (
+                        <BlurView
+                            intensity={blur.medium}
+                            tint="dark"
+                            style={styles.blurContainer}
+                        >
+                            <CardContent
+                                question={question}
+                                overlayStyle={overlayStyle}
+                                handleButtonPress={handleButtonPress}
+                            />
+                        </BlurView>
+                    ) : (
+                        <View style={styles.fallbackContainer}>
+                            <CardContent
+                                question={question}
+                                overlayStyle={overlayStyle}
+                                handleButtonPress={handleButtonPress}
+                            />
                         </View>
-                        <Text style={[styles.text, question.is_two_part ? styles.twoPartText : null]}>{question.text}</Text>
-                    </View>
+                    )}
                 </Animated.View>
             </GestureDetector>
-            
+        </View>
+    );
+}
+
+function CardContent({
+    question,
+    overlayStyle,
+    handleButtonPress,
+}: {
+    question: Props['question'];
+    overlayStyle: (direction: "left" | "right" | "up") => any;
+    handleButtonPress: (direction: "left" | "right" | "up") => void;
+}) {
+    return (
+        <>
+            {/* Top highlight */}
+            <LinearGradient
+                colors={[colors.glass.highlight, 'transparent']}
+                style={styles.highlight}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+            />
+
+            {/* Overlays */}
+            <Animated.View style={[styles.overlay, overlayStyle("right")]}>
+                <View style={[styles.overlayBadge, { backgroundColor: colors.success }]}>
+                    <Text style={styles.overlayText}>YES</Text>
+                </View>
+            </Animated.View>
+            <Animated.View style={[styles.overlay, overlayStyle("left")]}>
+                <View style={[styles.overlayBadge, { backgroundColor: colors.error }]}>
+                    <Text style={styles.overlayText}>NO</Text>
+                </View>
+            </Animated.View>
+            <Animated.View style={[styles.overlay, overlayStyle("up")]}>
+                <View style={[styles.overlayBadge, { backgroundColor: colors.warning }]}>
+                    <Text style={styles.overlayText}>MAYBE</Text>
+                </View>
+            </Animated.View>
+
+            {/* Content */}
+            <View style={styles.content}>
+                <View style={styles.intensityContainer}>
+                    {[...Array(question.intensity)].map((_, i) => (
+                        <Ionicons key={i} name="flame" size={16} color={colors.primary} />
+                    ))}
+                </View>
+                <Text style={[styles.text, question.is_two_part && styles.twoPartText]}>
+                    {question.text}
+                </Text>
+            </View>
+
+            {/* Action Buttons */}
             <View style={styles.footer}>
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.noButton]}
-                        onPress={() => onSwipe("left")}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="thumbs-down" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.maybeButton]}
-                        onPress={() => onSwipe("up")}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="help-circle" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.actionButton, styles.yesButton]}
-                        onPress={() => onSwipe("right")}
-                        activeOpacity={0.7}
-                    >
-                        <View style={styles.buttonInnerGlow} />
-                        <Ionicons name="thumbs-up" size={24} color="#fff" style={styles.buttonIcon} />
-                    </TouchableOpacity>
+                    <ActionButton
+                        onPress={() => handleButtonPress("left")}
+                        colors={gradients.error as [string, string]}
+                        icon="close"
+                    />
+                    <ActionButton
+                        onPress={() => handleButtonPress("up")}
+                        colors={gradients.warning as [string, string]}
+                        icon="help"
+                        small
+                    />
+                    <ActionButton
+                        onPress={() => handleButtonPress("right")}
+                        colors={gradients.success as [string, string]}
+                        icon="heart"
+                    />
                 </View>
             </View>
-        </View>
+        </>
+    );
+}
+
+function ActionButton({
+    onPress,
+    colors: buttonColors,
+    icon,
+    small = false,
+}: {
+    onPress: () => void;
+    colors: [string, string];
+    icon: string;
+    small?: boolean;
+}) {
+    return (
+        <Animated.View>
+            <LinearGradient
+                colors={buttonColors}
+                style={[
+                    styles.actionButton,
+                    small && styles.actionButtonSmall,
+                    shadows.md,
+                ]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+            >
+                <View style={styles.buttonHighlight} />
+                <Ionicons
+                    name={icon as any}
+                    size={small ? 20 : 28}
+                    color={colors.text}
+                    style={styles.buttonIcon}
+                    onPress={onPress}
+                />
+            </LinearGradient>
+        </Animated.View>
     );
 }
 
@@ -154,159 +278,113 @@ const styles = StyleSheet.create({
     cardWrapper: {
         position: "absolute",
         width: SCREEN_WIDTH - 48,
-        height: 500,
+        height: 480,
     },
-    card: {
+    cardOuter: {
         width: "100%",
-        height: 500,
-        backgroundColor: "#16213e",
-        borderRadius: 24,
-        borderWidth: 1,
-        borderColor: "#0f3460",
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
-        elevation: 8,
+        height: "100%",
+        borderRadius: radius.xxl,
         overflow: "hidden",
+    },
+    blurContainer: {
+        flex: 1,
+        backgroundColor: colors.glass.background,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        borderRadius: radius.xxl,
+        overflow: "hidden",
+    },
+    fallbackContainer: {
+        flex: 1,
+        backgroundColor: colors.glass.backgroundLight,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        borderRadius: radius.xxl,
+        overflow: "hidden",
+    },
+    highlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 80,
     },
     content: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        padding: 32,
+        padding: spacing.xl,
     },
     intensityContainer: {
         flexDirection: "row",
-        marginBottom: 24,
-        backgroundColor: "rgba(233, 69, 96, 0.1)",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+        marginBottom: spacing.lg,
+        backgroundColor: colors.primaryLight,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        gap: 2,
     },
     text: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#fff",
+        ...typography.title2,
+        color: colors.text,
         textAlign: "center",
         lineHeight: 32,
     },
     twoPartText: {
-        fontSize: 20,
+        ...typography.title3,
         lineHeight: 28,
     },
     footer: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingTop: 8,
-        paddingBottom: 16,
-        paddingHorizontal: 8,
-        alignItems: "center",
-        backgroundColor: "rgba(0,0,0,0.2)",
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
-    },
-    hint: {
-        color: "#666",
-        fontSize: 12,
-        marginBottom: 4,
+        paddingBottom: spacing.lg,
+        paddingHorizontal: spacing.lg,
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: "center",
         alignItems: "center",
         zIndex: 10,
+        borderRadius: radius.xxl,
+    },
+    overlayBadge: {
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        transform: [{ rotate: "-15deg" }],
     },
     overlayText: {
-        fontSize: 48,
+        fontSize: 36,
         fontWeight: "900",
-        color: "#fff",
-        textShadowColor: "rgba(0,0,0,0.5)",
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
-        transform: [{ rotate: "-15deg" }],
-        borderWidth: 4,
-        borderColor: "#fff",
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 12,
-    },
-    partnerContainer: {
-        width: "100%",
-        alignItems: "center",
-    },
-    divider: {
-        height: 1,
-        width: "80%",
-        backgroundColor: "rgba(255,255,255,0.1)",
-        marginVertical: 24,
-        position: "relative",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    dividerText: {
-        color: "#666",
-        backgroundColor: "#16213e",
-        paddingHorizontal: 10,
-        fontSize: 12,
-        fontWeight: "bold",
-        position: "absolute",
+        color: colors.text,
+        letterSpacing: 2,
     },
     buttonContainer: {
         flexDirection: "row",
-        justifyContent: "space-between",
+        justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-        gap: 20,
-        zIndex: 21,
+        gap: spacing.md,
     },
     actionButton: {
-        alignItems: "center",
-        justifyContent: "center",
         width: 64,
         height: 64,
         borderRadius: 32,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 8,
-        borderWidth: 2,
+        justifyContent: "center",
+        alignItems: "center",
         overflow: "hidden",
-        zIndex: 22,
     },
-    noButton: {
-        backgroundColor: "#E74C3C",
-        borderColor: "rgba(255, 255, 255, 0.3)",
+    actionButtonSmall: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
     },
-    maybeButton: {
-        backgroundColor: "#F39C12",
-        borderColor: "rgba(255, 255, 255, 0.3)",
-    },
-    yesButton: {
-        backgroundColor: "#2ECC71",
-        borderColor: "rgba(255, 255, 255, 0.3)",
-    },
-    buttonInnerGlow: {
+    buttonHighlight: {
         position: "absolute",
         top: 0,
         left: 0,
         right: 0,
         height: "50%",
         backgroundColor: "rgba(255, 255, 255, 0.15)",
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
     },
     buttonIcon: {
         zIndex: 1,
-        textShadowColor: "rgba(0, 0, 0, 0.3)",
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
     },
 });

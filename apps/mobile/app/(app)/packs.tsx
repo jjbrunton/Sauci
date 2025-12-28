@@ -1,8 +1,11 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Switch } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Switch, RefreshControl, Platform } from "react-native";
 import { usePacksStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import { GradientBackground, GlassCard } from "../../src/components/ui";
+import { colors, spacing, typography, radius } from "../../src/theme";
 
 export default function PacksScreen() {
     const { packs, enabledPackIds, togglePack, isLoading, fetchPacks } = usePacksStore();
@@ -11,86 +14,132 @@ export default function PacksScreen() {
         fetchPacks();
     }, []);
 
-    const renderItem = ({ item }: { item: any }) => (
-        <View style={styles.card}>
-            <TouchableOpacity
-                style={styles.cardContent}
-                activeOpacity={0.7}
-                onPress={() => router.push(`/pack/${item.id}`)}
-            >
-                <View style={styles.iconContainer}>
-                    <Text style={styles.emoji}>{item.icon || "📦"}</Text>
-                </View>
-                <View style={styles.content}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.name}>{item.name}</Text>
-                        {item.is_premium && (
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>PRO</Text>
+    const enabledCount = packs.filter(p => enabledPackIds.includes(p.id)).length;
+
+    const renderItem = ({ item, index }: { item: any; index: number }) => {
+        const isEnabled = enabledPackIds.includes(item.id);
+
+        return (
+            <Animated.View entering={FadeInRight.delay(index * 50).duration(300)}>
+                <GlassCard style={styles.card}>
+                    <TouchableOpacity
+                        style={styles.cardContent}
+                        activeOpacity={0.7}
+                        onPress={() => router.push(`/pack/${item.id}`)}
+                    >
+                        <View style={[styles.iconContainer, isEnabled && styles.iconContainerActive]}>
+                            <Text style={styles.emoji}>{item.icon || "📦"}</Text>
+                        </View>
+                        <View style={styles.content}>
+                            <View style={styles.headerRow}>
+                                <Text style={styles.name}>{item.name}</Text>
+                                {item.is_premium && (
+                                    <View style={styles.badge}>
+                                        <Ionicons name="star" size={10} color={colors.text} />
+                                        <Text style={styles.badgeText}>PRO</Text>
+                                    </View>
+                                )}
                             </View>
-                        )}
+                            <Text style={styles.description} numberOfLines={2}>
+                                {item.description}
+                            </Text>
+                            {item.question_count && (
+                                <Text style={styles.questionCount}>
+                                    {item.question_count} questions
+                                </Text>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                    <View style={styles.switchContainer}>
+                        <Switch
+                            value={isEnabled}
+                            onValueChange={() => togglePack(item.id)}
+                            trackColor={{
+                                false: colors.glass.background,
+                                true: colors.primary,
+                            }}
+                            thumbColor={colors.text}
+                            ios_backgroundColor={colors.glass.background}
+                        />
                     </View>
-                    <Text style={styles.description} numberOfLines={2}>
-                        {item.description}
-                    </Text>
-                </View>
-            </TouchableOpacity>
-            <Switch
-                value={enabledPackIds.includes(item.id)}
-                onValueChange={() => togglePack(item.id)}
-                trackColor={{ false: "#767577", true: "#e94560" }}
-                thumbColor={"#fff"}
-            />
-        </View>
-    );
+                </GlassCard>
+            </Animated.View>
+        );
+    };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Question Packs</Text>
-            </View>
+        <GradientBackground>
+            <View style={styles.container}>
+                <Animated.View
+                    entering={FadeInDown.duration(400)}
+                    style={styles.header}
+                >
+                    <Text style={styles.title}>Question Packs</Text>
+                    <Text style={styles.subtitle}>
+                        {enabledCount} of {packs.length} packs enabled
+                    </Text>
+                </Animated.View>
 
-            <FlatList
-                data={packs}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
-                refreshing={isLoading}
-                onRefresh={fetchPacks}
-            />
-        </View>
+                <FlatList
+                    data={packs}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.list}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={isLoading}
+                            onRefresh={fetchPacks}
+                            tintColor={colors.primary}
+                            colors={[colors.primary]}
+                        />
+                    }
+                    ListEmptyComponent={
+                        <Animated.View
+                            entering={FadeInDown.delay(200).duration(400)}
+                            style={styles.emptyContainer}
+                        >
+                            <View style={styles.emptyIconContainer}>
+                                <Ionicons name="layers-outline" size={48} color={colors.textTertiary} />
+                            </View>
+                            <Text style={styles.emptyTitle}>No packs available</Text>
+                            <Text style={styles.emptyText}>
+                                Check back later for new question packs!
+                            </Text>
+                        </Animated.View>
+                    }
+                />
+            </View>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#1a1a2e",
     },
     header: {
         paddingTop: 60,
-        paddingHorizontal: 24,
-        paddingBottom: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: "#16213e",
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
     },
     title: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#fff",
+        ...typography.title1,
+        color: colors.text,
+    },
+    subtitle: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        marginTop: spacing.xs,
     },
     list: {
-        padding: 24,
+        padding: spacing.lg,
+        paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
     card: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#16213e",
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: "#0f3460",
+        marginBottom: spacing.sm,
     },
     cardContent: {
         flex: 1,
@@ -98,46 +147,82 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "rgba(255, 255, 255, 0.05)",
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: colors.glass.background,
         justifyContent: "center",
         alignItems: "center",
-        marginRight: 16,
+        marginRight: spacing.md,
+    },
+    iconContainerActive: {
+        backgroundColor: colors.primaryLight,
     },
     emoji: {
-        fontSize: 24,
+        fontSize: 26,
     },
     content: {
         flex: 1,
-        marginRight: 16,
+        marginRight: spacing.sm,
     },
     headerRow: {
         flexDirection: "row",
         alignItems: "center",
-        marginBottom: 4,
+        marginBottom: spacing.xs,
     },
     name: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#fff",
-        marginRight: 8,
+        ...typography.headline,
+        color: colors.text,
+        marginRight: spacing.sm,
     },
     badge: {
-        backgroundColor: "#e94560",
-        paddingHorizontal: 6,
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.primary,
+        paddingHorizontal: spacing.sm,
         paddingVertical: 2,
-        borderRadius: 4,
+        borderRadius: radius.xs,
+        gap: 2,
     },
     badgeText: {
-        color: "#fff",
-        fontSize: 10,
-        fontWeight: "bold",
+        ...typography.caption2,
+        color: colors.text,
+        fontWeight: "700",
     },
     description: {
-        fontSize: 14,
-        color: "#888",
+        ...typography.subhead,
+        color: colors.textSecondary,
         lineHeight: 20,
+    },
+    questionCount: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        marginTop: spacing.xs,
+    },
+    switchContainer: {
+        paddingLeft: spacing.sm,
+    },
+    emptyContainer: {
+        alignItems: "center",
+        paddingVertical: spacing.xxl,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.md,
+    },
+    emptyTitle: {
+        ...typography.title3,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    emptyText: {
+        ...typography.body,
+        color: colors.textSecondary,
+        textAlign: "center",
     },
 });

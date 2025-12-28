@@ -1,7 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform } from "react-native";
 import { useAuthStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
+import { router } from "expo-router";
+import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
 export default function ProfileScreen() {
     const { user, partner, signOut, fetchCouple } = useAuthStore();
@@ -20,7 +25,7 @@ export default function ProfileScreen() {
                             await supabase.functions.invoke("manage-couple", {
                                 method: "DELETE",
                             });
-                            await fetchCouple(); // Refresh state
+                            await fetchCouple();
                         } catch (error) {
                             Alert.alert("Error", "Failed to unpair");
                         }
@@ -30,139 +35,269 @@ export default function ProfileScreen() {
         );
     };
 
+    const handleSignOut = () => {
+        Alert.alert(
+            "Sign Out",
+            "Are you sure you want to sign out?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Sign Out",
+                    style: "destructive",
+                    onPress: signOut,
+                },
+            ]
+        );
+    };
+
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Profile</Text>
-            </View>
+        <GradientBackground>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={styles.contentContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header */}
+                <Animated.View
+                    entering={FadeInDown.delay(100).duration(500)}
+                    style={styles.header}
+                >
+                    <Text style={styles.title}>Profile</Text>
+                </Animated.View>
 
-            <View style={styles.content}>
-                <View style={styles.profileCard}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                            {user?.name?.[0]?.toUpperCase() || "U"}
-                        </Text>
-                    </View>
-                    <Text style={styles.name}>{user?.name || "User"}</Text>
-                    <Text style={styles.email}>{user?.email}</Text>
-                </View>
-
-                <Text style={styles.sectionTitle}>Relationship</Text>
-                <View style={styles.section}>
-                    {partner ? (
-                        <View style={styles.row}>
-                            <View style={styles.partnerInfo}>
-                                <Ionicons name="heart" size={24} color="#e94560" />
-                                <Text style={styles.rowText}>Paired with {partner.name || partner.email || 'your partner'}</Text>
+                {/* Profile Card */}
+                <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+                    <GlassCard style={styles.profileCard} variant="elevated">
+                        <LinearGradient
+                            colors={gradients.primary as [string, string]}
+                            style={styles.avatarContainer}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {user?.name?.[0]?.toUpperCase() || "U"}
+                                </Text>
                             </View>
-                            <TouchableOpacity onPress={handleUnpair}>
-                                <Ionicons name="trash-outline" size={20} color="#666" />
+                        </LinearGradient>
+                        <Text style={styles.name}>{user?.name || "User"}</Text>
+                        <Text style={styles.email}>{user?.email}</Text>
+                    </GlassCard>
+                </Animated.View>
+
+                {/* Relationship Section */}
+                <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+                    <Text style={styles.sectionTitle}>Relationship</Text>
+                    <GlassCard>
+                        {partner ? (
+                            <View style={styles.row}>
+                                <View style={styles.rowLeft}>
+                                    <View style={styles.rowIconContainer}>
+                                        <Ionicons name="heart" size={20} color={colors.primary} />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.rowLabel}>Paired with</Text>
+                                        <Text style={styles.rowValue}>
+                                            {partner.name || partner.email || 'your partner'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={handleUnpair}
+                                    style={styles.rowAction}
+                                    activeOpacity={0.7}
+                                >
+                                    <Ionicons name="unlink-outline" size={20} color={colors.error} />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.row}
+                                onPress={() => router.push("/(app)/pairing")}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.rowLeft}>
+                                    <View style={[styles.rowIconContainer, styles.rowIconInactive]}>
+                                        <Ionicons name="heart-outline" size={20} color={colors.textTertiary} />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.rowLabel}>Not paired yet</Text>
+                                        <Text style={styles.rowValueMuted}>Tap to connect with your partner</Text>
+                                    </View>
+                                </View>
+                                <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
                             </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.row}>
-                            <Text style={styles.rowText}>Not paired yet</Text>
-                        </View>
-                    )}
-                </View>
+                        )}
+                    </GlassCard>
+                </Animated.View>
 
-                <Text style={styles.sectionTitle}>Settings</Text>
-                <View style={styles.section}>
-                    <TouchableOpacity style={styles.row} onPress={signOut}>
-                        <Text style={[styles.rowText, { color: "#ff4444" }]}>Sign Out</Text>
-                        <Ionicons name="log-out-outline" size={20} color="#ff4444" />
-                    </TouchableOpacity>
-                </View>
+                {/* Settings Section */}
+                <Animated.View entering={FadeInDown.delay(400).duration(500)}>
+                    <Text style={styles.sectionTitle}>Account</Text>
+                    <GlassCard noPadding>
+                        <TouchableOpacity
+                            style={[styles.menuRow, styles.menuRowDanger]}
+                            onPress={handleSignOut}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.rowLeft}>
+                                <View style={[styles.rowIconContainer, styles.rowIconDanger]}>
+                                    <Ionicons name="log-out-outline" size={20} color={colors.error} />
+                                </View>
+                                <Text style={styles.rowLabelDanger}>Sign Out</Text>
+                            </View>
+                            <Ionicons name="chevron-forward" size={20} color={colors.error} />
+                        </TouchableOpacity>
+                    </GlassCard>
+                </Animated.View>
 
-                <Text style={styles.version}>Sauci v1.0.0</Text>
-            </View>
-        </View>
+                {/* Version */}
+                <Animated.View
+                    entering={FadeInDown.delay(500).duration(500)}
+                    style={styles.versionContainer}
+                >
+                    <Text style={styles.version}>Sauci v1.0.0</Text>
+                    <Text style={styles.versionSub}>Made with love</Text>
+                </Animated.View>
+
+                {/* Bottom spacing for tab bar */}
+                <View style={styles.bottomSpacer} />
+            </ScrollView>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#1a1a2e",
+    },
+    contentContainer: {
+        paddingBottom: Platform.OS === 'ios' ? 100 : 80,
     },
     header: {
         paddingTop: 60,
-        paddingHorizontal: 24,
-        paddingBottom: 24,
-        borderBottomWidth: 1,
-        borderBottomColor: "#16213e",
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
     },
     title: {
-        fontSize: 28,
-        fontWeight: "bold",
-        color: "#fff",
-    },
-    content: {
-        padding: 24,
+        ...typography.title1,
+        color: colors.text,
     },
     profileCard: {
+        marginHorizontal: spacing.lg,
         alignItems: "center",
-        marginBottom: 40,
+        paddingVertical: spacing.xl,
+        marginBottom: spacing.lg,
+    },
+    avatarContainer: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.md,
+        ...shadows.lg,
     },
     avatar: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: "#e94560",
+        backgroundColor: colors.background,
         justifyContent: "center",
         alignItems: "center",
-        marginBottom: 16,
     },
     avatarText: {
         fontSize: 32,
         fontWeight: "bold",
-        color: "#fff",
+        color: colors.text,
     },
     name: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#fff",
-        marginBottom: 4,
+        ...typography.title2,
+        color: colors.text,
+        marginBottom: spacing.xs,
     },
     email: {
-        fontSize: 14,
-        color: "#666",
+        ...typography.subhead,
+        color: colors.textSecondary,
     },
     sectionTitle: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#666",
-        marginBottom: 8,
-        marginLeft: 4,
+        ...typography.caption1,
+        color: colors.textTertiary,
         textTransform: "uppercase",
-    },
-    section: {
-        backgroundColor: "#16213e",
-        borderRadius: 12,
-        marginBottom: 24,
-        overflow: "hidden",
+        letterSpacing: 1,
+        marginBottom: spacing.sm,
+        marginLeft: spacing.lg + spacing.xs,
     },
     row: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#1a1a2e",
+        padding: spacing.md,
     },
-    partnerInfo: {
+    rowLeft: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
+        flex: 1,
     },
-    rowText: {
-        fontSize: 16,
-        color: "#fff",
+    rowIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.primaryLight,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: spacing.md,
+    },
+    rowIconInactive: {
+        backgroundColor: colors.glass.background,
+    },
+    rowIconDanger: {
+        backgroundColor: colors.errorLight,
+    },
+    rowLabel: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+    },
+    rowValue: {
+        ...typography.body,
+        color: colors.text,
+        fontWeight: "600",
+    },
+    rowValueMuted: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    rowLabelDanger: {
+        ...typography.body,
+        color: colors.error,
+        fontWeight: "500",
+    },
+    rowAction: {
+        padding: spacing.sm,
+    },
+    menuRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: spacing.md,
+    },
+    menuRowDanger: {
+        borderRadius: radius.lg,
+    },
+    versionContainer: {
+        alignItems: "center",
+        marginTop: spacing.xl,
     },
     version: {
-        textAlign: "center",
-        color: "#666",
-        fontSize: 12,
-        marginTop: 24,
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    versionSub: {
+        ...typography.caption2,
+        color: colors.textTertiary,
+        marginTop: spacing.xs,
+    },
+    bottomSpacer: {
+        height: spacing.lg,
     },
 });
