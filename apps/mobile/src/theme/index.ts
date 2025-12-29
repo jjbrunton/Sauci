@@ -21,6 +21,10 @@ export const colors = {
   primaryDark: '#c73a52',
   primaryLight: 'rgba(233, 69, 96, 0.15)',
   primaryGlow: 'rgba(233, 69, 96, 0.3)',
+  secondary: '#9b59b6',
+  secondaryDark: '#8e44ad',
+  secondaryLight: 'rgba(155, 89, 182, 0.15)',
+  secondaryGlow: 'rgba(155, 89, 182, 0.3)',
 
   // Text
   text: '#ffffff',
@@ -37,8 +41,10 @@ export const colors = {
 };
 
 export const gradients = {
-  primary: ['#e94560', '#c73a52'],
-  primarySubtle: ['rgba(233, 69, 96, 0.8)', 'rgba(199, 58, 82, 0.8)'],
+  primary: ['#e94560', '#9b59b6'],
+  primarySubtle: ['rgba(233, 69, 96, 0.8)', 'rgba(155, 89, 182, 0.8)'],
+  primaryReverse: ['#9b59b6', '#e94560'],
+  primaryVertical: ['#e94560', '#9b59b6'],
   background: ['#1a1a2e', '#0d0d1a'],
   backgroundReverse: ['#0d0d1a', '#1a1a2e'],
   glass: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0)'],

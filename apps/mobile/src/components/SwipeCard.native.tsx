@@ -34,7 +34,7 @@ const SWIPE_THRESHOLD = 100;
 
 interface Props {
     question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean };
-    onSwipe: (direction: "left" | "right" | "up") => void;
+    onSwipe: (direction: "left" | "right" | "up" | "down") => void;
 }
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -83,6 +83,10 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                 runOnJS(triggerHaptic)('medium');
                 translateY.value = withSpring(-screenWidth * 1.5, animations.springGentle);
                 runOnJS(onSwipe)("up");
+            } else if (translateY.value > SWIPE_THRESHOLD) {
+                runOnJS(triggerHaptic)('light');
+                translateY.value = withSpring(screenWidth * 1.5, animations.springGentle);
+                runOnJS(onSwipe)("down");
             } else {
                 translateX.value = withSpring(0, animations.spring);
                 translateY.value = withSpring(0, animations.spring);
@@ -99,7 +103,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         ],
     }));
 
-    const overlayStyle = (direction: "left" | "right" | "up") =>
+    const overlayStyle = (direction: "left" | "right" | "up" | "down") =>
         useAnimatedStyle(() => {
             let opacity = 0;
             let backgroundColor = 'transparent';
@@ -118,12 +122,19 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                     [0, 0.9],
                     ['transparent', 'rgba(231, 76, 60, 0.4)']
                 ) as string;
-            } else {
+            } else if (direction === "up") {
                 opacity = interpolate(translateY.value, [0, -SWIPE_THRESHOLD], [0, 0.9]);
                 backgroundColor = interpolateColor(
                     opacity,
                     [0, 0.9],
                     ['transparent', 'rgba(243, 156, 18, 0.4)']
+                ) as string;
+            } else {
+                opacity = interpolate(translateY.value, [0, SWIPE_THRESHOLD], [0, 0.9]);
+                backgroundColor = interpolateColor(
+                    opacity,
+                    [0, 0.9],
+                    ['transparent', 'rgba(108, 117, 125, 0.4)']
                 ) as string;
             }
 
@@ -193,7 +204,7 @@ function CardContent({
     onFeedbackPress,
 }: {
     question: Props['question'];
-    overlayStyle: (direction: "left" | "right" | "up") => any;
+    overlayStyle: (direction: "left" | "right" | "up" | "down") => any;
     handleButtonPress: (direction: "left" | "right" | "up") => void;
     onFeedbackPress: () => void;
 }) {
@@ -232,6 +243,11 @@ function CardContent({
             <Animated.View style={[styles.overlay, overlayStyle("up")]} pointerEvents="none">
                 <View style={[styles.overlayBadge, { backgroundColor: colors.warning }]}>
                     <Text style={styles.overlayText}>MAYBE</Text>
+                </View>
+            </Animated.View>
+            <Animated.View style={[styles.overlay, overlayStyle("down")]} pointerEvents="none">
+                <View style={[styles.overlayBadge, { backgroundColor: colors.textTertiary }]}>
+                    <Text style={styles.overlayText}>SKIP</Text>
                 </View>
             </Animated.View>
 

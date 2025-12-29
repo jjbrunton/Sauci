@@ -235,6 +235,11 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                     <Text style={styles.errorText}>
                                         Unable to load subscription options.
                                     </Text>
+                                    {error && (
+                                        <Text style={[styles.errorText, { fontSize: 12, marginTop: 4 }]}>
+                                            {error}
+                                        </Text>
+                                    )}
                                     <TouchableOpacity
                                         style={styles.retryButton}
                                         onPress={fetchOfferings}

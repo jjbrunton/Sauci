@@ -30,6 +30,7 @@ export default function ChatScreen() {
     const [uploading, setUploading] = useState(false);
     const [partnerTyping, setPartnerTyping] = useState(false);
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+    const [fullScreenImageLoading, setFullScreenImageLoading] = useState(true);
     const flatListRef = useRef<FlatList>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isFocusedRef = useRef(false);
@@ -441,11 +442,16 @@ export default function ChatScreen() {
                     >
                         <Ionicons name="close" size={28} color={colors.text} />
                     </TouchableOpacity>
+                    {fullScreenImageLoading && (
+                        <ActivityIndicator size="large" color={colors.primary} style={styles.fullScreenSpinner} />
+                    )}
                     {fullScreenImage && (
                         <Image
                             source={{ uri: fullScreenImage }}
                             style={styles.fullScreenImage}
                             resizeMode="contain"
+                            onLoadStart={() => setFullScreenImageLoading(true)}
+                            onLoadEnd={() => setFullScreenImageLoading(false)}
                         />
                     )}
                 </View>
@@ -943,5 +949,8 @@ const styles = StyleSheet.create({
     fullScreenImage: {
         width: Dimensions.get("window").width,
         height: Dimensions.get("window").height * 0.8,
+    },
+    fullScreenSpinner: {
+        position: "absolute",
     },
 });

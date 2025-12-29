@@ -256,6 +256,9 @@ export const usePacksStore = create<PacksState>((set, get) => ({
     fetchPacks: async () => {
         set({ isLoading: true });
 
+        // Get user's explicit content preference
+        const showExplicit = useAuthStore.getState().user?.show_explicit_content ?? false;
+
         // Fetch categories
         const { data: categories } = await supabase
             .from("categories")
@@ -263,11 +266,18 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             .order("sort_order");
 
         // Fetch packs with category info and question count
-        const { data: packs } = await supabase
+        let query = supabase
             .from("question_packs")
             .select("*, category:categories(*), questions(count)")
             .eq("is_public", true)
             .order("sort_order");
+
+        // Filter out explicit packs if user doesn't want to see them
+        if (!showExplicit) {
+            query = query.eq("is_explicit", false);
+        }
+
+        const { data: packs } = await query;
 
         // Also fetch enabled packs if logged in
         await get().fetchEnabledPacks();
@@ -481,11 +491,51 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     fetchOfferings: async () => {
         set({ isLoadingOfferings: true, error: null });
         try {
-            const offerings = await revenueCatService.getOfferings();
-            set({ offerings, isLoadingOfferings: false });
-        } catch (error) {
+            // Check if RevenueCat is initialized
+            if (!revenueCatService.isInitialized()) {
+                set({
+                    offerings: null,
+                    isLoadingOfferings: false,
+                    error: "Subscriptions not available"
+                });
+                return;
+            }
+
+            const result = await revenueCatService.getOfferingsDebug();
+
+            if (result.error) {
+                set({
+                    offerings: null,
+                    isLoadingOfferings: false,
+                    error: result.error
+                });
+                return;
+            }
+
+            const offerings = result.current;
+
+            if (!offerings) {
+                set({
+                    offerings: null,
+                    isLoadingOfferings: false,
+                    error: `No current offering. Available: ${result.availableOfferings?.join(", ") || "none"}`
+                });
+                return;
+            }
+
+            if (!offerings.availablePackages || offerings.availablePackages.length === 0) {
+                set({
+                    offerings: null,
+                    isLoadingOfferings: false,
+                    error: "No packages in offering. Check RevenueCat dashboard."
+                });
+                return;
+            }
+
+            set({ offerings, isLoadingOfferings: false, error: null });
+        } catch (error: any) {
             console.error("Error fetching offerings:", error);
-            set({ error: "Failed to load subscription options", isLoadingOfferings: false });
+            set({ error: `Error: ${error.message || "Unknown"}`, isLoadingOfferings: false });
         }
     },
 

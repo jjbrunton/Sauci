@@ -1,4 +1,6 @@
 // User profile (extends Supabase auth.users)
+export type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+
 export interface Profile {
     id: string;
     name: string | null;
@@ -7,6 +9,9 @@ export interface Profile {
     push_token: string | null;
     is_premium: boolean;
     couple_id: string | null;
+    gender: Gender | null;
+    show_explicit_content: boolean;
+    onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
 }
@@ -36,6 +41,7 @@ export interface QuestionPack {
     icon: string | null;
     is_premium: boolean;
     is_public: boolean;
+    is_explicit: boolean;
     sort_order: number;
     category_id: string | null;
     category?: Category;

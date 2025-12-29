@@ -1,10 +1,11 @@
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, useRouter, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, ActivityIndicator, StyleSheet, Platform, Modal, Text, Pressable, Animated, AppState } from "react-native";
 import { BlurView } from "expo-blur";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore } from "../../src/store";
-import { colors, blur, radius, spacing, typography, shadows } from "../../src/theme";
+import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore } from "../../src/store";
+import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
 import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
@@ -15,31 +16,74 @@ function TabBarBackground() {
     if (Platform.OS === 'ios') {
         return (
             <BlurView
-                intensity={blur.medium}
-                tint="dark"
+                intensity={blur.heavy}
+                tint="systemChromeMaterialDark"
                 style={StyleSheet.absoluteFill}
             />
         );
     }
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glass.backgroundLight }]} />;
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.9)' }]} />;
+}
+
+interface PlayTabButtonProps {
+    children?: React.ReactNode;
+    onPress?: (e: any) => void;
+    accessibilityState?: { selected?: boolean };
+}
+
+function PlayTabButton({ onPress, accessibilityState }: PlayTabButtonProps) {
+    const isSelected = accessibilityState?.selected;
+
+    return (
+        <Pressable
+            onPress={onPress}
+            style={styles.playButtonContainer}
+        >
+            {/* Outer glow effect */}
+            <View style={[styles.playButtonGlow, isSelected && styles.playButtonGlowActive]} />
+
+            {/* Circle container */}
+            <View style={styles.playButtonCircle}>
+                <LinearGradient
+                    colors={gradients.primary as [string, string]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.playButtonGradient}
+                >
+                    <Ionicons
+                        name="flame"
+                        size={32}
+                        color={colors.text}
+                    />
+                </LinearGradient>
+            </View>
+        </Pressable>
+    );
 }
 
 export default function AppLayout() {
     const router = useRouter();
+    const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut } = useAuthStore();
     const { newMatchesCount, addMatch } = useMatchStore();
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
+    const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
     const [matchNotification, setMatchNotification] = useState<MatchWithQuestion | null>(null);
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Redirect to login when not authenticated
+    // Check if we're currently on the onboarding screen
+    const isOnOnboarding = segments.includes("onboarding");
+
+    // Redirect to login when not authenticated, or to onboarding if not completed
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
             router.replace("/(auth)/login");
+        } else if (!isLoading && isAuthenticated && user && !user.onboarding_completed && !isOnOnboarding) {
+            router.replace("/(app)/onboarding");
         }
-    }, [isLoading, isAuthenticated, router]);
+    }, [isLoading, isAuthenticated, user, router, isOnOnboarding]);
 
     // Check session validity on mount and when app comes to foreground
     useEffect(() => {
@@ -169,6 +213,32 @@ export default function AppLayout() {
         };
     }, [user?.couple_id, user?.id, addMessage]);
 
+    // Subscribe to realtime pack setting changes (when partner toggles a pack)
+    useEffect(() => {
+        if (!user?.couple_id) return;
+
+        const channel = supabase
+            .channel(`couple_packs:${user.couple_id}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*", // INSERT, UPDATE, DELETE
+                    schema: "public",
+                    table: "couple_packs",
+                    filter: `couple_id=eq.${user.couple_id}`,
+                },
+                () => {
+                    // Refetch enabled packs when partner changes pack settings
+                    fetchEnabledPacks();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.couple_id, fetchEnabledPacks]);
+
     // Animate message toast when lastMessage changes
     useEffect(() => {
         if (lastMessage) {
@@ -219,17 +289,8 @@ export default function AppLayout() {
         }
     }, [lastMessage, dismissMessageToast, router]);
 
-    // Show loading state while checking authentication
-    if (isLoading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-        );
-    }
-
-    // Show loading while checking auth or redirecting
-    if (!isAuthenticated) {
+    // Show loading state while checking authentication or redirecting to onboarding
+    if (isLoading || !isAuthenticated || (user && !user.onboarding_completed && !isOnOnboarding)) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
@@ -282,10 +343,8 @@ export default function AppLayout() {
                 <Tabs.Screen
                     name="swipe"
                     options={{
-                        title: "Play",
-                        tabBarIcon: ({ color, size }) => (
-                            <Ionicons name="flame" size={size} color={color} />
-                        ),
+                        title: "",
+                        tabBarButton: (props) => <PlayTabButton {...props} />,
                     }}
                 />
                 <Tabs.Screen
@@ -324,6 +383,13 @@ export default function AppLayout() {
                     options={{
                         href: null, // Hide from tab bar
                         tabBarStyle: { display: 'none' }, // Hide tab bar on chat screen
+                    }}
+                />
+                <Tabs.Screen
+                    name="onboarding"
+                    options={{
+                        href: null, // Hide from tab bar
+                        tabBarStyle: { display: 'none' }, // Hide tab bar on onboarding screen
                     }}
                 />
             </Tabs>
@@ -497,5 +563,36 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         color: colors.textSecondary,
         marginTop: 2,
+    },
+    // Play button styles
+    playButtonContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: -28,
+    },
+    playButtonGlow: {
+        position: 'absolute',
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: colors.primaryGlow,
+        opacity: 0.5,
+    },
+    playButtonGlowActive: {
+        opacity: 1,
+        ...shadows.glow(colors.primary),
+    },
+    playButtonCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        overflow: 'hidden',
+        ...shadows.lg,
+    },
+    playButtonGradient: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

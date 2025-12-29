@@ -165,6 +165,12 @@ export default function PairingScreen() {
     if (couple && !partner) {
         return (
             <View style={styles.container}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => router.back()}
+                >
+                    <Ionicons name="arrow-back" size={24} color="#fff" />
+                </TouchableOpacity>
                 <View style={styles.content}>
                     <View style={styles.iconContainer}>
                         <Ionicons name="heart" size={48} color="#e94560" />
@@ -188,11 +194,6 @@ export default function PairingScreen() {
                         Waiting for your partner to join...
                     </Text>
                     <ActivityIndicator size="small" color="#e94560" style={{ marginTop: 16 }} />
-
-                    <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                        <Ionicons name="log-out-outline" size={20} color="#888" />
-                        <Text style={styles.signOutText}>Sign Out</Text>
-                    </TouchableOpacity>
                 </View>
             </View>
         );
@@ -261,6 +262,18 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#1a1a2e",
+    },
+    backButton: {
+        position: "absolute",
+        top: Platform.OS === "ios" ? 60 : 40,
+        left: 20,
+        zIndex: 10,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        justifyContent: "center",
+        alignItems: "center",
     },
     centerContent: {
         justifyContent: "center",

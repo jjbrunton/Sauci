@@ -179,7 +179,7 @@ export default function MatchesScreen() {
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                 >
-                                    <Ionicons name="play" size={18} color={colors.text} />
+                                    <Ionicons name="flame" size={18} color={colors.text} />
                                     <Text style={styles.emptyButtonText}>Start Swiping</Text>
                                 </LinearGradient>
                             </TouchableOpacity>

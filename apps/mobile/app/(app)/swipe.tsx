@@ -3,11 +3,13 @@ import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-nativ
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../src/lib/supabase";
 import { usePacksStore } from "../../src/store";
+import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
 import SwipeCard from "../../src/components/SwipeCard";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
-import { colors, spacing, typography, radius, shadows } from "../../src/theme";
+import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 
 export default function SwipeScreen() {
     const { packId } = useLocalSearchParams();
@@ -20,18 +22,39 @@ export default function SwipeScreen() {
         fetchPacks().then(() => fetchQuestions());
     }, [packId]);
 
+    // Filter out questions from disabled packs immediately when enabledPackIds changes
+    useEffect(() => {
+        if (!packId && enabledPackIds.length > 0 && questions.length > 0) {
+            const enabledSet = new Set(enabledPackIds);
+            setQuestions(prev => {
+                const filtered = prev.filter(q => enabledSet.has(q.pack_id));
+                // Adjust currentIndex if it's now beyond the filtered list
+                if (currentIndex >= filtered.length && filtered.length > 0) {
+                    setCurrentIndex(filtered.length - 1);
+                }
+                return filtered;
+            });
+        }
+    }, [enabledPackIds]);
+
     const fetchQuestions = async () => {
         try {
-            const { data, error } = await supabase.rpc("get_recommended_questions", {
-                target_pack_id: packId || null
-            });
+            const [{ data, error }, skippedIds] = await Promise.all([
+                supabase.rpc("get_recommended_questions", {
+                    target_pack_id: packId || null
+                }),
+                getSkippedQuestionIds()
+            ]);
 
             if (error) {
                 console.error("Error fetching recommended questions:", error);
                 throw error;
             }
 
-            const sorted = (data || []).sort((a: any, b: any) => {
+            // Filter out recently skipped questions
+            const filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
+
+            const sorted = filtered.sort((a: any, b: any) => {
                 let scoreA = Math.random();
                 let scoreB = Math.random();
 
@@ -54,22 +77,40 @@ export default function SwipeScreen() {
         }
     };
 
-    const handleSwipe = async (direction: "left" | "right" | "up") => {
+    const handleSwipe = async (direction: "left" | "right" | "up" | "down") => {
         const question = questions[currentIndex];
-        const answer = direction === "right" ? "yes" : direction === "left" ? "no" : "maybe";
 
         setCurrentIndex(prev => prev + 1);
 
+        // Handle skip - don't submit a response, just store it for later
+        if (direction === "down") {
+            await skipQuestion(question.id);
+            return;
+        }
+
+        const answer = direction === "right" ? "yes" : direction === "left" ? "no" : "maybe";
+
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            console.log("DEBUG - Session exists:", !!session);
 
-            await supabase.functions.invoke("submit-response", {
+            if (!session?.access_token) {
+                console.error("No valid session - user may need to re-login");
+                return;
+            }
+
+            const { error } = await supabase.functions.invoke("submit-response", {
                 body: {
                     question_id: question.id,
                     answer,
                 },
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                },
             });
+
+            if (error) {
+                console.error("Submit response error:", error);
+            }
         } catch (error) {
             console.error("Failed to submit response", error);
         }
@@ -159,7 +200,14 @@ export default function SwipeScreen() {
                                     styles.progressFill,
                                     { width: `${((currentIndex + 1) / questions.length) * 100}%` }
                                 ]}
-                            />
+                            >
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.progressGradient}
+                                />
+                            </Animated.View>
                         </View>
                     </View>
                 </Animated.View>
@@ -217,16 +265,20 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
     },
     progressBar: {
-        width: 120,
-        height: 4,
+        width: 160,
+        height: 6,
         backgroundColor: colors.glass.background,
-        borderRadius: 2,
+        borderRadius: 3,
         overflow: "hidden",
     },
     progressFill: {
         height: "100%",
-        backgroundColor: colors.primary,
-        borderRadius: 2,
+        borderRadius: 3,
+        overflow: "hidden",
+    },
+    progressGradient: {
+        flex: 1,
+        borderRadius: 3,
     },
     cardContainer: {
         flex: 1,

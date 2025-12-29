@@ -73,18 +73,21 @@ class RevenueCatService {
             return;
         }
 
-        const available = await this.loadPurchases();
-        if (!available) return;
-
-        if (!REVENUECAT_IOS_API_KEY) {
-            console.warn("RevenueCat: Missing iOS API key");
+        // Skip if API key is missing or placeholder
+        if (!REVENUECAT_IOS_API_KEY || REVENUECAT_IOS_API_KEY === "your_revenuecat_ios_api_key") {
+            console.log("RevenueCat: Skipping - no valid API key configured");
             return;
         }
 
+        const available = await this.loadPurchases();
+        if (!available) return;
+
         try {
-            if (__DEV__) {
-                this.Purchases.setLogLevel(this.Purchases.LOG_LEVEL?.DEBUG || 4);
-            }
+            // Always enable debug logging for now to diagnose issues
+            this.Purchases.setLogLevel(this.Purchases.LOG_LEVEL?.DEBUG || 4);
+
+            const keyPrefix = REVENUECAT_IOS_API_KEY.substring(0, 10);
+            console.log("RevenueCat: Configuring with API key prefix:", keyPrefix + "...");
 
             await this.Purchases.configure({
                 apiKey: REVENUECAT_IOS_API_KEY,
@@ -92,9 +95,10 @@ class RevenueCatService {
             });
 
             this.initialized = true;
-            console.log("RevenueCat: Initialized successfully");
+            console.log("RevenueCat: Initialized successfully with user:", userId || "anonymous");
         } catch (error) {
             console.error("RevenueCat: Failed to initialize:", error);
+            // Don't rethrow - allow app to continue without subscriptions
         }
     }
 
@@ -129,16 +133,38 @@ class RevenueCatService {
     }
 
     async getOfferings(): Promise<PurchasesOffering | null> {
+        const result = await this.getOfferingsDebug();
+        return result.current;
+    }
+
+    async getOfferingsDebug(): Promise<{
+        current: PurchasesOffering | null;
+        availableOfferings: string[] | null;
+        error: string | null;
+    }> {
         if (!this.initialized || !this.Purchases) {
-            return null;
+            return {
+                current: null,
+                availableOfferings: null,
+                error: "RevenueCat not initialized"
+            };
         }
 
         try {
             const offerings = await this.Purchases.getOfferings();
-            return offerings.current;
-        } catch (error) {
-            console.error("RevenueCat: Error fetching offerings:", error);
-            return null;
+            const availableOfferings = Object.keys(offerings.all || {});
+
+            return {
+                current: offerings.current,
+                availableOfferings,
+                error: null
+            };
+        } catch (error: any) {
+            return {
+                current: null,
+                availableOfferings: null,
+                error: error.message || "Failed to fetch offerings"
+            };
         }
     }
 

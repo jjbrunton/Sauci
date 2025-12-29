@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Animated, { FadeInDown, FadeInRight, FadeIn, FadeOut, Layout } from "react-native-reanimated";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { Paywall } from "../../src/components/Paywall";
+import { PackTeaser } from "../../src/components/PackTeaser";
 import { colors, spacing, typography, radius } from "../../src/theme";
 import type { QuestionPack, Category } from "../../src/types";
 
@@ -19,6 +20,8 @@ export default function PacksScreen() {
     const { subscription } = useSubscriptionStore();
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
     const [showPaywall, setShowPaywall] = useState(false);
+    const [showTeaser, setShowTeaser] = useState(false);
+    const [teaserPack, setTeaserPack] = useState<QuestionPack | null>(null);
 
     // Check if user or partner has premium access
     const hasPremiumAccess = useMemo(() => {
@@ -29,14 +32,27 @@ export default function PacksScreen() {
         fetchPacks();
     }, []);
 
-    // Handle toggling a pack - show paywall if premium pack without access
+    // Handle toggling a pack - show teaser if premium pack without access
     const handleTogglePack = useCallback((pack: QuestionPack) => {
         if (pack.is_premium && !hasPremiumAccess) {
-            setShowPaywall(true);
+            setTeaserPack(pack);
+            setShowTeaser(true);
             return;
         }
         togglePack(pack.id);
     }, [hasPremiumAccess, togglePack]);
+
+    // Handle teaser unlock button - show paywall
+    const handleTeaserUnlock = useCallback(() => {
+        setShowTeaser(false);
+        setShowPaywall(true);
+    }, []);
+
+    // Handle teaser close
+    const handleTeaserClose = useCallback(() => {
+        setShowTeaser(false);
+        setTeaserPack(null);
+    }, []);
 
     const enabledPacks = packs.filter(p => enabledPackIds.includes(p.id));
     const enabledPackCount = enabledPacks.length;
@@ -81,7 +97,8 @@ export default function PacksScreen() {
                         activeOpacity={0.7}
                         onPress={() => {
                             if (isPremiumLocked) {
-                                setShowPaywall(true);
+                                setTeaserPack(item);
+                                setShowTeaser(true);
                             } else {
                                 router.push(`/pack/${item.id}`);
                             }
@@ -226,6 +243,17 @@ export default function PacksScreen() {
                         </Animated.View>
                     }
                 />
+
+                {teaserPack && (
+                    <PackTeaser
+                        visible={showTeaser}
+                        packId={teaserPack.id}
+                        packName={teaserPack.name}
+                        packIcon={teaserPack.icon}
+                        onClose={handleTeaserClose}
+                        onUnlock={handleTeaserUnlock}
+                    />
+                )}
 
                 <Paywall
                     visible={showPaywall}

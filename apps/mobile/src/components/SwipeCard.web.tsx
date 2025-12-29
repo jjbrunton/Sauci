@@ -8,7 +8,7 @@ const SWIPE_THRESHOLD = 100;
 
 interface Props {
     question: { id: string; text: string; intensity: number; partner_text?: string | null };
-    onSwipe: (direction: "left" | "right" | "up") => void;
+    onSwipe: (direction: "left" | "right" | "up" | "down") => void;
 }
 
 /**
@@ -48,6 +48,12 @@ export default function SwipeCard({ question, onSwipe }: Props) {
     const upOverlayOpacity = translateY.interpolate({
         inputRange: [-SWIPE_THRESHOLD, 0],
         outputRange: [1, 0],
+        extrapolate: "clamp",
+    });
+
+    const downOverlayOpacity = translateY.interpolate({
+        inputRange: [0, SWIPE_THRESHOLD],
+        outputRange: [0, 1],
         extrapolate: "clamp",
     });
 
@@ -103,6 +109,15 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                     }).start(() => {
                         setDismissed(true);
                         onSwipe("up");
+                    });
+                } else if (gestureState.dy > SWIPE_THRESHOLD) {
+                    // Vertical swipe down - skip
+                    Animated.spring(translateY, {
+                        toValue: screenWidth * 1.5,
+                        useNativeDriver: true,
+                    }).start(() => {
+                        setDismissed(true);
+                        onSwipe("down");
                     });
                 } else {
                     // Reset position
@@ -175,6 +190,14 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                     ]}
                 >
                     <Text style={styles.overlayText}>MAYBE</Text>
+                </Animated.View>
+                <Animated.View
+                    style={[
+                        styles.overlay,
+                        { opacity: downOverlayOpacity, backgroundColor: "rgba(108, 117, 125, 0.4)" },
+                    ]}
+                >
+                    <Text style={styles.overlayText}>SKIP</Text>
                 </Animated.View>
 
                 <View style={styles.content}>

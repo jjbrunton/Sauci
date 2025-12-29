@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch } from "react-native";
 import { useState, useMemo } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore, useSubscriptionStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,10 +14,10 @@ import { colors, gradients, spacing, radius, typography, shadows } from "../../s
 const MAX_CONTENT_WIDTH = 500;
 
 export default function ProfileScreen() {
-    const { user, partner, couple, signOut, fetchCouple } = useAuthStore();
+    const { user, partner, couple, signOut, fetchCouple, fetchUser } = useAuthStore();
     const { clearMatches } = useMatchStore();
     const { clearMessages } = useMessageStore();
-    const { clearPacks } = usePacksStore();
+    const { clearPacks, fetchPacks } = usePacksStore();
     const { subscription, restorePurchases, isPurchasing } = useSubscriptionStore();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
@@ -27,6 +27,8 @@ export default function ProfileScreen() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? false);
+    const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
 
     // Check if user or partner has premium access
     const hasPremiumAccess = useMemo(() => {
@@ -52,6 +54,35 @@ export default function ProfileScreen() {
             Alert.alert("Success", "Your purchases have been restored!");
         } else {
             Alert.alert("No Purchases Found", "No previous purchases found to restore.");
+        }
+    };
+
+    const handleExplicitToggle = async (value: boolean) => {
+        if (!user?.id) return;
+
+        setShowExplicit(value);
+        setIsUpdatingExplicit(true);
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    show_explicit_content: value,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            // Refresh user data and packs to reflect the change
+            await fetchUser();
+            await fetchPacks();
+        } catch (error) {
+            // Revert on error
+            setShowExplicit(!value);
+            Alert.alert("Error", "Failed to update preference. Please try again.");
+        } finally {
+            setIsUpdatingExplicit(false);
         }
     };
 
@@ -205,6 +236,30 @@ export default function ProfileScreen() {
                                     <Ionicons name="unlink-outline" size={18} color={colors.textTertiary} />
                                 </TouchableOpacity>
                             </View>
+                        ) : couple ? (
+                            <TouchableOpacity
+                                style={styles.rowContainer}
+                                onPress={() => router.push("/(app)/pairing")}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.rowLeft}>
+                                    <LinearGradient
+                                        colors={gradients.primary as [string, string]}
+                                        style={styles.partnerIconGradient}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                    >
+                                        <Ionicons name="hourglass-outline" size={20} color={colors.text} />
+                                    </LinearGradient>
+                                    <View style={styles.rowTextContainer}>
+                                        <Text style={styles.rowValue}>Waiting for partner</Text>
+                                        <Text style={styles.rowLabel}>Tap to view invite code</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.chevronContainer}>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                </View>
+                            </TouchableOpacity>
                         ) : (
                             <TouchableOpacity
                                 style={styles.rowContainer}
@@ -307,9 +362,43 @@ export default function ProfileScreen() {
                     )}
                 </Animated.View>
 
+                {/* Preferences Section */}
+                <Animated.View
+                    entering={FadeInDown.delay(375).duration(500)}
+                    style={styles.section}
+                >
+                    <Text style={styles.sectionTitle}>Preferences</Text>
+                    <GlassCard>
+                        <View style={styles.rowContainer}>
+                            <View style={styles.rowLeft}>
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    style={styles.partnerIconGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Ionicons name="flame" size={20} color={colors.text} />
+                                </LinearGradient>
+                                <View style={styles.rowTextContainer}>
+                                    <Text style={styles.rowValue}>Explicit Content</Text>
+                                    <Text style={styles.rowLabel}>Show 18+ question packs</Text>
+                                </View>
+                            </View>
+                            <Switch
+                                value={showExplicit}
+                                onValueChange={handleExplicitToggle}
+                                disabled={isUpdatingExplicit}
+                                trackColor={{ false: colors.glass.border, true: colors.primaryLight }}
+                                thumbColor={showExplicit ? colors.primary : colors.textTertiary}
+                                ios_backgroundColor={colors.glass.border}
+                            />
+                        </View>
+                    </GlassCard>
+                </Animated.View>
+
                 {/* Account Section */}
                 <Animated.View
-                    entering={FadeInDown.delay(400).duration(500)}
+                    entering={FadeInDown.delay(425).duration(500)}
                     style={styles.section}
                 >
                     <Text style={styles.sectionTitle}>Account</Text>
@@ -332,7 +421,7 @@ export default function ProfileScreen() {
 
                 {/* Support Section */}
                 <Animated.View
-                    entering={FadeInDown.delay(450).duration(500)}
+                    entering={FadeInDown.delay(475).duration(500)}
                     style={styles.section}
                 >
                     <Text style={styles.sectionTitle}>Support</Text>
@@ -366,7 +455,7 @@ export default function ProfileScreen() {
                 {/* Danger Zone - Only show if in a couple */}
                 {couple && (
                     <Animated.View
-                        entering={FadeInDown.delay(550).duration(500)}
+                        entering={FadeInDown.delay(525).duration(500)}
                         style={styles.section}
                     >
                         <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
@@ -398,7 +487,7 @@ export default function ProfileScreen() {
 
                 {/* Version */}
                 <Animated.View
-                    entering={FadeInDown.delay(couple ? 650 : 550).duration(500)}
+                    entering={FadeInDown.delay(couple ? 575 : 525).duration(500)}
                     style={styles.versionContainer}
                 >
                     <View style={styles.versionBadge}>

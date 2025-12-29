@@ -11,7 +11,7 @@ import { colors, gradients, spacing, radius, typography, shadows } from "../../s
 const MAX_CONTENT_WIDTH = 500;
 
 export default function HomeScreen() {
-    const { user, partner } = useAuthStore();
+    const { user, partner, couple } = useAuthStore();
     const { matches, newMatchesCount, fetchMatches } = useMatchStore();
     const { packs, fetchPacks } = usePacksStore();
     const { width } = useWindowDimensions();
@@ -52,6 +52,14 @@ export default function HomeScreen() {
                                         {partner.name || partner.email?.split('@')[0] || 'Partner'}
                                     </Text>
                                 </View>
+                            ) : couple ? (
+                                <TouchableOpacity
+                                    style={styles.waitingBadge}
+                                    onPress={() => router.push("/(app)/pairing")}
+                                >
+                                    <Ionicons name="hourglass-outline" size={12} color={colors.primary} />
+                                    <Text style={styles.waitingText}>Waiting for partner</Text>
+                                </TouchableOpacity>
                             ) : (
                                 <TouchableOpacity
                                     style={styles.pairBadge}
@@ -184,7 +192,7 @@ export default function HomeScreen() {
                                     </Text>
                                 </View>
                                 <View style={styles.ctaIconContainer}>
-                                    <Ionicons name="play" size={24} color={colors.text} />
+                                    <Ionicons name="flame" size={24} color={colors.text} />
                                 </View>
                             </LinearGradient>
                         </TouchableOpacity>
@@ -350,6 +358,22 @@ const styles = StyleSheet.create({
     pairText: {
         ...typography.caption1,
         color: colors.textTertiary,
+    },
+    waitingBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primaryLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+        alignSelf: 'flex-start',
+        marginTop: spacing.sm,
+        gap: spacing.xs,
+    },
+    waitingText: {
+        ...typography.caption1,
+        color: colors.text,
+        fontWeight: '500',
     },
     avatarGradient: {
         width: 48,

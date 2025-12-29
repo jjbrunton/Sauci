@@ -46,6 +46,8 @@ export default function LoginScreen() {
     const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
     const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
     const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+    const [isResendingEmail, setIsResendingEmail] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
     const [authMode, setAuthMode] = useState<AuthMode>("magic-link");
     const [isSignUp, setIsSignUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,47 @@ export default function LoginScreen() {
             });
         }
     }, []);
+
+    // Cooldown timer for resend verification email
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+
+        const timer = setInterval(() => {
+            setResendCooldown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [resendCooldown]);
+
+    // Resend verification email
+    const resendVerificationEmail = useCallback(async () => {
+        if (!pendingVerification || resendCooldown > 0) return;
+
+        setIsResendingEmail(true);
+        const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email: pendingVerification.email,
+        });
+        setIsResendingEmail(false);
+
+        if (resendError) {
+            if (Platform.OS !== 'web') {
+                Alert.alert("Error", resendError.message);
+            }
+        } else {
+            // Start 60 second cooldown
+            setResendCooldown(60);
+            if (Platform.OS !== 'web') {
+                Alert.alert("Email Sent", "A new verification email has been sent. Please check your inbox.");
+            }
+        }
+    }, [pendingVerification, resendCooldown]);
 
     // Check if user has verified their email
     const checkVerificationStatus = useCallback(async () => {
@@ -155,7 +198,7 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         if (isSignUp) {
-            const { error: signUpError } = await supabase.auth.signUp({
+            const { data, error: signUpError } = await supabase.auth.signUp({
                 email: email.trim(),
                 password,
             });
@@ -164,6 +207,10 @@ export default function LoginScreen() {
 
             if (signUpError) {
                 showError(signUpError.message);
+            } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+                // User already exists - Supabase returns success but empty identities
+                // for security (prevents email enumeration)
+                showError("An account with this email already exists. Please sign in instead.");
             } else {
                 // Show the verification pending screen
                 setPendingVerification({
@@ -303,11 +350,23 @@ export default function LoginScreen() {
                             I've verified my email
                         </GlassButton>
                         <GlassButton
+                            variant="secondary"
+                            onPress={resendVerificationEmail}
+                            loading={isResendingEmail}
+                            disabled={isResendingEmail || resendCooldown > 0}
+                            style={{ marginTop: spacing.sm }}
+                        >
+                            {resendCooldown > 0
+                                ? `Resend email (${resendCooldown}s)`
+                                : "Resend verification email"}
+                        </GlassButton>
+                        <GlassButton
                             variant="ghost"
                             onPress={() => {
                                 setPendingVerification(null);
                                 setEmail(pendingVerification.email);
                                 setPassword("");
+                                setResendCooldown(0);
                             }}
                             style={{ marginTop: spacing.sm }}
                         >
