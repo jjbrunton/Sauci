@@ -1,0 +1,14 @@
+node_modules
+.git
+.gitignore
+*.md
+.env*
+.DS_Store
+dist
+.expo
+android
+ios
+*.log
+.turbo
+coverage
+.nyc_output

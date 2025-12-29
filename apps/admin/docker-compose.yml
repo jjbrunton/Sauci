@@ -1,0 +1,16 @@
+services:
+  admin:
+    build:
+      context: ../..
+      dockerfile: apps/admin/Dockerfile.dev
+    ports:
+      - "3000:3001"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    volumes:
+      - ./src:/app/apps/admin/src
+      - ./index.html:/app/apps/admin/index.html
+      - ./vite.config.ts:/app/apps/admin/vite.config.ts
+      - ./tsconfig.json:/app/apps/admin/tsconfig.json
+    restart: unless-stopped

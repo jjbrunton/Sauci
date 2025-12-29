@@ -1,22 +1,20 @@
-import { createClient } from '@supabase/supabase-js';
-import { supabaseConfig } from '../config';
-
-export const supabase = createClient(
-    supabaseConfig.url,
-    supabaseConfig.anonKey
-);
-
-// Custom data provider wrapper if needed for ra-data-supabase
 import { supabaseDataProvider } from 'ra-supabase';
+import { supabase } from '../config';
 
-export const dataProvider = supabaseDataProvider(
-    supabase,
-    {
-        resources: {
-            question_packs: 'question_packs',
-            questions: 'questions',
-            profiles: 'profiles',
-            couples: 'couples'
-        }
-    }
-);
+export { supabase };
+
+const resources = {
+    question_packs: ['id', 'name', 'description', 'icon', 'is_premium', 'is_public', 'sort_order', 'created_at'],
+    questions: ['id', 'pack_id', 'text', 'partner_text', 'intensity', 'created_at'],
+    profiles: ['id', 'name', 'avatar_url', 'is_premium', 'couple_id', 'created_at'],
+    couples: ['id', 'invite_code', 'created_at'],
+    responses: ['id', 'user_id', 'question_id', 'couple_id', 'answer', 'created_at'],
+    matches: ['id', 'couple_id', 'question_id', 'match_type', 'is_new', 'created_at'],
+    messages: ['id', 'match_id', 'user_id', 'content', 'read_at', 'created_at'],
+    subscriptions: ['id', 'user_id', 'status', 'product_id', 'expires_at', 'created_at'],
+    feedback: ['id', 'user_id', 'type', 'title', 'description', 'status', 'created_at'],
+    audit_logs: ['id', 'table_name', 'record_id', 'action', 'old_values', 'new_values', 'changed_fields', 'admin_user_id', 'admin_role', 'created_at'],
+    admin_users: ['id', 'user_id', 'role', 'created_at'],
+};
+
+export const dataProvider = supabaseDataProvider(supabase, resources);
