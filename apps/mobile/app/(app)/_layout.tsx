@@ -17,17 +17,14 @@ type Message = Database["public"]["Tables"]["messages"]["Row"];
 function TabBarBackground() {
     if (Platform.OS === 'ios') {
         return (
-            <View style={StyleSheet.absoluteFill}>
-                <BlurView
-                    intensity={blur.heavy}
-                    tint="dark"
-                    style={StyleSheet.absoluteFill}
-                />
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.7)' }]} />
-            </View>
+            <BlurView
+                intensity={80}
+                tint="systemChromeMaterialDark"
+                style={StyleSheet.absoluteFill}
+            />
         );
     }
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.9)' }]} />;
+    return <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.95)' }]} />;
 }
 
 interface PlayTabButtonProps {
@@ -78,11 +75,14 @@ export default function AppLayout() {
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isLocked, setIsLocked] = useState(false);
-    const appStateRef = useRef<AppStateStatus>(AppState.currentState);
     const hasCheckedInitialBiometric = useRef(false);
+    const wentToBackgroundAt = useRef<number | null>(null);
 
-    // Check if we're currently on the onboarding screen
+    // Check if we're on screens that should hide the tab bar
     const isOnOnboarding = segments.includes("onboarding");
+    const isOnPairing = segments.includes("pairing");
+    const isOnChat = segments.includes("chat");
+    const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat;
 
     // Redirect to login when not authenticated, or to onboarding if not completed
     useEffect(() => {
@@ -136,18 +136,25 @@ export default function AppLayout() {
         }
 
         const subscription = AppState.addEventListener('change', async (nextAppState) => {
-            const previousState = appStateRef.current;
-            appStateRef.current = nextAppState;
+            // Track when app goes to background (not just inactive)
+            if (nextAppState === 'background') {
+                wentToBackgroundAt.current = Date.now();
+            }
 
-            // When app comes to foreground from background
-            if (
-                previousState.match(/inactive|background/) &&
-                nextAppState === 'active' &&
-                isAuthenticated
-            ) {
-                const enabled = await isBiometricEnabled();
-                if (enabled) {
-                    setIsLocked(true);
+            // When app becomes active, check if we should lock
+            if (nextAppState === 'active' && isAuthenticated && !isLocked) {
+                // Only lock if we actually went to background (not just inactive from modal/control center)
+                // and we were in background for at least 1 second
+                if (wentToBackgroundAt.current) {
+                    const timeInBackground = Date.now() - wentToBackgroundAt.current;
+                    wentToBackgroundAt.current = null;
+
+                    if (timeInBackground > 1000) {
+                        const enabled = await isBiometricEnabled();
+                        if (enabled) {
+                            setIsLocked(true);
+                        }
+                    }
                 }
             }
         });
@@ -155,7 +162,7 @@ export default function AppLayout() {
         return () => {
             subscription.remove();
         };
-    }, [isAuthenticated, isLoading]);
+    }, [isAuthenticated, isLoading, isLocked]);
 
     const handleBiometricUnlock = useCallback(() => {
         setIsLocked(false);
@@ -355,7 +362,7 @@ export default function AppLayout() {
                 screenOptions={{
                     headerShown: false,
                     tabBarBackground: () => <TabBarBackground />,
-                    tabBarStyle: {
+                    tabBarStyle: shouldHideTabBar ? { display: 'none' } : {
                         position: 'absolute',
                         backgroundColor: 'transparent',
                         borderTopColor: colors.glass.border,
@@ -366,7 +373,7 @@ export default function AppLayout() {
                         elevation: 0,
                     },
                     tabBarActiveTintColor: colors.primary,
-                    tabBarInactiveTintColor: colors.textTertiary,
+                    tabBarInactiveTintColor: '#fff',
                     tabBarLabelStyle: {
                         fontSize: 11,
                         fontWeight: "600",
@@ -426,21 +433,18 @@ export default function AppLayout() {
                     name="pairing"
                     options={{
                         href: null, // Hide from tab bar
-                        tabBarStyle: { display: 'none' }, // Hide tab bar on pairing screen
                     }}
                 />
                 <Tabs.Screen
                     name="chat/[id]"
                     options={{
                         href: null, // Hide from tab bar
-                        tabBarStyle: { display: 'none' }, // Hide tab bar on chat screen
                     }}
                 />
                 <Tabs.Screen
                     name="onboarding"
                     options={{
                         href: null, // Hide from tab bar
-                        tabBarStyle: { display: 'none' }, // Hide tab bar on onboarding screen
                     }}
                 />
             </Tabs>

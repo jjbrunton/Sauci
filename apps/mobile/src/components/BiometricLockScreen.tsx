@@ -30,13 +30,6 @@ export function BiometricLockScreen({ visible, onUnlock }: BiometricLockScreenPr
         loadBiometricType();
     }, []);
 
-    useEffect(() => {
-        if (visible) {
-            // Auto-trigger authentication when the lock screen appears
-            handleAuthenticate();
-        }
-    }, [visible]);
-
     const handleAuthenticate = async () => {
         if (isAuthenticating) return;
 
