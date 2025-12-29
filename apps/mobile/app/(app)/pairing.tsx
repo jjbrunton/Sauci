@@ -204,6 +204,12 @@ export default function PairingScreen() {
             style={styles.container}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
+            <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+            >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
             <View style={styles.content}>
                 <Text style={styles.emoji}>🔗</Text>
                 <Text style={styles.title}>Pair Up</Text>

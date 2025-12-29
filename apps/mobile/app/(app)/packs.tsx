@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Switch, RefreshControl, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Switch, RefreshControl, Platform, Alert } from "react-native";
 import { usePacksStore, useAuthStore, useSubscriptionStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -33,13 +33,23 @@ export default function PacksScreen() {
     }, []);
 
     // Handle toggling a pack - show teaser if premium pack without access
-    const handleTogglePack = useCallback((pack: QuestionPack) => {
+    const handleTogglePack = useCallback(async (pack: QuestionPack) => {
         if (pack.is_premium && !hasPremiumAccess) {
             setTeaserPack(pack);
             setShowTeaser(true);
             return;
         }
-        togglePack(pack.id);
+        const result = await togglePack(pack.id);
+        if (!result.success && result.reason === "no_couple") {
+            Alert.alert(
+                "Pair with Partner",
+                "You need to pair with your partner before you can customise question packs.",
+                [
+                    { text: "Later", style: "cancel" },
+                    { text: "Pair Now", onPress: () => router.push("/pairing") }
+                ]
+            );
+        }
     }, [hasPremiumAccess, togglePack]);
 
     // Handle teaser unlock button - show paywall

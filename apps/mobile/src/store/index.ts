@@ -243,7 +243,7 @@ interface PacksState {
     isLoading: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
-    togglePack: (packId: string) => Promise<void>;
+    togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
     clearPacks: () => void;
 }
 
@@ -306,9 +306,11 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         set({ enabledPackIds: ids });
     },
 
-    togglePack: async (packId: string) => {
+    togglePack: async (packId: string): Promise<{ success: boolean; reason?: string }> => {
         const coupleId = useAuthStore.getState().user?.couple_id;
-        if (!coupleId) return;
+        if (!coupleId) {
+            return { success: false, reason: "no_couple" };
+        }
 
         const isEnabled = get().enabledPackIds.includes(packId);
         const newValue = !isEnabled;
@@ -332,7 +334,10 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             console.error("Error toggling pack:", error);
             // Revert by refetching
             get().fetchEnabledPacks();
+            return { success: false, reason: "error" };
         }
+
+        return { success: true };
     },
 
     clearPacks: () => {

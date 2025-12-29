@@ -8,6 +8,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Keyboard,
+    ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +28,7 @@ import { GlassButton } from '../../src/components/ui/GlassButton';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { supabase } from '../../src/lib/supabase';
+import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import type { Gender } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
@@ -36,7 +38,7 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'prefer-not-to-say', label: 'Skip', icon: 'remove-circle-outline' },
 ];
 
-type Stage = 'name' | 'gender' | 'explicit';
+type Stage = 'name' | 'gender' | 'explicit' | 'notifications';
 
 export default function OnboardingScreen() {
     const router = useRouter();
@@ -44,7 +46,7 @@ export default function OnboardingScreen() {
     const [stage, setStage] = useState<Stage>('name');
     const [name, setName] = useState(user?.name || '');
     const [gender, setGender] = useState<Gender | null>(user?.gender || null);
-    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content || false);
+    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);
@@ -62,7 +64,33 @@ export default function OnboardingScreen() {
     const handleGenderSelect = (selectedGender: Gender) => {
         setGender(selectedGender);
         setError(null);
-        setTimeout(() => setStage('explicit'), 300);
+    };
+
+    const handleGenderContinue = () => {
+        if (!gender) {
+            setError('Please select a gender or skip');
+            return;
+        }
+        setStage('explicit');
+    };
+
+    const handleExplicitContinue = () => {
+        setStage('notifications');
+    };
+
+    const handleEnableNotifications = async () => {
+        setIsLoading(true);
+        try {
+            const token = await registerForPushNotificationsAsync();
+            if (token && user?.id) {
+                await savePushToken(user.id, token);
+            }
+        } catch (err) {
+            console.error('Failed to enable notifications:', err);
+        } finally {
+            setIsLoading(false);
+            await handleComplete();
+        }
     };
 
     const handleComplete = async () => {
@@ -205,7 +233,19 @@ export default function OnboardingScreen() {
                                     </Pressable>
                                 ))}
                             </View>
+                            {error && (
+                                <View style={styles.errorContainer}>
+                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            )}
                         </GlassCard>
+
+                        <View style={styles.footer}>
+                            <GlassButton onPress={handleGenderContinue} fullWidth size="lg">
+                                Continue
+                            </GlassButton>
+                        </View>
                     </Animated.View>
                 );
 
@@ -307,13 +347,78 @@ export default function OnboardingScreen() {
 
                         <View style={styles.footer}>
                             <GlassButton
-                                onPress={handleComplete}
+                                onPress={handleExplicitContinue}
+                                fullWidth
+                                size="lg"
+                            >
+                                Continue
+                            </GlassButton>
+                        </View>
+                    </Animated.View>
+                );
+
+            case 'notifications':
+                return (
+                    <Animated.View
+                        key="notifications"
+                        entering={SlideInRight.duration(400)}
+                        exiting={FadeOut.duration(200)}
+                        style={styles.stageContainer}
+                    >
+                        <View style={styles.header}>
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.iconContainer}
+                            >
+                                <Ionicons name="notifications" size={40} color={colors.text} />
+                            </LinearGradient>
+                            <Text style={styles.title}>Stay in the Loop</Text>
+                            <Text style={styles.subtitle}>
+                                Get notified when you and your partner match on answers
+                            </Text>
+                        </View>
+
+                        <GlassCard style={styles.card}>
+                            <View style={styles.notificationFeature}>
+                                <View style={styles.notificationIcon}>
+                                    <Ionicons name="heart" size={24} color={colors.primary} />
+                                </View>
+                                <View style={styles.notificationText}>
+                                    <Text style={styles.notificationTitle}>Match Alerts</Text>
+                                    <Text style={styles.notificationDescription}>
+                                        Know instantly when you both agree
+                                    </Text>
+                                </View>
+                            </View>
+                            <View style={styles.notificationFeature}>
+                                <View style={styles.notificationIcon}>
+                                    <Ionicons name="chatbubble" size={24} color={colors.primary} />
+                                </View>
+                                <View style={styles.notificationText}>
+                                    <Text style={styles.notificationTitle}>Messages</Text>
+                                    <Text style={styles.notificationDescription}>
+                                        Never miss a message from your partner
+                                    </Text>
+                                </View>
+                            </View>
+                        </GlassCard>
+
+                        <View style={styles.footer}>
+                            <GlassButton
+                                onPress={handleEnableNotifications}
                                 loading={isLoading}
                                 fullWidth
                                 size="lg"
                             >
-                                Let's Go!
+                                Enable Notifications
                             </GlassButton>
+                            <Pressable
+                                style={styles.skipButton}
+                                onPress={handleComplete}
+                                disabled={isLoading}
+                            >
+                                <Text style={styles.skipText}>Maybe Later</Text>
+                            </Pressable>
                         </View>
                     </Animated.View>
                 );
@@ -325,13 +430,18 @@ export default function OnboardingScreen() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 {/* Header with back button and progress dots */}
                 <Animated.View entering={FadeIn.duration(600)} style={styles.headerBar}>
                     {stage !== 'name' ? (
                         <Pressable
                             style={styles.backButton}
-                            onPress={() => setStage(stage === 'explicit' ? 'gender' : 'name')}
+                            onPress={() => {
+                                if (stage === 'notifications') setStage('explicit');
+                                else if (stage === 'explicit') setStage('gender');
+                                else setStage('name');
+                            }}
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.text} />
                         </Pressable>
@@ -342,11 +452,18 @@ export default function OnboardingScreen() {
                         <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'explicit' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, stage === 'notifications' && styles.progressDotActive]} />
                     </View>
                     <View style={styles.backButtonPlaceholder} />
                 </Animated.View>
 
-                {renderStage()}
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    {renderStage()}
+                </ScrollView>
             </KeyboardAvoidingView>
         </GradientBackground>
     );
@@ -355,6 +472,9 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
     },
     headerBar: {
         flexDirection: 'row',
@@ -551,5 +671,42 @@ const styles = StyleSheet.create({
     },
     footer: {
         marginTop: 'auto',
+    },
+    notificationFeature: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.glass.border,
+    },
+    notificationIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: colors.primaryLight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.md,
+    },
+    notificationText: {
+        flex: 1,
+    },
+    notificationTitle: {
+        ...typography.headline,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    notificationDescription: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+    },
+    skipButton: {
+        alignItems: 'center',
+        paddingVertical: spacing.md,
+        marginTop: spacing.sm,
+    },
+    skipText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
     },
 });

@@ -90,35 +90,21 @@ Deno.serve(async (req) => {
             );
         }
 
-        // Get sender name
-        const { data: sender } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("id", sender_id)
-            .single();
-
-        // Get the most recent message from this sender in this match
+        // Get the most recent message ID for navigation
         const { data: message } = await supabase
             .from("messages")
-            .select("id, content, media_path")
+            .select("id")
             .eq("match_id", match_id)
             .eq("user_id", sender_id)
             .order("created_at", { ascending: false })
             .limit(1)
             .single();
 
-        const senderName = sender?.name || "Your partner";
-        const messagePreview = message?.content
-            ? message.content.length > 100
-                ? message.content.substring(0, 100) + "..."
-                : message.content
-            : "Sent an image";
-
-        // Build push message
+        // Build push message (privacy-friendly - no content in notification)
         const pushMessage: ExpoPushMessage = {
             to: recipient.push_token,
-            title: senderName,
-            body: messagePreview,
+            title: "New message",
+            body: "Your partner sent you a message",
             sound: "default",
             data: {
                 type: "message",

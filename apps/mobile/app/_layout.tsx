@@ -7,8 +7,6 @@ initSentry();
 
 // Import push notification utilities
 import {
-    registerForPushNotificationsAsync,
-    savePushToken,
     clearPushToken,
     setupNotificationResponseListener,
     getInitialNotification,
@@ -54,19 +52,78 @@ export default function RootLayout() {
 
         // Handle initial URL if app was opened via deep link
         const handleDeepLink = async (url: string | null) => {
-            if (url) {
-                // Supabase needs to handle the URL to extract session
-                // getSession() will automatically check window.location on web if detectSessionInUrl is true
-                // For native, we rely on onAuthStateChange or manual processing if needed
+            console.log('[DeepLink] handleDeepLink called with URL:', url);
+            if (!url) return;
+
+            try {
+                // Parse the URL to extract auth parameters
+                const parsedUrl = new URL(url);
+                console.log('[DeepLink] Parsed URL:', {
+                    protocol: parsedUrl.protocol,
+                    host: parsedUrl.host,
+                    pathname: parsedUrl.pathname,
+                    search: parsedUrl.search,
+                    hash: parsedUrl.hash,
+                });
+                const params = new URLSearchParams(parsedUrl.search);
+
+                // Also check hash fragment (some auth flows use fragments)
+                const hashParams = new URLSearchParams(parsedUrl.hash.replace('#', ''));
+
+                // Get token parameters - check both query and hash
+                const accessToken = params.get('access_token') || hashParams.get('access_token');
+                const refreshToken = params.get('refresh_token') || hashParams.get('refresh_token');
+                const tokenHash = params.get('token_hash') || hashParams.get('token_hash');
+                const type = params.get('type') || hashParams.get('type');
+
+                console.log('[DeepLink] Extracted params:', {
+                    accessToken: accessToken ? 'present' : 'missing',
+                    refreshToken: refreshToken ? 'present' : 'missing',
+                    tokenHash: tokenHash ? 'present' : 'missing',
+                    type,
+                });
+
+                if (accessToken && refreshToken) {
+                    // OAuth flow - set session directly
+                    console.log('[DeepLink] Setting session with tokens');
+                    const { data, error } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken,
+                    });
+                    console.log('[DeepLink] setSession result:', {
+                        hasSession: !!data?.session,
+                        userId: data?.session?.user?.id,
+                        error: error?.message
+                    });
+                } else if (tokenHash && type) {
+                    // Magic link / email verification flow - verify the OTP
+                    console.log('[DeepLink] Verifying OTP with token_hash and type:', type);
+                    const { data, error } = await supabase.auth.verifyOtp({
+                        token_hash: tokenHash,
+                        type: type as 'signup' | 'magiclink' | 'recovery' | 'invite' | 'email',
+                    });
+                    console.log('[DeepLink] verifyOtp result:', { data: !!data?.session, error: error?.message });
+                } else {
+                    // Fallback for web or other scenarios
+                    console.log('[DeepLink] No auth params found, falling back to getSession');
+                    await supabase.auth.getSession();
+                }
+            } catch (error) {
+                console.error('[DeepLink] Error handling deep link:', error);
+                // Still try to get session as fallback
                 await supabase.auth.getSession();
             }
         };
 
         // Get initial URL
-        Linking.getInitialURL().then(handleDeepLink);
+        Linking.getInitialURL().then((url) => {
+            console.log('[DeepLink] getInitialURL returned:', url);
+            handleDeepLink(url);
+        });
 
         // Listen for new deep links while app is open
         const linkingSubscription = Linking.addEventListener("url", (event) => {
+            console.log('[DeepLink] URL event listener triggered with:', event.url);
             handleDeepLink(event.url);
         });
 
@@ -83,17 +140,13 @@ export default function RootLayout() {
         // Listen for auth changes
         const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
+                console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!session, 'userId:', session?.user?.id);
                 if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+                    console.log('[Auth] Calling fetchUser...');
                     fetchUser();
                     // Set Sentry user context for error tracking
                     if (session?.user) {
                         setUserContext(session.user.id, session.user.email);
-
-                        // Register for push notifications and save token
-                        const token = await registerForPushNotificationsAsync();
-                        if (token) {
-                            await savePushToken(session.user.id, token);
-                        }
                     }
                 } else if (event === "SIGNED_OUT") {
                     // Clear push token before clearing user state

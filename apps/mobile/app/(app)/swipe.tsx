@@ -5,9 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../src/lib/supabase";
-import { usePacksStore } from "../../src/store";
+import { usePacksStore, useAuthStore } from "../../src/store";
 import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
+import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipeTutorialSeen";
 import SwipeCard from "../../src/components/SwipeCard";
+import SwipeTutorial from "../../src/components/SwipeTutorial";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 
@@ -16,11 +18,26 @@ export default function SwipeScreen() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [showTutorial, setShowTutorial] = useState(false);
     const { enabledPackIds, fetchPacks } = usePacksStore();
+    const { partner, couple } = useAuthStore();
 
     useEffect(() => {
         fetchPacks().then(() => fetchQuestions());
+        checkTutorial();
     }, [packId]);
+
+    const checkTutorial = async () => {
+        const seen = await hasSeenSwipeTutorial();
+        if (!seen) {
+            setShowTutorial(true);
+        }
+    };
+
+    const handleTutorialComplete = async () => {
+        await markSwipeTutorialSeen();
+        setShowTutorial(false);
+    };
 
     // Filter out questions from disabled packs immediately when enabledPackIds changes
     useEffect(() => {
@@ -121,6 +138,45 @@ export default function SwipeScreen() {
             <GradientBackground>
                 <View style={styles.centerContainer}>
                     <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </GradientBackground>
+        );
+    }
+
+    // Show "pair with partner" prompt when user doesn't have a partner yet
+    if (!partner) {
+        return (
+            <GradientBackground showAccent>
+                <View style={styles.centerContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.emptyContent}
+                    >
+                        <LinearGradient
+                            colors={gradients.primary as [string, string]}
+                            style={styles.pairIconContainer}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <Ionicons name="heart" size={48} color={colors.text} />
+                        </LinearGradient>
+                        <Text style={styles.pairTitle}>
+                            {couple ? "Waiting for your partner" : "Pair with your partner"}
+                        </Text>
+                        <Text style={styles.emptySubtitle}>
+                            {couple
+                                ? "Share your invite code so they can join you. Once paired, you'll both answer questions and discover what you agree on!"
+                                : "Sauci is made for two! Connect with your partner to start answering questions together and discover what you have in common."
+                            }
+                        </Text>
+                        <GlassButton
+                            onPress={() => router.push("/pairing")}
+                            style={{ marginTop: spacing.xl }}
+                            size="lg"
+                        >
+                            {couple ? "View Invite Code" : "Pair Now"}
+                        </GlassButton>
+                    </Animated.View>
                 </View>
             </GradientBackground>
         );
@@ -238,6 +294,11 @@ export default function SwipeScreen() {
                 {/* Bottom spacing for tab bar */}
                 <View style={styles.bottomSpacer} />
             </View>
+
+            {/* Tutorial Overlay */}
+            {showTutorial && (
+                <SwipeTutorial onComplete={handleTutorialComplete} />
+            )}
         </GradientBackground>
     );
 }
@@ -317,6 +378,21 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         marginBottom: spacing.lg,
+    },
+    pairIconContainer: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.xl,
+        ...shadows.lg,
+    },
+    pairTitle: {
+        ...typography.title1,
+        color: colors.text,
+        marginBottom: spacing.md,
+        textAlign: "center",
     },
     noPacksIconContainer: {
         width: 120,

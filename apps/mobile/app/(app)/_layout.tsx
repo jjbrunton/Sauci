@@ -1,12 +1,14 @@
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, ActivityIndicator, StyleSheet, Platform, Modal, Text, Pressable, Animated, AppState } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform, Modal, Text, Pressable, Animated, AppState, AppStateStatus } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore } from "../../src/store";
 import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
+import { isBiometricEnabled } from "../../src/lib/biometricAuth";
+import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
 import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
 
@@ -15,11 +17,14 @@ type Message = Database["public"]["Tables"]["messages"]["Row"];
 function TabBarBackground() {
     if (Platform.OS === 'ios') {
         return (
-            <BlurView
-                intensity={blur.heavy}
-                tint="systemChromeMaterialDark"
-                style={StyleSheet.absoluteFill}
-            />
+            <View style={StyleSheet.absoluteFill}>
+                <BlurView
+                    intensity={blur.heavy}
+                    tint="dark"
+                    style={StyleSheet.absoluteFill}
+                />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.7)' }]} />
+            </View>
         );
     }
     return <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.9)' }]} />;
@@ -72,6 +77,9 @@ export default function AppLayout() {
     const [matchNotification, setMatchNotification] = useState<MatchWithQuestion | null>(null);
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isLocked, setIsLocked] = useState(false);
+    const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+    const hasCheckedInitialBiometric = useRef(false);
 
     // Check if we're currently on the onboarding screen
     const isOnOnboarding = segments.includes("onboarding");
@@ -109,6 +117,49 @@ export default function AppLayout() {
             subscription.remove();
         };
     }, [signOut]);
+
+    // Handle biometric lock when app goes to background/foreground
+    useEffect(() => {
+        // Check if biometric should be shown on initial mount
+        const checkInitialBiometric = async () => {
+            if (hasCheckedInitialBiometric.current) return;
+            hasCheckedInitialBiometric.current = true;
+
+            const enabled = await isBiometricEnabled();
+            if (enabled && isAuthenticated) {
+                setIsLocked(true);
+            }
+        };
+
+        if (isAuthenticated && !isLoading) {
+            checkInitialBiometric();
+        }
+
+        const subscription = AppState.addEventListener('change', async (nextAppState) => {
+            const previousState = appStateRef.current;
+            appStateRef.current = nextAppState;
+
+            // When app comes to foreground from background
+            if (
+                previousState.match(/inactive|background/) &&
+                nextAppState === 'active' &&
+                isAuthenticated
+            ) {
+                const enabled = await isBiometricEnabled();
+                if (enabled) {
+                    setIsLocked(true);
+                }
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, [isAuthenticated, isLoading]);
+
+    const handleBiometricUnlock = useCallback(() => {
+        setIsLocked(false);
+    }, []);
 
     // Fetch unread message count on mount
     useEffect(() => {
@@ -451,6 +502,12 @@ export default function AppLayout() {
                     </Pressable>
                 </Animated.View>
             )}
+
+            {/* Biometric Lock Screen */}
+            <BiometricLockScreen
+                visible={isLocked}
+                onUnlock={handleBiometricUnlock}
+            />
         </>
     );
 }

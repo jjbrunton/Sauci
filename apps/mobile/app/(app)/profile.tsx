@@ -1,10 +1,17 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch } from "react-native";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore, useSubscriptionStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
+import { resetSwipeTutorial } from "../../src/lib/swipeTutorialSeen";
+import {
+    isBiometricAvailable,
+    isBiometricEnabled,
+    setBiometricEnabled,
+    getBiometricType,
+} from "../../src/lib/biometricAuth";
 import { router } from "expo-router";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { FeedbackModal } from "../../src/components/FeedbackModal";
@@ -29,11 +36,33 @@ export default function ProfileScreen() {
     const [showPaywall, setShowPaywall] = useState(false);
     const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? false);
     const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
+    const [biometricAvailable, setBiometricAvailable] = useState(false);
+    const [biometricEnabled, setBiometricEnabledState] = useState(false);
+    const [biometricType, setBiometricType] = useState("Face ID");
+    const [isUpdatingBiometric, setIsUpdatingBiometric] = useState(false);
 
     // Check if user or partner has premium access
     const hasPremiumAccess = useMemo(() => {
         return user?.is_premium || partner?.is_premium || subscription.isProUser;
     }, [user?.is_premium, partner?.is_premium, subscription.isProUser]);
+
+    // Check biometric availability on mount
+    useEffect(() => {
+        const checkBiometric = async () => {
+            const available = await isBiometricAvailable();
+            setBiometricAvailable(available);
+
+            if (available) {
+                const enabled = await isBiometricEnabled();
+                setBiometricEnabledState(enabled);
+
+                const type = await getBiometricType();
+                setBiometricType(type);
+            }
+        };
+
+        checkBiometric();
+    }, []);
 
     // Check if it's the user's own subscription (vs partner's)
     const isOwnSubscription = user?.is_premium && subscription.isProUser;
@@ -83,6 +112,21 @@ export default function ProfileScreen() {
             Alert.alert("Error", "Failed to update preference. Please try again.");
         } finally {
             setIsUpdatingExplicit(false);
+        }
+    };
+
+    const handleBiometricToggle = async (value: boolean) => {
+        setBiometricEnabledState(value);
+        setIsUpdatingBiometric(true);
+
+        try {
+            await setBiometricEnabled(value);
+        } catch (error) {
+            // Revert on error
+            setBiometricEnabledState(!value);
+            Alert.alert("Error", `Failed to ${value ? "enable" : "disable"} ${biometricType}. Please try again.`);
+        } finally {
+            setIsUpdatingBiometric(false);
         }
     };
 
@@ -393,6 +437,39 @@ export default function ProfileScreen() {
                                 ios_backgroundColor={colors.glass.border}
                             />
                         </View>
+                        {biometricAvailable && (
+                            <>
+                                <View style={styles.preferencesDivider} />
+                                <View style={styles.rowContainer}>
+                                    <View style={styles.rowLeft}>
+                                        <LinearGradient
+                                            colors={gradients.primary as [string, string]}
+                                            style={styles.partnerIconGradient}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            <Ionicons
+                                                name={biometricType === "Face ID" || biometricType === "Face Recognition" ? "scan-outline" : "finger-print-outline"}
+                                                size={20}
+                                                color={colors.text}
+                                            />
+                                        </LinearGradient>
+                                        <View style={styles.rowTextContainer}>
+                                            <Text style={styles.rowValue}>{biometricType}</Text>
+                                            <Text style={styles.rowLabel}>Require unlock when opening app</Text>
+                                        </View>
+                                    </View>
+                                    <Switch
+                                        value={biometricEnabled}
+                                        onValueChange={handleBiometricToggle}
+                                        disabled={isUpdatingBiometric}
+                                        trackColor={{ false: colors.glass.border, true: colors.primaryLight }}
+                                        thumbColor={biometricEnabled ? colors.primary : colors.textTertiary}
+                                        ios_backgroundColor={colors.glass.border}
+                                    />
+                                </View>
+                            </>
+                        )}
                     </GlassCard>
                 </Animated.View>
 
@@ -451,6 +528,39 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
                     </GlassCard>
                 </Animated.View>
+
+                {/* Debug Section - Only show in development builds */}
+                {__DEV__ && (
+                    <Animated.View
+                        entering={FadeInDown.delay(500).duration(500)}
+                        style={styles.section}
+                    >
+                        <Text style={styles.debugSectionTitle}>Debug</Text>
+                        <GlassCard style={styles.debugCard}>
+                            <TouchableOpacity
+                                style={styles.rowContainer}
+                                onPress={async () => {
+                                    await resetSwipeTutorial();
+                                    Alert.alert("Success", "Swipe tutorial has been reset. It will show again next time you visit the swipe screen.");
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.rowLeft}>
+                                    <View style={styles.debugIcon}>
+                                        <Ionicons name="refresh" size={20} color={colors.warning} />
+                                    </View>
+                                    <View style={styles.rowTextContainer}>
+                                        <Text style={styles.rowValue}>Reset Swipe Tutorial</Text>
+                                        <Text style={styles.rowLabel}>Show the tutorial again</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.chevronContainer}>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                </View>
+                            </TouchableOpacity>
+                        </GlassCard>
+                    </Animated.View>
+                )}
 
                 {/* Danger Zone - Only show if in a couple */}
                 {couple && (
@@ -722,6 +832,11 @@ const styles = StyleSheet.create({
         color: colors.textTertiary,
         marginTop: 2,
     },
+    preferencesDivider: {
+        height: 1,
+        backgroundColor: colors.glass.border,
+        marginVertical: spacing.md,
+    },
     unlinkButton: {
         width: 36,
         height: 36,
@@ -809,6 +924,27 @@ const styles = StyleSheet.create({
     },
     bottomSpacer: {
         height: spacing.lg,
+    },
+    // Debug styles
+    debugSectionTitle: {
+        ...typography.caption1,
+        color: colors.warning,
+        textTransform: "uppercase",
+        letterSpacing: 1.5,
+        marginBottom: spacing.sm,
+        marginLeft: spacing.xs,
+    },
+    debugCard: {
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        borderWidth: 1,
+    },
+    debugIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.warningLight,
+        justifyContent: "center",
+        alignItems: "center",
     },
     // Danger Zone styles
     dangerSectionTitle: {

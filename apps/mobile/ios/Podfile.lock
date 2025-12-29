@@ -246,6 +246,8 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (7.0.5):
     - ExpoModulesCore
+  - ExpoLocalAuthentication (17.0.8):
+    - ExpoModulesCore
   - ExpoModulesCore (2.2.3):
     - DoubleConversion
     - glog
@@ -1786,6 +1788,8 @@ PODS:
     - React-perflogger (= 0.76.5)
     - React-utils (= 0.76.5)
   - RevenueCat (5.51.1)
+  - RNCAsyncStorage (2.2.0):
+    - React-Core
   - RNGestureHandler (2.20.2):
     - DoubleConversion
     - glog
@@ -1972,6 +1976,7 @@ DEPENDENCIES:
   - ExpoKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - ExpoLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
+  - ExpoLocalAuthentication (from `../node_modules/expo-local-authentication/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
@@ -2038,6 +2043,7 @@ DEPENDENCIES:
   - React-utils (from `../node_modules/react-native/ReactCommon/react/utils`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -2103,6 +2109,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-linear-gradient/ios"
   ExpoLinking:
     :path: "../node_modules/expo-linking/ios"
+  ExpoLocalAuthentication:
+    :path: "../node_modules/expo-local-authentication/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
   ExpoSecureStore:
@@ -2232,6 +2240,8 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RNCAsyncStorage:
+    :path: "../node_modules/@react-native-async-storage/async-storage"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNPurchases:
@@ -2271,6 +2281,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: b0171a73665bfcefcfcc311742a72a956e6aa680
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
+  ExpoLocalAuthentication: 8a31808565da7af926dd9b595e98594d8b1553b6
   ExpoModulesCore: 15f60d00e33ca0cea27147543877ca6e70c42ef5
   ExpoSecureStore: 9a3665d7161dd1031be386e278bffd623658f316
   EXUpdatesInterface: 7c977640bdd8b85833c19e3959ba46145c5719db
@@ -2337,6 +2348,7 @@ SPEC CHECKSUMS:
   ReactCodegen: 3a68408bf68d0957abcd13d610f76420005c1d91
   ReactCommon: 5809a8ee421b7219221a475b78180f8f34b5c5ec
   RevenueCat: eab035bbab271faccfef5c36eaff2a1ffef14dc0
+  RNCAsyncStorage: b44e8a4e798c3e1f56bffccd0f591f674fb9198f
   RNGestureHandler: 27a63f2218affdf1a426d56682f9b174904838b3
   RNPurchases: cc3333cede6c0f040545a95c38ae627d0174c058
   RNReanimated: 66cf0f600a26d2b5e74c6e0b1c77c1ab1f62fc05

@@ -93,15 +93,13 @@ Deno.serve(async (req) => {
             .eq("id", match_id)
             .single();
 
-        // Build push messages
+        // Build push messages (privacy-friendly - no content in notification)
         const messages: ExpoPushMessage[] = profiles
             .filter((p) => p.push_token)
             .map((profile) => ({
                 to: profile.push_token!,
                 title: "It's a match! 💕",
-                body: match?.question?.text
-                    ? `You both agreed: "${match.question.text.substring(0, 50)}..."`
-                    : "You and your partner agreed on something new!",
+                body: "You and your partner matched on something new!",
                 sound: "default",
                 data: { match_id, type: "match" },
             }));

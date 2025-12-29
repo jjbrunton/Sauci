@@ -11,26 +11,26 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		46CB71552F030871008AC4FC /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46CB71542F030871008AC4FC /* StoreKit.framework */; };
+		46CB71572F0334FF008AC4FC /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 46CB71562F0334FF008AC4FC /* StoreKit.framework */; };
+		753494A6E21B10482BBED79D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 426EFCCADE400D3F5060F5FE /* PrivacyInfo.xcprivacy */; };
+		7BA3DCB069BE4EDFB54CC861 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA143F69E734D11B2959507 /* noop-file.swift */; };
 		96905EF65AED1B983A6B3ABC /* libPods-Sauci.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58EEBF8E8E6FB1BC6CAF49B5 /* libPods-Sauci.a */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
-		B6ADEA6ED390C90F199467A5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1C9767CAD348ACB05A4870BE /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		E6717E3EEE9541E7BCC0E9B8 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63D24AC64FB84C3AB9F4302E /* noop-file.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08DDB0F6A9A146CE84A39C1C /* Sauci-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "Sauci-Bridging-Header.h"; path = "Sauci/Sauci-Bridging-Header.h"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* Sauci.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sauci.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = Sauci/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = Sauci/AppDelegate.mm; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Sauci/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Sauci/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = Sauci/main.m; sourceTree = "<group>"; };
-		1C9767CAD348ACB05A4870BE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Sauci/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		1E5EDAB25D1C4414926F678F /* Sauci-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "Sauci-Bridging-Header.h"; path = "Sauci/Sauci-Bridging-Header.h"; sourceTree = "<group>"; };
-		46CB71542F030871008AC4FC /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		426EFCCADE400D3F5060F5FE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = Sauci/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		46CB71562F0334FF008AC4FC /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		58EEBF8E8E6FB1BC6CAF49B5 /* libPods-Sauci.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Sauci.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		63D24AC64FB84C3AB9F4302E /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "Sauci/noop-file.swift"; sourceTree = "<group>"; };
+		6AA143F69E734D11B2959507 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "Sauci/noop-file.swift"; sourceTree = "<group>"; };
 		6C2E3173556A471DD304B334 /* Pods-Sauci.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sauci.debug.xcconfig"; path = "Target Support Files/Pods-Sauci/Pods-Sauci.debug.xcconfig"; sourceTree = "<group>"; };
 		7A4D352CD337FB3A3BF06240 /* Pods-Sauci.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Sauci.release.xcconfig"; path = "Target Support Files/Pods-Sauci/Pods-Sauci.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Sauci/SplashScreen.storyboard; sourceTree = "<group>"; };
@@ -45,7 +45,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				96905EF65AED1B983A6B3ABC /* libPods-Sauci.a in Frameworks */,
-				46CB71552F030871008AC4FC /* StoreKit.framework in Frameworks */,
+				46CB71572F0334FF008AC4FC /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,9 +62,9 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				63D24AC64FB84C3AB9F4302E /* noop-file.swift */,
-				1E5EDAB25D1C4414926F678F /* Sauci-Bridging-Header.h */,
-				1C9767CAD348ACB05A4870BE /* PrivacyInfo.xcprivacy */,
+				6AA143F69E734D11B2959507 /* noop-file.swift */,
+				08DDB0F6A9A146CE84A39C1C /* Sauci-Bridging-Header.h */,
+				426EFCCADE400D3F5060F5FE /* PrivacyInfo.xcprivacy */,
 			);
 			name = Sauci;
 			sourceTree = "<group>";
@@ -72,7 +72,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				46CB71542F030871008AC4FC /* StoreKit.framework */,
+				46CB71562F0334FF008AC4FC /* StoreKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				58EEBF8E8E6FB1BC6CAF49B5 /* libPods-Sauci.a */,
 			);
@@ -151,14 +151,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "Sauci" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				6F4D4033C27C2AC6612A535A /* [Expo] Configure project */,
+				3F25679DC28AE5BB78AFEBF5 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				6B8CABAC69F8483D9920303C /* Upload Debug Symbols to Sentry */,
-				A435DFC7C52C70693FBE0CD3 /* [CP] Embed Pods Frameworks */,
+				2269DDED21E54A6284DF755C /* Upload Debug Symbols to Sentry */,
+				F51873069048543029DDD07B /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -210,7 +210,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				B6ADEA6ED390C90F199467A5 /* PrivacyInfo.xcprivacy in Resources */,
+				753494A6E21B10482BBED79D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -254,7 +254,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		6B8CABAC69F8483D9920303C /* Upload Debug Symbols to Sentry */ = {
+		2269DDED21E54A6284DF755C /* Upload Debug Symbols to Sentry */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -268,7 +268,7 @@
 			shellPath = /bin/sh;
 			shellScript = "/bin/sh `${NODE_BINARY:-node} --print \"require('path').dirname(require.resolve('@sentry/react-native/package.json')) + '/scripts/sentry-xcode-debug-files.sh'\"`";
 		};
-		6F4D4033C27C2AC6612A535A /* [Expo] Configure project */ = {
+		3F25679DC28AE5BB78AFEBF5 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -301,6 +301,7 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/PurchasesHybridCommon/PurchasesHybridCommon.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RCT-Folly/RCT-Folly_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/RNCAsyncStorage/RNCAsyncStorage_resources.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/RevenueCat/RevenueCat.bundle",
@@ -319,6 +320,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/ExpoFileSystem_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/PurchasesHybridCommon.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RCT-Folly_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RNCAsyncStorage_resources.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/RevenueCat.bundle",
@@ -333,7 +335,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Sauci/Pods-Sauci-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A435DFC7C52C70693FBE0CD3 /* [CP] Embed Pods Frameworks */ = {
+		F51873069048543029DDD07B /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -361,7 +363,7 @@
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
-				E6717E3EEE9541E7BCC0E9B8 /* noop-file.swift in Sources */,
+				7BA3DCB069BE4EDFB54CC861 /* noop-file.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
