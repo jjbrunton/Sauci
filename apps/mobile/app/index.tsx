@@ -19,6 +19,11 @@ export default function Index() {
         return <Redirect href="/(auth)/login" />;
     }
 
+    // If user hasn't completed onboarding, go to onboarding first
+    if (!user?.onboarding_completed) {
+        return <Redirect href="/(app)/onboarding" />;
+    }
+
     // If user has no couple, go to pairing
     if (!user?.couple_id) {
         return <Redirect href="/(app)/pairing" />;

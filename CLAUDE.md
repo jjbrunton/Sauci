@@ -96,9 +96,52 @@ Edge functions in `apps/supabase/functions/` handle complex operations:
 - `revenuecat-webhook` - Subscription webhook handler
 - `sync-subscription` - Syncs RevenueCat subscription status
 
+#### Edge Function Deployment Guidelines
+When deploying edge functions via MCP tools (`mcp__sauci-*__deploy_edge_function`):
+
+**IMPORTANT: Always use `verify_jwt: false`** for all edge functions. Supabase's built-in JWT verification causes 401 errors even with valid tokens. Instead, handle authentication manually in the function code using:
+```typescript
+const { data: { user }, error: authError } = await supabase.auth.getUser(
+    authHeader.replace("Bearer ", "")
+);
+```
+
+This approach:
+- Gives better error messages
+- Allows custom auth handling
+- Avoids mysterious 401 failures
+
+**Current function settings (all should be verify_jwt: false):**
+| Function | verify_jwt | Auth Method |
+|----------|------------|-------------|
+| `manage-couple` | false | Manual via getUser() |
+| `submit-response` | false | Manual via getUser() |
+| `sync-subscription` | false | Manual via getUser() |
+| `delete-relationship` | false | Manual via getUser() |
+| `revenuecat-webhook` | false | Webhook signature validation |
+| `send-notification` | false | Internal trigger (no auth) |
+| `send-message-notification` | false | Internal trigger (no auth) |
+
+### Database Best Practices
+- **Always use `.maybeSingle()` instead of `.single()`** when the row might not exist. `.single()` throws an error if 0 or >1 rows are returned.
+- **Profile creation trigger**: The `on_auth_user_created` trigger automatically creates a profile when a user signs up. Never assume a profile exists without checking.
+- **Check for null profiles** in edge functions before performing operations.
+
 ### Key Patterns
 - Responses use UPSERT with `onConflict: "user_id,question_id"`
 - Match detection happens in `submit-response` edge function after each response
 - Real-time subscriptions used for chat messages
 - RevenueCat handles in-app purchases and subscription management
 - RLS policies enforce couple-level data isolation
+
+## Mobile UI - DO NOT CHANGE
+
+### Tab Bar Background
+**NEVER set `backgroundColor: 'transparent'` on the tab bar.** Always use a semi-transparent solid color:
+```typescript
+backgroundColor: 'rgba(18, 18, 18, 0.85)',
+```
+
+The `BlurView` in `tabBarBackground` is unreliable and can fail during re-renders/transitions, causing a fully transparent tab bar. The solid rgba background acts as a fallback while still allowing the blur effect on top.
+
+**Location:** `apps/mobile/app/(app)/_layout.tsx` - `tabBarStyle`

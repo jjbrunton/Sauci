@@ -673,10 +673,10 @@ CREATE TRIGGER on_new_message
   AFTER INSERT ON messages
   FOR EACH ROW EXECUTE FUNCTION notify_new_message();
 
--- Auth trigger (in auth schema - handled separately by Supabase)
--- CREATE TRIGGER on_auth_user_created
---   AFTER INSERT ON auth.users
---   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+-- Auth trigger to create profile on signup
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
 -- ============================================================================
 -- ENABLE ROW LEVEL SECURITY

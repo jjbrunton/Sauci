@@ -94,7 +94,9 @@ export default function OnboardingScreen() {
     };
 
     const handleComplete = async () => {
+        console.log('[Onboarding] handleComplete called, user:', user?.id, 'name:', name);
         if (!user?.id) {
+            console.error('[Onboarding] No user ID available');
             setError('Not logged in. Please restart the app.');
             return;
         }
@@ -115,10 +117,13 @@ export default function OnboardingScreen() {
                 .eq('id', user.id);
 
             if (updateError) {
+                console.error('[Onboarding] Profile update error:', updateError);
                 throw updateError;
             }
 
+            console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
+            console.log('[Onboarding] User fetched, navigating to home...');
             router.replace('/');
         } catch (err: any) {
             console.error('Onboarding error:', err);
@@ -401,6 +406,12 @@ export default function OnboardingScreen() {
                                     </Text>
                                 </View>
                             </View>
+                            {error && (
+                                <View style={styles.errorContainer}>
+                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            )}
                         </GlassCard>
 
                         <View style={styles.footer}>

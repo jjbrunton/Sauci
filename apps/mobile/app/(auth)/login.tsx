@@ -9,7 +9,7 @@ import {
     Platform,
     ScrollView,
 } from "react-native";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import * as Linking from "expo-linking";
 import Animated, {
     FadeIn,
@@ -472,14 +472,26 @@ export default function LoginScreen() {
                                     />
 
                                     {authMode === "password" && (
-                                        <GlassInput
-                                            placeholder="Enter your password"
-                                            value={password}
-                                            onChangeText={(text) => { clearError(); setPassword(text); }}
-                                            secureTextEntry
-                                            autoCapitalize="none"
-                                            icon={<Ionicons name="lock-closed-outline" size={20} color={colors.textTertiary} />}
-                                        />
+                                        <>
+                                            <GlassInput
+                                                placeholder="Enter your password"
+                                                value={password}
+                                                onChangeText={(text) => { clearError(); setPassword(text); }}
+                                                secureTextEntry
+                                                autoCapitalize="none"
+                                                icon={<Ionicons name="lock-closed-outline" size={20} color={colors.textTertiary} />}
+                                            />
+                                            {!isSignUp && (
+                                                <TouchableOpacity
+                                                    style={styles.forgotPassword}
+                                                    onPress={() => router.push("/(auth)/forgot-password")}
+                                                >
+                                                    <Text style={styles.forgotPasswordText}>
+                                                        Forgot password?
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            )}
+                                        </>
                                     )}
 
                                     {authMode === "magic-link" ? (
@@ -670,6 +682,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     toggleSignUpText: {
+        ...typography.subhead,
+        color: colors.primary,
+    },
+    forgotPassword: {
+        alignSelf: "flex-end",
+        marginTop: -spacing.xs,
+        marginBottom: spacing.xs,
+    },
+    forgotPasswordText: {
         ...typography.subhead,
         color: colors.primary,
     },

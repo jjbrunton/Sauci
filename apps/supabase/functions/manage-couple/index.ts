@@ -47,13 +47,28 @@ Deno.serve(async (req) => {
 
         if (method === "POST") {
             // Check if user is already in a couple
-            const { data: existingProfile } = await supabase
+            const { data: existingProfile, error: profileError } = await supabase
                 .from("profiles")
                 .select("couple_id")
                 .eq("id", user.id)
-                .single();
+                .maybeSingle();
 
-            if (existingProfile?.couple_id) {
+            if (profileError) {
+                console.error("Profile lookup error:", profileError);
+                return new Response(
+                    JSON.stringify({ error: "Failed to check profile" }),
+                    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
+
+            if (!existingProfile) {
+                return new Response(
+                    JSON.stringify({ error: "Profile not found. Please complete signup first." }),
+                    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
+
+            if (existingProfile.couple_id) {
                 return new Response(
                     JSON.stringify({ error: "You are already in a couple" }),
                     { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -67,26 +82,27 @@ Deno.serve(async (req) => {
                 const { invite_code }: JoinCoupleBody = body;
 
                 // Validate invite code format (alphanumeric, 8 chars)
-                const sanitizedCode = invite_code.trim().toUpperCase();
-                if (!/^[A-Z0-9]{8}$/.test(sanitizedCode)) {
+                const sanitizedCode = invite_code.trim().toLowerCase();
+                if (!/^[a-z0-9]{8}$/.test(sanitizedCode)) {
                     return new Response(
                         JSON.stringify({ error: "Invalid invite code format" }),
                         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                     );
                 }
 
-                // Use secure RPC function for invite code verification
-                const { data: verifyResult, error: verifyError } = await supabase
-                    .rpc("verify_invite_code", { code: sanitizedCode });
+                // Find couple by invite code (stored as lowercase in DB)
+                const { data: couple, error: coupleError } = await supabase
+                    .from("couples")
+                    .select("id")
+                    .eq("invite_code", sanitizedCode)
+                    .maybeSingle();
 
-                if (verifyError || !verifyResult?.valid) {
+                if (coupleError || !couple) {
                     return new Response(
-                        JSON.stringify({ error: verifyResult?.error || "Invalid invite code" }),
+                        JSON.stringify({ error: "Invalid invite code" }),
                         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                     );
                 }
-
-                const couple = { id: verifyResult.couple_id };
 
                 // Check if couple already has 2 members
                 const { count } = await supabase
@@ -151,21 +167,62 @@ Deno.serve(async (req) => {
         }
 
         if (method === "DELETE") {
-            // Leave couple
-            const { error } = await supabase
+            // Get user's current couple
+            const { data: profile, error: profileFetchError } = await supabase
+                .from("profiles")
+                .select("couple_id")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (profileFetchError || !profile?.couple_id) {
+                return new Response(
+                    JSON.stringify({ error: "You are not in a couple" }),
+                    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
+
+            const coupleId = profile.couple_id;
+
+            // Count members in this couple
+            const { count, error: countError } = await supabase
+                .from("profiles")
+                .select("*", { count: "exact", head: true })
+                .eq("couple_id", coupleId);
+
+            if (countError) {
+                return new Response(
+                    JSON.stringify({ error: "Failed to check couple members" }),
+                    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
+
+            // Remove ALL members from couple (both partners get unlinked)
+            // This ensures the remaining partner isn't left in a "waiting" state
+            const { error: updateError } = await supabase
                 .from("profiles")
                 .update({ couple_id: null })
-                .eq("id", user.id);
+                .eq("couple_id", coupleId);
 
-            if (error) {
+            if (updateError) {
                 return new Response(
                     JSON.stringify({ error: "Failed to leave couple" }),
                     { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                 );
             }
 
+            // Delete the couple entirely (cascades to all related data)
+            const { error: deleteError } = await supabase
+                .from("couples")
+                .delete()
+                .eq("id", coupleId);
+
+            if (deleteError) {
+                console.error("Failed to delete couple:", deleteError);
+                // Don't fail the request, users already unlinked
+            }
+
             return new Response(
-                JSON.stringify({ success: true }),
+                JSON.stringify({ success: true, couple_deleted: true }),
                 { headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }

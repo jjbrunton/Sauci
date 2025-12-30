@@ -19,13 +19,21 @@ function TabBarBackground() {
     if (Platform.OS === 'ios') {
         return (
             <BlurView
-                intensity={80}
-                tint="systemChromeMaterialDark"
+                intensity={100}
+                tint="dark"
                 style={StyleSheet.absoluteFill}
             />
         );
     }
-    return <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(22, 33, 62, 0.95)' }]} />;
+    // Android fallback - use experimental blur method
+    return (
+        <BlurView
+            intensity={80}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+            experimentalBlurMethod="dimezisBlurView"
+        />
+    );
 }
 
 interface PlayTabButtonProps {
@@ -190,6 +198,37 @@ export default function AppLayout() {
             checkAndRegisterPushToken(user.id);
         }
     }, [user?.id, user?.onboarding_completed]);
+
+    // Subscribe to realtime changes on the current user's profile
+    // This detects when partner disconnects (sets our couple_id to NULL)
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const channel = supabase
+            .channel(`profile:${user.id}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "UPDATE",
+                    schema: "public",
+                    table: "profiles",
+                    filter: `id=eq.${user.id}`,
+                },
+                async (payload) => {
+                    const newProfile = payload.new as { couple_id: string | null };
+                    // If couple_id changed (especially to NULL when partner disconnects)
+                    if (newProfile.couple_id !== user.couple_id) {
+                        console.log("Profile couple_id changed, refreshing user data...");
+                        await useAuthStore.getState().fetchUser();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id, user?.couple_id]);
 
     // Subscribe to realtime match notifications
     useEffect(() => {
@@ -373,7 +412,7 @@ export default function AppLayout() {
                     tabBarBackground: () => <TabBarBackground />,
                     tabBarStyle: shouldHideTabBar ? { display: 'none' } : {
                         position: 'absolute',
-                        backgroundColor: 'transparent',
+                        backgroundColor: 'rgba(18, 18, 18, 0.85)',
                         borderTopColor: colors.glass.border,
                         borderTopWidth: 1,
                         paddingTop: 8,

@@ -29,7 +29,7 @@ if (Platform.OS === "web" && typeof window === "undefined") {
     };
 }
 
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 // GestureHandlerRootView is only needed on native platforms
 // On web, we use a simple View to avoid findNodeHandle errors
@@ -103,6 +103,12 @@ export default function RootLayout() {
                         type: type as 'signup' | 'magiclink' | 'recovery' | 'invite' | 'email',
                     });
                     console.log('[DeepLink] verifyOtp result:', { data: !!data?.session, error: error?.message });
+
+                    // If this is a password recovery flow, navigate to reset password screen
+                    if (type === 'recovery' && data?.session && !error) {
+                        console.log('[DeepLink] Password recovery flow - navigating to reset-password');
+                        router.replace("/(auth)/reset-password");
+                    }
                 } else {
                     // Fallback for web or other scenarios
                     console.log('[DeepLink] No auth params found, falling back to getSession');

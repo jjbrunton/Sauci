@@ -3,22 +3,26 @@ import {
     View,
     Text,
     TextInput,
-    TouchableOpacity,
     StyleSheet,
     Alert,
     ActivityIndicator,
     Share,
     KeyboardAvoidingView,
     Platform,
+    TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Clipboard from "expo-clipboard";
 import { useAuthStore } from "../../src/store";
 import { supabase } from "../../src/lib/supabase";
 import { router } from "expo-router";
+import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
 export default function PairingScreen() {
-    const { user, fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading, signOut } = useAuthStore();
+    const { user, fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -105,13 +109,17 @@ export default function PairingScreen() {
                 body: { invite_code: sanitizedCode },
             });
 
-            if (error) throw error;
-            if (data.error) throw new Error(data.error);
+            if (error) {
+                // Extract user-friendly error message
+                const errorMessage = data?.error || "Unable to join couple. Please try again.";
+                throw new Error(errorMessage);
+            }
+            if (data?.error) throw new Error(data.error);
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
 
-            Alert.alert("Success", "You are now paired! 💕", [
+            Alert.alert("Success", "You are now paired!", [
                 { text: "Let's Go", onPress: () => router.replace("/(app)/") }
             ]);
         } catch (error: any) {
@@ -140,16 +148,33 @@ export default function PairingScreen() {
         }
     };
 
-    const handleSignOut = () => {
+    const handleCancelPairing = async () => {
         Alert.alert(
-            "Sign Out",
-            "Are you sure you want to sign out?",
+            "Cancel Pairing",
+            "Are you sure you want to cancel? Your invite code will be deleted.",
             [
-                { text: "Cancel", style: "cancel" },
+                { text: "Keep Waiting", style: "cancel" },
                 {
-                    text: "Sign Out",
+                    text: "Cancel Pairing",
                     style: "destructive",
-                    onPress: signOut,
+                    onPress: async () => {
+                        setIsSubmitting(true);
+                        try {
+                            const { data, error } = await supabase.functions.invoke("manage-couple", {
+                                method: "DELETE",
+                            });
+
+                            if (error) throw error;
+                            if (data?.error) throw new Error(data.error);
+
+                            await fetchUser();
+                            await fetchCouple();
+                        } catch (error: any) {
+                            Alert.alert("Error", error.message);
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    },
                 },
             ]
         );
@@ -157,273 +182,360 @@ export default function PairingScreen() {
 
     if (isAuthLoading) {
         return (
-            <View style={[styles.container, styles.centerContent]}>
-                <ActivityIndicator size="large" color="#e94560" />
-            </View>
+            <GradientBackground>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </GradientBackground>
         );
     }
 
     // If user has a couple but no partner, they are waiting
     if (couple && !partner) {
         return (
-            <View style={styles.container}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => router.back()}
-                >
-                    <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={styles.content}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="heart" size={48} color="#e94560" />
+            <GradientBackground>
+                <View style={styles.container}>
+                    {/* Header */}
+                    <Animated.View
+                        entering={FadeInDown.delay(100).duration(500)}
+                        style={styles.header}
+                    >
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            onPress={() => router.back()}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={colors.text} />
+                        </TouchableOpacity>
+                        <Text style={styles.title}>Partner Code</Text>
+                    </Animated.View>
+
+                    <View style={styles.content}>
+                        {/* Icon */}
+                        <Animated.View
+                            entering={FadeInDown.delay(200).duration(500)}
+                            style={styles.iconSection}
+                        >
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.iconGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Ionicons name="heart" size={40} color={colors.text} />
+                            </LinearGradient>
+                            <Text style={styles.subtitle}>
+                                Share this code with your partner to link your accounts
+                            </Text>
+                        </Animated.View>
+
+                        {/* Code Card */}
+                        <Animated.View
+                            entering={FadeInDown.delay(300).duration(500)}
+                            style={styles.section}
+                        >
+                            <GlassCard variant="elevated">
+                                <TouchableOpacity
+                                    style={styles.codeContainer}
+                                    onPress={copyToClipboard}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.code}>{couple.invite_code.toUpperCase()}</Text>
+                                    <View style={styles.copyIcon}>
+                                        <Ionicons name="copy-outline" size={20} color={colors.textSecondary} />
+                                    </View>
+                                </TouchableOpacity>
+                                <Text style={styles.tapToCopy}>Tap to copy</Text>
+                            </GlassCard>
+                        </Animated.View>
+
+                        {/* Share Button */}
+                        <Animated.View
+                            entering={FadeInDown.delay(400).duration(500)}
+                            style={styles.section}
+                        >
+                            <GlassButton
+                                onPress={shareCode}
+                                fullWidth
+                                icon={<Ionicons name="share-outline" size={20} color={colors.text} />}
+                            >
+                                Share Code
+                            </GlassButton>
+                        </Animated.View>
+
+                        {/* Waiting indicator */}
+                        <Animated.View
+                            entering={FadeInDown.delay(500).duration(500)}
+                            style={styles.waitingSection}
+                        >
+                            <View style={styles.waitingBadge}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                                <Text style={styles.waitingText}>Waiting for your partner to join...</Text>
+                            </View>
+                        </Animated.View>
+
+                        {/* Cancel Button */}
+                        <Animated.View
+                            entering={FadeInDown.delay(600).duration(500)}
+                            style={styles.cancelSection}
+                        >
+                            <TouchableOpacity
+                                onPress={handleCancelPairing}
+                                disabled={isSubmitting}
+                                style={styles.cancelButton}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel Pairing</Text>
+                            </TouchableOpacity>
+                        </Animated.View>
                     </View>
-                    <Text style={styles.title}>Partner Code</Text>
-                    <Text style={styles.subtitle}>
-                        Share this code with your partner to link your accounts
-                    </Text>
-
-                    <TouchableOpacity style={styles.codeContainer} onPress={copyToClipboard}>
-                        <Text style={styles.code}>{couple.invite_code.toUpperCase()}</Text>
-                        <Ionicons name="copy-outline" size={24} color="#666" />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.shareButton} onPress={shareCode}>
-                        <Ionicons name="share-outline" size={24} color="#fff" style={{ marginRight: 8 }} />
-                        <Text style={styles.buttonText}>Share Code</Text>
-                    </TouchableOpacity>
-
-                    <Text style={styles.waitingText}>
-                        Waiting for your partner to join...
-                    </Text>
-                    <ActivityIndicator size="small" color="#e94560" style={{ marginTop: 16 }} />
                 </View>
-            </View>
+            </GradientBackground>
         );
     }
 
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-            <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
+        <GradientBackground>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.content}>
-                <Text style={styles.emoji}>🔗</Text>
-                <Text style={styles.title}>Pair Up</Text>
-                <Text style={styles.subtitle}>
-                    Link with your partner to start matching
-                </Text>
-
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Have a code?</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter invite code"
-                        placeholderTextColor="#666"
-                        value={inviteCode}
-                        onChangeText={setInviteCode}
-                        autoCapitalize="characters"
-                        maxLength={8}
-                    />
-                    <TouchableOpacity
-                        style={[styles.button, isSubmitting && styles.buttonDisabled]}
-                        onPress={handleJoinCouple}
-                        disabled={isSubmitting}
-                    >
-                        <Text style={styles.buttonText}>
-                            {isSubmitting ? "Joining..." : "Join Partner"}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.divider}>
-                    <View style={styles.dividerLine} />
-                    <Text style={styles.dividerText}>or</Text>
-                    <View style={styles.dividerLine} />
-                </View>
-
-                <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={handleCreateCouple}
-                    disabled={isSubmitting}
+                {/* Header */}
+                <Animated.View
+                    entering={FadeInDown.delay(100).duration(500)}
+                    style={styles.header}
                 >
-                    <Text style={styles.secondaryButtonText}>
-                        {isSubmitting ? "Creating..." : "Create New Code"}
-                    </Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.back()}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Pair Up</Text>
+                </Animated.View>
 
-                <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                    <Ionicons name="log-out-outline" size={20} color="#888" />
-                    <Text style={styles.signOutText}>Sign Out</Text>
-                </TouchableOpacity>
-            </View>
-        </KeyboardAvoidingView>
+                <View style={styles.content}>
+                    {/* Icon */}
+                    <Animated.View
+                        entering={FadeInDown.delay(200).duration(500)}
+                        style={styles.iconSection}
+                    >
+                        <LinearGradient
+                            colors={gradients.primary as [string, string]}
+                            style={styles.iconGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <Ionicons name="link" size={40} color={colors.text} />
+                        </LinearGradient>
+                        <Text style={styles.subtitle}>
+                            Link with your partner to start matching
+                        </Text>
+                    </Animated.View>
+
+                    {/* Join Card */}
+                    <Animated.View
+                        entering={FadeInDown.delay(300).duration(500)}
+                        style={styles.section}
+                    >
+                        <Text style={styles.sectionTitle}>Have a code?</Text>
+                        <GlassCard>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="Enter invite code"
+                                placeholderTextColor={colors.textTertiary}
+                                value={inviteCode}
+                                onChangeText={setInviteCode}
+                                autoCapitalize="characters"
+                                maxLength={8}
+                            />
+                            <GlassButton
+                                onPress={handleJoinCouple}
+                                disabled={isSubmitting}
+                                loading={isSubmitting}
+                                fullWidth
+                            >
+                                Join Partner
+                            </GlassButton>
+                        </GlassCard>
+                    </Animated.View>
+
+                    {/* Divider */}
+                    <Animated.View
+                        entering={FadeInDown.delay(400).duration(500)}
+                        style={styles.divider}
+                    >
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>or</Text>
+                        <View style={styles.dividerLine} />
+                    </Animated.View>
+
+                    {/* Create Code Button */}
+                    <Animated.View
+                        entering={FadeInDown.delay(500).duration(500)}
+                        style={styles.section}
+                    >
+                        <GlassButton
+                            variant="secondary"
+                            onPress={handleCreateCouple}
+                            disabled={isSubmitting}
+                            fullWidth
+                        >
+                            Create New Code
+                        </GlassButton>
+                    </Animated.View>
+                </View>
+            </KeyboardAvoidingView>
+        </GradientBackground>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#1a1a2e",
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    header: {
+        paddingTop: Platform.OS === "ios" ? 60 : 40,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.lg,
+        flexDirection: "row",
+        alignItems: "center",
     },
     backButton: {
-        position: "absolute",
-        top: Platform.OS === "ios" ? 60 : 40,
-        left: 20,
-        zIndex: 10,
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: colors.glass.background,
         justifyContent: "center",
         alignItems: "center",
+        marginRight: spacing.md,
     },
-    centerContent: {
-        justifyContent: "center",
-        alignItems: "center",
+    title: {
+        ...typography.title1,
+        color: colors.text,
     },
     content: {
         flex: 1,
-        padding: 24,
+        paddingHorizontal: spacing.lg,
+        justifyContent: "center",
+    },
+    iconSection: {
+        alignItems: "center",
+        marginBottom: spacing.xl,
+    },
+    iconGradient: {
+        width: 88,
+        height: 88,
+        borderRadius: 44,
         justifyContent: "center",
         alignItems: "center",
-    },
-    emoji: {
-        fontSize: 64,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: "bold",
-        color: "#fff",
-        marginBottom: 8,
+        marginBottom: spacing.lg,
+        ...shadows.lg,
     },
     subtitle: {
-        fontSize: 16,
-        color: "#888",
-        marginBottom: 48,
+        ...typography.body,
+        color: colors.textSecondary,
         textAlign: "center",
+        maxWidth: 280,
     },
-    card: {
-        width: "100%",
-        backgroundColor: "#16213e",
-        borderRadius: 16,
-        padding: 24,
-        borderWidth: 1,
-        borderColor: "#0f3460",
+    section: {
+        marginBottom: spacing.md,
     },
-    cardTitle: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: "#fff",
-        marginBottom: 16,
+    sectionTitle: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        textTransform: "uppercase",
+        letterSpacing: 1.5,
+        marginBottom: spacing.sm,
+        marginLeft: spacing.xs,
     },
     input: {
-        backgroundColor: "#1a1a2e",
-        borderRadius: 12,
-        padding: 16,
-        fontSize: 18,
-        color: "#fff",
-        marginBottom: 16,
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: "#0f3460",
+        borderColor: colors.glass.border,
+        padding: spacing.md,
+        ...typography.headline,
+        color: colors.text,
         textAlign: "center",
-        letterSpacing: 2,
+        letterSpacing: 4,
         fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    },
-    button: {
-        backgroundColor: "#e94560",
-        borderRadius: 12,
-        padding: 16,
-        alignItems: "center",
-    },
-    buttonDisabled: {
-        opacity: 0.7,
-    },
-    buttonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "600",
+        marginBottom: spacing.md,
     },
     divider: {
         flexDirection: "row",
         alignItems: "center",
-        marginVertical: 32,
-        width: "100%",
+        marginVertical: spacing.lg,
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: "#333",
+        backgroundColor: colors.glass.border,
     },
     dividerText: {
-        color: "#666",
-        paddingHorizontal: 16,
-    },
-    secondaryButton: {
-        padding: 16,
-    },
-    secondaryButtonText: {
-        color: "#e94560",
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    iconContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "rgba(233, 69, 96, 0.1)",
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 24,
+        ...typography.subhead,
+        color: colors.textTertiary,
+        paddingHorizontal: spacing.md,
     },
     codeContainer: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#16213e",
-        padding: 20,
-        borderRadius: 16,
-        marginTop: 32,
-        marginBottom: 24,
-        borderWidth: 1,
-        borderColor: "#e94560",
-        borderStyle: "dashed",
+        justifyContent: "center",
     },
     code: {
-        fontSize: 32,
-        fontWeight: "bold",
-        color: "#fff",
-        letterSpacing: 4,
-        marginRight: 16,
+        ...typography.largeTitle,
+        color: colors.text,
+        letterSpacing: 6,
         fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     },
-    shareButton: {
-        flexDirection: "row",
-        backgroundColor: "#e94560",
-        paddingHorizontal: 32,
-        paddingVertical: 16,
-        borderRadius: 12,
+    copyIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
         alignItems: "center",
+        marginLeft: spacing.md,
+    },
+    tapToCopy: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        textAlign: "center",
+        marginTop: spacing.sm,
+    },
+    waitingSection: {
+        alignItems: "center",
+        marginTop: spacing.xl,
+    },
+    waitingBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.glass.background,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        gap: spacing.sm,
     },
     waitingText: {
-        marginTop: 48,
-        color: "#666",
-        fontSize: 14,
+        ...typography.subhead,
+        color: colors.textTertiary,
     },
-    signOutButton: {
-        flexDirection: "row",
+    cancelSection: {
         alignItems: "center",
-        marginTop: 48,
-        padding: 12,
+        marginTop: spacing.xl,
     },
-    signOutText: {
-        color: "#888",
-        fontSize: 16,
-        marginLeft: 8,
+    cancelButton: {
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+    },
+    cancelButtonText: {
+        ...typography.subhead,
+        color: colors.error,
     },
 });
