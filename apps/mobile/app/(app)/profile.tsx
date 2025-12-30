@@ -392,26 +392,17 @@ export default function ProfileScreen() {
                         )}
                     </GlassCard>
 
-                    {/* Restore Purchases & Redeem Links */}
+                    {/* Restore Purchases Link */}
                     {!hasPremiumAccess && (
-                        <View style={styles.subscriptionLinks}>
-                            <TouchableOpacity
-                                style={styles.restoreLink}
-                                onPress={handleRestorePurchases}
-                                disabled={isPurchasing}
-                            >
-                                <Text style={styles.restoreLinkText}>
-                                    {isPurchasing ? "Restoring..." : "Restore Purchases"}
-                                </Text>
-                            </TouchableOpacity>
-                            <Text style={styles.linkDivider}>|</Text>
-                            <TouchableOpacity
-                                style={styles.restoreLink}
-                                onPress={() => router.push("/(app)/redeem")}
-                            >
-                                <Text style={styles.restoreLinkText}>Redeem Code</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <TouchableOpacity
+                            style={styles.restoreLink}
+                            onPress={handleRestorePurchases}
+                            disabled={isPurchasing}
+                        >
+                            <Text style={styles.restoreLinkText}>
+                                {isPurchasing ? "Restoring..." : "Restore Purchases"}
+                            </Text>
+                        </TouchableOpacity>
                     )}
                 </Animated.View>
 
@@ -905,20 +896,12 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontWeight: "600",
     },
-    subscriptionLinks: {
-        flexDirection: "row",
-        justifyContent: "center",
+    restoreLink: {
         alignItems: "center",
         marginTop: spacing.sm,
-    },
-    restoreLink: {
         padding: spacing.sm,
     },
     restoreLinkText: {
-        ...typography.caption1,
-        color: colors.textTertiary,
-    },
-    linkDivider: {
         ...typography.caption1,
         color: colors.textTertiary,
     },
