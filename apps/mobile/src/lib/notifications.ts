@@ -95,6 +95,64 @@ export async function clearPushToken(userId: string): Promise<void> {
 }
 
 /**
+ * Check if current device needs to register for push notifications.
+ * This handles the case where a user onboarded on one device (e.g., iOS)
+ * and then installs on another device (e.g., Android) - the new device
+ * needs its own push token.
+ *
+ * Returns true if a new token was registered.
+ */
+export async function checkAndRegisterPushToken(userId: string): Promise<boolean> {
+  if (Platform.OS === "web") {
+    return false;
+  }
+
+  try {
+    // First check if permissions are already granted
+    const { status } = await Notifications.getPermissionsAsync();
+
+    // If permissions not granted, we need to prompt the user
+    // But only do this if we don't already have a token for this device
+    if (status !== "granted") {
+      // Request permissions
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+      if (newStatus !== "granted") {
+        return false;
+      }
+    }
+
+    // Get the current device's push token
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) {
+      return false;
+    }
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    const currentToken = tokenData.data;
+
+    // Fetch the stored token from the database
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("push_token")
+      .eq("id", userId)
+      .single();
+
+    // If the stored token is different (or null), save the new one
+    if (profile?.push_token !== currentToken) {
+      await savePushToken(userId, currentToken);
+      console.log("Push token updated for new device");
+      return true;
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Failed to check/register push token:", error);
+    captureError(error as Error, { context: "push_token_check" });
+    return false;
+  }
+}
+
+/**
  * Handle notification tap - navigate to appropriate screen.
  */
 export function handleNotificationResponse(

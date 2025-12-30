@@ -1,8 +1,12 @@
 {
   "mcpServers": {
-    "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=npmmakhjmbzlkcmfyegw"
-    }
+    "sauci-prod": {
+        "type": "http",
+        "url": "https://mcp.supabase.com/mcp?project_ref=ckjcrkjpmhqhiucifukx"
+      },
+      "sauci-non-prod": {
+        "type": "http",
+        "url": "https://mcp.supabase.com/mcp?project_ref=itbzhrvlgvdmzbnhzhyx"
+      }
   }
 }

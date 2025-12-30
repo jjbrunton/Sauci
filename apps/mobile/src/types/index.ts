@@ -57,6 +57,7 @@ export interface Question {
     partner_text?: string | null;
     intensity: 1 | 2 | 3 | 4 | 5;
     allowed_couple_genders?: string[] | null;
+    target_user_genders?: string[] | null;
     created_at: string;
 }
 

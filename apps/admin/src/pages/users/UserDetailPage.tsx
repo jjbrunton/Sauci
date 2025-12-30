@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -128,17 +129,15 @@ export function UserDetailPage() {
                 expiresAt = date.toISOString();
             }
 
-            const { error } = await supabase
-                .from('subscriptions')
-                .insert({
-                    user_id: userId,
-                    revenuecat_app_user_id: 'admin_grant',
-                    product_id: 'admin_premium',
-                    status: 'active',
-                    store: 'manual',
-                    purchased_at: new Date().toISOString(),
-                    expires_at: expiresAt,
-                });
+            const { error } = await auditedSupabase.insert('subscriptions', {
+                user_id: userId,
+                revenuecat_app_user_id: 'admin_grant',
+                product_id: 'admin_premium',
+                status: 'active',
+                store: 'manual',
+                purchased_at: new Date().toISOString(),
+                expires_at: expiresAt,
+            });
 
             if (error) throw error;
 

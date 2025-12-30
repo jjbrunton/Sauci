@@ -45,6 +45,20 @@ supabase functions serve                          # Run edge functions locally
 supabase migration new <name>                     # Create new migration
 ```
 
+### Supabase Environments
+
+There are two Supabase projects configured via MCP servers:
+
+| Environment | Project Ref | URL | MCP Server |
+|-------------|-------------|-----|------------|
+| **Production** | `ckjcrkjpmhqhiucifukx` | https://ckjcrkjpmhqhiucifukx.supabase.co | `sauci-prod` |
+| **Non-Production** | `itbzhrvlgvdmzbnhzhyx` | https://itbzhrvlgvdmzbnhzhyx.supabase.co | `sauci-non-prod` |
+
+When using Claude Code with MCP tools:
+- Use `mcp__sauci-prod__*` tools for production database operations
+- Use `mcp__sauci-non-prod__*` tools for development/staging database operations
+- **Always verify which environment you're targeting before running migrations or destructive operations**
+
 ## Architecture
 
 ### Monorepo Structure (Turborepo)

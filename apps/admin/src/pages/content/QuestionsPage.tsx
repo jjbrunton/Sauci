@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -25,16 +25,18 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Sparkles, Loader2, Users, ShieldCheck } from 'lucide-react';
+import { Plus, Pencil, Trash2, Sparkles, Loader2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
-import { FixTargetsDialog } from '@/components/content/FixTargetsDialog';
+import { ReviewQuestionsDialog } from '@/components/content/ReviewQuestionsDialog';
 
 interface QuestionPack {
     id: string;
     name: string;
+    description: string | null;
     icon: string | null;
+    is_explicit: boolean;
 }
 
 interface Question {
@@ -44,11 +46,14 @@ interface Question {
     partner_text: string | null;
     intensity: number;
     allowed_couple_genders: string[] | null;
+    target_user_genders: string[] | null;
     created_at: string | null;
 }
 
-const intensityLabels = ['', 'Light', 'Mild', 'Medium', 'Spicy', 'Intense'];
-const intensityColors = ['', 'bg-green-500', 'bg-lime-500', 'bg-yellow-500', 'bg-orange-500', 'bg-red-500'];
+import { INTENSITY_LEVELS } from '@/lib/openai';
+
+// Helper to get intensity info by level (1-indexed)
+const getIntensity = (level: number) => INTENSITY_LEVELS[level - 1] || INTENSITY_LEVELS[0];
 
 export function QuestionsPage() {
     const { packId } = useParams<{ packId: string }>();
@@ -57,7 +62,7 @@ export function QuestionsPage() {
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [aiDialogOpen, setAiDialogOpen] = useState(false);
-    const [fixTargetsOpen, setFixTargetsOpen] = useState(false);
+    const [reviewOpen, setReviewOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -67,11 +72,13 @@ export function QuestionsPage() {
         partner_text: string;
         intensity: number;
         allowed_couple_genders: string[];
+        target_user_genders: string[];
     }>({
         text: '',
         partner_text: '',
         intensity: 1,
         allowed_couple_genders: [],
+        target_user_genders: [],
     });
 
     const fetchData = async () => {
@@ -82,7 +89,7 @@ export function QuestionsPage() {
             // Fetch pack info
             const { data: packData } = await supabase
                 .from('question_packs')
-                .select('id, name, icon')
+                .select('id, name, description, icon, is_explicit')
                 .eq('id', packId)
                 .single();
 
@@ -111,7 +118,7 @@ export function QuestionsPage() {
 
     const openCreateDialog = () => {
         setEditingQuestion(null);
-        setFormData({ text: '', partner_text: '', intensity: 1, allowed_couple_genders: [] });
+        setFormData({ text: '', partner_text: '', intensity: 1, allowed_couple_genders: [], target_user_genders: [] });
         setDialogOpen(true);
     };
 
@@ -122,6 +129,7 @@ export function QuestionsPage() {
             partner_text: question.partner_text || '',
             intensity: question.intensity,
             allowed_couple_genders: question.allowed_couple_genders || [],
+            target_user_genders: question.target_user_genders || [],
         });
         setDialogOpen(true);
     };
@@ -135,28 +143,25 @@ export function QuestionsPage() {
         setSaving(true);
         try {
             if (editingQuestion) {
-                const { error } = await supabase
-                    .from('questions')
-                    .update({
-                        text: formData.text,
-                        partner_text: formData.partner_text || null,
-                        intensity: formData.intensity,
-                        allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
-                    })
-                    .eq('id', editingQuestion.id);
+                const { error } = await auditedSupabase.update('questions', editingQuestion.id, {
+                    text: formData.text,
+                    partner_text: formData.partner_text || null,
+                    intensity: formData.intensity,
+                    allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
+                    target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
+                });
 
                 if (error) throw error;
                 toast.success('Question updated');
             } else {
-                const { error } = await supabase
-                    .from('questions')
-                    .insert({
-                        pack_id: packId,
-                        text: formData.text,
-                        partner_text: formData.partner_text || null,
-                        intensity: formData.intensity,
-                        allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
-                    });
+                const { error } = await auditedSupabase.insert('questions', {
+                    pack_id: packId,
+                    text: formData.text,
+                    partner_text: formData.partner_text || null,
+                    intensity: formData.intensity,
+                    allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
+                    target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
+                });
 
                 if (error) throw error;
                 toast.success('Question created');
@@ -178,10 +183,7 @@ export function QuestionsPage() {
         }
 
         try {
-            const { error } = await supabase
-                .from('questions')
-                .delete()
-                .eq('id', question.id);
+            const { error } = await auditedSupabase.delete('questions', question.id);
 
             if (error) throw error;
             toast.success('Question deleted');
@@ -196,16 +198,15 @@ export function QuestionsPage() {
         // Bulk insert AI-generated questions
         const insertQuestions = async () => {
             try {
-                const { error } = await supabase
-                    .from('questions')
-                    .insert(
-                        generatedQuestions.map(q => ({
-                            pack_id: packId,
-                            text: q.text,
-                            partner_text: q.partner_text || null,
-                            intensity: q.intensity,
-                        }))
-                    );
+                const { error } = await auditedSupabase.insert(
+                    'questions',
+                    generatedQuestions.map(q => ({
+                        pack_id: packId,
+                        text: q.text,
+                        partner_text: q.partner_text || null,
+                        intensity: q.intensity,
+                    }))
+                );
 
                 if (error) throw error;
                 toast.success(`${generatedQuestions.length} questions added`);
@@ -250,9 +251,9 @@ export function QuestionsPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setFixTargetsOpen(true)}>
-                        <ShieldCheck className="mr-2 h-4 w-4" />
-                        Fix Targets
+                    <Button variant="outline" onClick={() => setReviewOpen(true)}>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Review Questions
                     </Button>
                     <Button variant="outline" onClick={() => setAiDialogOpen(true)}>
                         <Sparkles className="mr-2 h-4 w-4" />
@@ -284,6 +285,7 @@ export function QuestionsPage() {
                                         <AIPolishButton
                                             text={formData.text}
                                             type="question"
+                                            explicit={pack?.is_explicit ?? false}
                                             onPolished={(val) => setFormData(d => ({ ...d, text: val }))}
                                         />
                                     </div>
@@ -308,6 +310,7 @@ export function QuestionsPage() {
                                         <AIPolishButton
                                             text={formData.partner_text}
                                             type="partner_text"
+                                            explicit={pack?.is_explicit ?? false}
                                             onPolished={(val) => setFormData(d => ({ ...d, partner_text: val }))}
                                         />
                                     </div>
@@ -326,16 +329,17 @@ export function QuestionsPage() {
                                 <div className="space-y-2">
                                     <Label>Intensity Level</Label>
                                     <div className="flex gap-2">
-                                        {[1, 2, 3, 4, 5].map((level) => (
+                                        {INTENSITY_LEVELS.map((intensity) => (
                                             <Button
-                                                key={level}
+                                                key={intensity.level}
                                                 type="button"
-                                                variant={formData.intensity === level ? 'default' : 'outline'}
+                                                variant={formData.intensity === intensity.level ? 'default' : 'outline'}
                                                 size="sm"
-                                                onClick={() => setFormData(d => ({ ...d, intensity: level }))}
-                                                className={formData.intensity === level ? intensityColors[level] : ''}
+                                                onClick={() => setFormData(d => ({ ...d, intensity: intensity.level }))}
+                                                className={formData.intensity === intensity.level ? intensity.color : ''}
+                                                title={intensity.description}
                                             >
-                                                {level} - {intensityLabels[level]}
+                                                {intensity.level} - {intensity.label}
                                             </Button>
                                         ))}
                                     </div>
@@ -375,6 +379,40 @@ export function QuestionsPage() {
                                         Select specific couple types to restrict this question. Leave all unselected to allow for everyone.
                                     </p>
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label>Initiator Gender (optional)</Label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {[
+                                            { id: 'male', label: 'Male' },
+                                            { id: 'female', label: 'Female' },
+                                            { id: 'non-binary', label: 'Non-binary' },
+                                        ].map((type) => {
+                                            const isSelected = formData.target_user_genders.includes(type.id);
+                                            return (
+                                                <Button
+                                                    key={type.id}
+                                                    type="button"
+                                                    variant={isSelected ? 'default' : 'outline'}
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setFormData(d => ({
+                                                            ...d,
+                                                            target_user_genders: isSelected
+                                                                ? d.target_user_genders.filter(id => id !== type.id)
+                                                                : [...d.target_user_genders, type.id]
+                                                        }));
+                                                    }}
+                                                >
+                                                    {type.label}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Who sees this question first? Their partner will see the Partner Text after they answer. Leave empty for anyone.
+                                    </p>
+                                </div>
                             </div>
 
                             <DialogFooter>
@@ -402,14 +440,15 @@ export function QuestionsPage() {
                 open={aiDialogOpen}
                 onOpenChange={setAiDialogOpen}
                 type="questions"
-                context={{ packName: pack?.name }}
+                context={{ packName: pack?.name, packDescription: pack?.description, isExplicit: pack?.is_explicit }}
                 onGenerated={handleAiGenerated}
             />
 
-            <FixTargetsDialog
-                open={fixTargetsOpen}
-                onOpenChange={setFixTargetsOpen}
+            <ReviewQuestionsDialog
+                open={reviewOpen}
+                onOpenChange={setReviewOpen}
                 questions={questions}
+                isExplicit={pack?.is_explicit ?? false}
                 onUpdated={fetchData}
             />
 
@@ -441,7 +480,8 @@ export function QuestionsPage() {
                                     <TableHead className="w-12">#</TableHead>
                                     <TableHead>Question</TableHead>
                                     <TableHead className="w-32">Partner Text</TableHead>
-                                    <TableHead className="w-24">Targets</TableHead>
+                                    <TableHead className="w-24">Couples</TableHead>
+                                    <TableHead className="w-24">Initiator</TableHead>
                                     <TableHead className="w-24">Intensity</TableHead>
                                     <TableHead className="w-24">Actions</TableHead>
                                 </TableRow>
@@ -479,8 +519,24 @@ export function QuestionsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={`${intensityColors[question.intensity]} text-white`}>
-                                                {intensityLabels[question.intensity]}
+                                            {question.target_user_genders && question.target_user_genders.length > 0 ? (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {question.target_user_genders.map(g => (
+                                                        <Badge key={g} variant="outline" className="text-[10px] px-1 py-0 h-5 border-orange-500 text-orange-500">
+                                                            {g.charAt(0).toUpperCase()}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">Any</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                className={`${getIntensity(question.intensity).color} text-white`}
+                                                title={getIntensity(question.intensity).description}
+                                            >
+                                                {getIntensity(question.intensity).label}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>

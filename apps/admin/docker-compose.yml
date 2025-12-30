@@ -11,9 +11,13 @@ services:
       - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
       - VITE_OPENROUTER_API_KEY=${VITE_OPENROUTER_API_KEY}
       - VITE_AI_MODEL=${VITE_AI_MODEL}
+      - VITE_AI_MODEL_GENERATE=${VITE_AI_MODEL_GENERATE}
+      - VITE_AI_MODEL_FIX=${VITE_AI_MODEL_FIX}
+      - VITE_AI_MODEL_POLISH=${VITE_AI_MODEL_POLISH}
     volumes:
       - ./src:/app/apps/admin/src
       - ./index.html:/app/apps/admin/index.html
       - ./vite.config.ts:/app/apps/admin/vite.config.ts
       - ./tsconfig.json:/app/apps/admin/tsconfig.json
+      - ../../packages/shared/src:/app/packages/shared/src
     restart: unless-stopped

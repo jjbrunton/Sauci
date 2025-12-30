@@ -8,6 +8,7 @@ import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, use
 import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
+import { checkAndRegisterPushToken } from "../../src/lib/notifications";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
 import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
@@ -181,6 +182,14 @@ export default function AppLayout() {
             initializeRevenueCat(user.id);
         }
     }, [user?.id, initializeRevenueCat]);
+
+    // Check and register push token for this device
+    // This handles the case where user onboarded on a different device
+    useEffect(() => {
+        if (user?.id && user?.onboarding_completed) {
+            checkAndRegisterPushToken(user.id);
+        }
+    }, [user?.id, user?.onboarding_completed]);
 
     // Subscribe to realtime match notifications
     useEffect(() => {

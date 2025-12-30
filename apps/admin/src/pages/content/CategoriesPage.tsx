@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -108,7 +109,7 @@ export function CategoriesPage() {
         setEditingCategory(null);
         setFormData({
             name: idea.name,
-            description: '',
+            description: idea.description || '',
             icon: idea.icon,
         });
         setDialogOpen(true);
@@ -124,27 +125,22 @@ export function CategoriesPage() {
         try {
             if (editingCategory) {
                 // Update
-                const { error } = await supabase
-                    .from('categories')
-                    .update({
-                        name: formData.name,
-                        description: formData.description || null,
-                        icon: formData.icon || null,
-                    })
-                    .eq('id', editingCategory.id);
+                const { error } = await auditedSupabase.update('categories', editingCategory.id, {
+                    name: formData.name,
+                    description: formData.description || null,
+                    icon: formData.icon || null,
+                });
 
                 if (error) throw error;
                 toast.success('Category updated');
             } else {
                 // Create
-                const { error } = await supabase
-                    .from('categories')
-                    .insert({
-                        name: formData.name,
-                        description: formData.description || null,
-                        icon: formData.icon || null,
-                        sort_order: categories.length,
-                    });
+                const { error } = await auditedSupabase.insert('categories', {
+                    name: formData.name,
+                    description: formData.description || null,
+                    icon: formData.icon || null,
+                    sort_order: categories.length,
+                });
 
                 if (error) throw error;
                 toast.success('Category created');
@@ -166,10 +162,7 @@ export function CategoriesPage() {
         }
 
         try {
-            const { error } = await supabase
-                .from('categories')
-                .delete()
-                .eq('id', category.id);
+            const { error } = await auditedSupabase.delete('categories', category.id);
 
             if (error) throw error;
             toast.success('Category deleted');

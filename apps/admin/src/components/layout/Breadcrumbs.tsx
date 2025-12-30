@@ -1,15 +1,55 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { supabase } from '@/config';
 
 interface BreadcrumbItem {
     label: string;
     href?: string;
 }
 
+interface PackInfo {
+    category_id: string | null;
+    category_name: string | null;
+}
+
 // Generate breadcrumbs based on current path and params
-function useBreadcrumbs(): BreadcrumbItem[] {
+function useBreadcrumbs(): { breadcrumbs: BreadcrumbItem[]; loading: boolean } {
     const location = useLocation();
     const params = useParams();
+    const [packInfo, setPackInfo] = useState<PackInfo | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch pack info when on questions page to get category_id
+    useEffect(() => {
+        const fetchPackInfo = async () => {
+            if (params.packId && !params.categoryId) {
+                setLoading(true);
+                try {
+                    const { data } = await supabase
+                        .from('question_packs')
+                        .select('category_id, categories(name)')
+                        .eq('id', params.packId)
+                        .single();
+
+                    if (data) {
+                        setPackInfo({
+                            category_id: data.category_id,
+                            category_name: (data.categories as any)?.name || null,
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch pack info for breadcrumbs:', error);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                setPackInfo(null);
+            }
+        };
+
+        fetchPackInfo();
+    }, [params.packId, params.categoryId]);
 
     const pathSegments = location.pathname.split('/').filter(Boolean);
     const breadcrumbs: BreadcrumbItem[] = [];
@@ -23,6 +63,13 @@ function useBreadcrumbs(): BreadcrumbItem[] {
             breadcrumbs.push({ label: 'Categories', href: '/categories' });
         } else if (segment === 'packs' && params.categoryId) {
             breadcrumbs.push({ label: 'Packs', href: currentPath });
+        } else if (segment === 'packs' && params.packId && packInfo?.category_id) {
+            // On questions page, link back to category's packs
+            breadcrumbs.push({ label: 'Categories', href: '/categories' });
+            breadcrumbs.push({
+                label: packInfo.category_name || 'Packs',
+                href: `/categories/${packInfo.category_id}/packs`
+            });
         } else if (segment === 'questions' && params.packId) {
             breadcrumbs.push({ label: 'Questions', href: currentPath });
         } else if (segment === 'users') {
@@ -44,13 +91,13 @@ function useBreadcrumbs(): BreadcrumbItem[] {
         breadcrumbs[breadcrumbs.length - 1].href = undefined;
     }
 
-    return breadcrumbs;
+    return { breadcrumbs, loading };
 }
 
 export function Breadcrumbs() {
-    const breadcrumbs = useBreadcrumbs();
+    const { breadcrumbs, loading } = useBreadcrumbs();
 
-    if (breadcrumbs.length === 0) return null;
+    if (breadcrumbs.length === 0 && !loading) return null;
 
     return (
         <nav className="flex items-center space-x-1 text-sm text-muted-foreground">

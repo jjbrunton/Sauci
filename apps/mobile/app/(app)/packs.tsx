@@ -123,10 +123,13 @@ export default function PacksScreen() {
                         </View>
                         <View style={styles.packInfo}>
                             <View style={styles.packHeader}>
-                                <Text style={[
-                                    styles.packName,
-                                    isPremiumLocked && styles.packNameLocked
-                                ]}>
+                                <Text
+                                    style={[
+                                        styles.packName,
+                                        isPremiumLocked && styles.packNameLocked
+                                    ]}
+                                    numberOfLines={1}
+                                >
                                     {item.name}
                                 </Text>
                                 {item.is_premium && (
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
     },
     packInfo: {
         flex: 1,
-        marginRight: spacing.sm,
+        marginRight: spacing.md,
     },
     packHeader: {
         flexDirection: "row",
@@ -370,6 +373,8 @@ const styles = StyleSheet.create({
         ...typography.headline,
         color: colors.text,
         marginRight: spacing.sm,
+        flex: 1,
+        flexShrink: 1,
     },
     packNameLocked: {
         color: colors.textSecondary,

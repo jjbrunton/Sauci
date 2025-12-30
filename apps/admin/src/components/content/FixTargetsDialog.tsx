@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, ShieldCheck, ArrowRight, Check } from 'lucide-react';
 import { analyzeQuestionTargets, TargetAnalysis } from '@/lib/openai';
-import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { toast } from 'sonner';
 
 // Define local compatible interface
@@ -22,6 +22,7 @@ interface Question {
     partner_text: string | null;
     intensity: number;
     allowed_couple_genders: string[] | null;
+    target_user_genders: string[] | null;
 }
 
 interface FixTargetsDialogProps {
@@ -38,13 +39,58 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
     const [step, setStep] = useState<'initial' | 'review'>('initial');
     const [applying, setApplying] = useState(false);
 
+    // Check if couple targets represent "All" (null, empty, or all three values)
+    const isAllCoupleTargets = (targets: string[] | null): boolean => {
+        if (!targets || targets.length === 0) return true;
+        if (targets.length === 3) {
+            const sorted = [...targets].sort();
+            return sorted[0] === 'female+female' && sorted[1] === 'female+male' && sorted[2] === 'male+male';
+        }
+        return false;
+    };
+
+    // Check if initiator targets represent "All" (null or empty)
+    const isAllInitiator = (targets: string[] | null): boolean => {
+        return !targets || targets.length === 0;
+    };
+
+    // Check if two arrays are equal
+    const arraysEqual = (a: string[] | null, b: string[] | null): boolean => {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        if (a.length !== b.length) return false;
+        const sortedA = [...a].sort();
+        const sortedB = [...b].sort();
+        return sortedA.every((val, i) => val === sortedB[i]);
+    };
+
     const handleAnalyze = async () => {
         setAnalyzing(true);
         try {
             const results = await analyzeQuestionTargets(questions);
-            setSuggestions(results);
+            // Filter out redundant suggestions where nothing meaningful changes
+            const meaningfulResults = results.filter(suggestion => {
+                const question = questions.find(q => q.id === suggestion.id);
+                if (!question) return false;
+
+                // Check if couple targets change meaningfully
+                const currentCoupleIsAll = isAllCoupleTargets(question.allowed_couple_genders);
+                const suggestedCoupleIsAll = isAllCoupleTargets(suggestion.suggested_targets);
+                const coupleChanged = !(currentCoupleIsAll && suggestedCoupleIsAll) &&
+                    !arraysEqual(question.allowed_couple_genders, suggestion.suggested_targets);
+
+                // Check if initiator changes meaningfully
+                const currentInitiatorIsAll = isAllInitiator(question.target_user_genders);
+                const suggestedInitiatorIsAll = isAllInitiator(suggestion.suggested_initiator);
+                const initiatorChanged = !(currentInitiatorIsAll && suggestedInitiatorIsAll) &&
+                    !arraysEqual(question.target_user_genders, suggestion.suggested_initiator);
+
+                // Include if either changed
+                return coupleChanged || initiatorChanged;
+            });
+            setSuggestions(meaningfulResults);
             // Default select all
-            setSelectedIds(new Set(results.map(r => r.id)));
+            setSelectedIds(new Set(meaningfulResults.map(r => r.id)));
             setStep('review');
         } catch (error) {
             console.error(error);
@@ -63,12 +109,12 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
                 return;
             }
 
-            // Apply updates in parallel
+            // Apply updates in parallel with audit logging
             await Promise.all(updates.map(update =>
-                supabase
-                    .from('questions')
-                    .update({ allowed_couple_genders: update.suggested_targets && update.suggested_targets.length > 0 ? update.suggested_targets : null })
-                    .eq('id', update.id)
+                auditedSupabase.update('questions', update.id, {
+                    allowed_couple_genders: update.suggested_targets && update.suggested_targets.length > 0 ? update.suggested_targets : null,
+                    target_user_genders: update.suggested_initiator && update.suggested_initiator.length > 0 ? update.suggested_initiator : null,
+                })
             ));
 
             toast.success(`Updated ${updates.length} questions`);
@@ -101,6 +147,11 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
     const formatTargets = (targets: string[] | null) => {
         if (!targets || targets.length === 0) return 'All';
         return targets.map(t => t.replace('male+male', 'M+M').replace('female+male', 'M+F').replace('female+female', 'F+F')).join(', ');
+    };
+
+    const formatInitiator = (targets: string[] | null) => {
+        if (!targets || targets.length === 0) return 'Any';
+        return targets.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
     };
 
     return (
@@ -163,8 +214,8 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
                                                     />
                                                 </TableHead>
                                                 <TableHead>Question</TableHead>
-                                                <TableHead>Current</TableHead>
-                                                <TableHead>Suggested</TableHead>
+                                                <TableHead>Couples</TableHead>
+                                                <TableHead>Initiator</TableHead>
                                                 <TableHead>Reason</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -190,16 +241,25 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
                                                                 </div>
                                                             )}
                                                         </TableCell>
-                                                        <TableCell className="text-xs whitespace-nowrap">
-                                                            <Badge variant="outline" className="text-muted-foreground">
-                                                                {formatTargets(question.allowed_couple_genders)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-xs whitespace-nowrap">
+                                                        <TableCell className="text-xs">
                                                             <div className="flex items-center gap-1">
+                                                                <Badge variant="outline" className="text-muted-foreground">
+                                                                    {formatTargets(question.allowed_couple_genders)}
+                                                                </Badge>
                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                                                                 <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100">
                                                                     {formatTargets(suggestion.suggested_targets)}
+                                                                </Badge>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs">
+                                                            <div className="flex items-center gap-1">
+                                                                <Badge variant="outline" className="text-muted-foreground border-orange-300">
+                                                                    {formatInitiator(question.target_user_genders)}
+                                                                </Badge>
+                                                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                                                <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+                                                                    {formatInitiator(suggestion.suggested_initiator)}
                                                                 </Badge>
                                                             </div>
                                                         </TableCell>

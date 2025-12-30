@@ -4,8 +4,9 @@ import { supabase } from '../config';
 export { supabase };
 
 const resources = {
-    question_packs: ['id', 'name', 'description', 'icon', 'is_premium', 'is_public', 'sort_order', 'created_at'],
-    questions: ['id', 'pack_id', 'text', 'partner_text', 'intensity', 'created_at'],
+    categories: ['id', 'name', 'description', 'icon', 'sort_order', 'created_at'],
+    question_packs: ['id', 'name', 'description', 'icon', 'is_premium', 'is_public', 'is_explicit', 'sort_order', 'created_at'],
+    questions: ['id', 'pack_id', 'text', 'partner_text', 'intensity', 'allowed_couple_genders', 'target_user_genders', 'created_at'],
     profiles: ['id', 'name', 'avatar_url', 'is_premium', 'couple_id', 'created_at'],
     couples: ['id', 'invite_code', 'created_at'],
     responses: ['id', 'user_id', 'question_id', 'couple_id', 'answer', 'created_at'],

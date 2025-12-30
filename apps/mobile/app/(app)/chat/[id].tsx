@@ -211,7 +211,25 @@ export default function ChatScreen() {
     const handlePickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            uploadImage(result.assets[0].uri);
+        }
+    };
+
+    const handleTakePhoto = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert(
+                "Camera Permission",
+                "Please allow camera access to take photos."
+            );
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
             quality: 0.7,
         });
 
@@ -423,6 +441,7 @@ export default function ChatScreen() {
                         onChangeText={handleTyping}
                         onSend={handleSend}
                         onPickImage={handlePickImage}
+                        onTakePhoto={handleTakePhoto}
                     />
                 </View>
             </KeyboardAvoidingView>
@@ -611,21 +630,27 @@ function InputBar({
     onChangeText,
     onSend,
     onPickImage,
+    onTakePhoto,
 }: {
     inputText: string;
     uploading: boolean;
     onChangeText: (text: string) => void;
     onSend: () => void;
     onPickImage: () => void;
+    onTakePhoto: () => void;
 }) {
     return (
         <View style={styles.inputContainer}>
-            <TouchableOpacity onPress={onPickImage} disabled={uploading} style={styles.attachButton}>
+            <TouchableOpacity onPress={onTakePhoto} disabled={uploading} style={styles.attachButton}>
                 {uploading ? (
                     <ActivityIndicator color={colors.primary} size="small" />
                 ) : (
-                    <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+                    <Ionicons name="camera-outline" size={22} color={colors.textSecondary} />
                 )}
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={onPickImage} disabled={uploading} style={styles.attachButton}>
+                <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
             </TouchableOpacity>
 
             <View style={styles.inputFieldWrapper}>

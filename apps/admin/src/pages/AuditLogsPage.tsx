@@ -14,14 +14,15 @@ import { format } from 'date-fns';
 
 interface AuditLog {
     id: string;
-    user_id: string;
+    admin_user_id: string;
+    admin_username: string | null;
+    admin_role: string;
     action: string;
     table_name: string;
-    record_id: string | null;
-    old_data: Record<string, unknown> | null;
-    new_data: Record<string, unknown> | null;
+    old_values: Record<string, unknown> | null;
+    new_values: Record<string, unknown> | null;
+    changed_fields: string[] | null;
     created_at: string;
-    user_email?: string;
 }
 
 const actionColors: Record<string, string> = {
@@ -81,9 +82,9 @@ export function AuditLogsPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-40">Time</TableHead>
+                            <TableHead className="w-32">Admin</TableHead>
                             <TableHead className="w-24">Action</TableHead>
                             <TableHead>Table</TableHead>
-                            <TableHead>Record ID</TableHead>
                             <TableHead>Changes</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -101,6 +102,10 @@ export function AuditLogsPage() {
                                         {format(new Date(log.created_at), 'MMM d, h:mm a')}
                                     </TableCell>
                                     <TableCell>
+                                        <div className="text-sm font-medium">{log.admin_username || 'Unknown'}</div>
+                                        <div className="text-xs text-muted-foreground capitalize">{log.admin_role?.replace('_', ' ')}</div>
+                                    </TableCell>
+                                    <TableCell>
                                         <Badge className={`${actionColors[log.action] || 'bg-gray-500'} text-white`}>
                                             {log.action}
                                         </Badge>
@@ -108,21 +113,23 @@ export function AuditLogsPage() {
                                     <TableCell className="font-mono text-sm">
                                         {log.table_name}
                                     </TableCell>
-                                    <TableCell className="font-mono text-xs text-muted-foreground">
-                                        {log.record_id ? log.record_id.substring(0, 8) + '...' : '—'}
-                                    </TableCell>
                                     <TableCell className="max-w-md">
-                                        {log.action === 'DELETE' && log.old_data && (
+                                        {log.action === 'DELETE' && log.old_values && (
                                             <code className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded">
-                                                Deleted: {JSON.stringify(log.old_data).substring(0, 100)}...
+                                                Deleted: {JSON.stringify(log.old_values).substring(0, 100)}...
                                             </code>
                                         )}
-                                        {log.action === 'INSERT' && log.new_data && (
+                                        {log.action === 'INSERT' && log.new_values && (
                                             <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
-                                                Created: {JSON.stringify(log.new_data).substring(0, 100)}...
+                                                Created: {JSON.stringify(log.new_values).substring(0, 100)}...
                                             </code>
                                         )}
-                                        {log.action === 'UPDATE' && (
+                                        {log.action === 'UPDATE' && log.changed_fields && (
+                                            <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                                Changed: {log.changed_fields.join(', ')}
+                                            </code>
+                                        )}
+                                        {log.action === 'UPDATE' && !log.changed_fields && (
                                             <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
                                                 Updated record
                                             </code>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -153,12 +154,10 @@ export function AdminsPage() {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('admin_users')
-                .insert({
-                    user_id: selectedUser.id,
-                    role: selectedRole
-                });
+            const { error } = await auditedSupabase.insert('admin_users', {
+                user_id: selectedUser.id,
+                role: selectedRole
+            });
 
             if (error) throw error;
 
@@ -182,10 +181,7 @@ export function AdminsPage() {
         }
 
         try {
-            const { error } = await supabase
-                .from('admin_users')
-                .delete()
-                .eq('user_id', admin.user_id);
+            const { error } = await auditedSupabase.deleteBy('admin_users', 'user_id', admin.user_id);
 
             if (error) throw error;
 

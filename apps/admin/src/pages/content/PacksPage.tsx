@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/config';
+import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Loader2, Crown, Eye, EyeOff } from 'lucide-react';
+import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Loader2, Crown, Eye, EyeOff, Flame, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
@@ -36,6 +37,7 @@ interface QuestionPack {
     icon: string | null;
     is_premium: boolean;
     is_public: boolean;
+    is_explicit: boolean;
     sort_order: number | null;
     category_id: string | null;
     created_at: string | null;
@@ -59,6 +61,7 @@ export function PacksPage() {
         icon: '💕',
         is_premium: false,
         is_public: true,
+        is_explicit: false,
     });
 
     const fetchData = async () => {
@@ -126,6 +129,7 @@ export function PacksPage() {
             icon: '💕',
             is_premium: false,
             is_public: true,
+            is_explicit: false,
         });
         setDialogOpen(true);
     };
@@ -138,6 +142,7 @@ export function PacksPage() {
             icon: pack.icon || '💕',
             is_premium: pack.is_premium,
             is_public: pack.is_public,
+            is_explicit: pack.is_explicit,
         });
         setDialogOpen(true);
     };
@@ -151,31 +156,28 @@ export function PacksPage() {
         setSaving(true);
         try {
             if (editingPack) {
-                const { error } = await supabase
-                    .from('question_packs')
-                    .update({
-                        name: formData.name,
-                        description: formData.description || null,
-                        icon: formData.icon || null,
-                        is_premium: formData.is_premium,
-                        is_public: formData.is_public,
-                    })
-                    .eq('id', editingPack.id);
+                const { error } = await auditedSupabase.update('question_packs', editingPack.id, {
+                    name: formData.name,
+                    description: formData.description || null,
+                    icon: formData.icon || null,
+                    is_premium: formData.is_premium,
+                    is_public: formData.is_public,
+                    is_explicit: formData.is_explicit,
+                });
 
                 if (error) throw error;
                 toast.success('Pack updated');
             } else {
-                const { error } = await supabase
-                    .from('question_packs')
-                    .insert({
-                        name: formData.name,
-                        description: formData.description || null,
-                        icon: formData.icon || null,
-                        is_premium: formData.is_premium,
-                        is_public: formData.is_public,
-                        category_id: categoryId || null,
-                        sort_order: packs.length,
-                    });
+                const { error } = await auditedSupabase.insert('question_packs', {
+                    name: formData.name,
+                    description: formData.description || null,
+                    icon: formData.icon || null,
+                    is_premium: formData.is_premium,
+                    is_public: formData.is_public,
+                    is_explicit: formData.is_explicit,
+                    category_id: categoryId || null,
+                    sort_order: packs.length,
+                });
 
                 if (error) throw error;
                 toast.success('Pack created');
@@ -197,10 +199,7 @@ export function PacksPage() {
         }
 
         try {
-            const { error } = await supabase
-                .from('question_packs')
-                .delete()
-                .eq('id', pack.id);
+            const { error } = await auditedSupabase.delete('question_packs', pack.id);
 
             if (error) throw error;
             toast.success('Pack deleted');
@@ -361,6 +360,21 @@ export function PacksPage() {
                                         }
                                     />
                                 </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label>Explicit Content</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Contains adult or mature content
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.is_explicit}
+                                        onCheckedChange={(checked) =>
+                                            setFormData(d => ({ ...d, is_explicit: checked }))
+                                        }
+                                    />
+                                </div>
                             </div>
 
                             <DialogFooter>
@@ -429,10 +443,26 @@ export function PacksPage() {
                                                 Premium
                                             </Badge>
                                         )}
-                                        {!pack.is_public && (
+                                        {pack.is_public ? (
+                                            <Badge variant="outline" className="border-green-500 text-green-600">
+                                                <Eye className="h-3 w-3 mr-1" />
+                                                Published
+                                            </Badge>
+                                        ) : (
                                             <Badge variant="secondary">
                                                 <EyeOff className="h-3 w-3 mr-1" />
-                                                Hidden
+                                                Draft
+                                            </Badge>
+                                        )}
+                                        {pack.is_explicit ? (
+                                            <Badge variant="outline" className="border-red-500 text-red-600">
+                                                <Flame className="h-3 w-3 mr-1" />
+                                                Explicit
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline" className="border-pink-400 text-pink-500">
+                                                <Heart className="h-3 w-3 mr-1" />
+                                                Safe
                                             </Badge>
                                         )}
                                     </div>

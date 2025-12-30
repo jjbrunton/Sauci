@@ -47,6 +47,8 @@ erDiagram
         text text
         text partner_text "for two-part questions"
         int intensity "1-5"
+        text[] allowed_couple_genders "couple composition filter"
+        text[] target_user_genders "individual user filter"
         timestamptz created_at
     }
 
@@ -180,3 +182,34 @@ erDiagram
 1. Couples can enable/disable packs via `couple_packs` junction table
 2. `get_recommended_questions()` function filters questions by enabled packs
 3. Two-part questions show `partner_text` to second responder
+
+### Question Targeting System
+
+Questions can be targeted at specific audiences using two complementary filters:
+
+| Field | Purpose | Level | Example |
+|-------|---------|-------|---------|
+| `allowed_couple_genders` | Couple composition filter | Couple | `['male+female', 'female+female']` |
+| `target_user_genders` | Individual user filter | User | `['female', 'non-binary']` |
+
+**How targeting works:**
+
+1. **Couple filter** (`allowed_couple_genders`): Questions only shown to couples matching the composition (e.g., same-sex specific questions)
+
+2. **User filter** (`target_user_genders`): Controls who sees the question **as initiator** (first responder)
+   - If user's gender matches → they can see and answer first
+   - If user's gender doesn't match → they only see it after partner answers (via `partner_text`)
+
+**Example flow:**
+```
+Question:
+  text: "Have your partner suck your tits"
+  partner_text: "Suck your partner's tits"
+  target_user_genders: ['female']
+
+1. Female sees "Have your partner suck your tits" → swipes YES
+2. Male sees "Suck your partner's tits" (partner_text, unlocked by her answer)
+3. Both answered → Match created!
+```
+
+This ensures gender-appropriate phrasing while still allowing both partners to respond.
