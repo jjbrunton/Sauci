@@ -153,18 +153,18 @@ Level 3 - MODERATE (Sensual/Intimate):
 - Examples: "Give your partner a sensual massage", "Make out in an unexpected place", "Slow dance intimately"
 
 Level 4 - SPICY (Sexual without Penetration):
-- Oral sex, manual stimulation, mutual masturbation
-- Foreplay activities, using hands/mouth on genitals
-- Using toys externally, edging, teasing to climax
+- Oral sex, fingering, handjobs, mutual masturbation
+- Foreplay activities, using hands/mouth on private parts
+- Using toys externally, edging, making your partner cum
 - Nakedness with sexual intent
-- Examples: "Give your partner oral", "Touch your partner until they climax", "Use a vibrator on your partner"
+- Examples: "Go down on your partner", "Get your partner off with your hands", "Use a vibrator on your partner"
 
 Level 5 - INTENSE (Penetration/Advanced):
-- Vaginal or anal penetration (sex, toys, fingers)
+- Sex (vaginal or anal), toys inside, fingers inside
 - Kinks: bondage, role-play with power dynamics, BDSM
-- Group activities, exhibitionism, voyeurism
+- Threesomes, exhibitionism, voyeurism
 - Any activity involving penetration or advanced kinks
-- Examples: "Have sex in a new location", "Try anal play", "Tie your partner up and have your way with them"
+- Examples: "Fuck in a new location", "Try anal", "Tie your partner up and have your way with them"
 
 IMPORTANT: Intensity is about the PHYSICAL INTIMACY level, not the language used.
 A question can be intensity 5 with tasteful language (non-explicit pack) or crude language (explicit pack).
@@ -176,8 +176,8 @@ INTENSITY LEVELS:
 1 (Light): Talking, emotional sharing, compliments, non-physical activities
 2 (Mild): Holding hands, hugging, cuddling, gentle kisses, light touch
 3 (Moderate): Making out, sensual massage, passionate kissing, intimate but not sexual
-4 (Spicy): Oral sex, manual stimulation, foreplay, sexual touching without penetration
-5 (Intense): Penetration (vaginal/anal), advanced kinks, BDSM, group activities
+4 (Spicy): Oral sex, fingering, handjobs, foreplay, getting each other off without sex
+5 (Intense): Sex (vaginal/anal), kinks, BDSM, toys inside, threesomes
 `;
 
 // Intensity levels for UI display (consistent with AI grading)
@@ -212,8 +212,8 @@ export async function generateQuestions(
         1: 'TONE: Romantic and sweet. Focus on emotional connection, love, and tenderness. Keep content clean and wholesome - NO sexual content whatsoever. Think date nights, compliments, and heartfelt moments.',
         2: 'TONE: Playful and flirty. Light teasing, fun activities, and cheeky suggestions. Mildly suggestive but NOTHING explicit or sexual. Think playful banter and innocent mischief.',
         3: 'TONE: Sensual and intimate. Passionate and suggestive content that implies intimacy without being graphic. Use tasteful language - "make love" rather than crude terms. Romantic but with heat. AVOID explicit sexual acts or crude terminology.',
-        4: 'TONE: Spicy and bold. Adventurous sexual content with direct but not crude language. Can include kinks, fantasies, and explicit acts but described tastefully. Use terms like "oral", "bondage" etc.',
-        5: 'TONE: Explicit and raw. NSFW content with graphic, direct sexual terminology. Be crude and uninhibited. Use explicit terms freely. This is adult content - do not hold back or euphemize.',
+        4: 'TONE: Spicy and bold. Adventurous sexual content with direct, natural language. Use everyday terms like "oral sex", "finger", "go down on", "handjob", "turn on". AVOID clinical/medical terms like "stimulate", "arousal", "genitals", "penetration". Write like real people talk about sex.',
+        5: 'TONE: Explicit and raw. NSFW content with blunt, dirty talk language. Use words like "fuck", "cock", "pussy", "cum", "suck", "eat out". NEVER use clinical terms like "intercourse", "stimulate", "genitalia", "fellatio", "cunnilingus". Write like uncensored sexting - direct, crude, and hot.',
     };
 
     const toneInstruction = toneInstructions[tone];
@@ -222,7 +222,7 @@ export async function generateQuestions(
     const symmetricExamples = isClean
         ? 'GOOD: "Cook a new recipe together", "Play a board game", "Go on a hike", "Have a deep conversation about your goals".'
         : isExplicit
-            ? 'GOOD: "Have sex in a public place", "Roleplay a new scenario together", "Shower together".'
+            ? 'GOOD: "Fuck in a risky place", "Try a new position", "Sixty-nine together", "Watch porn and recreate a scene".'
             : 'GOOD: "Cook a romantic dinner together", "Stargaze and share dreams", "Give each other massages", "Dance together at home".';
 
     const asymmetricExamples = isClean
@@ -230,9 +230,9 @@ export async function generateQuestions(
    - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Learn something new from your partner", "Be surprised with an activity").
    - GOOD: "Cook your partner their favorite meal" / "Have your partner cook your favorite meal".`
         : isExplicit
-            ? `text (The Doer): Active command/proposal (e.g., "Tie your partner up", "Give your partner a massage").
-   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Be tied up by your partner", "Receive a massage from your partner").
-   - GOOD: "Spank your partner" / "Be spanked by your partner".`
+            ? `text (The Doer): Active command/proposal (e.g., "Tie your partner up", "Go down on your partner").
+   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Get tied up by your partner", "Have your partner go down on you").
+   - GOOD: "Give your partner a blowjob" / "Get a blowjob from your partner".`
             : `text (The Doer): Active command/proposal (e.g., "Write a love letter to your partner", "Plan a surprise date").
    - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Receive a love letter from your partner", "Be surprised with a date").
    - GOOD: "Give your partner a massage" / "Receive a massage from your partner".`;
@@ -294,8 +294,8 @@ Mix distinct symmetric and asymmetric proposals.`;
         1: 'You are a romantic content writer for a couples relationship app. Generate sweet, wholesome content that helps couples connect emotionally. Always respond with valid JSON only.',
         2: 'You are a playful content writer for a couples relationship app. Generate fun, flirty content that helps couples have fun together. Always respond with valid JSON only.',
         3: 'You are a sensual content writer for a couples relationship app. Generate passionate, intimate content that helps couples explore their desires tastefully. Always respond with valid JSON only.',
-        4: 'You are a bold content writer for an adult couples app. Generate spicy, adventurous content that helps couples explore kinks and fantasies. Always respond with valid JSON only.',
-        5: 'You are an uninhibited content writer for an adult couples app. Generate raw, explicit, and direct content that explores kinks and desires. Do not filter for politeness. Always respond with valid JSON only.',
+        4: 'You are a bold content writer for an adult couples app. Write like a sex-positive friend giving suggestions - natural, direct, not clinical. Avoid medical terminology. Always respond with valid JSON only.',
+        5: 'You are an uninhibited adult content writer. Write like dirty talk or sexting - raw, blunt, using everyday explicit words. Never use clinical terms like intercourse, stimulate, genitalia. Always respond with valid JSON only.',
     };
 
     const response = await openai.chat.completions.create({

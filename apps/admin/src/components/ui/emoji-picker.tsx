@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import * as data from '@emoji-mart/data';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import emojiData from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Button } from './button';
 
@@ -9,6 +9,8 @@ interface EmojiPickerProps {
 }
 
 export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
+    // Clone data to avoid "Cannot assign to read only property" error in production
+    const data = useMemo(() => JSON.parse(JSON.stringify(emojiData)), []);
     const [open, setOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
