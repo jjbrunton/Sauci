@@ -34,7 +34,7 @@ export default function ProfileScreen() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
-    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? false);
+    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
     const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
     const [biometricAvailable, setBiometricAvailable] = useState(false);
     const [biometricEnabled, setBiometricEnabledState] = useState(false);

@@ -5,6 +5,10 @@ import "../src/polyfills/web";
 import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry";
 initSentry();
 
+// Initialize Firebase Analytics
+import { initAnalytics, setUserId, clearUserId } from "../src/lib/analytics";
+initAnalytics();
+
 // Import push notification utilities
 import {
     clearPushToken,
@@ -153,6 +157,8 @@ export default function RootLayout() {
                     // Set Sentry user context for error tracking
                     if (session?.user) {
                         setUserContext(session.user.id, session.user.email);
+                        // Set Analytics user ID
+                        setUserId(session.user.id);
                     }
                 } else if (event === "SIGNED_OUT") {
                     // Clear push token before clearing user state
@@ -162,6 +168,7 @@ export default function RootLayout() {
                     }
                     setUser(null);
                     clearUserContext();
+                    clearUserId();
                     // Clear React Query cache
                     queryClient.clear();
                 }

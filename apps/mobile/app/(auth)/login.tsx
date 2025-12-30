@@ -29,6 +29,8 @@ if (Platform.OS === "ios") {
     }
 }
 import { supabase } from "../../src/lib/supabase";
+import { getAuthError } from "../../src/lib/errors";
+import { Events } from "../../src/lib/analytics";
 import { useAuthStore } from "../../src/store";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
@@ -96,7 +98,7 @@ export default function LoginScreen() {
 
         if (resendError) {
             if (Platform.OS !== 'web') {
-                Alert.alert("Error", resendError.message);
+                Alert.alert("Error", getAuthError(resendError));
             }
         } else {
             // Start 60 second cooldown
@@ -125,7 +127,7 @@ export default function LoginScreen() {
                     Alert.alert("Not yet verified", "Please check your email and click the verification link.");
                 }
             } else {
-                Alert.alert("Error", signInError.message);
+                Alert.alert("Error", getAuthError(signInError));
             }
         }
         // If successful, the auth state change will handle the redirect
@@ -175,9 +177,10 @@ export default function LoginScreen() {
         setIsLoading(false);
 
         if (authError) {
-            showError(authError.message);
+            showError(getAuthError(authError));
         } else {
             setIsMagicLinkSent(true);
+            Events.signIn("magic_link");
         }
     };
 
@@ -207,7 +210,7 @@ export default function LoginScreen() {
             setIsLoading(false);
 
             if (signUpError) {
-                showError(signUpError.message);
+                showError(getAuthError(signUpError));
             } else if (data.user && data.user.identities && data.user.identities.length === 0) {
                 // User already exists - Supabase returns success but empty identities
                 // for security (prevents email enumeration)
@@ -218,6 +221,7 @@ export default function LoginScreen() {
                     email: email.trim(),
                     password,
                 });
+                Events.signUp("password");
             }
         } else {
             const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -227,7 +231,9 @@ export default function LoginScreen() {
 
             setIsLoading(false);
 
-            if (signInError) {
+            if (!signInError) {
+                Events.signIn("password");
+            } else if (signInError) {
                 // Check if the error is due to unverified email
                 if (signInError.message.includes("Email not confirmed")) {
                     // Show the verification pending screen
@@ -236,7 +242,7 @@ export default function LoginScreen() {
                         password,
                     });
                 } else {
-                    showError(signInError.message);
+                    showError(getAuthError(signInError));
                 }
             }
         }
@@ -264,7 +270,9 @@ export default function LoginScreen() {
 
                     if (error) {
                         console.log("[Apple Sign In] Supabase error:", error.message);
-                        Alert.alert("Error", error.message);
+                        Alert.alert("Error", getAuthError(error));
+                    } else {
+                        Events.signIn("apple");
                     }
                 } else {
                     Alert.alert("Error", "No identity token received from Apple");
@@ -274,7 +282,7 @@ export default function LoginScreen() {
                 if (e.code === "ERR_REQUEST_CANCELED") {
                     // User canceled - do nothing
                 } else {
-                    Alert.alert("Apple Sign In Error", `${e.code || 'Unknown'}: ${e.message || "Apple sign in failed"}`);
+                    Alert.alert("Error", "Apple sign in failed. Please try again.");
                 }
             }
         } else {
@@ -288,7 +296,7 @@ export default function LoginScreen() {
             });
 
             if (error) {
-                Alert.alert("Error", error.message);
+                Alert.alert("Error", getAuthError(error));
             }
         }
     };

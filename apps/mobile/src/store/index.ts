@@ -257,7 +257,7 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         set({ isLoading: true });
 
         // Get user's explicit content preference
-        const showExplicit = useAuthStore.getState().user?.show_explicit_content ?? false;
+        const showExplicit = useAuthStore.getState().user?.show_explicit_content ?? true;
 
         // Fetch categories
         const { data: categories } = await supabase

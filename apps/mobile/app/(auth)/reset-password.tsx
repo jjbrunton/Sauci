@@ -16,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/lib/supabase";
+import { getAuthError } from "../../src/lib/errors";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
 
@@ -59,14 +60,7 @@ export default function ResetPasswordScreen() {
         setIsLoading(false);
 
         if (updateError) {
-            // Handle common errors
-            if (updateError.message.includes("same as")) {
-                showError("New password must be different from your current password");
-            } else if (updateError.message.includes("session")) {
-                showError("Your reset link has expired. Please request a new one.");
-            } else {
-                showError(updateError.message);
-            }
+            showError(getAuthError(updateError));
         } else {
             setIsSuccess(true);
         }

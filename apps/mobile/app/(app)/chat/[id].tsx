@@ -14,6 +14,7 @@ import { decode } from 'base64-arraybuffer';
 import { Database } from "../../../src/types/supabase";
 import { GradientBackground } from "../../../src/components/ui";
 import { colors, gradients, spacing, radius, typography } from "../../../src/theme";
+import { Events } from "../../../src/lib/analytics";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -205,6 +206,8 @@ export default function ChatScreen() {
         if (error) {
             Alert.alert("Error", "Failed to send message");
             setInputText(content);
+        } else {
+            Events.messageSent();
         }
     };
 
@@ -283,6 +286,7 @@ export default function ChatScreen() {
                 user_id: user.id,
                 media_path: fileName,
             });
+            Events.mediaUploaded();
 
         } catch (error) {
             Alert.alert("Error", "Failed to upload image");

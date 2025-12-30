@@ -17,6 +17,8 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Clipboard from "expo-clipboard";
 import { useAuthStore } from "../../src/store";
 import { supabase } from "../../src/lib/supabase";
+import { getPairingError } from "../../src/lib/errors";
+import { Events } from "../../src/lib/analytics";
 import { router } from "expo-router";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
@@ -81,8 +83,9 @@ export default function PairingScreen() {
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
+            Events.coupleCreated();
         } catch (error: any) {
-            Alert.alert("Error", error.message);
+            Alert.alert("Error", getPairingError(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -92,7 +95,7 @@ export default function PairingScreen() {
         // Validate invite code format (8 alphanumeric characters)
         const sanitizedCode = inviteCode.trim().toUpperCase();
         if (!/^[A-Z0-9]{8}$/.test(sanitizedCode)) {
-            Alert.alert("Error", "Please enter a valid 8-character invite code");
+            Alert.alert("Invalid Code", "Please enter a valid 8-character invite code.");
             return;
         }
 
@@ -118,12 +121,13 @@ export default function PairingScreen() {
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
+            Events.coupleJoined();
 
             Alert.alert("Success", "You are now paired!", [
                 { text: "Let's Go", onPress: () => router.replace("/(app)/") }
             ]);
         } catch (error: any) {
-            Alert.alert("Error", error.message);
+            Alert.alert("Error", getPairingError(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -142,6 +146,7 @@ export default function PairingScreen() {
                 await Share.share({
                     message: `Join me on Sauci! Use my invite code to pair up: ${couple.invite_code}`,
                 });
+                Events.codeShared();
             } catch (error) {
                 console.error(error);
             }
@@ -169,8 +174,9 @@ export default function PairingScreen() {
 
                             await fetchUser();
                             await fetchCouple();
+                            Events.pairingCancelled();
                         } catch (error: any) {
-                            Alert.alert("Error", error.message);
+                            Alert.alert("Error", getPairingError(error));
                         } finally {
                             setIsSubmitting(false);
                         }

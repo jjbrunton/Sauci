@@ -17,6 +17,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../../src/lib/supabase";
+import { getAuthError } from "../../src/lib/errors";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
 
@@ -71,7 +72,7 @@ export default function ForgotPasswordScreen() {
         setIsLoading(false);
 
         if (resetError) {
-            showError(resetError.message);
+            showError(getAuthError(resetError));
         } else {
             setIsEmailSent(true);
             setResendCooldown(60);
@@ -92,7 +93,7 @@ export default function ForgotPasswordScreen() {
 
         if (resendError) {
             if (Platform.OS !== 'web') {
-                Alert.alert("Error", resendError.message);
+                Alert.alert("Error", getAuthError(resendError));
             }
         } else {
             setResendCooldown(60);

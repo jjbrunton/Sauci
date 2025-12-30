@@ -46,6 +46,9 @@ export default function Navbar() {
           <a href="#how-it-works" className="text-white/70 hover:text-white transition-colors">
             How It Works
           </a>
+          <a href="#pricing" className="text-white/70 hover:text-white transition-colors">
+            Pro
+          </a>
           <a
             href="https://apps.apple.com/app/sauci"
             target="_blank"
@@ -86,6 +89,13 @@ export default function Navbar() {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               How It Works
+            </a>
+            <a
+              href="#pricing"
+              className="text-white/70 hover:text-white transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Pro
             </a>
             <a
               href="https://apps.apple.com/app/sauci"

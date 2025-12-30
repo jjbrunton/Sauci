@@ -28,7 +28,9 @@ import { GlassButton } from '../../src/components/ui/GlassButton';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { supabase } from '../../src/lib/supabase';
+import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
+import { Events } from '../../src/lib/analytics';
 import type { Gender } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
@@ -59,6 +61,7 @@ export default function OnboardingScreen() {
         Keyboard.dismiss();
         setError(null);
         setStage('gender');
+        Events.onboardingStageComplete('name');
     };
 
     const handleGenderSelect = (selectedGender: Gender) => {
@@ -72,10 +75,12 @@ export default function OnboardingScreen() {
             return;
         }
         setStage('explicit');
+        Events.onboardingStageComplete('gender');
     };
 
     const handleExplicitContinue = () => {
         setStage('notifications');
+        Events.onboardingStageComplete('explicit');
     };
 
     const handleEnableNotifications = async () => {
@@ -124,10 +129,11 @@ export default function OnboardingScreen() {
             console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
             console.log('[Onboarding] User fetched, navigating to home...');
+            Events.onboardingComplete();
             router.replace('/');
         } catch (err: any) {
             console.error('Onboarding error:', err);
-            setError(err.message || 'Something went wrong');
+            setError(getProfileError(err));
         } finally {
             setIsLoading(false);
         }

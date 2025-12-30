@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSubscriptionStore } from "../store";
 import { colors, gradients, spacing, radius, typography } from "../theme";
 import type { PurchasesPackage } from "../lib/revenuecat";
+import { Events } from "../lib/analytics";
 
 interface PaywallProps {
     visible: boolean;
@@ -58,6 +59,9 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         if (visible && !offerings) {
             fetchOfferings();
         }
+        if (visible) {
+            Events.paywallShown("paywall");
+        }
     }, [visible, offerings, fetchOfferings]);
 
     useEffect(() => {
@@ -73,8 +77,10 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
     const handlePurchase = async () => {
         if (!selectedPackage) return;
 
+        Events.purchaseInitiated(selectedPackage.packageType || "unknown");
         const success = await purchasePackage(selectedPackage);
         if (success) {
+            Events.purchaseCompleted(selectedPackage.packageType || "unknown");
             onSuccess?.();
             onClose();
         }
@@ -83,6 +89,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
     const handleRestore = async () => {
         const restored = await restorePurchases();
         if (restored) {
+            Events.purchaseRestored();
             onSuccess?.();
             onClose();
         }

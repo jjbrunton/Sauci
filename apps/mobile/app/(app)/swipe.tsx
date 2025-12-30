@@ -11,6 +11,7 @@ import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipe
 import SwipeCard from "../../src/components/SwipeCard";
 import SwipeTutorial from "../../src/components/SwipeTutorial";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 
 export default function SwipeScreen() {
@@ -102,6 +103,7 @@ export default function SwipeScreen() {
         // Handle skip - don't submit a response, just store it for later
         if (direction === "down") {
             await skipQuestion(question.id);
+            Events.questionSkipped();
             return;
         }
 
@@ -127,6 +129,8 @@ export default function SwipeScreen() {
 
             if (error) {
                 console.error("Submit response error:", error);
+            } else {
+                Events.questionAnswered(answer, question.pack_id);
             }
         } catch (error) {
             console.error("Failed to submit response", error);
