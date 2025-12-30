@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Dialog,
@@ -225,13 +226,10 @@ export function CategoriesPage() {
 
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="icon">Icon (emoji)</Label>
-                                    <Input
-                                        id="icon"
+                                    <Label>Icon</Label>
+                                    <EmojiPicker
                                         value={formData.icon}
-                                        onChange={(e) => setFormData(d => ({ ...d, icon: e.target.value }))}
-                                        placeholder="📚"
-                                        className="w-20 text-center text-2xl"
+                                        onChange={(emoji) => setFormData(d => ({ ...d, icon: emoji }))}
                                     />
                                 </div>
 
