@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { PostHogProvider } from './providers'
+import { PostHogPageView } from './PostHogPageView'
 
 export const metadata: Metadata = {
   title: 'Sauci - Ignite Your Connection',
@@ -32,7 +34,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <PostHogProvider>
+          <PostHogPageView />
+          {children}
+        </PostHogProvider>
       </body>
     </html>
   )

@@ -3,6 +3,13 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build args for Next.js public env vars (inlined at build time)
+ARG NEXT_PUBLIC_POSTHOG_KEY
+ARG NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+
+ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
+ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
+
 # Install dependencies
 COPY package*.json ./
 RUN npm ci

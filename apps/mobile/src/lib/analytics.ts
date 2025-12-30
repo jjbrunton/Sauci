@@ -1,9 +1,9 @@
-import analytics from "@react-native-firebase/analytics";
-import { Platform } from "react-native";
+import PostHog from "posthog-react-native";
 
+let posthog: PostHog | null = null;
 let isInitialized = false;
 
-export function initAnalytics() {
+export async function initAnalytics() {
   if (__DEV__) {
     console.log("[Analytics] Disabled in development mode");
     return;
@@ -13,12 +13,32 @@ export function initAnalytics() {
     return;
   }
 
-  isInitialized = true;
-  console.log("[Analytics] Firebase Analytics initialized");
+  const apiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
+  const host = process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
+
+  if (!apiKey) {
+    console.warn("[Analytics] PostHog API key not configured");
+    return;
+  }
+
+  try {
+    posthog = new PostHog(apiKey, {
+      host,
+      // Disable automatic capture in production for privacy
+      captureApplicationLifecycleEvents: true,
+      captureDeepLinks: true,
+      recordScreenViews: false, // We'll track manually for more control
+    });
+
+    isInitialized = true;
+    console.log("[Analytics] PostHog initialized");
+  } catch (error) {
+    console.warn("[Analytics] Failed to initialize PostHog:", error);
+  }
 }
 
 // Log a custom event
-export async function logEvent(
+export function logEvent(
   name: string,
   params?: Record<string, string | number | boolean>
 ) {
@@ -28,42 +48,42 @@ export async function logEvent(
   }
 
   try {
-    await analytics().logEvent(name, params);
+    posthog?.capture(name, params);
   } catch (error) {
     console.warn("[Analytics] Failed to log event:", error);
   }
 }
 
 // Set user ID for tracking
-export async function setUserId(userId: string) {
+export function setUserId(userId: string) {
   if (__DEV__) {
     console.log("[Analytics] Set user ID:", userId);
     return;
   }
 
   try {
-    await analytics().setUserId(userId);
+    posthog?.identify(userId);
   } catch (error) {
     console.warn("[Analytics] Failed to set user ID:", error);
   }
 }
 
 // Clear user ID on logout
-export async function clearUserId() {
+export function clearUserId() {
   if (__DEV__) {
     console.log("[Analytics] Cleared user ID");
     return;
   }
 
   try {
-    await analytics().setUserId(null);
+    posthog?.reset();
   } catch (error) {
     console.warn("[Analytics] Failed to clear user ID:", error);
   }
 }
 
 // Set user properties
-export async function setUserProperties(
+export function setUserProperties(
   properties: Record<string, string | null>
 ) {
   if (__DEV__) {
@@ -72,28 +92,39 @@ export async function setUserProperties(
   }
 
   try {
+    // Filter out null values for PostHog
+    const filteredProps: Record<string, string> = {};
     for (const [key, value] of Object.entries(properties)) {
-      await analytics().setUserProperty(key, value);
+      if (value !== null) {
+        filteredProps[key] = value;
+      }
     }
+    posthog?.capture("$set", { $set: filteredProps });
   } catch (error) {
     console.warn("[Analytics] Failed to set user properties:", error);
   }
 }
 
 // Log screen view
-export async function logScreenView(screenName: string, screenClass?: string) {
+export function logScreenView(screenName: string, screenClass?: string) {
   if (__DEV__) {
     console.log("[Analytics] Screen view:", screenName);
     return;
   }
 
   try {
-    await analytics().logScreenView({
-      screen_name: screenName,
-      screen_class: screenClass ?? screenName,
-    });
+    posthog?.screen(screenName, { screen_class: screenClass ?? screenName });
   } catch (error) {
     console.warn("[Analytics] Failed to log screen view:", error);
+  }
+}
+
+// Flush events (useful before app backgrounding)
+export function flush() {
+  try {
+    posthog?.flush();
+  } catch (error) {
+    console.warn("[Analytics] Failed to flush:", error);
   }
 }
 
