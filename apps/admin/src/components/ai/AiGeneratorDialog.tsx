@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog,
     DialogContent,
@@ -44,6 +45,8 @@ export function AiGeneratorDialog({
     // Default tone based on pack's explicit flag (5 for explicit packs, 3 for non-explicit)
     const [tone, setTone] = useState<ToneLevel>(context?.isExplicit ? 5 : 3);
     const isExplicit = tone >= 4; // For other generators that still use boolean
+    const [crudeLang, setCrudeLang] = useState(false);
+    const [inspiration, setInspiration] = useState('');
 
     // Update tone when dialog opens with new context
     useEffect(() => {
@@ -65,26 +68,26 @@ export function AiGeneratorDialog({
         setLoading(true);
         try {
             if (type === 'pack') {
-                const result = await generatePack(context?.categoryName, isExplicit);
+                const result = await generatePack(context?.categoryName, isExplicit, crudeLang, inspiration || undefined);
                 setGeneratedPack(result);
             } else if (type === 'questions') {
                 if (!context?.packName) {
                     toast.error('Pack name is required');
                     return;
                 }
-                const result = await generateQuestions(context.packName, count, undefined, tone, context.packDescription || undefined, context.existingQuestions);
+                const result = await generateQuestions(context.packName, count, undefined, tone, context.packDescription || undefined, context.existingQuestions, crudeLang, inspiration || undefined);
                 setGeneratedQuestions(result);
                 // Select all questions by default
                 setSelectedQuestionIndices(new Set(result.map((_, i) => i)));
             } else if (type === 'category-ideas') {
-                const result = await suggestCategories(context?.existingCategories || [], isExplicit);
+                const result = await suggestCategories(context?.existingCategories || [], isExplicit, crudeLang, inspiration || undefined);
                 setGeneratedIdeas(result);
             } else if (type === 'category-pack-ideas') {
                 if (!context?.categoryName) {
                     toast.error('Category name is required');
                     return;
                 }
-                const result = await suggestPacks(context.categoryName, context?.existingPacks || [], isExplicit);
+                const result = await suggestPacks(context.categoryName, context?.existingPacks || [], isExplicit, crudeLang, inspiration || undefined);
                 setGeneratedPackIdeas(result);
             }
         } catch (error) {
@@ -136,6 +139,8 @@ export function AiGeneratorDialog({
         setGeneratedIdeas([]);
         setGeneratedPackIdeas([]);
         setSelectedQuestionIndices(new Set());
+        setCrudeLang(false);
+        setInspiration('');
         onOpenChange(false);
     };
 
@@ -211,6 +216,33 @@ export function AiGeneratorDialog({
                             <Label htmlFor="explicit-mode">Suggest Explicit Ideas</Label>
                         </div>
                     )}
+
+                    {/* Crude Language Toggle */}
+                    <div className="flex items-center space-x-2">
+                        <Switch
+                            id="crude-lang"
+                            checked={crudeLang}
+                            onCheckedChange={setCrudeLang}
+                        />
+                        <Label htmlFor="crude-lang">Crude Language</Label>
+                        <span className="text-xs text-muted-foreground">(vulgar, raw, everyday explicit words)</span>
+                    </div>
+
+                    {/* Inspiration/Suggestions Textarea */}
+                    <div className="space-y-2">
+                        <Label htmlFor="inspiration">Inspiration / Suggestions (optional)</Label>
+                        <Textarea
+                            id="inspiration"
+                            placeholder="Provide any themes, ideas, or guidance for the AI to consider..."
+                            value={inspiration}
+                            onChange={(e) => setInspiration(e.target.value)}
+                            rows={3}
+                            className="resize-none"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Add freetext suggestions to guide the AI generation
+                        </p>
+                    </div>
 
                     {/* Context info */}
                     {context?.categoryName && (

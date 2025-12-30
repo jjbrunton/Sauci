@@ -58,12 +58,25 @@ export interface GeneratedQuestion {
     intensity: number;
 }
 
-export async function generatePack(categoryName?: string, explicit: boolean = false): Promise<GeneratedPack> {
+export async function generatePack(
+    categoryName?: string,
+    explicit: boolean = false,
+    crudeLang: boolean = false,
+    inspiration?: string
+): Promise<GeneratedPack> {
     const openai = getOpenAI();
 
     const explicitInstruction = explicit
         ? 'Include bold, spicy, and uncensored themes (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
+
+    const crudeLangInstruction = crudeLang
+        ? 'Use crude, vulgar, and raw language. Be blunt and use everyday explicit words.'
+        : 'Use tasteful, refined language. Avoid crude or vulgar terms even for explicit content.';
+
+    const inspirationInstruction = inspiration
+        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your generation.`
+        : '';
 
     const appContext = `This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
 Each partner independently swipes Like/Dislike/Maybe, and when both swipe positively they "match".
@@ -78,6 +91,7 @@ This is NOT a Q&A app - it's about discovering shared interests in activities.`;
        The pack should contain a themed collection of activities couples can explore together.
 
        ${explicitInstruction}
+       ${crudeLangInstruction}${inspirationInstruction}
 
        Return a JSON object with:
        - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
@@ -91,6 +105,7 @@ This is NOT a Q&A app - it's about discovering shared interests in activities.`;
        The pack should contain a themed collection of activities couples can explore together.
 
        ${explicitInstruction}
+       ${crudeLangInstruction}${inspirationInstruction}
 
        Return a JSON object with:
        - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
@@ -198,11 +213,21 @@ export async function generateQuestions(
     intensity?: number,
     tone: ToneLevel = 3,
     packDescription?: string,
-    existingQuestions?: string[]
+    existingQuestions?: string[],
+    crudeLang: boolean = false,
+    inspiration?: string
 ): Promise<GeneratedQuestion[]> {
     const openai = getOpenAI();
     const isClean = tone === 0;
     const isExplicit = tone >= 4;
+
+    const crudeLangInstruction = crudeLang
+        ? '\n\nCRUDE LANGUAGE: Use crude, vulgar, raw language throughout. Be blunt, direct, and use everyday explicit words like people actually use in real life. Avoid euphemisms or clinical terms.'
+        : '\n\nLANGUAGE STYLE: Use tasteful, refined language. Avoid crude or vulgar terms. For explicit content, use direct but non-crude terms (e.g., "oral sex" not "blowjob", "have sex" not "fuck").';
+
+    const inspirationInstruction = inspiration
+        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide the types of questions you generate.`
+        : '';
 
     const intensityInstruction = isClean
         ? 'All questions should be intensity level 1 (non-physical activities).'
@@ -266,7 +291,7 @@ CRITICAL: Generate completely NEW and DIFFERENT questions. Do not repeat any of 
 ${INTENSITY_GUIDE_SHORT}
 
 ${intensityInstruction}
-${toneInstruction}${explicitWarning}
+${toneInstruction}${explicitWarning}${crudeLangInstruction}${inspirationInstruction}
 
 IMPORTANT: The app uses a swipe-based interface (Like/Dislike/Maybe).
 Cards should be "Proposals" for specific actions, NOT interview questions.
@@ -371,7 +396,9 @@ export interface GeneratedCategoryIdea {
 
 export async function suggestCategories(
     existingCategories: string[],
-    explicit: boolean
+    explicit: boolean,
+    crudeLang: boolean = false,
+    inspiration?: string
 ): Promise<GeneratedCategoryIdea[]> {
     const openai = getOpenAI();
     const existingList = existingCategories.length > 0
@@ -381,6 +408,14 @@ export async function suggestCategories(
     const explicitInstruction = explicit
         ? 'Include bold, spicy, and explicitly intimate categories (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
+
+    const crudeLangInstruction = crudeLang
+        ? '\nUse crude, vulgar, and raw language in the names and descriptions.'
+        : '\nUse tasteful, refined language. Avoid crude or vulgar terms.';
+
+    const inspirationInstruction = inspiration
+        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your category suggestions.`
+        : '';
 
     const prompt = `Here are the current categories in our couples' activity/intimacy app: ${existingList}.
 
@@ -392,7 +427,7 @@ IMPORTANT - HOW THE APP WORKS:
 - This is NOT a Q&A app - it's about discovering shared interests in activities to do together
 
 Suggest 5 NEW, UNIQUE category ideas that differ from the existing ones.
-${explicitInstruction}
+${explicitInstruction}${crudeLangInstruction}${inspirationInstruction}
 
 Return a JSON object with an "ideas" array containing 5 objects, where each object has:
 - name: Category name (1-3 words)
@@ -429,7 +464,9 @@ export interface GeneratedPackIdea {
 export async function suggestPacks(
     categoryName: string,
     existingPacks: string[],
-    explicit: boolean
+    explicit: boolean,
+    crudeLang: boolean = false,
+    inspiration?: string
 ): Promise<GeneratedPackIdea[]> {
     const openai = getOpenAI();
     const existingList = existingPacks.length > 0
@@ -439,6 +476,14 @@ export async function suggestPacks(
     const explicitInstruction = explicit
         ? 'Include bold, spicy, and uncensored pack ideas (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
+
+    const crudeLangInstruction = crudeLang
+        ? '\nUse crude, vulgar, and raw language in the pack names and descriptions.'
+        : '\nUse tasteful, refined language. Avoid crude or vulgar terms.';
+
+    const inspirationInstruction = inspiration
+        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your pack suggestions.`
+        : '';
 
     const prompt = `We are building activity packs for the category "${categoryName}" in a couples' intimacy app.
 
@@ -459,7 +504,7 @@ PACK THEMES should focus on:
 Existing packs in this category: ${existingList}.
 
 Suggest 5 NEW, UNIQUE pack ideas that fit this category and differ from existing ones.
-${explicitInstruction}
+${explicitInstruction}${crudeLangInstruction}${inspirationInstruction}
 
 Return a JSON object with an "ideas" array containing 5 objects, where each object has:
 - name: Pack name (catchy, 3-6 words) - should evoke activities/experiences, not questions
