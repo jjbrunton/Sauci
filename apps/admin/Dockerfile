@@ -1,16 +1,12 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /app
-COPY package*.json ./
-COPY turbo.json ./
-COPY apps/admin/package.json ./apps/admin/
-COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies (only what's needed for admin)
-RUN npm install
-
-# Copy source
+# Copy everything first (workspaces need full structure)
 COPY . .
+
+# Install all dependencies
+RUN npm install
 
 # Build shared package first
 RUN npx turbo run build --filter=@sauci/shared

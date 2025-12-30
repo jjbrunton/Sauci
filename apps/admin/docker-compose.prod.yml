@@ -12,6 +12,4 @@ services:
         - VITE_AI_MODEL_GENERATE=${VITE_AI_MODEL_GENERATE}
         - VITE_AI_MODEL_FIX=${VITE_AI_MODEL_FIX}
         - VITE_AI_MODEL_POLISH=${VITE_AI_MODEL_POLISH}
-    ports:
-      - "3000:80"
     restart: unless-stopped
