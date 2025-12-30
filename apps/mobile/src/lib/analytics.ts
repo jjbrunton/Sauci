@@ -4,11 +4,6 @@ let posthog: PostHog | null = null;
 let isInitialized = false;
 
 export async function initAnalytics() {
-  if (__DEV__) {
-    console.log("[Analytics] Disabled in development mode");
-    return;
-  }
-
   if (isInitialized) {
     return;
   }
@@ -42,12 +37,8 @@ export function logEvent(
   name: string,
   params?: Record<string, string | number | boolean>
 ) {
-  if (__DEV__) {
-    console.log("[Analytics] Event:", name, params);
-    return;
-  }
-
   try {
+    if (__DEV__) console.log("[Analytics] Event:", name, params);
     posthog?.capture(name, params);
   } catch (error) {
     console.warn("[Analytics] Failed to log event:", error);
@@ -56,12 +47,8 @@ export function logEvent(
 
 // Set user ID for tracking
 export function setUserId(userId: string) {
-  if (__DEV__) {
-    console.log("[Analytics] Set user ID:", userId);
-    return;
-  }
-
   try {
+    if (__DEV__) console.log("[Analytics] Set user ID:", userId);
     posthog?.identify(userId);
   } catch (error) {
     console.warn("[Analytics] Failed to set user ID:", error);
@@ -70,12 +57,8 @@ export function setUserId(userId: string) {
 
 // Clear user ID on logout
 export function clearUserId() {
-  if (__DEV__) {
-    console.log("[Analytics] Cleared user ID");
-    return;
-  }
-
   try {
+    if (__DEV__) console.log("[Analytics] Cleared user ID");
     posthog?.reset();
   } catch (error) {
     console.warn("[Analytics] Failed to clear user ID:", error);
@@ -86,12 +69,8 @@ export function clearUserId() {
 export function setUserProperties(
   properties: Record<string, string | null>
 ) {
-  if (__DEV__) {
-    console.log("[Analytics] Set user properties:", properties);
-    return;
-  }
-
   try {
+    if (__DEV__) console.log("[Analytics] Set user properties:", properties);
     // Filter out null values for PostHog
     const filteredProps: Record<string, string> = {};
     for (const [key, value] of Object.entries(properties)) {
@@ -107,12 +86,8 @@ export function setUserProperties(
 
 // Log screen view
 export function logScreenView(screenName: string, screenClass?: string) {
-  if (__DEV__) {
-    console.log("[Analytics] Screen view:", screenName);
-    return;
-  }
-
   try {
+    if (__DEV__) console.log("[Analytics] Screen view:", screenName);
     posthog?.screen(screenName, { screen_class: screenClass ?? screenName });
   } catch (error) {
     console.warn("[Analytics] Failed to log screen view:", error);
