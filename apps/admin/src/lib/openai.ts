@@ -129,64 +129,67 @@ export const TONE_LEVELS = [
 
 export type ToneLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
-// Intensity levels for questions (controls physical intimacy level)
+// Intensity levels for questions (controls sexual/intimacy level)
 // This guide helps AI consistently grade question intensity
 export const INTENSITY_GUIDE = `
 INTENSITY GRADING GUIDE - Use this to assign intensity levels consistently:
 
-Level 1 - LIGHT (Emotional/Verbal):
+Level 1 - LIGHT (Emotional/Non-Sexual):
 - Talking, sharing feelings, compliments, emotional vulnerability
 - Non-physical activities: writing letters, planning dates, sharing dreams
-- Examples: "Share your biggest dream with your partner", "Write a love note", "Tell your partner what you love most about them"
+- Clean activities with no sexual undertones
+- Examples: "Share your biggest dream", "Write a love note", "Plan a surprise date"
 
-Level 2 - MILD (Light Physical):
+Level 2 - MILD (Affectionate/Flirty):
 - Light physical affection: holding hands, hugging, cuddling
 - Gentle kisses, playing with hair, light touches
-- Non-sexual physical closeness: dancing together, sleeping in each other's arms
-- Examples: "Give your partner a forehead kiss", "Cuddle while watching a movie", "Hold hands during dinner"
+- Flirty but non-sexual: dancing together, sleeping in each other's arms
+- Examples: "Give your partner a forehead kiss", "Cuddle while watching a movie", "Send a flirty text"
 
-Level 3 - MODERATE (Sensual/Intimate):
+Level 3 - MODERATE (Sensual/Suggestive):
 - Making out, passionate kissing, intimate massage
 - Sensual touch over clothes, caressing, teasing
-- Showering together (non-sexual), skinny dipping
-- Suggestive activities that build tension without explicit sexual acts
-- Examples: "Give your partner a sensual massage", "Make out in an unexpected place", "Slow dance intimately"
+- Suggestive photos (lingerie, shirtless), sexy selfies, teasing texts
+- Showering together, skinny dipping
+- Examples: "Give a sensual massage", "Send a sexy photo", "Make out somewhere risky"
 
-Level 4 - SPICY (Sexual without Penetration):
+Level 4 - SPICY (Sexual/Explicit Content):
 - Oral sex, fingering, handjobs, mutual masturbation
 - Foreplay activities, using hands/mouth on private parts
+- Nudes, explicit photos, dirty pics, sexting explicit content
 - Using toys externally, edging, making your partner cum
-- Nakedness with sexual intent
-- Examples: "Go down on your partner", "Get your partner off with your hands", "Use a vibrator on your partner"
+- Examples: "Go down on your partner", "Send a nude", "Sext each other something filthy"
 
-Level 5 - INTENSE (Penetration/Advanced):
+Level 5 - INTENSE (Penetration/Advanced Kinks):
 - Sex (vaginal or anal), toys inside, fingers inside
 - Kinks: bondage, role-play with power dynamics, BDSM
 - Threesomes, exhibitionism, voyeurism
-- Any activity involving penetration or advanced kinks
-- Examples: "Fuck in a new location", "Try anal", "Tie your partner up and have your way with them"
+- Making/sharing explicit videos, masturbating on video call
+- Examples: "Fuck in a new location", "Try anal", "Record yourselves having sex"
 
-IMPORTANT: Intensity is about the PHYSICAL INTIMACY level, not the language used.
-A question can be intensity 5 with tasteful language (non-explicit pack) or crude language (explicit pack).
+IMPORTANT: Intensity is about SEXUAL CONTENT level, not just physical touch.
+Sending nudes = Level 4, Sexting explicit content = Level 4, Dirty/filthy photos = Level 4.
 `;
 
 // Condensed version for prompts (to save tokens)
 export const INTENSITY_GUIDE_SHORT = `
 INTENSITY LEVELS:
-1 (Light): Talking, emotional sharing, compliments, non-physical activities
-2 (Mild): Holding hands, hugging, cuddling, gentle kisses, light touch
-3 (Moderate): Making out, sensual massage, passionate kissing, intimate but not sexual
-4 (Spicy): Oral sex, fingering, handjobs, foreplay, getting each other off without sex
-5 (Intense): Sex (vaginal/anal), kinks, BDSM, toys inside, threesomes
+1 (Light): Talking, emotional sharing, compliments, non-sexual activities
+2 (Mild): Holding hands, hugging, cuddling, gentle kisses, flirty texts
+3 (Moderate): Making out, sensual massage, sexy/suggestive photos, teasing
+4 (Spicy): Oral sex, fingering, handjobs, nudes, explicit photos/sexting, foreplay
+5 (Intense): Sex, anal, kinks, BDSM, explicit videos, threesomes
+
+IMPORTANT: "Filthy photo", "nude", "dirty pic" = Level 4. "Sexy photo", "lingerie pic" = Level 3.
 `;
 
 // Intensity levels for UI display (consistent with AI grading)
 export const INTENSITY_LEVELS = [
-    { level: 1, label: 'Light', description: 'Talking, emotional sharing, compliments, non-physical', color: 'bg-green-500' },
-    { level: 2, label: 'Mild', description: 'Holding hands, hugging, cuddling, gentle kisses', color: 'bg-lime-500' },
-    { level: 3, label: 'Moderate', description: 'Making out, sensual massage, passionate kissing', color: 'bg-yellow-500' },
-    { level: 4, label: 'Spicy', description: 'Oral, manual stimulation, foreplay, sexual without penetration', color: 'bg-orange-500' },
-    { level: 5, label: 'Intense', description: 'Penetration, advanced kinks, BDSM, group activities', color: 'bg-red-500' },
+    { level: 1, label: 'Light', description: 'Talking, emotional sharing, compliments, non-sexual', color: 'bg-green-500' },
+    { level: 2, label: 'Mild', description: 'Hugging, cuddling, gentle kisses, flirty texts', color: 'bg-lime-500' },
+    { level: 3, label: 'Moderate', description: 'Making out, massage, sexy/suggestive photos', color: 'bg-yellow-500' },
+    { level: 4, label: 'Spicy', description: 'Oral, foreplay, nudes, explicit sexting', color: 'bg-orange-500' },
+    { level: 5, label: 'Intense', description: 'Sex, kinks, BDSM, explicit videos', color: 'bg-red-500' },
 ] as const;
 
 export async function generateQuestions(
@@ -226,16 +229,20 @@ export async function generateQuestions(
             : 'GOOD: "Cook a romantic dinner together", "Stargaze and share dreams", "Give each other massages", "Dance together at home".';
 
     const asymmetricExamples = isClean
-        ? `text (The Doer): Active command/proposal (e.g., "Teach your partner something new", "Plan a surprise activity").
-   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Learn something new from your partner", "Be surprised with an activity").
-   - GOOD: "Cook your partner their favorite meal" / "Have your partner cook your favorite meal".`
+        ? `Examples:
+   - text: "Cook your partner their favorite meal" → partner_text: "Have your partner cook your favorite meal"
+   - text: "Plan a surprise for your partner" → partner_text: "Be surprised by your partner"
+   - text: "Give your partner a compliment" → partner_text: "Receive a compliment from your partner"`
         : isExplicit
-            ? `text (The Doer): Active command/proposal (e.g., "Tie your partner up", "Go down on your partner").
-   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Get tied up by your partner", "Have your partner go down on you").
-   - GOOD: "Give your partner a blowjob" / "Get a blowjob from your partner".`
-            : `text (The Doer): Active command/proposal (e.g., "Write a love letter to your partner", "Plan a surprise date").
-   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Receive a love letter from your partner", "Be surprised with a date").
-   - GOOD: "Give your partner a massage" / "Receive a massage from your partner".`;
+            ? `Examples:
+   - text: "Go down on your partner" → partner_text: "Have your partner go down on you"
+   - text: "Send your partner a nude" → partner_text: "Receive a nude from your partner"
+   - text: "Tie your partner up" → partner_text: "Get tied up by your partner"
+   - text: "Spank your partner" → partner_text: "Get spanked by your partner"`
+            : `Examples:
+   - text: "Give your partner a massage" → partner_text: "Receive a massage from your partner"
+   - text: "Write your partner a love letter" → partner_text: "Receive a love letter from your partner"
+   - text: "Plan a surprise date for your partner" → partner_text: "Be surprised with a date by your partner"`;
 
     const explicitWarning = isClean
         ? '\n\nCRITICAL: This is a CLEAN pack with NO romantic or sexual content. Focus ONLY on communication, activities, challenges, and bonding. NO romance, NO flirting, NO intimacy, NO physical affection beyond friendly gestures.'
@@ -262,32 +269,35 @@ ${intensityInstruction}
 ${toneInstruction}${explicitWarning}
 
 IMPORTANT: The app uses a swipe-based interface (Like/Dislike/Maybe).
-Cards should be "Proposals" relative to a specific action, rather than interview questions.
+Cards should be "Proposals" for specific actions, NOT interview questions.
 
-For each "question", strictly decide if it is a SYMMETRIC activity (shared) or ASYMMETRIC action (one-way).
+CRITICAL LANGUAGE RULES:
+- ALWAYS use "your partner" - NEVER use "me", "I", "you" (as the receiver), "him", "her"
+- BAD: "Send me a photo" (who is "me"?), "Let me spank you", "I want you to..."
+- GOOD: "Send your partner a photo", "Spank your partner", "Give your partner..."
+- The card reader is the DOER. Their partner is "your partner".
 
-1. SYMMETRIC Activities (Single Card):
-   - Use for shared experiences where both partners do the same thing together.
-   - Phrasing: Direct action proposal or simple "Would you like to...".
+For each question, decide if it is SYMMETRIC (shared) or ASYMMETRIC (one does to the other):
+
+1. SYMMETRIC Activities (partner_text = null):
+   - Both partners do the same thing together.
    - ${symmetricExamples}
-   - BAD: "Have you ever thought about...", "Do you think we should...", "How about we...".
-   - Structure:
-     - text: The action proposal.
-     - partner_text: null.
+   - BAD: "Have you ever thought about...", "Do you think we should..."
 
-2. ASYMMETRIC Actions (Two-Part Card):
-   - Use for actions where one partner does something TO the other.
+2. ASYMMETRIC Actions (requires partner_text):
+   - One partner does something TO/FOR the other.
+   - text = what the DOER does: "Give your partner X", "Do Y to your partner"
+   - partner_text = what the RECEIVER gets: "Receive X from your partner", "Have your partner do Y to you"
    - ${asymmetricExamples}
-   - BAD: "Would you like to spank me?" (Ambiguous who "me" is).
+   - BOTH texts must use "your partner" - never "me" or "I"
 
 Required JSON structure:
-- text: The question/proposal text (see above).
-- partner_text: (optional) The partner-facing text for two-part cards.
-- intensity: A number 1-5 based on the INTENSITY LEVELS guide above. Grade based on PHYSICAL INTIMACY, not language.
-  Examples: "Share a dream" = 1, "Cuddle" = 2, "Massage" = 3, "Oral sex" = 4, "Have sex" = 5
+- text: The proposal (DOER's perspective, uses "your partner")
+- partner_text: For asymmetric only - RECEIVER's perspective (also uses "your partner")
+- intensity: 1-5 based on INTENSITY LEVELS above.
 
-Return a JSON object with a "questions" array containing these question objects.
-Mix distinct symmetric and asymmetric proposals.`;
+Return a JSON object with a "questions" array.
+Mix symmetric and asymmetric proposals.`;
 
     const systemMessages: Record<ToneLevel, string> = {
         0: 'You are a content writer for a couples app focused on communication, activities, and bonding. Generate clean, non-romantic content like conversation starters, fun challenges, and activities. No romance or intimacy. Always respond with valid JSON only.',
