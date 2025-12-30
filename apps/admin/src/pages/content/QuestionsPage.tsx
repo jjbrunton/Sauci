@@ -440,7 +440,7 @@ export function QuestionsPage() {
                 open={aiDialogOpen}
                 onOpenChange={setAiDialogOpen}
                 type="questions"
-                context={{ packName: pack?.name, packDescription: pack?.description, isExplicit: pack?.is_explicit }}
+                context={{ packName: pack?.name, packDescription: pack?.description, isExplicit: pack?.is_explicit, existingQuestions: questions.map(q => q.text) }}
                 onGenerated={handleAiGenerated}
             />
 

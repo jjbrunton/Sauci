@@ -194,7 +194,8 @@ export async function generateQuestions(
     count: number = 10,
     intensity?: number,
     tone: ToneLevel = 3,
-    packDescription?: string
+    packDescription?: string,
+    existingQuestions?: string[]
 ): Promise<GeneratedQuestion[]> {
     const openai = getOpenAI();
     const isClean = tone === 0;
@@ -246,7 +247,14 @@ export async function generateQuestions(
         ? `\nPack Description: "${packDescription}"\nUse this description to guide the theme and style of questions.`
         : '';
 
-    const prompt = `Generate ${count} unique questions for a couples' intimacy question pack called "${packName}".${descriptionContext}
+    const existingQuestionsContext = existingQuestions && existingQuestions.length > 0
+        ? `\n\nEXISTING QUESTIONS IN THIS PACK (DO NOT DUPLICATE OR CREATE SIMILAR VARIATIONS):
+${existingQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+CRITICAL: Generate completely NEW and DIFFERENT questions. Do not repeat any of the above questions or create minor variations of them. Each new question must offer a genuinely distinct activity or experience.`
+        : '';
+
+    const prompt = `Generate ${count} unique questions for a couples' intimacy question pack called "${packName}".${descriptionContext}${existingQuestionsContext}
 
 ${INTENSITY_GUIDE_SHORT}
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import data from '@emoji-mart/data';
+import * as data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Button } from './button';
 

@@ -26,6 +26,7 @@ interface AiGeneratorDialogProps {
         packDescription?: string | null;
         existingCategories?: string[];
         existingPacks?: string[];
+        existingQuestions?: string[];
         isExplicit?: boolean;
     };
     onGenerated: (result: any) => void;
@@ -71,7 +72,7 @@ export function AiGeneratorDialog({
                     toast.error('Pack name is required');
                     return;
                 }
-                const result = await generateQuestions(context.packName, count, undefined, tone, context.packDescription || undefined);
+                const result = await generateQuestions(context.packName, count, undefined, tone, context.packDescription || undefined, context.existingQuestions);
                 setGeneratedQuestions(result);
                 // Select all questions by default
                 setSelectedQuestionIndices(new Set(result.map((_, i) => i)));
