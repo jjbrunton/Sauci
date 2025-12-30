@@ -8,6 +8,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     ScrollView,
+    Image,
 } from "react-native";
 import { Redirect, router } from "expo-router";
 import * as Linking from "expo-linking";
@@ -395,9 +396,11 @@ export default function LoginScreen() {
                             entering={FadeInDown.delay(100).duration(600).springify()}
                             style={styles.brandContainer}
                         >
-                            <View style={styles.logoContainer}>
-                                <Ionicons name="heart" size={40} color={colors.primary} />
-                            </View>
+                            <Image
+                                source={require("../../assets/logo.png")}
+                                style={styles.logoImage}
+                                resizeMode="contain"
+                            />
                             <Text style={styles.title}>Sauci</Text>
                             <Text style={styles.subtitle}>
                                 Explore intimacy together
@@ -594,13 +597,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: spacing.xl,
     },
-    logoContainer: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: colors.primaryLight,
-        justifyContent: "center",
-        alignItems: "center",
+    logoImage: {
+        width: 100,
+        height: 100,
         marginBottom: spacing.md,
     },
     title: {
