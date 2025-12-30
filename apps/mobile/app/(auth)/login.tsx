@@ -190,8 +190,8 @@ export default function LoginScreen() {
             showError("Please enter your password");
             return;
         }
-        if (isSignUp && password.length < 6) {
-            showError("Password must be at least 6 characters");
+        if (isSignUp && password.length < 8) {
+            showError("Password must be at least 8 characters");
             return;
         }
 

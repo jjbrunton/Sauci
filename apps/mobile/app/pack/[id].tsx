@@ -45,16 +45,52 @@ export default function PackDetailsScreen() {
             {item.partner_text && (
                 <Text style={styles.partnerText}>Partner role: {item.partner_text}</Text>
             )}
-            <View style={styles.intensityContainer}>
-                {[...Array(5)].map((_, index) => (
-                    <Ionicons
-                        key={index}
-                        name="flame"
-                        size={12}
-                        color={index < item.intensity ? "#e94560" : "#333"}
-                        style={{ marginRight: 2 }}
-                    />
-                ))}
+            <View style={styles.footerContainer}>
+                <View style={styles.intensityContainer}>
+                    {[...Array(5)].map((_, index) => (
+                        <Ionicons
+                            key={index}
+                            name="flame"
+                            size={12}
+                            color={index < item.intensity ? "#e94560" : "#333"}
+                            style={{ marginRight: 2 }}
+                        />
+                    ))}
+                </View>
+                {item.allowed_couple_genders && item.allowed_couple_genders.length > 0 ? (
+                    <View style={styles.targetsContainer}>
+                        {item.allowed_couple_genders.map((g) => {
+                            const icons = [];
+                            if (g === 'male+male') {
+                                icons.push('male', 'male');
+                            } else if (g === 'female+female') {
+                                icons.push('female', 'female');
+                            } else {
+                                icons.push('male', 'female');
+                            }
+
+                            return (
+                                <View key={g} style={styles.targetBadge}>
+                                    {icons.map((icon, i) => (
+                                        <Ionicons
+                                            key={i}
+                                            name={icon as any}
+                                            size={10}
+                                            color="#ccc"
+                                            style={i > 0 ? { marginLeft: 2 } : {}}
+                                        />
+                                    ))}
+                                </View>
+                            );
+                        })}
+                    </View>
+                ) : (
+                    <View style={styles.targetsContainer}>
+                        <View style={styles.targetBadge}>
+                            <Ionicons name="people" size={10} color="#ccc" />
+                        </View>
+                    </View>
+                )}
             </View>
         </View>
     );
@@ -187,5 +223,26 @@ const styles = StyleSheet.create({
         color: "#aaa",
         fontStyle: "italic",
         marginBottom: 8,
+    },
+    footerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 8,
+    },
+    targetsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 4,
+    },
+    targetBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
     },
 });

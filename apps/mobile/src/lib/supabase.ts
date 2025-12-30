@@ -50,9 +50,6 @@ const ExpoStorageAdapter = {
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-// DEBUG: Log which key is being used
-console.log("DEBUG - Anon key preview:", supabaseAnonKey?.substring(0, 30) + "...");
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         storage: ExpoStorageAdapter,

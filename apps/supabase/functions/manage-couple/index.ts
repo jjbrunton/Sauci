@@ -66,19 +66,27 @@ Deno.serve(async (req) => {
                 // Join existing couple
                 const { invite_code }: JoinCoupleBody = body;
 
-                // Find couple by invite code
-                const { data: couple, error: coupleError } = await supabase
-                    .from("couples")
-                    .select("id")
-                    .eq("invite_code", invite_code.toLowerCase())
-                    .single();
-
-                if (coupleError || !couple) {
+                // Validate invite code format (alphanumeric, 8 chars)
+                const sanitizedCode = invite_code.trim().toUpperCase();
+                if (!/^[A-Z0-9]{8}$/.test(sanitizedCode)) {
                     return new Response(
-                        JSON.stringify({ error: "Invalid invite code" }),
+                        JSON.stringify({ error: "Invalid invite code format" }),
+                        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                    );
+                }
+
+                // Use secure RPC function for invite code verification
+                const { data: verifyResult, error: verifyError } = await supabase
+                    .rpc("verify_invite_code", { code: sanitizedCode });
+
+                if (verifyError || !verifyResult?.valid) {
+                    return new Response(
+                        JSON.stringify({ error: verifyResult?.error || "Invalid invite code" }),
                         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
                     );
                 }
+
+                const couple = { id: verifyResult.couple_id };
 
                 // Check if couple already has 2 members
                 const { count } = await supabase

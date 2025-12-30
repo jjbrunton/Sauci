@@ -1,81 +1,93 @@
-import { Admin, Resource } from "react-admin";
-import { auditDataProvider } from "./providers/auditDataProvider";
-import { PackList, PackEdit, PackCreate } from "./resources/packs";
-import { QuestionList, QuestionEdit, QuestionCreate } from "./resources/questions";
-import { ProfileList, ProfileShow, ProfileEdit, ResponseList } from "./resources/users";
-import { CoupleList } from "./resources/couples";
-import { MatchList, MatchShow } from "./resources/matches";
-import { AuditLogList } from "./resources/auditLogs";
-import { authProvider, AdminPermissions } from "./providers/authProvider";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { LoginPage } from '@/pages/LoginPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { CategoriesPage } from '@/pages/content/CategoriesPage';
+import { PacksPage } from '@/pages/content/PacksPage';
+import { QuestionsPage } from '@/pages/content/QuestionsPage';
+import { UsersPage } from '@/pages/users/UsersPage';
+import { UserDetailPage } from '@/pages/users/UserDetailPage';
+import { MatchChatPage } from '@/pages/users/MatchChatPage';
+import { AuditLogsPage } from '@/pages/AuditLogsPage';
+import { AdminsPage } from '@/pages/admins/AdminsPage';
 
-const App = () => (
-    <Admin
-        dataProvider={auditDataProvider}
-        authProvider={authProvider}
-        requireAuth
-    >
-        {(permissions: AdminPermissions) => (
-            <>
-                {/* Question Packs - accessible to all admins */}
-                <Resource
-                    name="question_packs"
-                    list={PackList}
-                    edit={PackEdit}
-                    create={PackCreate}
-                    recordRepresentation="name"
-                    options={{ label: 'Question Packs' }}
-                />
+function App() {
+    return (
+        <BrowserRouter>
+            <AuthProvider>
+                <Routes>
+                    {/* Public routes */}
+                    <Route path="/login" element={<LoginPage />} />
 
-                {/* Questions - accessible to all admins */}
-                <Resource
-                    name="questions"
-                    list={QuestionList}
-                    edit={QuestionEdit}
-                    create={QuestionCreate}
-                    options={{ label: 'Questions' }}
-                />
+                    {/* Protected routes */}
+                    <Route
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout />
+                            </ProtectedRoute>
+                        }
+                    >
+                        {/* Dashboard */}
+                        <Route path="/" element={<DashboardPage />} />
 
-                {/* Super admin only resources */}
-                {permissions?.role === 'super_admin' && (
-                    <>
-                        <Resource
-                            name="profiles"
-                            list={ProfileList}
-                            show={ProfileShow}
-                            edit={ProfileEdit}
-                            recordRepresentation="name"
-                            options={{ label: 'Users' }}
+                        {/* Content management */}
+                        <Route path="/categories" element={<CategoriesPage />} />
+                        <Route path="/categories/:categoryId/packs" element={<PacksPage />} />
+                        <Route path="/packs/:packId/questions" element={<QuestionsPage />} />
+
+                        {/* User management (super_admin only) */}
+                        <Route
+                            path="/users"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <UsersPage />
+                                </ProtectedRoute>
+                            }
                         />
-                        <Resource
-                            name="couples"
-                            list={CoupleList}
-                            options={{ label: 'Relationships' }}
+                        <Route
+                            path="/users/:userId"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <UserDetailPage />
+                                </ProtectedRoute>
+                            }
                         />
-                        <Resource
-                            name="matches"
-                            list={MatchList}
-                            show={MatchShow}
-                            options={{ label: 'Matches & Chats' }}
+                        <Route
+                            path="/users/:userId/matches/:matchId"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <MatchChatPage />
+                                </ProtectedRoute>
+                            }
                         />
-                        <Resource
-                            name="responses"
-                            list={ResponseList}
-                            options={{ label: 'Responses' }}
+
+                        {/* System (super_admin only) */}
+                        <Route
+                            path="/admins"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <AdminsPage />
+                                </ProtectedRoute>
+                            }
                         />
-                        <Resource
-                            name="messages"
-                            options={{ label: 'Messages' }}
+                        <Route
+                            path="/audit-logs"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <AuditLogsPage />
+                                </ProtectedRoute>
+                            }
                         />
-                        <Resource
-                            name="audit_logs"
-                            list={AuditLogList}
-                            options={{ label: 'Audit Logs' }}
-                        />
-                    </>
-                )}
-            </>
-        )}
-    </Admin>
-);
+                    </Route>
+
+                    {/* Catch all - redirect to dashboard */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </AuthProvider>
+        </BrowserRouter>
+    );
+}
 
 export default App;

@@ -85,8 +85,10 @@ export default function PairingScreen() {
     };
 
     const handleJoinCouple = async () => {
-        if (inviteCode.length < 8) {
-            Alert.alert("Error", "Please enter a valid invite code");
+        // Validate invite code format (8 alphanumeric characters)
+        const sanitizedCode = inviteCode.trim().toUpperCase();
+        if (!/^[A-Z0-9]{8}$/.test(sanitizedCode)) {
+            Alert.alert("Error", "Please enter a valid 8-character invite code");
             return;
         }
 
@@ -100,7 +102,7 @@ export default function PairingScreen() {
 
             const { data, error } = await supabase.functions.invoke("manage-couple", {
                 method: "POST",
-                body: { invite_code: inviteCode },
+                body: { invite_code: sanitizedCode },
             });
 
             if (error) throw error;

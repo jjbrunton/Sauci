@@ -8,6 +8,9 @@ services:
     environment:
       - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
       - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+      - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
+      - VITE_OPENROUTER_API_KEY=${VITE_OPENROUTER_API_KEY}
+      - VITE_AI_MODEL=${VITE_AI_MODEL}
     volumes:
       - ./src:/app/apps/admin/src
       - ./index.html:/app/apps/admin/index.html

@@ -63,7 +63,9 @@
           "organization": "molten-prints",
           "project": "sauci"
         }
-      ]
+      ],
+      "@sentry/react-native",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
