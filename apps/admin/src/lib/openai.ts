@@ -65,34 +65,45 @@ export async function generatePack(categoryName?: string, explicit: boolean = fa
         ? 'Include bold, spicy, and uncensored themes (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
+    const appContext = `This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
+Each partner independently swipes Like/Dislike/Maybe, and when both swipe positively they "match".
+Packs contain collections of activities to try together (date ideas, intimate experiences, adventures, challenges, etc.).
+This is NOT a Q&A app - it's about discovering shared interests in activities.`;
+
     const prompt = categoryName
-        ? `Generate a creative question pack for a couples' intimacy/connection app in the category "${categoryName}". 
-       The pack should help couples explore their relationship and desires together.
-       
+        ? `Generate a creative activity pack for a couples' intimacy/connection app in the category "${categoryName}".
+
+       ${appContext}
+
+       The pack should contain a themed collection of activities couples can explore together.
+
        ${explicitInstruction}
-       
+
        Return a JSON object with:
-       - name: A catchy, engaging pack name (3-6 words)
-       - description: A brief, enticing description (1-2 sentences)
-       
-       Make it romantic, playful, and relationship-focused.`
-        : `Generate a creative question pack for a couples' intimacy/connection app.
-       The pack should help couples explore their relationship and desires together.
-       
+       - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
+       - description: A brief, enticing description (1-2 sentences) focusing on the activities in the pack
+
+       Make it romantic, playful, and activity-focused.`
+        : `Generate a creative activity pack for a couples' intimacy/connection app.
+
+       ${appContext}
+
+       The pack should contain a themed collection of activities couples can explore together.
+
        ${explicitInstruction}
-       
+
        Return a JSON object with:
-       - name: A catchy, engaging pack name (3-6 words)  
-       - description: A brief, enticing description (1-2 sentences)
-       
-       Make it romantic, playful, and relationship-focused.`;
+       - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
+       - description: A brief, enticing description (1-2 sentences) focusing on the activities in the pack
+
+       Make it romantic, playful, and activity-focused.`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
         messages: [
             {
                 role: 'system',
-                content: 'You are a creative content writer for a couples relationship app. Generate engaging, tasteful content that helps couples connect. Always respond with valid JSON only.',
+                content: 'You are a creative content writer for a couples activity/intimacy app. The app helps couples discover shared interests by swiping on activity proposals. Generate engaging pack ideas that contain collections of activities couples can do together. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],
@@ -348,24 +359,31 @@ export async function suggestCategories(
         ? 'Include bold, spicy, and explicitly intimate categories (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
-    const prompt = `Here are the current categories in our couples' question app: ${existingList}.
+    const prompt = `Here are the current categories in our couples' activity/intimacy app: ${existingList}.
 
-  Suggest 5 NEW, UNIQUE category ideas that differ from the existing ones.
-  ${explicitInstruction}
+IMPORTANT - HOW THE APP WORKS:
+- This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals
+- Each partner independently swipes Like/Dislike/Maybe on activities
+- When BOTH partners swipe positively, they "match" and can discuss the activity
+- Categories organize collections of activity packs (date ideas, intimate experiences, adventures, etc.)
+- This is NOT a Q&A app - it's about discovering shared interests in activities to do together
 
-  Return a JSON object with an "ideas" array containing 5 objects, where each object has:
-  - name: Category name (1-3 words)
-  - description: Brief description of what packs in this category explore (1 sentence)
-  - icon: A single descriptive emoji
+Suggest 5 NEW, UNIQUE category ideas that differ from the existing ones.
+${explicitInstruction}
 
-  Focus on diverse topics like communications, future planning, fun, conflict resolution, intimacy, etc.`;
+Return a JSON object with an "ideas" array containing 5 objects, where each object has:
+- name: Category name (1-3 words)
+- description: Brief description of what activity packs in this category contain (1 sentence)
+- icon: A single descriptive emoji
+
+Focus on diverse activity themes like: date ideas, adventures, intimate experiences, bonding activities, challenges, travel, home activities, etc.`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
         messages: [
             {
                 role: 'system',
-                content: 'You are a creative content strategist for a couples relationship app. Generate engaging, diverse category ideas. Always respond with valid JSON only.',
+                content: 'You are a creative content strategist for a couples activity/intimacy app. The app helps couples discover shared interests by swiping on activity proposals. Generate engaging, diverse category ideas for organizing activity packs. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],
@@ -399,25 +417,40 @@ export async function suggestPacks(
         ? 'Include bold, spicy, and uncensored pack ideas (NSFW is allowed).'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
-    const prompt = `We are building question packs for the category "${categoryName}" in a couples' app.
-  Existing packs in this category: ${existingList}.
-  
-  Suggest 5 NEW, UNIQUE pack ideas that fit this category and differ from existing ones.
-  ${explicitInstruction}
-  
-  Return a JSON object with an "ideas" array containing 5 objects, where each object has:
-  - name: Pack name (catchy, 3-6 words)
-  - description: Brief description (1-2 sentences)
-  - icon: A single descriptive emoji
-  
-  Make them engaging and specific to "${categoryName}".`;
+    const prompt = `We are building activity packs for the category "${categoryName}" in a couples' intimacy app.
+
+IMPORTANT - HOW THE APP WORKS:
+- This is an ACTIVITY-FOCUSED app, NOT a Q&A app
+- Packs contain ACTIVITY PROPOSALS (things couples can do together)
+- Each partner independently swipes Like/Dislike/Maybe on activities
+- When BOTH partners swipe positively on the same activity, they "match" and can discuss it
+- Activities are things like: date ideas, intimate experiences, adventures, challenges, conversations to have, etc.
+- This is NOT about asking each other questions - it's about discovering shared interests in activities
+
+PACK THEMES should focus on:
+- Collections of related activities couples might want to try
+- Experiences to share together
+- Things to do, not questions to ask
+- Date ideas, adventures, intimate moments, challenges, bonding activities
+
+Existing packs in this category: ${existingList}.
+
+Suggest 5 NEW, UNIQUE pack ideas that fit this category and differ from existing ones.
+${explicitInstruction}
+
+Return a JSON object with an "ideas" array containing 5 objects, where each object has:
+- name: Pack name (catchy, 3-6 words) - should evoke activities/experiences, not questions
+- description: Brief description (1-2 sentences) focusing on the activities/experiences in the pack
+- icon: A single descriptive emoji
+
+Make them engaging and specific to "${categoryName}".`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
         messages: [
             {
                 role: 'system',
-                content: 'You are a creative content strategist for a couples relationship app. Generate engaging pack ideas. Always respond with valid JSON only.',
+                content: 'You are a creative content strategist for a couples activity/intimacy app. The app helps couples discover shared interests by swiping on activity proposals. Generate engaging pack ideas that contain collections of activities couples can do together. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],
