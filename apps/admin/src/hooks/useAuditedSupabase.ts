@@ -20,6 +20,7 @@ type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE';
 async function logAction(
     tableName: string,
     action: AuditAction,
+    recordId: string | null,
     oldValues?: Record<string, unknown> | null,
     newValues?: Record<string, unknown> | null
 ): Promise<void> {
@@ -29,6 +30,7 @@ async function logAction(
         const { error } = await supabase.rpc('log_admin_action', {
             p_table_name: tableName,
             p_action: action,
+            p_record_id: recordId,
             p_old_values: oldValues || null,
             p_new_values: newValues || null,
         });
@@ -72,7 +74,7 @@ export const auditedSupabase = {
         if (!error && data) {
             // Log each inserted record
             for (const record of data as T[]) {
-                await logAction(table, 'INSERT', null, record as Record<string, unknown>);
+                await logAction(table, 'INSERT', record.id, null, record as Record<string, unknown>);
             }
         }
 
@@ -106,7 +108,7 @@ export const auditedSupabase = {
             .single();
 
         if (!error && data) {
-            await logAction(table, 'UPDATE', oldValues, data as Record<string, unknown>);
+            await logAction(table, 'UPDATE', id, oldValues, data as Record<string, unknown>);
         }
 
         return { data: data as T | null, error };
@@ -140,7 +142,7 @@ export const auditedSupabase = {
             // Log each updated record
             for (const record of data as T[]) {
                 const oldRecord = oldRecords.find(r => r.id === record.id);
-                await logAction(table, 'UPDATE', oldRecord || null, record as Record<string, unknown>);
+                await logAction(table, 'UPDATE', record.id, oldRecord || null, record as Record<string, unknown>);
             }
         }
 
@@ -171,7 +173,7 @@ export const auditedSupabase = {
             .eq('id', id);
 
         if (!error) {
-            await logAction(table, 'DELETE', oldValues, null);
+            await logAction(table, 'DELETE', id, oldValues, null);
         }
 
         return { error };
@@ -202,7 +204,7 @@ export const auditedSupabase = {
         if (!error) {
             // Log each deletion
             for (const record of oldRecords) {
-                await logAction(table, 'DELETE', record, null);
+                await logAction(table, 'DELETE', record.id as string, record, null);
             }
         }
 
@@ -234,7 +236,7 @@ export const auditedSupabase = {
             .eq(field, value);
 
         if (!error && oldValues) {
-            await logAction(table, 'DELETE', oldValues, null);
+            await logAction(table, 'DELETE', (oldValues.id as string) || null, oldValues, null);
         }
 
         return { error };

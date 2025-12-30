@@ -312,21 +312,26 @@ Mix distinct symmetric and asymmetric proposals.`;
 
 export async function generateCategory(): Promise<{ name: string; description: string; icon: string }> {
     const openai = getOpenAI();
-    const prompt = `Generate a unique category for organizing question packs in a couples' intimacy/connection app.
-  
-  Return a JSON object with:
-  - name: Category name (1-3 words, e.g., "Romance", "Adventure", "Communication")
-  - description: Brief description of what packs in this category explore (1 sentence)
-  - icon: A single emoji that represents this category
-  
-  Be creative and think of categories that help couples explore different aspects of their relationship.`;
+    const prompt = `Generate a unique category for organizing activity packs in a couples' intimacy/connection app.
+
+This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
+Each partner independently swipes Like/Dislike/Maybe, and when both swipe positively they "match".
+Categories organize collections of activity packs (date ideas, intimate experiences, adventures, challenges, etc.).
+This is NOT a Q&A app - it's about discovering shared interests in activities.
+
+Return a JSON object with:
+- name: Category name (1-3 words, e.g., "Romance", "Adventure", "Date Nights")
+- description: Brief description of what activity packs in this category contain (1 sentence)
+- icon: A single emoji that represents this category
+
+Be creative and think of categories that help couples explore different types of activities together.`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
         messages: [
             {
                 role: 'system',
-                content: 'You are a creative content organizer for a couples relationship app. Generate engaging category ideas. Always respond with valid JSON only.',
+                content: 'You are a creative content organizer for a couples activity/intimacy app. The app helps couples discover shared interests by swiping on activity proposals. Generate engaging category ideas for organizing activity packs. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],
