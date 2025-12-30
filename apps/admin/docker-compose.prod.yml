@@ -1,0 +1,17 @@
+services:
+  admin:
+    build:
+      context: ../..
+      dockerfile: apps/admin/Dockerfile
+      args:
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_OPENAI_API_KEY=${VITE_OPENAI_API_KEY}
+        - VITE_OPENROUTER_API_KEY=${VITE_OPENROUTER_API_KEY}
+        - VITE_AI_MODEL=${VITE_AI_MODEL}
+        - VITE_AI_MODEL_GENERATE=${VITE_AI_MODEL_GENERATE}
+        - VITE_AI_MODEL_FIX=${VITE_AI_MODEL_FIX}
+        - VITE_AI_MODEL_POLISH=${VITE_AI_MODEL_POLISH}
+    ports:
+      - "3000:80"
+    restart: unless-stopped
