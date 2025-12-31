@@ -1,0 +1,304 @@
+import sharp from "sharp";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Google Play Store screenshot dimensions (phone only)
+const DIMENSIONS = {
+  phone: { width: 1080, height: 2400 }, // Standard modern phone (20:9)
+};
+
+// Screenshot configurations with marketing text (consistent with iOS)
+const SCREENSHOTS = [
+  {
+    source: "android_dashboard",
+    headline: "Your Couple Dashboard",
+    subheadline: "Track matches, packs & explore together",
+    outputName: "01-home",
+  },
+  {
+    source: "android_packs.png",
+    headline: "Curated Question Packs",
+    subheadline: "From first dates to spicy adventures",
+    outputName: "02-packs",
+  },
+  {
+    source: "android swiping.png",
+    headline: "Swipe on Questions",
+    subheadline: "Answer yes, no, or maybe together",
+    outputName: "03-swipe",
+  },
+  {
+    source: "android_play.png",
+    headline: "Express Yourself",
+    subheadline: "Swipe right on what excites you",
+    outputName: "04-swipe-yes",
+  },
+  {
+    source: "android_matches.png",
+    headline: "Discover Your Matches",
+    subheadline: "See where you both agree",
+    outputName: "05-matches",
+  },
+  {
+    source: "android_chat.png",
+    headline: "Chat About It",
+    subheadline: "Every match unlocks a conversation",
+    outputName: "06-chat",
+  },
+];
+
+// Brand colors (matching app theme)
+const COLORS = {
+  background: {
+    start: "#0f0f1a", // Dark purple-black
+    end: "#1a1a2e", // Slightly lighter
+  },
+  accent: {
+    pink: "#ec4899",
+    purple: "#8b5cf6",
+  },
+  text: {
+    primary: "#ffffff",
+    secondary: "rgba(255, 255, 255, 0.7)",
+  },
+};
+
+async function createGradientBackground(width, height) {
+  // Create a gradient background using canvas
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  // Create vertical gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, COLORS.background.start);
+  gradient.addColorStop(0.5, COLORS.background.end);
+  gradient.addColorStop(1, COLORS.background.start);
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  // Add subtle accent glow at top
+  const glowGradient = ctx.createRadialGradient(
+    width / 2,
+    0,
+    0,
+    width / 2,
+    0,
+    width * 0.8
+  );
+  glowGradient.addColorStop(0, "rgba(236, 72, 153, 0.15)");
+  glowGradient.addColorStop(0.5, "rgba(139, 92, 246, 0.08)");
+  glowGradient.addColorStop(1, "transparent");
+
+  ctx.fillStyle = glowGradient;
+  ctx.fillRect(0, 0, width, height * 0.5);
+
+  return canvas.toBuffer("image/png");
+}
+
+async function addTextOverlay(
+  backgroundBuffer,
+  width,
+  height,
+  headline,
+  subheadline
+) {
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  // Draw the background first
+  const img = await sharp(backgroundBuffer).toBuffer();
+  const backgroundImage = await loadImage(img);
+  ctx.drawImage(backgroundImage, 0, 0);
+
+  // Calculate text positions (top area)
+  const textAreaTop = height * 0.05;
+
+  // Draw headline
+  const headlineSize = Math.round(width * 0.065);
+  ctx.font = `bold ${headlineSize}px -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif`;
+  ctx.fillStyle = COLORS.text.primary;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  // Add text shadow for better readability
+  ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 4;
+
+  ctx.fillText(headline, width / 2, textAreaTop);
+
+  // Draw subheadline
+  const subheadlineSize = Math.round(width * 0.035);
+  ctx.font = `${subheadlineSize}px -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif`;
+  ctx.fillStyle = COLORS.text.secondary;
+  ctx.shadowBlur = 10;
+
+  ctx.fillText(subheadline, width / 2, textAreaTop + headlineSize + 20);
+
+  return canvas.toBuffer("image/png");
+}
+
+async function generateScreenshot(config, targetSize, inputDir, outputDir) {
+  const { width, height } = DIMENSIONS[targetSize];
+  const { source, headline, subheadline, outputName } = config;
+
+  console.log(
+    `  Generating ${outputName} for ${targetSize} (${width}x${height})...`
+  );
+
+  // Load source screenshot
+  const sourcePath = path.join(inputDir, source);
+  const sourceImage = sharp(sourcePath);
+  const sourceMetadata = await sourceImage.metadata();
+
+  // Calculate screenshot placement
+  // Screenshot should take up about 75% of height, centered horizontally
+  const screenshotMaxHeight = Math.round(height * 0.75);
+  const screenshotMaxWidth = Math.round(width * 0.85);
+
+  // Calculate scale to fit
+  const scaleHeight = screenshotMaxHeight / sourceMetadata.height;
+  const scaleWidth = screenshotMaxWidth / sourceMetadata.width;
+  const scale = Math.min(scaleHeight, scaleWidth);
+
+  const screenshotWidth = Math.round(sourceMetadata.width * scale);
+  const screenshotHeight = Math.round(sourceMetadata.height * scale);
+
+  // Position screenshot (centered horizontally, below text area)
+  const screenshotX = Math.round((width - screenshotWidth) / 2);
+  const screenshotY = Math.round(height * 0.18); // Start below text
+
+  // Create gradient background
+  const backgroundBuffer = await createGradientBackground(width, height);
+
+  // Add text overlay
+  const withText = await addTextOverlay(
+    backgroundBuffer,
+    width,
+    height,
+    headline,
+    subheadline
+  );
+
+  // Resize source screenshot with rounded corners
+  const roundedCorners = Math.round(screenshotWidth * 0.06);
+  const resizedScreenshot = await sourceImage
+    .resize(screenshotWidth, screenshotHeight, {
+      fit: "contain",
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .toBuffer();
+
+  // Create rounded corner mask
+  const maskCanvas = createCanvas(screenshotWidth, screenshotHeight);
+  const maskCtx = maskCanvas.getContext("2d");
+  maskCtx.beginPath();
+  maskCtx.roundRect(0, 0, screenshotWidth, screenshotHeight, roundedCorners);
+  maskCtx.fillStyle = "white";
+  maskCtx.fill();
+
+  const roundedScreenshot = await sharp(resizedScreenshot)
+    .composite([
+      {
+        input: await sharp(maskCanvas.toBuffer("image/png"))
+          .resize(screenshotWidth, screenshotHeight)
+          .toBuffer(),
+        blend: "dest-in",
+      },
+    ])
+    .toBuffer();
+
+  // Add drop shadow effect by creating a shadow layer
+  const shadowOffset = 20;
+  const shadowBlur = 40;
+  const shadowCanvas = createCanvas(
+    screenshotWidth + shadowBlur * 2,
+    screenshotHeight + shadowBlur * 2
+  );
+  const shadowCtx = shadowCanvas.getContext("2d");
+  shadowCtx.shadowColor = "rgba(0, 0, 0, 0.4)";
+  shadowCtx.shadowBlur = shadowBlur;
+  shadowCtx.shadowOffsetX = 0;
+  shadowCtx.shadowOffsetY = shadowOffset;
+  shadowCtx.fillStyle = "black";
+  shadowCtx.beginPath();
+  shadowCtx.roundRect(
+    shadowBlur,
+    shadowBlur,
+    screenshotWidth,
+    screenshotHeight,
+    roundedCorners
+  );
+  shadowCtx.fill();
+
+  // Composite everything together
+  const finalImage = await sharp(withText)
+    .composite([
+      {
+        input: shadowCanvas.toBuffer("image/png"),
+        left: screenshotX - shadowBlur,
+        top: screenshotY - shadowBlur,
+        blend: "multiply",
+      },
+      {
+        input: roundedScreenshot,
+        left: screenshotX,
+        top: screenshotY,
+      },
+    ])
+    .png()
+    .toBuffer();
+
+  // Save output
+  const outputPath = path.join(outputDir, `${outputName}-${targetSize}.png`);
+  await fs.writeFile(outputPath, finalImage);
+  console.log(`    Saved: ${outputPath}`);
+}
+
+async function main() {
+  console.log("Google Play Store Screenshot Generator\n");
+
+  const inputDir = path.resolve(__dirname, "../../etc/android_sim");
+  const outputDir = path.resolve(__dirname, "output");
+
+  // Create output directory
+  await fs.mkdir(outputDir, { recursive: true });
+
+  // Check for source files
+  console.log("Checking source screenshots...");
+  for (const config of SCREENSHOTS) {
+    const sourcePath = path.join(inputDir, config.source);
+    try {
+      await fs.access(sourcePath);
+      console.log(`  Found: ${config.source}`);
+    } catch {
+      console.error(`  Missing: ${config.source}`);
+      process.exit(1);
+    }
+  }
+
+  console.log("\nGenerating screenshots...\n");
+
+  // Generate for each size
+  for (const targetSize of Object.keys(DIMENSIONS)) {
+    console.log(`\n${targetSize} device:`);
+    for (const config of SCREENSHOTS) {
+      await generateScreenshot(config, targetSize, inputDir, outputDir);
+    }
+  }
+
+  console.log("\n\nDone! Screenshots saved to:", outputDir);
+  console.log("\nGenerated files:");
+  const files = await fs.readdir(outputDir);
+  for (const file of files.sort()) {
+    console.log(`  - ${file}`);
+  }
+}
+
+main().catch(console.error);

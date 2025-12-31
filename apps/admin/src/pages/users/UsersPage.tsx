@@ -26,6 +26,7 @@ interface Profile {
     couple_id: string | null;
     created_at: string | null;
     storage_bytes?: number;
+    partner_is_premium?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -66,14 +67,37 @@ export function UsersPage() {
                     });
                 }
 
-                // Merge storage data with profiles
-                const profilesWithStorage = (profilesData || []).map(profile => ({
-                    ...profile,
-                    storage_bytes: storageMap[profile.id] || 0,
-                }));
+                // Build a map of couple_id -> users with premium in that couple
+                const couplePartners: Record<string, { id: string; is_premium: boolean }[]> = {};
+                (profilesData || []).forEach(profile => {
+                    if (profile.couple_id) {
+                        if (!couplePartners[profile.couple_id]) {
+                            couplePartners[profile.couple_id] = [];
+                        }
+                        couplePartners[profile.couple_id].push({
+                            id: profile.id,
+                            is_premium: profile.is_premium || false,
+                        });
+                    }
+                });
 
-                setProfiles(profilesWithStorage);
-                setFilteredProfiles(profilesWithStorage);
+                // Merge storage data and partner premium status with profiles
+                const profilesWithExtras = (profilesData || []).map(profile => {
+                    // Check if partner has premium
+                    let partnerIsPremium = false;
+                    if (profile.couple_id && couplePartners[profile.couple_id]) {
+                        const partner = couplePartners[profile.couple_id].find(p => p.id !== profile.id);
+                        partnerIsPremium = partner?.is_premium || false;
+                    }
+                    return {
+                        ...profile,
+                        storage_bytes: storageMap[profile.id] || 0,
+                        partner_is_premium: partnerIsPremium,
+                    };
+                });
+
+                setProfiles(profilesWithExtras);
+                setFilteredProfiles(profilesWithExtras);
             } catch (error) {
                 console.error('Failed to load profiles:', error);
             } finally {
@@ -179,6 +203,11 @@ export function UsersPage() {
                                             <Badge className="bg-amber-500">
                                                 <Crown className="h-3 w-3 mr-1" />
                                                 Premium
+                                            </Badge>
+                                        ) : profile.partner_is_premium ? (
+                                            <Badge className="bg-amber-500/70">
+                                                <Crown className="h-3 w-3 mr-1" />
+                                                Partner
                                             </Badge>
                                         ) : (
                                             <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">

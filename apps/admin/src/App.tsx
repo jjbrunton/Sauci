@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LoginPage } from '@/pages/LoginPage';
@@ -13,6 +13,8 @@ import { MatchChatPage } from '@/pages/users/MatchChatPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { AdminsPage } from '@/pages/admins/AdminsPage';
 import { RedemptionCodesPage } from '@/pages/RedemptionCodesPage';
+import { FeedbackPage } from '@/pages/FeedbackPage';
+import { UsageInsightsPage } from '@/pages/UsageInsightsPage';
 
 function App() {
     return (
@@ -34,15 +36,36 @@ function App() {
                         <Route path="/" element={<DashboardPage />} />
 
                         {/* Content management */}
-                        <Route path="/categories" element={<CategoriesPage />} />
-                        <Route path="/categories/:categoryId/packs" element={<PacksPage />} />
-                        <Route path="/packs/:packId/questions" element={<QuestionsPage />} />
+                        <Route
+                            path="/categories"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_CATEGORIES}>
+                                    <CategoriesPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/categories/:categoryId/packs"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_PACKS}>
+                                    <PacksPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/packs/:packId/questions"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
+                                    <QuestionsPage />
+                                </ProtectedRoute>
+                            }
+                        />
 
-                        {/* User management (super_admin only) */}
+                        {/* User management */}
                         <Route
                             path="/users"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
                                     <UsersPage />
                                 </ProtectedRoute>
                             }
@@ -50,7 +73,7 @@ function App() {
                         <Route
                             path="/users/:userId"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
                                     <UserDetailPage />
                                 </ProtectedRoute>
                             }
@@ -58,17 +81,25 @@ function App() {
                         <Route
                             path="/users/:userId/matches/:matchId"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_CHATS}>
                                     <MatchChatPage />
                                 </ProtectedRoute>
                             }
                         />
+                        <Route
+                            path="/usage-insights"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
+                                    <UsageInsightsPage />
+                                </ProtectedRoute>
+                            }
+                        />
 
-                        {/* System (super_admin only) */}
+                        {/* System */}
                         <Route
                             path="/admins"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_ADMINS}>
                                     <AdminsPage />
                                 </ProtectedRoute>
                             }
@@ -76,7 +107,7 @@ function App() {
                         <Route
                             path="/redemption-codes"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_CODES}>
                                     <RedemptionCodesPage />
                                 </ProtectedRoute>
                             }
@@ -84,8 +115,16 @@ function App() {
                         <Route
                             path="/audit-logs"
                             element={
-                                <ProtectedRoute requireSuperAdmin>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_AUDIT_LOGS}>
                                     <AuditLogsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/feedback"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
+                                    <FeedbackPage />
                                 </ProtectedRoute>
                             }
                         />

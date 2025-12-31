@@ -34,6 +34,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     fetchUser: async () => {
         try {
+            // First check if we have a session in storage
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session?.user) {
@@ -41,10 +42,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 return;
             }
 
+            // Validate the session by fetching the user from the server
+            // This will fail if the session was deleted server-side
+            const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+
+            if (authError || !authUser) {
+                console.log("[Auth] Session invalid, signing out:", authError?.message);
+                // Session is invalid - clear everything
+                set({ user: null, couple: null, partner: null, isAuthenticated: false, isLoading: false });
+                // Clear other stores
+                useMatchStore.getState().clearMatches();
+                usePacksStore.getState().clearPacks();
+                useMessageStore.getState().clearMessages();
+                useSubscriptionStore.getState().clearSubscription();
+                // Sign out from Supabase (clears storage)
+                await supabase.auth.signOut();
+                return;
+            }
+
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("*")
-                .eq("id", session.user.id)
+                .eq("id", authUser.id)
                 .maybeSingle();
 
             set({

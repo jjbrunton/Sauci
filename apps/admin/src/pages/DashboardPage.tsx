@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { supabase } from '@/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity } from 'lucide-react';
+import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity, Target, TrendingUp, Heart, MessageCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
 export function DashboardPage() {
-    const { isSuperAdmin } = useAuth();
+    const { hasPermission } = useAuth();
     const [stats, setStats] = useState({
         categories: 0,
         packs: 0,
@@ -86,185 +85,190 @@ export function DashboardPage() {
         fetchStats();
     }, []);
 
-    const contentCards = [
+    const quickLinks = [
         {
             title: 'Categories',
-            description: 'Manage question categories and organize your packs',
-            icon: <LayoutGrid className="h-8 w-8" />,
+            description: 'Organize your question packs into themed collections',
+            icon: LayoutGrid,
             href: '/categories',
-            color: 'bg-rose-500',
+            gradient: 'from-rose-500 to-pink-600',
+            permission: PERMISSION_KEYS.MANAGE_CATEGORIES,
         },
-    ];
-
-    const adminCards = [
         {
             title: 'Users',
-            description: 'View user profiles, responses, and chat history',
-            icon: <Users className="h-8 w-8" />,
+            description: 'View user profiles, responses, and activity',
+            icon: Users,
             href: '/users',
-            color: 'bg-blue-500',
+            gradient: 'from-violet-500 to-purple-600',
+            permission: PERMISSION_KEYS.VIEW_USERS,
+        },
+        {
+            title: 'Usage Insights',
+            description: 'Understand why users join and how they engage',
+            icon: Target,
+            href: '/usage-insights',
+            gradient: 'from-amber-500 to-orange-600',
+            permission: PERMISSION_KEYS.VIEW_USERS,
         },
         {
             title: 'Audit Logs',
-            description: 'Track all admin actions and changes',
-            icon: <ClipboardList className="h-8 w-8" />,
+            description: 'Track all admin actions and system changes',
+            icon: ClipboardList,
             href: '/audit-logs',
-            color: 'bg-amber-500',
+            gradient: 'from-emerald-500 to-teal-600',
+            permission: PERMISSION_KEYS.VIEW_AUDIT_LOGS,
         },
+    ];
+
+    const statCards = [
+        { label: 'Categories', value: stats.categories, icon: LayoutGrid, color: 'text-rose-400' },
+        { label: 'Packs', value: stats.packs, icon: Heart, color: 'text-violet-400' },
+        { label: 'Questions', value: stats.questions, icon: MessageCircle, color: 'text-amber-400' },
+        { label: 'Active Users', value: stats.users, icon: Users, color: 'text-emerald-400', permission: PERMISSION_KEYS.VIEW_USERS },
     ];
 
     return (
         <div className="space-y-8">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">
-                    Welcome back! Manage your Sauci content and users.
-                </p>
+            {/* Header */}
+            <div className="relative">
+                <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+                <div className="relative">
+                    <h1 className="text-4xl font-bold tracking-tight mb-2">
+                        Dashboard
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                        Welcome back. Here's what's happening with Sauci.
+                    </p>
+                </div>
             </div>
 
-            {/* Content Management */}
-            <section>
-                <h2 className="text-xl font-semibold mb-4">Content Management</h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {contentCards.map((card) => (
-                        <Card key={card.href} className="group hover:shadow-md transition-shadow">
-                            <CardHeader>
-                                <div className={`w-14 h-14 rounded-lg ${card.color} text-white flex items-center justify-center mb-2`}>
-                                    {card.icon}
+            {/* Stats Grid */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {statCards
+                    .filter(card => !card.permission || hasPermission(card.permission))
+                    .map((stat) => (
+                        <Card key={stat.label} className="glass border-white/5 hover:border-white/10 transition-colors">
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-muted-foreground mb-1">
+                                            {stat.label}
+                                        </p>
+                                        <div className="text-3xl font-bold">
+                                            {loading ? (
+                                                <Skeleton className="h-9 w-16" />
+                                            ) : (
+                                                stat.value.toLocaleString()
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className={`p-3 rounded-xl bg-white/5 ${stat.color}`}>
+                                        <stat.icon className="h-6 w-6" />
+                                    </div>
                                 </div>
-                                <CardTitle>{card.title}</CardTitle>
-                                <CardDescription>{card.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Link to={card.href}>
-                                    <Button variant="ghost" className="group-hover:translate-x-1 transition-transform">
-                                        Open
-                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Button>
-                                </Link>
                             </CardContent>
                         </Card>
                     ))}
-                </div>
-            </section>
+            </div>
 
-            {/* Super Admin Only */}
-            {isSuperAdmin && (
-                <section>
-                    <h2 className="text-xl font-semibold mb-4">Administration</h2>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {adminCards.map((card) => (
-                            <Card key={card.href} className="group hover:shadow-md transition-shadow">
-                                <CardHeader>
-                                    <div className={`w-14 h-14 rounded-lg ${card.color} text-white flex items-center justify-center mb-2`}>
-                                        {card.icon}
-                                    </div>
-                                    <CardTitle>{card.title}</CardTitle>
-                                    <CardDescription>{card.description}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Link to={card.href}>
-                                        <Button variant="ghost" className="group-hover:translate-x-1 transition-transform">
-                                            Open
-                                            <ArrowRight className="ml-2 h-4 w-4" />
-                                        </Button>
-                                    </Link>
-                                </CardContent>
-                            </Card>
-                        ))}
+            {/* Main Content Grid */}
+            <div className="grid gap-6 lg:grid-cols-7">
+                {/* Quick Links - 4 columns */}
+                <div className="lg:col-span-4 space-y-4">
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        Quick Access
+                    </h2>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {quickLinks
+                            .filter(link => hasPermission(link.permission))
+                            .map((link) => (
+                                <Link key={link.href} to={link.href} className="group">
+                                    <Card className="h-full glass border-white/5 hover:border-white/10 transition-all duration-300 hover:glow-rose-sm overflow-hidden">
+                                        <CardHeader className="pb-2">
+                                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${link.gradient} flex items-center justify-center mb-3 shadow-lg group-hover:scale-105 transition-transform duration-300`}>
+                                                <link.icon className="h-6 w-6 text-white" />
+                                            </div>
+                                            <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                                                {link.title}
+                                            </CardTitle>
+                                            <CardDescription className="text-sm">
+                                                {link.description}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="pt-0">
+                                            <div className="flex items-center text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                                                <span>Open</span>
+                                                <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
+                            ))}
                     </div>
-                </section>
-            )}
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                {/* Quick Stats - Takes up 4 columns */}
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Quick Stats</CardTitle>
-                        <CardDescription>Overview of your platform's content and users</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">Categories</p>
-                                <div className="text-2xl font-bold">
-                                    {loading ? <Skeleton className="h-8 w-16" /> : stats.categories}
-                                </div>
+                {/* Activity Chart - 3 columns */}
+                <div className="lg:col-span-3">
+                    <Card className="h-full glass border-white/5">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-primary" />
+                                <CardTitle>Message Activity</CardTitle>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">Packs</p>
-                                <div className="text-2xl font-bold">
-                                    {loading ? <Skeleton className="h-8 w-16" /> : stats.packs}
-                                </div>
+                            <CardDescription>
+                                Messages sent over the last 7 days
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-[280px]">
+                                {loading ? (
+                                    <Skeleton className="h-full w-full rounded-xl" />
+                                ) : (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={messageStats}>
+                                            <XAxis
+                                                dataKey="date"
+                                                stroke="hsl(var(--muted-foreground))"
+                                                fontSize={11}
+                                                tickLine={false}
+                                                axisLine={false}
+                                            />
+                                            <YAxis
+                                                stroke="hsl(var(--muted-foreground))"
+                                                fontSize={11}
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tickFormatter={(value) => `${value}`}
+                                            />
+                                            <Tooltip
+                                                cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                                contentStyle={{
+                                                    borderRadius: '12px',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    background: 'hsl(240 8% 10%)',
+                                                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                }}
+                                                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                                            />
+                                            <defs>
+                                                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stopColor="hsl(340 65% 55%)" />
+                                                    <stop offset="100%" stopColor="hsl(320 60% 45%)" />
+                                                </linearGradient>
+                                            </defs>
+                                            <Bar
+                                                dataKey="count"
+                                                fill="url(#barGradient)"
+                                                radius={[6, 6, 0, 0]}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                )}
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">Questions</p>
-                                <div className="text-2xl font-bold">
-                                    {loading ? <Skeleton className="h-8 w-16" /> : stats.questions}
-                                </div>
-                            </div>
-                            {isSuperAdmin && (
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                                    <div className="text-2xl font-bold">
-                                        {loading ? <Skeleton className="h-8 w-16" /> : stats.users}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Message Activity Chart - Takes up 3 columns */}
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-primary" />
-                            <CardTitle>Message Activity</CardTitle>
-                        </div>
-                        <CardDescription>Messages sent over the last 7 days</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="h-[200px]">
-                            {loading ? (
-                                <Skeleton className="h-full w-full" />
-                            ) : (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={messageStats}>
-                                        <XAxis
-                                            dataKey="date"
-                                            stroke="#888888"
-                                            fontSize={12}
-                                            tickLine={false}
-                                            axisLine={false}
-                                        />
-                                        <YAxis
-                                            stroke="#888888"
-                                            fontSize={12}
-                                            tickLine={false}
-                                            axisLine={false}
-                                            tickFormatter={(value) => `${value}`}
-                                        />
-                                        <Tooltip
-                                            cursor={{ fill: 'transparent' }}
-                                            contentStyle={{
-                                                borderRadius: '8px',
-                                                border: '1px solid #e2e8f0',
-                                                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                                            }}
-                                        />
-                                        <Bar
-                                            dataKey="count"
-                                            fill="currentColor"
-                                            radius={[4, 4, 0, 0]}
-                                            className="fill-primary"
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

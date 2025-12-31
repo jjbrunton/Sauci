@@ -1,14 +1,15 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, PermissionKey } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
     requireSuperAdmin?: boolean;
+    requiredPermission?: PermissionKey;
 }
 
-export function ProtectedRoute({ children, requireSuperAdmin = false }: ProtectedRouteProps) {
-    const { session, loading, isSuperAdmin } = useAuth();
+export function ProtectedRoute({ children, requireSuperAdmin = false, requiredPermission }: ProtectedRouteProps) {
+    const { session, loading, isSuperAdmin, hasPermission } = useAuth();
 
     if (loading) {
         return (
@@ -23,6 +24,10 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     }
 
     if (requireSuperAdmin && !isSuperAdmin) {
+        return <Navigate to="/" replace />;
+    }
+
+    if (requiredPermission && !hasPermission(requiredPermission)) {
         return <Navigate to="/" replace />;
     }
 

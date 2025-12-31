@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
 import { Plus, Pencil, Trash2, Sparkles, Loader2, Users } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
@@ -65,6 +66,8 @@ export function QuestionsPage() {
     const [reviewOpen, setReviewOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [saving, setSaving] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState<{
@@ -219,6 +222,49 @@ export function QuestionsPage() {
 
         insertQuestions();
         setAiDialogOpen(false);
+    };
+
+    // Selection handlers
+    const toggleSelection = (id: string) => {
+        const next = new Set(selectedIds);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        setSelectedIds(next);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.size === questions.length) {
+            setSelectedIds(new Set());
+        } else {
+            setSelectedIds(new Set(questions.map(q => q.id)));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.size === 0) return;
+
+        const count = selectedIds.size;
+        if (!confirm(`Delete ${count} question${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
+            return;
+        }
+
+        setBulkDeleting(true);
+        try {
+            await Promise.all(
+                Array.from(selectedIds).map(id => auditedSupabase.delete('questions', id))
+            );
+            toast.success(`${count} question${count !== 1 ? 's' : ''} deleted`);
+            setSelectedIds(new Set());
+            fetchData();
+        } catch (error) {
+            toast.error('Failed to delete questions');
+            console.error(error);
+        } finally {
+            setBulkDeleting(false);
+        }
     };
 
     if (loading) {
@@ -435,6 +481,42 @@ export function QuestionsPage() {
                 </div>
             </div>
 
+            {/* Bulk Action Bar */}
+            {selectedIds.size > 0 && (
+                <div className="flex items-center justify-between bg-muted/50 border rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">
+                            {selectedIds.size} question{selectedIds.size !== 1 ? 's' : ''} selected
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedIds(new Set())}
+                        >
+                            Clear selection
+                        </Button>
+                    </div>
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleting}
+                    >
+                        {bulkDeleting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete {selectedIds.size} Question{selectedIds.size !== 1 ? 's' : ''}
+                            </>
+                        )}
+                    </Button>
+                </div>
+            )}
+
             {/* AI Generator Dialog */}
             <AiGeneratorDialog
                 open={aiDialogOpen}
@@ -477,6 +559,13 @@ export function QuestionsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={selectedIds.size === questions.length && questions.length > 0}
+                                            onCheckedChange={toggleSelectAll}
+                                            aria-label="Select all"
+                                        />
+                                    </TableHead>
                                     <TableHead className="w-12">#</TableHead>
                                     <TableHead>Question</TableHead>
                                     <TableHead className="w-32">Partner Text</TableHead>
@@ -488,7 +577,17 @@ export function QuestionsPage() {
                             </TableHeader>
                             <TableBody>
                                 {questions.map((question, index) => (
-                                    <TableRow key={question.id}>
+                                    <TableRow
+                                        key={question.id}
+                                        className={selectedIds.has(question.id) ? 'bg-muted/50' : ''}
+                                    >
+                                        <TableCell>
+                                            <Checkbox
+                                                checked={selectedIds.has(question.id)}
+                                                onCheckedChange={() => toggleSelection(question.id)}
+                                                aria-label={`Select question ${index + 1}`}
+                                            />
+                                        </TableCell>
                                         <TableCell className="font-medium text-muted-foreground">
                                             {index + 1}
                                         </TableCell>

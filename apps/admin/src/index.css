@@ -1,51 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Premium Light Mode - Soft cream with rose gold */
+    --background: 30 20% 98%;
+    --foreground: 0 0% 10%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 346.8 77.2% 49.8%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 346.8 77.2% 49.8%;
-    --radius: 0.5rem;
+    --popover-foreground: 0 0% 10%;
+    --primary: 340 65% 47%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 15% 94%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 30 10% 94%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 340 40% 94%;
+    --accent-foreground: 340 65% 35%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 15% 90%;
+    --input: 30 15% 90%;
+    --ring: 340 65% 47%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 346.8 77.2% 49.8%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 346.8 77.2% 49.8%;
+    /* Premium Dark Mode - Deep charcoal with rose gold */
+    --background: 240 10% 6%;
+    --foreground: 0 0% 98%;
+    --card: 240 8% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 8% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 340 65% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 6% 15%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 6% 15%;
+    --muted-foreground: 0 0% 75%;
+    --accent: 340 30% 20%;
+    --accent-foreground: 340 65% 75%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 20%;
+    --input: 240 6% 20%;
+    --ring: 340 65% 55%;
   }
 }
 
@@ -53,8 +57,148 @@
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  h1, h2, h3 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Premium gradient backgrounds */
+  .bg-gradient-premium {
+    background: linear-gradient(135deg,
+      hsl(240 10% 6%) 0%,
+      hsl(340 20% 10%) 50%,
+      hsl(240 10% 6%) 100%
+    );
+  }
+
+  .bg-gradient-card {
+    background: linear-gradient(145deg,
+      hsl(240 8% 12%) 0%,
+      hsl(240 8% 10%) 100%
+    );
+  }
+
+  .bg-gradient-rose {
+    background: linear-gradient(135deg,
+      hsl(340 65% 55%) 0%,
+      hsl(320 60% 45%) 100%
+    );
+  }
+
+  .bg-gradient-sunset {
+    background: linear-gradient(135deg,
+      hsl(25 90% 55%) 0%,
+      hsl(340 65% 50%) 50%,
+      hsl(280 50% 40%) 100%
+    );
+  }
+
+  /* Glass effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glass-rose {
+    background: rgba(200, 100, 130, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(200, 100, 130, 0.15);
+  }
+
+  /* Glow effects */
+  .glow-rose {
+    box-shadow: 0 0 40px rgba(200, 80, 120, 0.15);
+  }
+
+  .glow-rose-sm {
+    box-shadow: 0 0 20px rgba(200, 80, 120, 0.1);
+  }
+
+  /* Text gradients */
+  .text-gradient-rose {
+    background: linear-gradient(135deg, hsl(340 65% 60%) 0%, hsl(320 60% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-sunset {
+    background: linear-gradient(135deg, hsl(25 90% 60%) 0%, hsl(340 65% 55%) 50%, hsl(280 50% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Shine animation for buttons */
+  @keyframes shine {
+    0% { background-position: -100% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .btn-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-shine::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shine 3s ease-in-out infinite;
+  }
+
+  /* Subtle pulse for active states */
+  @keyframes subtle-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+  }
+
+  .animate-subtle-pulse {
+    animation: subtle-pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Custom scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(240 10% 8%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(240 6% 20%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(340 30% 30%);
+}
+
+/* Selection styling */
+::selection {
+  background: hsl(340 65% 55% / 0.3);
+  color: inherit;
 }

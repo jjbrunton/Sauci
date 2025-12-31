@@ -1,6 +1,6 @@
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, ActivityIndicator, StyleSheet, Platform, Modal, Text, Pressable, Animated, AppState, AppStateStatus } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform, Text, Pressable, Animated, AppState, AppStateStatus } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
@@ -17,6 +17,8 @@ import type { Database } from "../../src/types/supabase";
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
 function TabBarBackground() {
+    // Only use BlurView on iOS - Android experimental blur causes white overlay artifacts
+    // The solid rgba background in tabBarStyle provides the visual effect on Android
     if (Platform.OS === 'ios') {
         return (
             <BlurView
@@ -26,15 +28,7 @@ function TabBarBackground() {
             />
         );
     }
-    // Android fallback - use experimental blur method
-    return (
-        <BlurView
-            intensity={80}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-            experimentalBlurMethod="dimezisBlurView"
-        />
-    );
+    return null;
 }
 
 interface PlayTabButtonProps {
@@ -82,6 +76,7 @@ export default function AppLayout() {
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
     const [matchNotification, setMatchNotification] = useState<MatchWithQuestion | null>(null);
+    const matchModalAnim = useRef(new Animated.Value(0)).current;
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isLocked, setIsLocked] = useState(false);
@@ -384,9 +379,27 @@ export default function AppLayout() {
         };
     }, [lastMessage]);
 
+    // Animate match modal when notification changes
+    useEffect(() => {
+        if (matchNotification) {
+            Animated.spring(matchModalAnim, {
+                toValue: 1,
+                useNativeDriver: true,
+                tension: 80,
+                friction: 10,
+            }).start();
+        }
+    }, [matchNotification, matchModalAnim]);
+
     const dismissNotification = useCallback(() => {
-        setMatchNotification(null);
-    }, []);
+        Animated.timing(matchModalAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => {
+            setMatchNotification(null);
+        });
+    }, [matchModalAnim]);
 
     const dismissMessageToast = useCallback(() => {
         Animated.timing(messageToastAnim, {
@@ -507,15 +520,32 @@ export default function AppLayout() {
                 />
             </Tabs>
 
-            {/* Match Notification Modal */}
-            <Modal
-                visible={!!matchNotification}
-                transparent
-                animationType="fade"
-                onRequestClose={dismissNotification}
-            >
-                <Pressable style={styles.modalOverlay} onPress={dismissNotification}>
-                    <View style={styles.modalContent}>
+            {/* Match Notification Overlay - Using Animated.View instead of Modal for Android compatibility */}
+            {matchNotification && (
+                <Animated.View
+                    style={[
+                        styles.matchOverlay,
+                        {
+                            opacity: matchModalAnim,
+                        },
+                    ]}
+                >
+                    <Pressable style={styles.matchOverlayBackground} onPress={dismissNotification} />
+                    <Animated.View
+                        style={[
+                            styles.modalContent,
+                            {
+                                transform: [
+                                    {
+                                        scale: matchModalAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.8, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
                         <View style={styles.modalHeader}>
                             <Ionicons name="heart" size={48} color={colors.primary} />
                             <Text style={styles.modalTitle}>It's a Match!</Text>
@@ -534,9 +564,9 @@ export default function AppLayout() {
                         <Pressable style={styles.dismissButton} onPress={dismissNotification}>
                             <Text style={styles.dismissButtonText}>Nice!</Text>
                         </Pressable>
-                    </View>
-                </Pressable>
-            </Modal>
+                    </Animated.View>
+                </Animated.View>
+            )}
 
             {/* Message Toast Notification */}
             {lastMessage && (
@@ -581,19 +611,23 @@ const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: colors.background,
     },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    matchOverlay: {
+        ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: spacing.lg,
+        zIndex: 9999,
+        elevation: 9999,
+    },
+    matchOverlayBackground: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
     },
     modalContent: {
         backgroundColor: colors.backgroundLight,
         borderRadius: radius.xl,
         padding: spacing.xl,
         alignItems: 'center',
-        width: '100%',
+        width: '90%',
         maxWidth: 340,
         borderWidth: 1,
         borderColor: colors.glass.border,

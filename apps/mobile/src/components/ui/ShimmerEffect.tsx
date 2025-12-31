@@ -6,6 +6,8 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  withSequence,
+  withDelay,
   interpolate,
   Easing,
 } from 'react-native-reanimated';
@@ -19,44 +21,43 @@ interface ShimmerEffectProps {
   enabled?: boolean;
 }
 
-const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
-
 export function ShimmerEffect({
   children,
   style,
   shimmerColor = colors.premium.gold,
-  duration = 2500,
+  duration = 4000,
   enabled = true,
 }: ShimmerEffectProps) {
-  const shimmerTranslate = useSharedValue(-1);
+  const glowIntensity = useSharedValue(0);
 
   useEffect(() => {
     if (enabled) {
-      shimmerTranslate.value = withRepeat(
-        withTiming(1, {
-          duration,
-          easing: Easing.inOut(Easing.ease),
-        }),
-        -1, // infinite repeat
-        false // don't reverse
+      // Gentle breathing glow - slow fade in, hold, slow fade out, pause
+      glowIntensity.value = withRepeat(
+        withSequence(
+          withTiming(1, {
+            duration: duration * 0.4,
+            easing: Easing.out(Easing.cubic),
+          }),
+          withDelay(
+            duration * 0.2,
+            withTiming(0, {
+              duration: duration * 0.4,
+              easing: Easing.in(Easing.cubic),
+            })
+          )
+        ),
+        -1,
+        false
       );
     } else {
-      shimmerTranslate.value = -1;
+      glowIntensity.value = 0;
     }
   }, [enabled, duration]);
 
-  const shimmerStyle = useAnimatedStyle(() => {
-    const translateX = interpolate(
-      shimmerTranslate.value,
-      [-1, 1],
-      [-200, 200]
-    );
-
+  const glowStyle = useAnimatedStyle(() => {
     return {
-      transform: [
-        { translateX },
-        { rotate: '25deg' },
-      ],
+      opacity: interpolate(glowIntensity.value, [0, 1], [0, 0.6]),
     };
   });
 
@@ -64,18 +65,47 @@ export function ShimmerEffect({
     <View style={[styles.container, style]}>
       {children}
       {enabled && (
-        <Animated.View style={[styles.shimmerContainer, shimmerStyle]}>
+        <Animated.View style={[styles.glowContainer, glowStyle]} pointerEvents="none">
+          {/* Top edge glow */}
           <LinearGradient
-            colors={[
-              'transparent',
-              `${shimmerColor}40`, // 25% opacity
-              `${shimmerColor}60`, // 37% opacity
-              `${shimmerColor}40`, // 25% opacity
-              'transparent',
-            ]}
+            colors={[`${shimmerColor}30`, 'transparent']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.edgeGlowTop}
+          />
+          {/* Bottom edge glow */}
+          <LinearGradient
+            colors={['transparent', `${shimmerColor}20`]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.edgeGlowBottom}
+          />
+          {/* Left edge glow */}
+          <LinearGradient
+            colors={[`${shimmerColor}25`, 'transparent']}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
-            style={styles.shimmerGradient}
+            style={styles.edgeGlowLeft}
+          />
+          {/* Right edge glow */}
+          <LinearGradient
+            colors={['transparent', `${shimmerColor}25`]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.edgeGlowRight}
+          />
+          {/* Corner accents for refined look */}
+          <LinearGradient
+            colors={[`${shimmerColor}35`, 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cornerTopLeft}
+          />
+          <LinearGradient
+            colors={[`${shimmerColor}35`, 'transparent']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.cornerTopRight}
           />
         </Animated.View>
       )}
@@ -87,17 +117,50 @@ const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
   },
-  shimmerContainer: {
-    position: 'absolute',
-    top: -50,
-    bottom: -50,
-    width: 100,
-    left: '50%',
-    marginLeft: -50,
+  glowContainer: {
+    ...StyleSheet.absoluteFillObject,
   },
-  shimmerGradient: {
-    flex: 1,
-    width: '100%',
+  edgeGlowTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 24,
+  },
+  edgeGlowBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 16,
+  },
+  edgeGlowLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: 16,
+  },
+  edgeGlowRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: 16,
+  },
+  cornerTopLeft: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 40,
+  },
+  cornerTopRight: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 40,
+    height: 40,
   },
 });
 

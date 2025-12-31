@@ -8,6 +8,7 @@ import { supabase } from "../../src/lib/supabase";
 import { usePacksStore, useAuthStore } from "../../src/store";
 import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
 import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipeTutorialSeen";
+import { invokeWithAuthRetry } from "../../src/lib/authErrorHandler";
 import SwipeCard from "../../src/components/SwipeCard";
 import SwipeTutorial from "../../src/components/SwipeTutorial";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
@@ -120,20 +121,10 @@ export default function SwipeScreen() {
         const answer = direction === "right" ? "yes" : direction === "left" ? "no" : "maybe";
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (!session?.access_token) {
-                console.error("No valid session - user may need to re-login");
-                return;
-            }
-
-            const { error } = await supabase.functions.invoke("submit-response", {
+            const { error } = await invokeWithAuthRetry("submit-response", {
                 body: {
                     question_id: question.id,
                     answer,
-                },
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`,
                 },
             });
 

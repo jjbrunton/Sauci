@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Table,
     TableBody,
@@ -23,23 +24,18 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Search, Shield, Trash2, UserPlus } from 'lucide-react';
+import { Separator } from "@/components/ui/separator";
+import { Search, Shield, Trash2, UserPlus, Settings } from 'lucide-react';
 import { format } from 'date-fns';
-import { useAuth, AdminRole } from '@/contexts/AuthContext';
+import { useAuth, AdminRole, PERMISSION_METADATA, PermissionKey } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface AdminUser {
     id: string; // admin_users PK
     user_id: string;
     role: AdminRole;
+    permissions: string[];
     created_at: string;
     profile?: {
         name: string | null;
@@ -67,8 +63,15 @@ export function AdminsPage() {
     const [searchResults, setSearchResults] = useState<Profile[]>([]);
     const [searchingUsers, setSearchingUsers] = useState(false);
     const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
-    const [selectedRole, setSelectedRole] = useState<AdminRole>('pack_creator');
+    const [isSuperAdminChecked, setIsSuperAdminChecked] = useState(false);
+    const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Edit Permissions State
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+    const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false);
+    const [editPermissions, setEditPermissions] = useState<string[]>([]);
 
     // Initial load
     useEffect(() => {
@@ -113,10 +116,10 @@ export function AdminsPage() {
     const fetchAdmins = async () => {
         setLoading(true);
         try {
-            // First fetch admin users
+            // First fetch admin users with permissions
             const { data: adminData, error: adminError } = await supabase
                 .from('admin_users')
-                .select('*')
+                .select('id, user_id, role, permissions, created_at')
                 .order('created_at', { ascending: false });
 
             if (adminError) throw adminError;
@@ -135,6 +138,7 @@ export function AdminsPage() {
                 // Merge data
                 const joinedAdmins = adminData.map(admin => ({
                     ...admin,
+                    permissions: (admin.permissions as string[]) || [],
                     profile: profileData?.find(p => p.id === admin.user_id)
                 }));
                 setAdmins(joinedAdmins);
@@ -154,24 +158,82 @@ export function AdminsPage() {
 
         setIsSubmitting(true);
         try {
+            const role: AdminRole = isSuperAdminChecked ? 'super_admin' : 'pack_creator';
+            const permissions = isSuperAdminChecked ? [] : selectedPermissions;
+
             const { error } = await auditedSupabase.insert('admin_users', {
                 user_id: selectedUser.id,
-                role: selectedRole
+                role,
+                permissions
             });
 
             if (error) throw error;
 
-            toast.success(`${selectedUser.name || selectedUser.email} added as ${selectedRole.replace('_', ' ')}`);
+            const roleLabel = isSuperAdminChecked ? 'Super Admin' : 'Admin';
+            toast.success(`${selectedUser.name || selectedUser.email} added as ${roleLabel}`);
 
             setIsAddDialogOpen(false);
             setSelectedUser(null);
             setUserSearch('');
+            setIsSuperAdminChecked(false);
+            setSelectedPermissions([]);
             fetchAdmins();
         } catch (error: any) {
             console.error('Failed to add admin:', error);
             toast.error(error.message || "Failed to add admin");
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleEditPermissions = (admin: AdminUser) => {
+        setEditingAdmin(admin);
+        setEditIsSuperAdmin(admin.role === 'super_admin');
+        setEditPermissions(admin.permissions || []);
+        setIsEditDialogOpen(true);
+    };
+
+    const handleSavePermissions = async () => {
+        if (!editingAdmin) return;
+
+        setIsSubmitting(true);
+        try {
+            const role: AdminRole = editIsSuperAdmin ? 'super_admin' : 'pack_creator';
+            const permissions = editIsSuperAdmin ? [] : editPermissions;
+
+            const { error } = await auditedSupabase.update('admin_users', editingAdmin.id, {
+                role,
+                permissions
+            });
+
+            if (error) throw error;
+
+            toast.success("Permissions updated successfully");
+
+            setIsEditDialogOpen(false);
+            setEditingAdmin(null);
+            fetchAdmins();
+        } catch (error: any) {
+            console.error('Failed to update permissions:', error);
+            toast.error(error.message || "Failed to update permissions");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const togglePermission = (permission: string, isEdit: boolean) => {
+        if (isEdit) {
+            setEditPermissions(prev =>
+                prev.includes(permission)
+                    ? prev.filter(p => p !== permission)
+                    : [...prev, permission]
+            );
+        } else {
+            setSelectedPermissions(prev =>
+                prev.includes(permission)
+                    ? prev.filter(p => p !== permission)
+                    : [...prev, permission]
+            );
         }
     };
 
@@ -229,7 +291,7 @@ export function AdminsPage() {
                                 Add Admin
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-[500px]">
                             <DialogHeader>
                                 <DialogTitle>Add Administrator</DialogTitle>
                                 <DialogDescription>
@@ -289,17 +351,107 @@ export function AdminsPage() {
                                         </div>
                                     )}
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label>Role</Label>
-                                    <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as AdminRole)}>
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="pack_creator">Pack Creator</SelectItem>
-                                            <SelectItem value="super_admin">Super Admin</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+
+                                <Separator />
+
+                                <div className="grid gap-3">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id="super-admin"
+                                            checked={isSuperAdminChecked}
+                                            onCheckedChange={(checked) => setIsSuperAdminChecked(checked === true)}
+                                        />
+                                        <label
+                                            htmlFor="super-admin"
+                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                            Super Admin (grants all permissions)
+                                        </label>
+                                    </div>
+
+                                    {!isSuperAdminChecked && (
+                                        <>
+                                            <Separator />
+
+                                            <div className="space-y-3">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                    Content Permissions
+                                                </Label>
+                                                {Object.entries(PERMISSION_METADATA)
+                                                    .filter(([_, meta]) => meta.group === 'content')
+                                                    .map(([key, meta]) => (
+                                                        <div key={key} className="flex items-start space-x-2">
+                                                            <Checkbox
+                                                                id={`add-${key}`}
+                                                                checked={selectedPermissions.includes(key)}
+                                                                onCheckedChange={() => togglePermission(key, false)}
+                                                            />
+                                                            <div className="grid gap-0.5 leading-none">
+                                                                <label
+                                                                    htmlFor={`add-${key}`}
+                                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                                >
+                                                                    {meta.label}
+                                                                </label>
+                                                                <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                    User Permissions
+                                                </Label>
+                                                {Object.entries(PERMISSION_METADATA)
+                                                    .filter(([_, meta]) => meta.group === 'users')
+                                                    .map(([key, meta]) => (
+                                                        <div key={key} className="flex items-start space-x-2">
+                                                            <Checkbox
+                                                                id={`add-${key}`}
+                                                                checked={selectedPermissions.includes(key)}
+                                                                onCheckedChange={() => togglePermission(key, false)}
+                                                            />
+                                                            <div className="grid gap-0.5 leading-none">
+                                                                <label
+                                                                    htmlFor={`add-${key}`}
+                                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                                >
+                                                                    {meta.label}
+                                                                </label>
+                                                                <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                                    System Permissions
+                                                </Label>
+                                                {Object.entries(PERMISSION_METADATA)
+                                                    .filter(([_, meta]) => meta.group === 'system')
+                                                    .map(([key, meta]) => (
+                                                        <div key={key} className="flex items-start space-x-2">
+                                                            <Checkbox
+                                                                id={`add-${key}`}
+                                                                checked={selectedPermissions.includes(key)}
+                                                                onCheckedChange={() => togglePermission(key, false)}
+                                                            />
+                                                            <div className="grid gap-0.5 leading-none">
+                                                                <label
+                                                                    htmlFor={`add-${key}`}
+                                                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                                >
+                                                                    {meta.label}
+                                                                </label>
+                                                                <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <DialogFooter>
@@ -320,9 +472,9 @@ export function AdminsPage() {
                         <TableRow>
                             <TableHead>Admin User</TableHead>
                             <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
+                            <TableHead>Role / Permissions</TableHead>
                             <TableHead>Added On</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead className="w-[120px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -361,26 +513,57 @@ export function AdminsPage() {
                                         {admin.profile?.email || '—'}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={admin.role === 'super_admin' ? 'default' : 'secondary'}>
-                                            <Shield className="h-3 w-3 mr-1" />
-                                            {admin.role.replace('_', ' ')}
-                                        </Badge>
+                                        {admin.role === 'super_admin' ? (
+                                            <Badge variant="default">
+                                                <Shield className="h-3 w-3 mr-1" />
+                                                Super Admin
+                                            </Badge>
+                                        ) : (
+                                            <div className="flex flex-wrap gap-1">
+                                                {admin.permissions.length === 0 ? (
+                                                    <span className="text-muted-foreground text-sm">No permissions</span>
+                                                ) : (
+                                                    admin.permissions.slice(0, 3).map(perm => (
+                                                        <Badge key={perm} variant="secondary" className="text-xs">
+                                                            {PERMISSION_METADATA[perm as PermissionKey]?.label.replace('Can ', '') || perm}
+                                                        </Badge>
+                                                    ))
+                                                )}
+                                                {admin.permissions.length > 3 && (
+                                                    <Badge variant="outline" className="text-xs">
+                                                        +{admin.permissions.length - 3} more
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground text-sm">
                                         {admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '—'}
                                     </TableCell>
                                     <TableCell>
-                                        {admin.user_id !== currentUser?.id && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleRemoveAdmin(admin)}
-                                                title="Revoke Access"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        )}
+                                        <div className="flex items-center gap-1">
+                                            {admin.user_id !== currentUser?.id && (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => handleEditPermissions(admin)}
+                                                        title="Edit Permissions"
+                                                    >
+                                                        <Settings className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleRemoveAdmin(admin)}
+                                                        title="Revoke Access"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -388,6 +571,125 @@ export function AdminsPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {/* Edit Permissions Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Permissions</DialogTitle>
+                        <DialogDescription>
+                            Update permissions for {editingAdmin?.profile?.name || editingAdmin?.profile?.email || 'this admin'}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-3">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="edit-super-admin"
+                                    checked={editIsSuperAdmin}
+                                    onCheckedChange={(checked) => setEditIsSuperAdmin(checked === true)}
+                                />
+                                <label
+                                    htmlFor="edit-super-admin"
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                    Super Admin (grants all permissions)
+                                </label>
+                            </div>
+
+                            {!editIsSuperAdmin && (
+                                <>
+                                    <Separator />
+
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            Content Permissions
+                                        </Label>
+                                        {Object.entries(PERMISSION_METADATA)
+                                            .filter(([_, meta]) => meta.group === 'content')
+                                            .map(([key, meta]) => (
+                                                <div key={key} className="flex items-start space-x-2">
+                                                    <Checkbox
+                                                        id={`edit-${key}`}
+                                                        checked={editPermissions.includes(key)}
+                                                        onCheckedChange={() => togglePermission(key, true)}
+                                                    />
+                                                    <div className="grid gap-0.5 leading-none">
+                                                        <label
+                                                            htmlFor={`edit-${key}`}
+                                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                        >
+                                                            {meta.label}
+                                                        </label>
+                                                        <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            User Permissions
+                                        </Label>
+                                        {Object.entries(PERMISSION_METADATA)
+                                            .filter(([_, meta]) => meta.group === 'users')
+                                            .map(([key, meta]) => (
+                                                <div key={key} className="flex items-start space-x-2">
+                                                    <Checkbox
+                                                        id={`edit-${key}`}
+                                                        checked={editPermissions.includes(key)}
+                                                        onCheckedChange={() => togglePermission(key, true)}
+                                                    />
+                                                    <div className="grid gap-0.5 leading-none">
+                                                        <label
+                                                            htmlFor={`edit-${key}`}
+                                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                        >
+                                                            {meta.label}
+                                                        </label>
+                                                        <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                            System Permissions
+                                        </Label>
+                                        {Object.entries(PERMISSION_METADATA)
+                                            .filter(([_, meta]) => meta.group === 'system')
+                                            .map(([key, meta]) => (
+                                                <div key={key} className="flex items-start space-x-2">
+                                                    <Checkbox
+                                                        id={`edit-${key}`}
+                                                        checked={editPermissions.includes(key)}
+                                                        onCheckedChange={() => togglePermission(key, true)}
+                                                    />
+                                                    <div className="grid gap-0.5 leading-none">
+                                                        <label
+                                                            htmlFor={`edit-${key}`}
+                                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                                        >
+                                                            {meta.label}
+                                                        </label>
+                                                        <p className="text-xs text-muted-foreground">{meta.description}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleSavePermissions} disabled={isSubmitting}>
+                            {isSubmitting ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

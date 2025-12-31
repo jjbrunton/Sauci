@@ -1,36 +1,50 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../config';
 import type { User, Session } from '@supabase/supabase-js';
 
 // Define admin roles
 export type AdminRole = 'pack_creator' | 'super_admin';
 
+// Available permission keys
+export const PERMISSION_KEYS = {
+    // Content permissions
+    MANAGE_PACKS: 'manage_packs',
+    MANAGE_QUESTIONS: 'manage_questions',
+    MANAGE_CATEGORIES: 'manage_categories',
+    // User permissions
+    VIEW_USERS: 'view_users',
+    VIEW_CHATS: 'view_chats',
+    VIEW_MEDIA: 'view_media',
+    VIEW_MATCHES: 'view_matches',
+    VIEW_RESPONSES: 'view_responses',
+    // System permissions
+    MANAGE_CODES: 'manage_codes',
+    MANAGE_ADMINS: 'manage_admins',
+    VIEW_AUDIT_LOGS: 'view_audit_logs',
+} as const;
+
+export type PermissionKey = typeof PERMISSION_KEYS[keyof typeof PERMISSION_KEYS];
+
+// Permission metadata for UI
+export const PERMISSION_METADATA: Record<PermissionKey, { label: string; description: string; group: 'content' | 'users' | 'system' }> = {
+    [PERMISSION_KEYS.MANAGE_CATEGORIES]: { label: 'Can manage categories', description: 'Create, edit, delete categories', group: 'content' },
+    [PERMISSION_KEYS.MANAGE_PACKS]: { label: 'Can manage packs', description: 'Create, edit, delete question packs', group: 'content' },
+    [PERMISSION_KEYS.MANAGE_QUESTIONS]: { label: 'Can manage questions', description: 'Create, edit, delete questions', group: 'content' },
+    [PERMISSION_KEYS.VIEW_USERS]: { label: 'Can view users', description: 'View user profiles and list', group: 'users' },
+    [PERMISSION_KEYS.VIEW_CHATS]: { label: 'Can view chats', description: 'View chat messages between users', group: 'users' },
+    [PERMISSION_KEYS.VIEW_MEDIA]: { label: 'Can view media', description: 'View user photos and media', group: 'users' },
+    [PERMISSION_KEYS.VIEW_MATCHES]: { label: 'Can view matches', description: 'View user matches and match details', group: 'users' },
+    [PERMISSION_KEYS.VIEW_RESPONSES]: { label: 'Can view responses', description: 'View user question responses', group: 'users' },
+    [PERMISSION_KEYS.MANAGE_CODES]: { label: 'Can manage redemption codes', description: 'Create and view redemption codes', group: 'system' },
+    [PERMISSION_KEYS.MANAGE_ADMINS]: { label: 'Can manage admins', description: 'Add/remove admin users and change permissions', group: 'system' },
+    [PERMISSION_KEYS.VIEW_AUDIT_LOGS]: { label: 'Can view audit logs', description: 'Access audit log history', group: 'system' },
+};
+
 // Permission structure
 export interface AdminPermissions {
     role: AdminRole;
-    permissions: Array<{ action: string; resource: string }>;
+    permissions: string[];
 }
-
-// Define permissions by role
-const ROLE_PERMISSIONS: Record<AdminRole, Array<{ action: string; resource: string }>> = {
-    pack_creator: [
-        { action: 'list', resource: 'categories' },
-        { action: 'create', resource: 'categories' },
-        { action: 'edit', resource: 'categories' },
-        { action: 'list', resource: 'question_packs' },
-        { action: 'create', resource: 'question_packs' },
-        { action: 'edit', resource: 'question_packs' },
-        { action: 'delete', resource: 'question_packs' },
-        { action: 'list', resource: 'questions' },
-        { action: 'create', resource: 'questions' },
-        { action: 'edit', resource: 'questions' },
-        { action: 'delete', resource: 'questions' },
-    ],
-    super_admin: [
-        // Full access to all resources
-        { action: '*', resource: '*' },
-    ],
-};
 
 interface AuthContextType {
     user: User | null;
@@ -39,7 +53,7 @@ interface AuthContextType {
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
-    canAccess: (resource: string, action: string) => boolean;
+    hasPermission: (permission: PermissionKey) => boolean;
     isSuperAdmin: boolean;
 }
 
@@ -94,10 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error(error.message);
         }
 
-        // Fetch admin role
+        // Fetch admin role and permissions
         const { data: adminData, error: adminError } = await supabase
             .from('admin_users')
-            .select('role')
+            .select('role, permissions')
             .eq('user_id', data.user.id)
             .single();
 
@@ -106,10 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             throw new Error('Access denied. You are not an administrator.');
         }
 
-        // Store permissions
+        // Store permissions from database
         const perms: AdminPermissions = {
             role: adminData.role as AdminRole,
-            permissions: ROLE_PERMISSIONS[adminData.role as AdminRole],
+            permissions: (adminData.permissions as string[]) || [],
         };
 
         localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(perms));
@@ -122,21 +136,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
     };
 
-    const canAccess = (resource: string, action: string): boolean => {
+    const isSuperAdmin = permissions?.role === 'super_admin';
+
+    const hasPermission = (permission: PermissionKey): boolean => {
         if (!permissions) return false;
 
-        // Check for wildcard (super_admin)
-        if (permissions.permissions.some(p => p.action === '*' && p.resource === '*')) {
-            return true;
-        }
+        // Super admins have all permissions
+        if (isSuperAdmin) return true;
 
-        // Check specific permission
-        return permissions.permissions.some(
-            p => p.resource === resource && (p.action === action || p.action === '*')
-        );
+        // Check if user has the specific permission
+        return permissions.permissions.includes(permission);
     };
-
-    const isSuperAdmin = permissions?.role === 'super_admin';
 
     return (
         <AuthContext.Provider value={{
@@ -146,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loading,
             login,
             logout,
-            canAccess,
+            hasPermission,
             isSuperAdmin,
         }}>
             {children}

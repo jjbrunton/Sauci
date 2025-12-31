@@ -63,7 +63,7 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
     const handlePickScreenshot = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
+            allowsEditing: false,
             quality: 0.7,
         });
 
@@ -178,6 +178,16 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
                 <View style={styles.content}>
+                    {/* Close Button */}
+                    <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={handleClose}
+                        disabled={isSubmitting}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <Ionicons name="close" size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+
                     <ScrollView
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
@@ -374,6 +384,13 @@ const styles = StyleSheet.create({
         maxHeight: '80%',
         borderWidth: 1,
         borderColor: colors.glass.border,
+    },
+    closeButton: {
+        position: 'absolute',
+        top: spacing.md,
+        right: spacing.md,
+        zIndex: 1,
+        padding: spacing.xs,
     },
     scrollContent: {
         flexGrow: 1,

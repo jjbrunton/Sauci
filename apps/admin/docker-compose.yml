@@ -3,6 +3,8 @@ services:
     build:
       context: ../..
       dockerfile: apps/admin/Dockerfile.dev
+    ports:
+      - "3005:3001"
     environment:
       - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
       - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}

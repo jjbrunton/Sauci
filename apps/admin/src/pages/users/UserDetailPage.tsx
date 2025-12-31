@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Table,
@@ -34,8 +35,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, HardDrive, ExternalLink } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, HardDrive, ExternalLink, Target, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
+
+type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
+type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
 
 interface Profile {
     id: string;
@@ -45,7 +49,26 @@ interface Profile {
     is_premium: boolean | null;
     couple_id: string | null;
     created_at: string | null;
+    gender: Gender | null;
+    usage_reason: UsageReason | null;
+    show_explicit_content: boolean | null;
+    onboarding_completed: boolean | null;
 }
+
+const usageReasonLabels: Record<UsageReason, { label: string; icon: string }> = {
+    improve_communication: { label: 'Improve communication', icon: 'chatbubbles' },
+    spice_up_intimacy: { label: 'Spice up intimacy', icon: 'flame' },
+    deeper_connection: { label: 'Build deeper connection', icon: 'heart' },
+    have_fun: { label: 'Have fun together', icon: 'happy' },
+    strengthen_relationship: { label: 'Strengthen relationship', icon: 'shield-checkmark' },
+};
+
+const genderLabels: Record<Gender, string> = {
+    male: 'Male',
+    female: 'Female',
+    'non-binary': 'Non-binary',
+    'prefer-not-to-say': 'Prefer not to say',
+};
 
 interface Partner {
     id: string;
@@ -111,6 +134,7 @@ function formatBytes(bytes: number): string {
 
 export function UserDetailPage() {
     const { userId } = useParams<{ userId: string }>();
+    const { hasPermission } = useAuth();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [partner, setPartner] = useState<Partner | null>(null);
     const [responses, setResponses] = useState<Response[]>([]);
@@ -118,6 +142,11 @@ export function UserDetailPage() {
     const [media, setMedia] = useState<MediaFile[]>([]);
     const [totalStorage, setTotalStorage] = useState(0);
     const [loading, setLoading] = useState(true);
+
+    const canViewResponses = hasPermission(PERMISSION_KEYS.VIEW_RESPONSES);
+    const canViewMatches = hasPermission(PERMISSION_KEYS.VIEW_MATCHES);
+    const canViewMedia = hasPermission(PERMISSION_KEYS.VIEW_MEDIA);
+    const canViewChats = hasPermission(PERMISSION_KEYS.VIEW_CHATS);
 
     const [upgradeOpen, setUpgradeOpen] = useState(false);
     const [expiryType, setExpiryType] = useState('forever');
@@ -430,178 +459,270 @@ export function UserDetailPage() {
                 </CardContent>
             </Card>
 
+            {/* Onboarding Details */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                        Onboarding Details
+                    </CardTitle>
+                    <CardDescription>
+                        Information collected during user onboarding
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        {/* Gender */}
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Gender</p>
+                                <p className="font-medium">
+                                    {profile.gender ? genderLabels[profile.gender] : 'Not set'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Usage Reason */}
+                        <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
+                                <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Why using Sauci</p>
+                                <p className="font-medium">
+                                    {profile.usage_reason
+                                        ? usageReasonLabels[profile.usage_reason]?.label
+                                        : 'Not set'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Explicit Content */}
+                        <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${profile.show_explicit_content ? 'bg-amber-100 dark:bg-amber-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                                {profile.show_explicit_content ? (
+                                    <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                ) : (
+                                    <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Explicit Content</p>
+                                <p className="font-medium">
+                                    {profile.show_explicit_content === null
+                                        ? 'Not set'
+                                        : profile.show_explicit_content
+                                            ? 'Enabled'
+                                            : 'Disabled'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Onboarding Status */}
+                        <div className="flex items-start gap-3">
+                            <div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
+                                <CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Onboarding</p>
+                                <p className="font-medium">
+                                    {profile.onboarding_completed ? 'Completed' : 'Not completed'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* Tabs */}
-            <Tabs defaultValue="responses">
+            <Tabs defaultValue={canViewResponses ? "responses" : canViewMatches ? "matches" : canViewMedia ? "media" : "responses"}>
                 <TabsList>
-                    <TabsTrigger value="responses">
-                        Responses ({responses.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="matches" disabled={!profile.couple_id}>
-                        Matches ({matches.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="media">
-                        Media ({media.length})
-                    </TabsTrigger>
+                    {canViewResponses && (
+                        <TabsTrigger value="responses">
+                            Responses ({responses.length})
+                        </TabsTrigger>
+                    )}
+                    {canViewMatches && (
+                        <TabsTrigger value="matches" disabled={!profile.couple_id}>
+                            Matches ({matches.length})
+                        </TabsTrigger>
+                    )}
+                    {canViewMedia && (
+                        <TabsTrigger value="media">
+                            Media ({media.length})
+                        </TabsTrigger>
+                    )}
                 </TabsList>
 
-                <TabsContent value="responses" className="mt-4">
-                    {responses.length === 0 ? (
-                        <Card className="flex flex-col items-center justify-center py-12">
-                            <p className="text-muted-foreground">No responses yet</p>
-                        </Card>
-                    ) : (
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Question</TableHead>
-                                        <TableHead>Pack</TableHead>
-                                        <TableHead className="w-24">Answer</TableHead>
-                                        <TableHead className="w-32">Date</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {responses.map((r) => (
-                                        <TableRow key={r.id}>
-                                            <TableCell className="max-w-md">
-                                                <span className="line-clamp-2">{r.question.text}</span>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">
-                                                {r.question.pack?.name || '—'}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    {answerIcons[r.answer]}
-                                                    <span className="capitalize">{r.answer}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground text-sm">
-                                                {r.created_at
-                                                    ? format(new Date(r.created_at), 'MMM d, yyyy')
-                                                    : '—'}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="matches" className="mt-4">
-                    {matches.length === 0 ? (
-                        <Card className="flex flex-col items-center justify-center py-12">
-                            <p className="text-muted-foreground">No matches yet</p>
-                        </Card>
-                    ) : (
-                        <div className="grid gap-4 md:grid-cols-2">
-                            {matches.map((match) => (
-                                <Card key={match.id} className="hover:shadow-md transition-shadow">
-                                    <CardHeader className="pb-2">
-                                        <div className="flex items-start justify-between">
-                                            <Badge variant="secondary">
-                                                {matchTypeLabels[match.match_type]}
-                                            </Badge>
-                                            {match.is_new && (
-                                                <Badge variant="default" className="text-xs">New</Badge>
-                                            )}
-                                        </div>
-                                        <CardDescription className="line-clamp-2 mt-2">
-                                            {match.question?.text || 'Unknown question'}
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                <MessageCircle className="h-4 w-4" />
-                                                {match.message_count} message{match.message_count !== 1 ? 's' : ''}
-                                            </div>
-                                            <Link to={`/users/${userId}/matches/${match.id}`}>
-                                                <Button variant="ghost" size="sm">
-                                                    View Chat
-                                                    <ChevronRight className="ml-1 h-4 w-4" />
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="media" className="mt-4">
-                    {media.length === 0 ? (
-                        <Card className="flex flex-col items-center justify-center py-12">
-                            <Image className="h-12 w-12 text-muted-foreground mb-4" />
-                            <p className="text-muted-foreground">No media uploaded</p>
-                        </Card>
-                    ) : (
-                        <div className="space-y-4">
-                            {/* Storage Summary */}
-                            <Card>
-                                <CardContent className="pt-6">
-                                    <div className="flex items-center gap-3">
-                                        <HardDrive className="h-5 w-5 text-muted-foreground" />
-                                        <div>
-                                            <p className="font-medium">Total Storage Used</p>
-                                            <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
-                                        </div>
-                                        <div className="ml-auto text-sm text-muted-foreground">
-                                            {media.length} file{media.length !== 1 ? 's' : ''}
-                                        </div>
-                                    </div>
-                                </CardContent>
+                {canViewResponses && (
+                    <TabsContent value="responses" className="mt-4">
+                        {responses.length === 0 ? (
+                            <Card className="flex flex-col items-center justify-center py-12">
+                                <p className="text-muted-foreground">No responses yet</p>
                             </Card>
+                        ) : (
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Question</TableHead>
+                                            <TableHead>Pack</TableHead>
+                                            <TableHead className="w-24">Answer</TableHead>
+                                            <TableHead className="w-32">Date</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {responses.map((r) => (
+                                            <TableRow key={r.id}>
+                                                <TableCell className="max-w-md">
+                                                    <span className="line-clamp-2">{r.question.text}</span>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {r.question.pack?.name || '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {answerIcons[r.answer]}
+                                                        <span className="capitalize">{r.answer}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-sm">
+                                                    {r.created_at
+                                                        ? format(new Date(r.created_at), 'MMM d, yyyy')
+                                                        : '—'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </TabsContent>
+                )}
 
-                            {/* Media Grid */}
-                            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                {media.map((file) => (
-                                    <Card key={file.id} className="overflow-hidden">
-                                        <div className="aspect-square bg-muted relative">
-                                            {file.signedUrl ? (
-                                                <img
-                                                    src={file.signedUrl}
-                                                    alt={file.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => {
-                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                    }}
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <Image className="h-8 w-8 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <CardContent className="p-3">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <div className="truncate text-muted-foreground">
-                                                    {formatBytes(file.metadata?.size || 0)}
-                                                </div>
-                                                {file.signedUrl && (
-                                                    <a
-                                                        href={file.signedUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-primary hover:underline flex items-center gap-1"
-                                                    >
-                                                        <ExternalLink className="h-3 w-3" />
-                                                    </a>
+                {canViewMatches && (
+                    <TabsContent value="matches" className="mt-4">
+                        {matches.length === 0 ? (
+                            <Card className="flex flex-col items-center justify-center py-12">
+                                <p className="text-muted-foreground">No matches yet</p>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {matches.map((match) => (
+                                    <Card key={match.id} className="hover:shadow-md transition-shadow">
+                                        <CardHeader className="pb-2">
+                                            <div className="flex items-start justify-between">
+                                                <Badge variant="secondary">
+                                                    {matchTypeLabels[match.match_type]}
+                                                </Badge>
+                                                {match.is_new && (
+                                                    <Badge variant="default" className="text-xs">New</Badge>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                {file.created_at
-                                                    ? format(new Date(file.created_at), 'MMM d, yyyy')
-                                                    : '—'}
+                                            <CardDescription className="line-clamp-2 mt-2">
+                                                {match.question?.text || 'Unknown question'}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                                    <MessageCircle className="h-4 w-4" />
+                                                    {match.message_count} message{match.message_count !== 1 ? 's' : ''}
+                                                </div>
+                                                {canViewChats && (
+                                                    <Link to={`/users/${userId}/matches/${match.id}`}>
+                                                        <Button variant="ghost" size="sm">
+                                                            View Chat
+                                                            <ChevronRight className="ml-1 h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                )}
                                             </div>
                                         </CardContent>
                                     </Card>
                                 ))}
                             </div>
-                        </div>
-                    )}
-                </TabsContent>
+                        )}
+                    </TabsContent>
+                )}
+
+                {canViewMedia && (
+                    <TabsContent value="media" className="mt-4">
+                        {media.length === 0 ? (
+                            <Card className="flex flex-col items-center justify-center py-12">
+                                <Image className="h-12 w-12 text-muted-foreground mb-4" />
+                                <p className="text-muted-foreground">No media uploaded</p>
+                            </Card>
+                        ) : (
+                            <div className="space-y-4">
+                                {/* Storage Summary */}
+                                <Card>
+                                    <CardContent className="pt-6">
+                                        <div className="flex items-center gap-3">
+                                            <HardDrive className="h-5 w-5 text-muted-foreground" />
+                                            <div>
+                                                <p className="font-medium">Total Storage Used</p>
+                                                <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
+                                            </div>
+                                            <div className="ml-auto text-sm text-muted-foreground">
+                                                {media.length} file{media.length !== 1 ? 's' : ''}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Media Grid */}
+                                <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                                    {media.map((file) => (
+                                        <Card key={file.id} className="overflow-hidden">
+                                            <div className="aspect-square bg-muted relative">
+                                                {file.signedUrl ? (
+                                                    <img
+                                                        src={file.signedUrl}
+                                                        alt={file.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLImageElement).style.display = 'none';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center">
+                                                        <Image className="h-8 w-8 text-muted-foreground" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <CardContent className="p-3">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <div className="truncate text-muted-foreground">
+                                                        {formatBytes(file.metadata?.size || 0)}
+                                                    </div>
+                                                    {file.signedUrl && (
+                                                        <a
+                                                            href={file.signedUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-primary hover:underline flex items-center gap-1"
+                                                        >
+                                                            <ExternalLink className="h-3 w-3" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                    {file.created_at
+                                                        ? format(new Date(file.created_at), 'MMM d, yyyy')
+                                                        : '—'}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </TabsContent>
+                )}
             </Tabs>
         </div>
     );
