@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch, Image, ActionSheetIOS } from "react-native";
 import { useState, useMemo, useEffect } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore, useSubscriptionStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,6 +6,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
 import { resetSwipeTutorial } from "../../src/lib/swipeTutorialSeen";
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
 import {
     isBiometricAvailable,
     isBiometricEnabled,
@@ -16,6 +19,7 @@ import { router } from "expo-router";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { FeedbackModal } from "../../src/components/FeedbackModal";
 import { Paywall } from "../../src/components/Paywall";
+import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
 const MAX_CONTENT_WIDTH = 500;
@@ -40,11 +44,22 @@ export default function ProfileScreen() {
     const [biometricEnabled, setBiometricEnabledState] = useState(false);
     const [biometricType, setBiometricType] = useState("Face ID");
     const [isUpdatingBiometric, setIsUpdatingBiometric] = useState(false);
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [newName, setNewName] = useState(user?.name || "");
+    const [isUpdatingName, setIsUpdatingName] = useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     // Check if user or partner has premium access
     const hasPremiumAccess = useMemo(() => {
         return user?.is_premium || partner?.is_premium || subscription.isProUser;
     }, [user?.is_premium, partner?.is_premium, subscription.isProUser]);
+
+    // Update newName when user changes
+    useEffect(() => {
+        if (user?.name) {
+            setNewName(user.name);
+        }
+    }, [user?.name]);
 
     // Check biometric availability on mount
     useEffect(() => {
@@ -130,6 +145,181 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleUpdateName = async () => {
+        if (!user?.id) return;
+
+        const trimmedName = newName.trim();
+        if (!trimmedName) {
+            Alert.alert("Error", "Name cannot be empty");
+            return;
+        }
+
+        if (trimmedName === user.name) {
+            setIsEditingName(false);
+            return;
+        }
+
+        setIsUpdatingName(true);
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    name: trimmedName,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            await fetchUser();
+            setIsEditingName(false);
+        } catch (error) {
+            Alert.alert("Error", "Failed to update name. Please try again.");
+            setNewName(user.name || "");
+        } finally {
+            setIsUpdatingName(false);
+        }
+    };
+
+    const handleCancelEditName = () => {
+        setNewName(user?.name || "");
+        setIsEditingName(false);
+    };
+
+    const handleAvatarPress = () => {
+        if (Platform.OS === 'ios') {
+            ActionSheetIOS.showActionSheetWithOptions(
+                {
+                    options: ['Cancel', 'Take Photo', 'Choose from Library'],
+                    cancelButtonIndex: 0,
+                },
+                (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        pickAvatar('camera');
+                    } else if (buttonIndex === 2) {
+                        pickAvatar('library');
+                    }
+                }
+            );
+        } else {
+            Alert.alert(
+                'Change Profile Photo',
+                'Choose an option',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Take Photo', onPress: () => pickAvatar('camera') },
+                    { text: 'Choose from Library', onPress: () => pickAvatar('library') },
+                ]
+            );
+        }
+    };
+
+    const pickAvatar = async (source: 'camera' | 'library') => {
+        try {
+            let result: ImagePicker.ImagePickerResult;
+
+            if (source === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Permission Denied', 'Camera access is required to take a photo.');
+                    return;
+                }
+                result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                });
+            } else {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Permission Denied', 'Photo library access is required to choose a photo.');
+                    return;
+                }
+                result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                    quality: 0.8,
+                });
+            }
+
+            if (!result.canceled && result.assets[0]) {
+                await uploadAvatar(result.assets[0].uri);
+            }
+        } catch (error) {
+            console.error('Error picking avatar:', error);
+            Alert.alert('Error', 'Failed to pick image. Please try again.');
+        }
+    };
+
+    const uploadAvatar = async (uri: string) => {
+        if (!user?.id) return;
+
+        setIsUploadingAvatar(true);
+
+        try {
+            let fileBody;
+            let ext = 'jpg';
+
+            if (Platform.OS === 'web') {
+                const response = await fetch(uri);
+                const blob = await response.blob();
+                fileBody = blob;
+
+                if (blob.type === 'image/png') ext = 'png';
+                else if (blob.type === 'image/webp') ext = 'webp';
+            } else {
+                const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+                fileBody = decode(base64);
+
+                const uriExt = uri.split('.').pop()?.toLowerCase();
+                if (uriExt && ['jpg', 'jpeg', 'png', 'webp'].includes(uriExt)) {
+                    ext = uriExt === 'jpeg' ? 'jpg' : uriExt;
+                }
+            }
+
+            const fileName = `${user.id}/${Date.now()}.${ext}`;
+            const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+            // Upload to storage
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(fileName, fileBody, {
+                    contentType,
+                    upsert: true,
+                });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(fileName);
+
+            // Update profile with avatar URL
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    avatar_url: publicUrl,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
+
+            // Refresh user data
+            await fetchUser();
+            Events.avatarUploaded();
+        } catch (error) {
+            console.error('Error uploading avatar:', error);
+            Alert.alert('Error', 'Failed to upload photo. Please try again.');
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
     const handleManageSubscription = () => {
         Linking.openURL("https://apps.apple.com/account/subscriptions");
     };
@@ -153,6 +343,7 @@ export default function ProfileScreen() {
             // Refresh user data (will also clear couple/partner since couple_id is now null)
             await useAuthStore.getState().fetchUser();
 
+            Events.relationshipEnded();
             setShowDeleteModal(false);
             setDeleteConfirmText("");
             Alert.alert("Success", "All relationship data has been deleted.");
@@ -227,20 +418,90 @@ export default function ProfileScreen() {
                 >
                     <GlassCard variant="elevated">
                         <View style={styles.profileContent}>
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.avatarGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
+                            <TouchableOpacity
+                                onPress={handleAvatarPress}
+                                disabled={isUploadingAvatar}
+                                activeOpacity={0.7}
+                                style={styles.avatarTouchable}
                             >
-                                <View style={styles.avatarInner}>
-                                    <Text style={styles.avatarText}>
-                                        {user?.name?.[0]?.toUpperCase() || "U"}
-                                    </Text>
-                                </View>
-                            </LinearGradient>
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    style={styles.avatarGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    {user?.avatar_url ? (
+                                        <Image
+                                            source={{ uri: user.avatar_url }}
+                                            style={styles.avatarImage}
+                                        />
+                                    ) : (
+                                        <View style={styles.avatarInner}>
+                                            <Text style={styles.avatarText}>
+                                                {user?.name?.[0]?.toUpperCase() || "U"}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </LinearGradient>
+                                {isUploadingAvatar ? (
+                                    <View style={styles.avatarOverlay}>
+                                        <ActivityIndicator size="large" color={colors.text} />
+                                    </View>
+                                ) : (
+                                    <View style={styles.avatarEditBadge}>
+                                        <Ionicons name="camera" size={14} color={colors.text} />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
                             <View style={styles.profileInfo}>
-                                <Text style={styles.name}>{user?.name || "User"}</Text>
+                                {isEditingName ? (
+                                    <View style={styles.editNameContainer}>
+                                        <TextInput
+                                            style={styles.nameInput}
+                                            value={newName}
+                                            onChangeText={setNewName}
+                                            placeholder="Enter your name"
+                                            placeholderTextColor={colors.textTertiary}
+                                            autoFocus
+                                            editable={!isUpdatingName}
+                                            onSubmitEditing={handleUpdateName}
+                                            returnKeyType="done"
+                                        />
+                                        <View style={styles.editNameButtons}>
+                                            <TouchableOpacity
+                                                style={styles.cancelEditButton}
+                                                onPress={handleCancelEditName}
+                                                disabled={isUpdatingName}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="close" size={20} color={colors.textSecondary} />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity
+                                                style={styles.saveEditButton}
+                                                onPress={handleUpdateName}
+                                                disabled={isUpdatingName}
+                                                activeOpacity={0.7}
+                                            >
+                                                {isUpdatingName ? (
+                                                    <ActivityIndicator size="small" color={colors.text} />
+                                                ) : (
+                                                    <Ionicons name="checkmark" size={20} color={colors.text} />
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.nameContainer}
+                                        onPress={() => setIsEditingName(true)}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.name}>{user?.name || "User"}</Text>
+                                        <View style={styles.editNameIcon}>
+                                            <Ionicons name="pencil" size={14} color={colors.textTertiary} />
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
                                 <Text style={styles.email}>{user?.email}</Text>
                             </View>
                         </View>
@@ -764,14 +1025,99 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: colors.text,
     },
+    avatarTouchable: {
+        position: "relative",
+    },
+    avatarImage: {
+        width: 96,
+        height: 96,
+        borderRadius: 48,
+    },
+    avatarOverlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderRadius: 50,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    avatarEditBadge: {
+        position: "absolute",
+        bottom: 0,
+        right: 0,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.primary,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 3,
+        borderColor: colors.background,
+    },
     profileInfo: {
         alignItems: "center",
         marginTop: spacing.lg,
+    },
+    nameContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.xs,
     },
     name: {
         ...typography.title2,
         color: colors.text,
         marginBottom: spacing.xs,
+    },
+    editNameIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.xs,
+    },
+    editNameContainer: {
+        width: "100%",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    nameInput: {
+        ...typography.title2,
+        color: colors.text,
+        textAlign: "center",
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.primary,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        minWidth: 200,
+    },
+    editNameButtons: {
+        flexDirection: "row",
+        gap: spacing.sm,
+    },
+    cancelEditButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+    },
+    saveEditButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.primary,
+        justifyContent: "center",
+        alignItems: "center",
     },
     email: {
         ...typography.subhead,

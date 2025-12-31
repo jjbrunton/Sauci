@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -40,7 +40,17 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'prefer-not-to-say', label: 'Skip', icon: 'remove-circle-outline' },
 ];
 
-type Stage = 'name' | 'gender' | 'explicit' | 'notifications';
+type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
+
+const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
+    { value: 'improve_communication', label: 'Improve communication', icon: 'chatbubbles' },
+    { value: 'spice_up_intimacy', label: 'Spice up intimacy', icon: 'flame' },
+    { value: 'deeper_connection', label: 'Build deeper connection', icon: 'heart' },
+    { value: 'have_fun', label: 'Have fun together', icon: 'happy' },
+    { value: 'strengthen_relationship', label: 'Strengthen our relationship', icon: 'shield-checkmark' },
+];
+
+type Stage = 'name' | 'gender' | 'purpose' | 'explicit' | 'notifications';
 
 export default function OnboardingScreen() {
     const router = useRouter();
@@ -48,10 +58,15 @@ export default function OnboardingScreen() {
     const [stage, setStage] = useState<Stage>('name');
     const [name, setName] = useState(user?.name || '');
     const [gender, setGender] = useState<Gender | null>(user?.gender || null);
+    const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
     const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);
+
+    useEffect(() => {
+        Events.onboardingStart();
+    }, []);
 
     const handleNameSubmit = () => {
         if (!name.trim()) {
@@ -74,8 +89,22 @@ export default function OnboardingScreen() {
             setError('Please select a gender or skip');
             return;
         }
-        setStage('explicit');
+        setStage('purpose');
         Events.onboardingStageComplete('gender');
+    };
+
+    const handlePurposeSelect = (selectedReason: UsageReason) => {
+        setUsageReason(selectedReason);
+        setError(null);
+    };
+
+    const handlePurposeContinue = () => {
+        if (!usageReason) {
+            setError('Please select what brings you to Sauci');
+            return;
+        }
+        setStage('explicit');
+        Events.onboardingStageComplete('purpose');
     };
 
     const handleExplicitContinue = () => {
@@ -115,6 +144,7 @@ export default function OnboardingScreen() {
                 .update({
                     name: name.trim(),
                     gender,
+                    usage_reason: usageReason,
                     show_explicit_content: showExplicit,
                     onboarding_completed: true,
                     updated_at: new Date().toISOString(),
@@ -254,6 +284,82 @@ export default function OnboardingScreen() {
 
                         <View style={styles.footer}>
                             <GlassButton onPress={handleGenderContinue} fullWidth size="lg">
+                                Continue
+                            </GlassButton>
+                        </View>
+                    </Animated.View>
+                );
+
+            case 'purpose':
+                return (
+                    <Animated.View
+                        key="purpose"
+                        entering={SlideInRight.duration(400)}
+                        exiting={SlideOutLeft.duration(300)}
+                        style={styles.stageContainer}
+                    >
+                        <View style={styles.header}>
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.iconContainer}
+                            >
+                                <Ionicons name="sparkles" size={40} color={colors.text} />
+                            </LinearGradient>
+                            <Text style={styles.title}>What brings you here?</Text>
+                            <Text style={styles.subtitle}>
+                                This helps us personalize your experience
+                            </Text>
+                        </View>
+
+                        <GlassCard style={styles.card}>
+                            <Text style={styles.label}>I'm using Sauci to...</Text>
+                            <View style={styles.purposeList}>
+                                {PURPOSE_OPTIONS.map((option) => (
+                                    <Pressable
+                                        key={option.value}
+                                        style={[
+                                            styles.purposeOption,
+                                            usageReason === option.value && styles.purposeOptionSelected,
+                                        ]}
+                                        onPress={() => handlePurposeSelect(option.value)}
+                                    >
+                                        <View style={[
+                                            styles.purposeIcon,
+                                            usageReason === option.value && styles.purposeIconSelected
+                                        ]}>
+                                            <Ionicons
+                                                name={option.icon as any}
+                                                size={24}
+                                                color={usageReason === option.value ? colors.primary : colors.textSecondary}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={[
+                                                styles.purposeLabel,
+                                                usageReason === option.value && styles.purposeLabelSelected,
+                                            ]}
+                                        >
+                                            {option.label}
+                                        </Text>
+                                        <View style={[
+                                            styles.radioOuter,
+                                            usageReason === option.value && styles.radioOuterSelected
+                                        ]}>
+                                            {usageReason === option.value && <View style={styles.radioInner} />}
+                                        </View>
+                                    </Pressable>
+                                ))}
+                            </View>
+                            {error && (
+                                <View style={styles.errorContainer}>
+                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            )}
+                        </GlassCard>
+
+                        <View style={styles.footer}>
+                            <GlassButton onPress={handlePurposeContinue} fullWidth size="lg">
                                 Continue
                             </GlassButton>
                         </View>
@@ -401,7 +507,7 @@ export default function OnboardingScreen() {
                                     </Text>
                                 </View>
                             </View>
-                            <View style={styles.notificationFeature}>
+                            <View style={[styles.notificationFeature, styles.notificationFeatureLast]}>
                                 <View style={styles.notificationIcon}>
                                     <Ionicons name="chatbubble" size={24} color={colors.primary} />
                                 </View>
@@ -456,7 +562,8 @@ export default function OnboardingScreen() {
                             style={styles.backButton}
                             onPress={() => {
                                 if (stage === 'notifications') setStage('explicit');
-                                else if (stage === 'explicit') setStage('gender');
+                                else if (stage === 'explicit') setStage('purpose');
+                                else if (stage === 'purpose') setStage('gender');
                                 else setStage('name');
                             }}
                         >
@@ -468,6 +575,7 @@ export default function OnboardingScreen() {
                     <View style={styles.progressContainer}>
                         <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, stage === 'purpose' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'explicit' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'notifications' && styles.progressDotActive]} />
                     </View>
@@ -617,6 +725,43 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontWeight: '600',
     },
+    purposeList: {
+        gap: spacing.sm,
+    },
+    purposeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.lg,
+        borderWidth: 2,
+        borderColor: colors.glass.border,
+        padding: spacing.md,
+    },
+    purposeOptionSelected: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primaryLight,
+    },
+    purposeIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.glass.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.md,
+    },
+    purposeIconSelected: {
+        backgroundColor: colors.primaryLight,
+    },
+    purposeLabel: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        flex: 1,
+    },
+    purposeLabelSelected: {
+        color: colors.text,
+        fontWeight: '600',
+    },
     explicitOption: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -695,6 +840,9 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.glass.border,
+    },
+    notificationFeatureLast: {
+        borderBottomWidth: 0,
     },
     notificationIcon: {
         width: 48,

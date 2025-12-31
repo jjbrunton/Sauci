@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { captureError } from "./sentry";
+import { Events } from "./analytics";
 
 // Configure notification behavior for foreground
 // We don't show system alerts since the app handles notifications with in-app toasts
@@ -41,6 +42,12 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     if (existingStatus !== "granted") {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
+      // Track permission result (only when we actually requested)
+      if (status === "granted") {
+        Events.notificationPermissionGranted();
+      } else {
+        Events.notificationPermissionDenied();
+      }
     }
 
     if (finalStatus !== "granted") {

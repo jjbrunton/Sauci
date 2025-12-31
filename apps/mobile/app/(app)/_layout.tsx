@@ -10,6 +10,7 @@ import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
+import { Events } from "../../src/lib/analytics";
 import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
 
@@ -76,7 +77,7 @@ export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut } = useAuthStore();
-    const { newMatchesCount, addMatch } = useMatchStore();
+    const { matches, newMatchesCount, addMatch } = useMatchStore();
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
@@ -256,9 +257,18 @@ export default function AppLayout() {
                         .single();
 
                     if (matchWithQuestion) {
+                        // Track milestone events before adding (so count is accurate)
+                        const currentMatchCount = matches.length;
+                        if (currentMatchCount === 0) {
+                            Events.firstMatch();
+                        } else if ((currentMatchCount + 1) % 10 === 0) {
+                            Events.milestoneMatch(currentMatchCount + 1);
+                        }
+
                         // Add to store and show notification
                         addMatch(matchWithQuestion);
                         setMatchNotification(matchWithQuestion);
+                        Events.matchCreated(matchWithQuestion.match_type || "unknown");
                     }
                 }
             )
@@ -267,7 +277,7 @@ export default function AppLayout() {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.couple_id, addMatch]);
+    }, [user?.couple_id, addMatch, matches.length]);
 
     // Subscribe to realtime message notifications
     useEffect(() => {

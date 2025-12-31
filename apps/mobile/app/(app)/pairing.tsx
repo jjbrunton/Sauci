@@ -136,6 +136,7 @@ export default function PairingScreen() {
     const copyToClipboard = async () => {
         if (couple?.invite_code) {
             await Clipboard.setStringAsync(couple.invite_code);
+            Events.inviteCodeCopied();
             Alert.alert("Copied", "Invite code copied to clipboard");
         }
     };

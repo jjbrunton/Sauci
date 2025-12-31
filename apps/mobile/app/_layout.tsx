@@ -5,8 +5,8 @@ import "../src/polyfills/web";
 import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry";
 initSentry();
 
-// Initialize Firebase Analytics
-import { initAnalytics, setUserId, clearUserId } from "../src/lib/analytics";
+// Initialize Analytics
+import { initAnalytics, setUserId, clearUserId, logScreenView } from "../src/lib/analytics";
 initAnalytics();
 
 // Import push notification utilities
@@ -33,7 +33,7 @@ if (Platform.OS === "web" && typeof window === "undefined") {
     };
 }
 
-import { Stack, router } from "expo-router";
+import { Stack, router, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 // GestureHandlerRootView is only needed on native platforms
 // On web, we use a simple View to avoid findNodeHandle errors
@@ -49,6 +49,14 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
     const { fetchUser, setUser } = useAuthStore();
+    const pathname = usePathname();
+
+    // Track screen views
+    useEffect(() => {
+        if (pathname) {
+            logScreenView(pathname);
+        }
+    }, [pathname]);
 
     useEffect(() => {
         // Fetch user on mount

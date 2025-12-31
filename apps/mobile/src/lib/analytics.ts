@@ -145,4 +145,25 @@ export const Events = {
   // Pack events
   packEnabled: (packId: string) => logEvent("pack_enabled", { pack_id: packId }),
   packDisabled: (packId: string) => logEvent("pack_disabled", { pack_id: packId }),
+
+  // App lifecycle events
+  appOpened: (type: "cold" | "warm") => logEvent("app_opened", { type }),
+
+  // Profile events
+  profileUpdated: (fields: string[]) => logEvent("profile_updated", { fields: fields.join(",") }),
+  avatarUploaded: () => logEvent("avatar_uploaded"),
+
+  // Notification events
+  notificationPermissionGranted: () => logEvent("notification_permission_granted"),
+  notificationPermissionDenied: () => logEvent("notification_permission_denied"),
+
+  // Relationship events
+  relationshipEnded: () => logEvent("relationship_ended"),
+
+  // Milestone events
+  firstMatch: () => logEvent("first_match"),
+  milestoneMatch: (count: number) => logEvent("milestone_match", { match_count: count }),
+
+  // Invite events
+  inviteCodeCopied: () => logEvent("invite_code_copied"),
 };

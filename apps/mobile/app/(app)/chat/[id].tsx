@@ -23,7 +23,7 @@ export default function ChatScreen() {
     const matchId = id as string;
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { user } = useAuthStore();
+    const { user, partner } = useAuthStore();
     const { setActiveMatchId, markMatchMessagesAsRead } = useMessageStore();
     const [messages, setMessages] = useState<Message[]>([]);
     const [match, setMatch] = useState<any>(null);
@@ -44,6 +44,7 @@ export default function ChatScreen() {
             if (matchId) {
                 setActiveMatchId(matchId);
                 markMatchMessagesAsRead(matchId);
+                Events.matchViewed();
             }
             return () => {
                 isFocusedRef.current = false;
@@ -350,7 +351,26 @@ export default function ChatScreen() {
                     >
                         <Ionicons name="chevron-back" size={24} color={colors.text} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Chat</Text>
+                    <View style={styles.headerCenter}>
+                        {partner?.avatar_url ? (
+                            <Image
+                                source={{ uri: partner.avatar_url }}
+                                style={styles.headerAvatar}
+                            />
+                        ) : (
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.headerAvatarGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Text style={styles.headerAvatarText}>
+                                    {partner?.name?.[0]?.toUpperCase() || "P"}
+                                </Text>
+                            </LinearGradient>
+                        )}
+                        <Text style={styles.headerTitle}>{partner?.name || "Chat"}</Text>
+                    </View>
                     <View style={styles.headerSpacer} />
                 </View>
 
@@ -710,11 +730,33 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    headerCenter: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+    },
+    headerAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+    },
+    headerAvatarGradient: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerAvatarText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: colors.text,
+    },
     headerTitle: {
         ...typography.headline,
         color: colors.text,
-        flex: 1,
-        textAlign: 'center',
     },
     headerSpacer: {
         width: 40,

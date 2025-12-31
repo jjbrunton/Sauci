@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,11 +22,21 @@ export default function SwipeScreen() {
     const [showTutorial, setShowTutorial] = useState(false);
     const { enabledPackIds, fetchPacks } = usePacksStore();
     const { partner, couple } = useAuthStore();
+    const hasTrackedExhausted = useRef(false);
 
     useEffect(() => {
         fetchPacks().then(() => fetchQuestions());
         checkTutorial();
+        hasTrackedExhausted.current = false; // Reset when pack changes
     }, [packId]);
+
+    // Track when all questions are exhausted
+    useEffect(() => {
+        if (questions.length > 0 && currentIndex >= questions.length && !hasTrackedExhausted.current) {
+            hasTrackedExhausted.current = true;
+            Events.allQuestionsExhausted();
+        }
+    }, [currentIndex, questions.length]);
 
     const checkTutorial = async () => {
         const seen = await hasSeenSwipeTutorial();

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
+import { Events } from "../lib/analytics";
 import revenueCatService, {
     SubscriptionState,
     PurchasesPackage,
@@ -87,6 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     signOut: async () => {
+        Events.signOut();
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
         set({
             user: null,
@@ -335,6 +337,13 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             // Revert by refetching
             get().fetchEnabledPacks();
             return { success: false, reason: "error" };
+        }
+
+        // Track pack enable/disable
+        if (newValue) {
+            Events.packEnabled(packId);
+        } else {
+            Events.packDisabled(packId);
         }
 
         return { success: true };
