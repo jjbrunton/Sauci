@@ -95,6 +95,7 @@ Edge functions in `apps/supabase/functions/` handle complex operations:
 - `send-notification` - Push notifications for matches
 - `revenuecat-webhook` - Subscription webhook handler
 - `sync-subscription` - Syncs RevenueCat subscription status
+- `redeem-code` - Redeems promotional codes for premium access (website only)
 
 #### Edge Function Deployment Guidelines
 When deploying edge functions via MCP tools (`mcp__sauci-*__deploy_edge_function`):
@@ -118,6 +119,7 @@ This approach:
 | `submit-response` | false | Manual via getUser() |
 | `sync-subscription` | false | Manual via getUser() |
 | `delete-relationship` | false | Manual via getUser() |
+| `redeem-code` | false | Manual via getUser() |
 | `revenuecat-webhook` | false | Webhook signature validation |
 | `send-notification` | false | Internal trigger (no auth) |
 | `send-message-notification` | false | Internal trigger (no auth) |
@@ -133,6 +135,26 @@ This approach:
 - Real-time subscriptions used for chat messages
 - RevenueCat handles in-app purchases and subscription management
 - RLS policies enforce couple-level data isolation
+
+### Redemption Code System
+Promotional codes that grant users premium access. **Codes can only be redeemed on the website, NOT in the mobile app.**
+
+**Database Tables:**
+- `redemption_codes` - Stores codes with max_uses, current_uses, expiration, active status
+- `code_redemptions` - Tracks which users redeemed which codes
+
+**Components:**
+- **Admin UI** (`apps/admin/src/pages/RedemptionCodesPage.tsx`) - Super admins can generate, manage, and view redemption codes
+- **Edge Function** (`apps/supabase/functions/redeem-code/`) - Validates and processes code redemption
+- **Database Function** (`redeem_code(p_code)`) - Atomic redemption with validation (active, not expired, has uses remaining, user hasn't redeemed)
+
+**Flow:**
+1. Admin generates code in admin dashboard
+2. User enters code on website (NOT mobile app)
+3. `redeem-code` edge function calls `redeem_code()` database function
+4. On success, user's `profiles.is_premium` is set to `true`
+
+**Important:** Do NOT add redemption code UI to the mobile app. Apple requires in-app purchases for premium features purchased within iOS apps.
 
 ## Mobile UI - DO NOT CHANGE
 

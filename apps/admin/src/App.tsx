@@ -12,6 +12,7 @@ import { UserDetailPage } from '@/pages/users/UserDetailPage';
 import { MatchChatPage } from '@/pages/users/MatchChatPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { AdminsPage } from '@/pages/admins/AdminsPage';
+import { RedemptionCodesPage } from '@/pages/RedemptionCodesPage';
 
 function App() {
     return (
@@ -69,6 +70,14 @@ function App() {
                             element={
                                 <ProtectedRoute requireSuperAdmin>
                                     <AdminsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/redemption-codes"
+                            element={
+                                <ProtectedRoute requireSuperAdmin>
+                                    <RedemptionCodesPage />
                                 </ProtectedRoute>
                             }
                         />

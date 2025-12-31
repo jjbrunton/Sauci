@@ -13,6 +13,8 @@ const AUDITED_TABLES = [
     'subscriptions',
     'feedback',
     'admin_users',
+    'redemption_codes',
+    'code_redemptions',
 ];
 
 type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE';

@@ -10,6 +10,7 @@ import {
     LogOut,
     Sparkles,
     Shield,
+    Ticket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -45,6 +46,12 @@ const systemNav: NavItem[] = [
         label: 'Admins',
         href: '/admins',
         icon: <Shield className="h-5 w-5" />,
+        requireSuperAdmin: true,
+    },
+    {
+        label: 'Redemption Codes',
+        href: '/redemption-codes',
+        icon: <Ticket className="h-5 w-5" />,
         requireSuperAdmin: true,
     },
     {
