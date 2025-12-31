@@ -121,6 +121,7 @@ export default function ProfileScreen() {
             // Refresh user data and packs to reflect the change
             await fetchUser();
             await fetchPacks();
+            Events.profileUpdated(["show_explicit_content"]);
         } catch (error) {
             // Revert on error
             setShowExplicit(!value);
@@ -174,6 +175,7 @@ export default function ProfileScreen() {
 
             await fetchUser();
             setIsEditingName(false);
+            Events.profileUpdated(["name"]);
         } catch (error) {
             Alert.alert("Error", "Failed to update name. Please try again.");
             setNewName(user.name || "");

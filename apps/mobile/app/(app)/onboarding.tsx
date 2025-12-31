@@ -159,6 +159,7 @@ export default function OnboardingScreen() {
             console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
             console.log('[Onboarding] User fetched, navigating to home...');
+            Events.profileUpdated(["name", "gender", "usage_reason", "show_explicit_content"]);
             Events.onboardingComplete();
             router.replace('/');
         } catch (err: any) {

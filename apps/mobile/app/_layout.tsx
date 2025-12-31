@@ -6,8 +6,11 @@ import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry"
 initSentry();
 
 // Initialize Analytics
-import { initAnalytics, setUserId, clearUserId, logScreenView } from "../src/lib/analytics";
+import { initAnalytics, setUserId, clearUserId, logScreenView, Events } from "../src/lib/analytics";
 initAnalytics();
+
+// Track cold start immediately
+Events.appOpened("cold");
 
 // Import push notification utilities
 import {
@@ -17,8 +20,8 @@ import {
     handleNotificationResponse,
 } from "../src/lib/notifications";
 
-import React, { useEffect } from "react";
-import { Platform, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Platform, View, AppState, AppStateStatus } from "react-native";
 
 // Suppress useLayoutEffect warning on server-side rendering
 if (Platform.OS === "web" && typeof window === "undefined") {
@@ -50,6 +53,7 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
     const { fetchUser, setUser } = useAuthStore();
     const pathname = usePathname();
+    const appState = useRef(AppState.currentState);
 
     // Track screen views
     useEffect(() => {
@@ -57,6 +61,18 @@ export default function RootLayout() {
             logScreenView(pathname);
         }
     }, [pathname]);
+
+    // Track warm starts when app comes back from background
+    useEffect(() => {
+        const subscription = AppState.addEventListener("change", (nextAppState: AppStateStatus) => {
+            if (appState.current.match(/inactive|background/) && nextAppState === "active") {
+                Events.appOpened("warm");
+            }
+            appState.current = nextAppState;
+        });
+
+        return () => subscription.remove();
+    }, []);
 
     useEffect(() => {
         // Fetch user on mount
