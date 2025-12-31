@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { supabase } from '@/config';
@@ -7,6 +7,8 @@ import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity, Target, Trendin
 import { Skeleton } from '@/components/ui/skeleton';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 
 export function DashboardPage() {
     const { hasPermission } = useAuth();
@@ -16,74 +18,109 @@ export function DashboardPage() {
         questions: 0,
         users: 0,
     });
-    const [messageStats, setMessageStats] = useState<any[]>([]);
+    const [messageStats, setMessageStats] = useState<{ date: string; count: number }[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                // Fetch counts
-                const [
-                    { count: categoriesCount },
-                    { count: packsCount },
-                    { count: questionsCount },
-                    { count: usersCount },
-                ] = await Promise.all([
-                    supabase.from('categories').select('*', { count: 'exact', head: true }),
-                    supabase.from('question_packs').select('*', { count: 'exact', head: true }),
-                    supabase.from('questions').select('*', { count: 'exact', head: true }),
-                    supabase.from('profiles').select('*', { count: 'exact', head: true }),
-                ]);
+    const fetchStats = useCallback(async () => {
+        try {
+            // Fetch counts
+            const [
+                { count: categoriesCount },
+                { count: packsCount },
+                { count: questionsCount },
+                { count: usersCount },
+            ] = await Promise.all([
+                supabase.from('categories').select('*', { count: 'exact', head: true }),
+                supabase.from('question_packs').select('*', { count: 'exact', head: true }),
+                supabase.from('questions').select('*', { count: 'exact', head: true }),
+                supabase.from('profiles').select('*', { count: 'exact', head: true }),
+            ]);
 
-                setStats({
-                    categories: categoriesCount || 0,
-                    packs: packsCount || 0,
-                    questions: questionsCount || 0,
-                    users: usersCount || 0,
-                });
+            setStats({
+                categories: categoriesCount || 0,
+                packs: packsCount || 0,
+                questions: questionsCount || 0,
+                users: usersCount || 0,
+            });
 
-                // Fetch message history for chart
-                const endDate = endOfDay(new Date());
-                const startDate = subDays(startOfDay(new Date()), 6); // Last 7 days including today
+            // Fetch message history for chart
+            const endDate = endOfDay(new Date());
+            const startDate = subDays(startOfDay(new Date()), 6); // Last 7 days including today
 
-                const { data: messages } = await supabase
-                    .from('messages')
-                    .select('created_at')
-                    .gte('created_at', startDate.toISOString())
-                    .lte('created_at', endDate.toISOString());
+            const { data: messages } = await supabase
+                .from('messages')
+                .select('created_at')
+                .gte('created_at', startDate.toISOString())
+                .lte('created_at', endDate.toISOString());
 
-                // Process messages for chart
-                const daysMap = new Map();
-                // Initialize last 7 days with 0
-                for (let i = 0; i < 7; i++) {
-                    const date = subDays(new Date(), 6 - i);
-                    const key = format(date, 'MMM d');
-                    daysMap.set(key, 0);
-                }
-
-                messages?.forEach(msg => {
-                    const date = new Date(msg.created_at);
-                    const key = format(date, 'MMM d');
-                    if (daysMap.has(key)) {
-                        daysMap.set(key, daysMap.get(key) + 1);
-                    }
-                });
-
-                const chartData = Array.from(daysMap.entries()).map(([date, count]) => ({
-                    date,
-                    count
-                }));
-
-                setMessageStats(chartData);
-            } catch (error) {
-                console.error('Failed to fetch stats:', error);
-            } finally {
-                setLoading(false);
+            // Process messages for chart
+            const daysMap = new Map();
+            // Initialize last 7 days with 0
+            for (let i = 0; i < 7; i++) {
+                const date = subDays(new Date(), 6 - i);
+                const key = format(date, 'MMM d');
+                daysMap.set(key, 0);
             }
-        };
 
-        fetchStats();
+            messages?.forEach(msg => {
+                const date = new Date(msg.created_at);
+                const key = format(date, 'MMM d');
+                if (daysMap.has(key)) {
+                    daysMap.set(key, daysMap.get(key) + 1);
+                }
+            });
+
+            const chartData = Array.from(daysMap.entries()).map(([date, count]) => ({
+                date,
+                count
+            }));
+
+            setMessageStats(chartData);
+        } catch (error) {
+            console.error('Failed to fetch stats:', error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Real-time subscriptions for dashboard stats (with debouncing)
+    const { status: profilesStatus } = useRealtimeSubscription({
+        table: 'profiles',
+        onInsert: fetchStats,
+        onDelete: fetchStats,
+        debounceMs: 2000,
+    });
+
+    const { status: messagesStatus } = useRealtimeSubscription({
+        table: 'messages',
+        onInsert: fetchStats,
+        debounceMs: 2000,
+    });
+
+    useRealtimeSubscription({
+        table: 'categories',
+        onInsert: fetchStats,
+        onDelete: fetchStats,
+        debounceMs: 2000,
+    });
+
+    useRealtimeSubscription({
+        table: 'question_packs',
+        onInsert: fetchStats,
+        onDelete: fetchStats,
+        debounceMs: 2000,
+    });
+
+    useRealtimeSubscription({
+        table: 'questions',
+        onInsert: fetchStats,
+        onDelete: fetchStats,
+        debounceMs: 2000,
+    });
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
     const quickLinks = [
         {
@@ -133,9 +170,15 @@ export function DashboardPage() {
             <div className="relative">
                 <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
                 <div className="relative">
-                    <h1 className="text-4xl font-bold tracking-tight mb-2">
-                        Dashboard
-                    </h1>
+                    <div className="flex items-center gap-3 mb-2">
+                        <h1 className="text-4xl font-bold tracking-tight">
+                            Dashboard
+                        </h1>
+                        <RealtimeStatusIndicator
+                            status={profilesStatus === 'SUBSCRIBED' && messagesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profilesStatus}
+                            showLabel
+                        />
+                    </div>
                     <p className="text-muted-foreground text-lg">
                         Welcome back. Here's what's happening with Sauci.
                     </p>

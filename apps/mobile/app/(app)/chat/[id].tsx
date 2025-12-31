@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator, Alert, Modal, Dimensions } from "react-native";
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal, Dimensions } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import { Database } from "../../../src/types/supabase";
 import { GradientBackground } from "../../../src/components/ui";
 import { colors, gradients, spacing, radius, typography } from "../../../src/theme";
 import { Events } from "../../../src/lib/analytics";
+import { getCachedSignedUrl, getStoragePath } from "../../../src/lib/imageCache";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -356,6 +358,8 @@ export default function ChatScreen() {
                             <Image
                                 source={{ uri: partner.avatar_url }}
                                 style={styles.headerAvatar}
+                                cachePolicy="disk"
+                                transition={200}
                             />
                         ) : (
                             <LinearGradient
@@ -492,7 +496,8 @@ export default function ChatScreen() {
                         <Image
                             source={{ uri: fullScreenImage }}
                             style={styles.fullScreenImage}
-                            resizeMode="contain"
+                            contentFit="contain"
+                            cachePolicy="disk"
                             onLoadStart={() => setFullScreenImageLoading(true)}
                             onLoadEnd={() => setFullScreenImageLoading(false)}
                         />
@@ -501,16 +506,6 @@ export default function ChatScreen() {
             </Modal>
         </GradientBackground>
     );
-}
-
-// Extract storage path from media_path (handles both old full URLs and new path-only format)
-function getStoragePath(mediaPath: string): string {
-    if (mediaPath.startsWith('http')) {
-        // Old format: extract path from full URL
-        const match = mediaPath.match(/\/chat-media\/(.+)$/);
-        return match ? match[1] : mediaPath;
-    }
-    return mediaPath;
 }
 
 function MessageContent({
@@ -530,26 +525,26 @@ function MessageContent({
     useEffect(() => {
         if (!item.media_path) return;
 
+        let isMounted = true;
+
         const fetchSignedUrl = async () => {
             const storagePath = getStoragePath(item.media_path!);
-            const { data, error } = await supabase.storage
-                .from('chat-media')
-                .createSignedUrl(storagePath, 3600); // 1 hour expiry
+            const url = await getCachedSignedUrl(storagePath);
 
-            if (error) {
-                console.error('Failed to get signed URL:', error);
-                setUrlError(true);
-                return;
-            }
+            if (!isMounted) return;
 
-            if (data?.signedUrl) {
-                setSignedUrl(data.signedUrl);
+            if (url) {
+                setSignedUrl(url);
             } else {
                 setUrlError(true);
             }
         };
 
         fetchSignedUrl();
+
+        return () => {
+            isMounted = false;
+        };
     }, [item.media_path]);
 
     if (item.media_path) {
@@ -568,6 +563,8 @@ function MessageContent({
                             source={{ uri: signedUrl }}
                             style={styles.messageImage}
                             blurRadius={(!isMe && !isViewed) ? 20 : 0}
+                            cachePolicy="disk"
+                            transition={200}
                         />
                     ) : urlError ? (
                         <View style={[styles.messageImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }]}>

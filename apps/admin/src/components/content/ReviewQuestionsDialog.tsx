@@ -252,8 +252,8 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                 <div className="flex-1 overflow-y-auto py-4">
                     {step === 'initial' ? (
                         <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
-                            <div className="bg-amber-50 p-4 rounded-full">
-                                <Sparkles className="h-12 w-12 text-amber-500" />
+                            <div className="bg-amber-500/20 p-4 rounded-full">
+                                <Sparkles className="h-12 w-12 text-amber-400" />
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-lg font-medium">Ready to analyze {questions.length} questions</h3>
@@ -262,13 +262,13 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                 </p>
                             </div>
                             <div className="flex gap-4">
-                                <div className="flex items-center gap-2 bg-purple-50 px-4 py-2 rounded-lg">
-                                    <Wand2 className="h-5 w-5 text-purple-500" />
-                                    <span className="text-sm font-medium">Text Phrasing</span>
+                                <div className="flex items-center gap-2 bg-purple-500/20 px-4 py-2 rounded-lg">
+                                    <Wand2 className="h-5 w-5 text-purple-400" />
+                                    <span className="text-sm font-medium text-purple-300">Text Phrasing</span>
                                 </div>
-                                <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-lg">
-                                    <ShieldCheck className="h-5 w-5 text-indigo-500" />
-                                    <span className="text-sm font-medium">Audience Targeting</span>
+                                <div className="flex items-center gap-2 bg-indigo-500/20 px-4 py-2 rounded-lg">
+                                    <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                                    <span className="text-sm font-medium text-indigo-300">Audience Targeting</span>
                                 </div>
                             </div>
                             <Button onClick={handleAnalyze} disabled={analyzing} size="lg" className="bg-amber-600 hover:bg-amber-700">
@@ -366,7 +366,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                             {suggestion.textSuggestion ? (
                                                                 <div
                                                                     className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedTextIds.has(suggestion.questionId)
-                                                                            ? 'bg-purple-50 border-purple-300'
+                                                                            ? 'bg-purple-500/20 border-purple-500/50'
                                                                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                                                                         }`}
                                                                     onClick={() => toggleTextSelection(suggestion.questionId)}
@@ -378,11 +378,11 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                             className="mt-0.5"
                                                                         />
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="text-sm text-purple-700 font-medium">
+                                                                            <div className="text-sm text-purple-300 font-medium">
                                                                                 {suggestion.textSuggestion.suggested_text}
                                                                             </div>
                                                                             {suggestion.textSuggestion.suggested_partner_text && (
-                                                                                <div className="text-xs text-purple-600 mt-1 italic">
+                                                                                <div className="text-xs text-purple-400 mt-1 italic">
                                                                                     Partner: {suggestion.textSuggestion.suggested_partner_text}
                                                                                 </div>
                                                                             )}
@@ -405,7 +405,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                             {suggestion.targetSuggestion ? (
                                                                 <div
                                                                     className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedTargetIds.has(suggestion.questionId)
-                                                                            ? 'bg-indigo-50 border-indigo-300'
+                                                                            ? 'bg-indigo-500/20 border-indigo-500/50'
                                                                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                                                                         }`}
                                                                     onClick={() => toggleTargetSelection(suggestion.questionId)}
@@ -423,17 +423,17 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                                     {formatTargets(suggestion.question.allowed_couple_genders)}
                                                                                 </Badge>
                                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                                <Badge className="text-[10px] bg-indigo-100 text-indigo-700 hover:bg-indigo-100">
+                                                                                <Badge className="text-[10px] bg-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30">
                                                                                     {formatTargets(suggestion.targetSuggestion.suggested_targets)}
                                                                                 </Badge>
                                                                             </div>
                                                                             {/* Initiator */}
                                                                             <div className="flex items-center gap-1 flex-wrap">
-                                                                                <Badge variant="outline" className="text-[10px] text-muted-foreground border-orange-300">
+                                                                                <Badge variant="outline" className="text-[10px] text-muted-foreground border-orange-500/50">
                                                                                     {formatInitiator(suggestion.question.target_user_genders)}
                                                                                 </Badge>
                                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                                <Badge className="text-[10px] bg-orange-100 text-orange-700 hover:bg-orange-100">
+                                                                                <Badge className="text-[10px] bg-orange-500/30 text-orange-300 hover:bg-orange-500/30">
                                                                                     {formatInitiator(suggestion.targetSuggestion.suggested_initiator)}
                                                                                 </Badge>
                                                                             </div>

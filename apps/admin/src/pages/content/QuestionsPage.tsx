@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -84,7 +86,7 @@ export function QuestionsPage() {
         target_user_genders: [],
     });
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         if (!packId) return;
 
         setLoading(true);
@@ -113,11 +115,32 @@ export function QuestionsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [packId]);
+
+    // Real-time subscription for questions in this pack
+    const { status: realtimeStatus } = useRealtimeSubscription<Question>({
+        table: 'questions',
+        filter: packId ? `pack_id=eq.${packId}` : undefined,
+        enabled: !!packId,
+        onInsert: useCallback((newQuestion: Question) => {
+            setQuestions(prev => [...prev, newQuestion]);
+        }, []),
+        onUpdate: useCallback(({ new: updated }: { old: Question; new: Question }) => {
+            setQuestions(prev => prev.map(q => q.id === updated.id ? updated : q));
+        }, []),
+        onDelete: useCallback((deleted: Question) => {
+            setQuestions(prev => prev.filter(q => q.id !== deleted.id));
+            setSelectedIds(prev => {
+                const next = new Set(prev);
+                next.delete(deleted.id);
+                return next;
+            });
+        }, []),
+    });
 
     useEffect(() => {
         fetchData();
-    }, [packId]);
+    }, [fetchData]);
 
     const openCreateDialog = () => {
         setEditingQuestion(null);
@@ -284,14 +307,17 @@ export function QuestionsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                        {pack && (
-                            <>
-                                <span className="text-3xl">{pack.icon}</span>
-                                {pack.name}
-                            </>
-                        )}
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                            {pack && (
+                                <>
+                                    <span className="text-3xl">{pack.icon}</span>
+                                    {pack.name}
+                                </>
+                            )}
+                        </h1>
+                        <RealtimeStatusIndicator status={realtimeStatus} showLabel />
+                    </div>
                     <p className="text-muted-foreground">
                         {questions.length} question{questions.length !== 1 ? 's' : ''} in this pack
                     </p>

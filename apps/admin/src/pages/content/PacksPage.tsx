@@ -20,15 +20,21 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Loader2, Crown, Eye, EyeOff, Flame, Heart } from 'lucide-react';
+import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Loader2, Crown, Eye, EyeOff, Flame, Heart, Tags, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
+import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
 
 interface Category {
     id: string;
     name: string;
     icon: string | null;
+}
+
+interface Topic {
+    id: string;
+    name: string;
 }
 
 interface QuestionPack {
@@ -43,6 +49,7 @@ interface QuestionPack {
     category_id: string | null;
     created_at: string | null;
     question_count?: number;
+    topics?: Topic[];
 }
 
 export function PacksPage() {
@@ -54,6 +61,10 @@ export function PacksPage() {
     const [aiDialogOpen, setAiDialogOpen] = useState(false);
     const [editingPack, setEditingPack] = useState<QuestionPack | null>(null);
     const [saving, setSaving] = useState(false);
+    const [extractTopicsDialogOpen, setExtractTopicsDialogOpen] = useState(false);
+    const [extractTopicsPack, setExtractTopicsPack] = useState<QuestionPack | null>(null);
+    const [allTopics, setAllTopics] = useState<Topic[]>([]);
+    const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
 
     // Form state
     const [formData, setFormData] = useState({
@@ -104,10 +115,34 @@ export function PacksPage() {
                 questionCounts[q.pack_id] = (questionCounts[q.pack_id] || 0) + 1;
             });
 
+            // Fetch all topics
+            const { data: topicsData } = await supabase
+                .from('topics')
+                .select('id, name')
+                .order('name');
+            setAllTopics(topicsData || []);
+
+            // Fetch pack_topics relationships
+            const { data: packTopicsData } = await supabase
+                .from('pack_topics')
+                .select('pack_id, topic_id, topics(id, name)')
+                .in('pack_id', packIds);
+
+            const packTopicsMap: Record<string, Topic[]> = {};
+            packTopicsData?.forEach((pt: any) => {
+                if (!packTopicsMap[pt.pack_id]) {
+                    packTopicsMap[pt.pack_id] = [];
+                }
+                if (pt.topics) {
+                    packTopicsMap[pt.pack_id].push(pt.topics);
+                }
+            });
+
             setPacks(
                 (packData || []).map(p => ({
                     ...p,
                     question_count: questionCounts[p.id] || 0,
+                    topics: packTopicsMap[p.id] || [],
                 }))
             );
         } catch (error) {
@@ -132,6 +167,7 @@ export function PacksPage() {
             is_public: true,
             is_explicit: false,
         });
+        setSelectedTopicIds(new Set());
         setDialogOpen(true);
     };
 
@@ -145,6 +181,7 @@ export function PacksPage() {
             is_public: pack.is_public,
             is_explicit: pack.is_explicit,
         });
+        setSelectedTopicIds(new Set(pack.topics?.map(t => t.id) || []));
         setDialogOpen(true);
     };
 
@@ -156,6 +193,8 @@ export function PacksPage() {
 
         setSaving(true);
         try {
+            let packId: string;
+
             if (editingPack) {
                 const { error } = await auditedSupabase.update('question_packs', editingPack.id, {
                     name: formData.name,
@@ -167,23 +206,47 @@ export function PacksPage() {
                 });
 
                 if (error) throw error;
-                toast.success('Pack updated');
+                packId = editingPack.id;
             } else {
-                const { error } = await auditedSupabase.insert('question_packs', {
-                    name: formData.name,
-                    description: formData.description || null,
-                    icon: formData.icon || null,
-                    is_premium: formData.is_premium,
-                    is_public: formData.is_public,
-                    is_explicit: formData.is_explicit,
-                    category_id: categoryId || null,
-                    sort_order: packs.length,
-                });
+                const { data, error } = await supabase
+                    .from('question_packs')
+                    .insert({
+                        name: formData.name,
+                        description: formData.description || null,
+                        icon: formData.icon || null,
+                        is_premium: formData.is_premium,
+                        is_public: formData.is_public,
+                        is_explicit: formData.is_explicit,
+                        category_id: categoryId || null,
+                        sort_order: packs.length,
+                    })
+                    .select('id')
+                    .single();
 
                 if (error) throw error;
-                toast.success('Pack created');
+                packId = data.id;
             }
 
+            // Update topics - delete existing and insert new
+            await supabase
+                .from('pack_topics')
+                .delete()
+                .eq('pack_id', packId);
+
+            if (selectedTopicIds.size > 0) {
+                const { error: topicsError } = await supabase
+                    .from('pack_topics')
+                    .insert(
+                        Array.from(selectedTopicIds).map(topicId => ({
+                            pack_id: packId,
+                            topic_id: topicId,
+                        }))
+                    );
+
+                if (topicsError) throw topicsError;
+            }
+
+            toast.success(editingPack ? 'Pack updated' : 'Pack created');
             setDialogOpen(false);
             fetchData();
         } catch (error) {
@@ -373,6 +436,67 @@ export function PacksPage() {
                                         }
                                     />
                                 </div>
+
+                                {/* Topics */}
+                                <div className="space-y-2">
+                                    <Label>Topics</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Select topics/kinks for filtering
+                                    </p>
+                                    {/* Selected topics */}
+                                    {selectedTopicIds.size > 0 && (
+                                        <div className="flex flex-wrap gap-1 mb-2">
+                                            {Array.from(selectedTopicIds).map(id => {
+                                                const topic = allTopics.find(t => t.id === id);
+                                                if (!topic) return null;
+                                                return (
+                                                    <Badge
+                                                        key={id}
+                                                        variant="secondary"
+                                                        className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                                        onClick={() => {
+                                                            const next = new Set(selectedTopicIds);
+                                                            next.delete(id);
+                                                            setSelectedTopicIds(next);
+                                                        }}
+                                                    >
+                                                        {topic.name}
+                                                        <X className="h-3 w-3 ml-1" />
+                                                    </Badge>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    {/* Available topics */}
+                                    {allTopics.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1 p-2 border rounded-md max-h-32 overflow-y-auto">
+                                            {allTopics
+                                                .filter(t => !selectedTopicIds.has(t.id))
+                                                .map(topic => (
+                                                    <Badge
+                                                        key={topic.id}
+                                                        variant="outline"
+                                                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                                                        onClick={() => {
+                                                            const next = new Set(selectedTopicIds);
+                                                            next.add(topic.id);
+                                                            setSelectedTopicIds(next);
+                                                        }}
+                                                    >
+                                                        <Plus className="h-3 w-3 mr-1" />
+                                                        {topic.name}
+                                                    </Badge>
+                                                ))}
+                                            {allTopics.filter(t => !selectedTopicIds.has(t.id)).length === 0 && (
+                                                <span className="text-xs text-muted-foreground">All topics selected</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground italic">
+                                            No topics yet. Use "Extract Topics" on a pack to create some.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <DialogFooter>
@@ -396,7 +520,6 @@ export function PacksPage() {
             </div>
 
             {/* AI Generator Dialog */}
-            {/* AI Generator Dialog */}
             <AiGeneratorDialog
                 open={aiDialogOpen}
                 onOpenChange={setAiDialogOpen}
@@ -407,6 +530,16 @@ export function PacksPage() {
                 }}
                 onGenerated={handleAiGenerated}
             />
+
+            {/* Extract Topics Dialog */}
+            {extractTopicsPack && (
+                <ExtractTopicsDialog
+                    open={extractTopicsDialogOpen}
+                    onOpenChange={setExtractTopicsDialogOpen}
+                    pack={extractTopicsPack}
+                    onUpdated={fetchData}
+                />
+            )}
 
             {/* Packs Grid */}
             {packs.length === 0 ? (
@@ -442,7 +575,7 @@ export function PacksPage() {
                                             </Badge>
                                         )}
                                         {pack.is_public ? (
-                                            <Badge variant="outline" className="border-green-500 text-green-600">
+                                            <Badge variant="outline" className="border-green-500 text-green-400">
                                                 <Eye className="h-3 w-3 mr-1" />
                                                 Published
                                             </Badge>
@@ -453,12 +586,12 @@ export function PacksPage() {
                                             </Badge>
                                         )}
                                         {pack.is_explicit ? (
-                                            <Badge variant="outline" className="border-red-500 text-red-600">
+                                            <Badge variant="outline" className="border-red-500 text-red-400">
                                                 <Flame className="h-3 w-3 mr-1" />
                                                 Explicit
                                             </Badge>
                                         ) : (
-                                            <Badge variant="outline" className="border-pink-400 text-pink-500">
+                                            <Badge variant="outline" className="border-pink-400 text-pink-300">
                                                 <Heart className="h-3 w-3 mr-1" />
                                                 Safe
                                             </Badge>
@@ -468,6 +601,17 @@ export function PacksPage() {
                                 <div className="flex items-start justify-between">
                                     <CardTitle className="flex-1">{pack.name}</CardTitle>
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => {
+                                                setExtractTopicsPack(pack);
+                                                setExtractTopicsDialogOpen(true);
+                                            }}
+                                            title="Extract Topics"
+                                        >
+                                            <Tags className="h-4 w-4 text-blue-400" />
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
@@ -487,6 +631,16 @@ export function PacksPage() {
                                 <CardDescription className="line-clamp-2">
                                     {pack.description || 'No description'}
                                 </CardDescription>
+                                {/* Topics */}
+                                {pack.topics && pack.topics.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {pack.topics.map(topic => (
+                                            <Badge key={topic.id} variant="outline" className="text-xs">
+                                                {topic.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center justify-between">

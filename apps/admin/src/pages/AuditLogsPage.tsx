@@ -115,22 +115,22 @@ export function AuditLogsPage() {
                                     </TableCell>
                                     <TableCell className="max-w-md">
                                         {log.action === 'DELETE' && log.old_values && (
-                                            <code className="text-xs bg-red-50 text-red-700 px-2 py-1 rounded">
+                                            <code className="text-xs bg-red-500/20 text-red-300 px-2 py-1 rounded">
                                                 Deleted: {JSON.stringify(log.old_values).substring(0, 100)}...
                                             </code>
                                         )}
                                         {log.action === 'INSERT' && log.new_values && (
-                                            <code className="text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
+                                            <code className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded">
                                                 Created: {JSON.stringify(log.new_values).substring(0, 100)}...
                                             </code>
                                         )}
                                         {log.action === 'UPDATE' && log.changed_fields && (
-                                            <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                            <code className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">
                                                 Changed: {log.changed_fields.join(', ')}
                                             </code>
                                         )}
                                         {log.action === 'UPDATE' && !log.changed_fields && (
-                                            <code className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                                            <code className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded">
                                                 Updated record
                                             </code>
                                         )}

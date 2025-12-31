@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/config';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import {
     Table,
     TableBody,
@@ -92,11 +94,7 @@ export function FeedbackPage() {
     const [editStatus, setEditStatus] = useState<FeedbackStatus>('new');
     const [editNotes, setEditNotes] = useState('');
 
-    useEffect(() => {
-        fetchFeedback();
-    }, []);
-
-    const fetchFeedback = async () => {
+    const fetchFeedback = useCallback(async () => {
         setLoading(true);
         try {
             const { data, error } = await supabase
@@ -110,13 +108,37 @@ export function FeedbackPage() {
 
             if (error) throw error;
             setFeedback(data || []);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to load feedback:', error);
             toast.error("Failed to load feedback");
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    // Real-time subscription for feedback table
+    const { status: realtimeStatus } = useRealtimeSubscription<Feedback>({
+        table: 'feedback',
+        onInsert: useCallback(() => {
+            // Refetch to get the full data with profile/question relations
+            fetchFeedback();
+        }, [fetchFeedback]),
+        onUpdate: useCallback(({ new: updated }: { old: Feedback; new: Feedback }) => {
+            setFeedback(prev => prev.map(f => f.id === updated.id ? { ...f, ...updated } : f));
+        }, []),
+        onDelete: useCallback((deleted: Feedback) => {
+            setFeedback(prev => prev.filter(f => f.id !== deleted.id));
+        }, []),
+        insertToast: {
+            enabled: true,
+            message: (payload) => `New ${payload.type.replace('_', ' ')} feedback: "${payload.title}"`,
+            type: 'info',
+        },
+    });
+
+    useEffect(() => {
+        fetchFeedback();
+    }, [fetchFeedback]);
 
     const handleOpenDetail = (item: Feedback) => {
         setSelectedFeedback(item);
@@ -196,7 +218,10 @@ export function FeedbackPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">User Feedback</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight">User Feedback</h1>
+                        <RealtimeStatusIndicator status={realtimeStatus} showLabel />
+                    </div>
                     <p className="text-muted-foreground">
                         Review and respond to user feedback submissions
                     </p>

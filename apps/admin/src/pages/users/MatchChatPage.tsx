@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Check, CheckCheck, Eye } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 
 interface Profile {
     id: string;
@@ -123,6 +125,22 @@ export function MatchChatPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Real-time subscription for messages in this chat
+    const { status: realtimeStatus } = useRealtimeSubscription<Message>({
+        table: 'messages',
+        filter: matchId ? `match_id=eq.${matchId}` : undefined,
+        enabled: !!matchId,
+        onInsert: useCallback((newMessage: Message) => {
+            setMessages(prev => [...prev, newMessage]);
+        }, []),
+        onUpdate: useCallback(({ new: updated }: { old: Message; new: Message }) => {
+            setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
+        }, []),
+        onDelete: useCallback((deleted: Message) => {
+            setMessages(prev => prev.filter(m => m.id !== deleted.id));
+        }, []),
+    });
+
     useEffect(() => {
         const fetchData = async () => {
             if (!userId || !matchId) return;
@@ -221,6 +239,7 @@ export function MatchChatPage() {
                         <Badge variant="secondary">
                             {matchTypeLabels[match.match_type]}
                         </Badge>
+                        <RealtimeStatusIndicator status={realtimeStatus} showLabel />
                     </div>
                     <p className="text-sm text-muted-foreground line-clamp-1">
                         {match.question?.text}

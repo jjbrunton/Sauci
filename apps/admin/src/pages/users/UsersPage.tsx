@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import {
     Table,
     TableBody,
@@ -43,70 +45,93 @@ export function UsersPage() {
     const [search, setSearch] = useState('');
     const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
 
-    useEffect(() => {
-        const fetchProfiles = async () => {
-            setLoading(true);
-            try {
-                // Fetch profiles
-                const { data: profilesData, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+    const fetchProfiles = useCallback(async () => {
+        setLoading(true);
+        try {
+            // Fetch profiles
+            const { data: profilesData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-                if (error) throw error;
+            if (error) throw error;
 
-                // Fetch storage usage per user from storage.objects
-                const { data: storageData } = await supabase
-                    .rpc('get_user_storage_usage');
+            // Fetch storage usage per user from storage.objects
+            const { data: storageData } = await supabase
+                .rpc('get_user_storage_usage');
 
-                // Create a map of user_id -> storage_bytes
-                const storageMap: Record<string, number> = {};
-                if (storageData) {
-                    storageData.forEach((row: { owner: string; total_bytes: number }) => {
-                        storageMap[row.owner] = row.total_bytes;
+            // Create a map of user_id -> storage_bytes
+            const storageMap: Record<string, number> = {};
+            if (storageData) {
+                storageData.forEach((row: { owner: string; total_bytes: number }) => {
+                    storageMap[row.owner] = row.total_bytes;
+                });
+            }
+
+            // Build a map of couple_id -> users with premium in that couple
+            const couplePartners: Record<string, { id: string; is_premium: boolean }[]> = {};
+            (profilesData || []).forEach(profile => {
+                if (profile.couple_id) {
+                    if (!couplePartners[profile.couple_id]) {
+                        couplePartners[profile.couple_id] = [];
+                    }
+                    couplePartners[profile.couple_id].push({
+                        id: profile.id,
+                        is_premium: profile.is_premium || false,
                     });
                 }
+            });
 
-                // Build a map of couple_id -> users with premium in that couple
-                const couplePartners: Record<string, { id: string; is_premium: boolean }[]> = {};
-                (profilesData || []).forEach(profile => {
-                    if (profile.couple_id) {
-                        if (!couplePartners[profile.couple_id]) {
-                            couplePartners[profile.couple_id] = [];
-                        }
-                        couplePartners[profile.couple_id].push({
-                            id: profile.id,
-                            is_premium: profile.is_premium || false,
-                        });
-                    }
-                });
+            // Merge storage data and partner premium status with profiles
+            const profilesWithExtras = (profilesData || []).map(profile => {
+                // Check if partner has premium
+                let partnerIsPremium = false;
+                if (profile.couple_id && couplePartners[profile.couple_id]) {
+                    const partner = couplePartners[profile.couple_id].find(p => p.id !== profile.id);
+                    partnerIsPremium = partner?.is_premium || false;
+                }
+                return {
+                    ...profile,
+                    storage_bytes: storageMap[profile.id] || 0,
+                    partner_is_premium: partnerIsPremium,
+                };
+            });
 
-                // Merge storage data and partner premium status with profiles
-                const profilesWithExtras = (profilesData || []).map(profile => {
-                    // Check if partner has premium
-                    let partnerIsPremium = false;
-                    if (profile.couple_id && couplePartners[profile.couple_id]) {
-                        const partner = couplePartners[profile.couple_id].find(p => p.id !== profile.id);
-                        partnerIsPremium = partner?.is_premium || false;
-                    }
-                    return {
-                        ...profile,
-                        storage_bytes: storageMap[profile.id] || 0,
-                        partner_is_premium: partnerIsPremium,
-                    };
-                });
-
-                setProfiles(profilesWithExtras);
-                setFilteredProfiles(profilesWithExtras);
-            } catch (error) {
-                console.error('Failed to load profiles:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProfiles();
+            setProfiles(profilesWithExtras);
+            setFilteredProfiles(profilesWithExtras);
+        } catch (error) {
+            console.error('Failed to load profiles:', error);
+        } finally {
+            setLoading(false);
+        }
     }, []);
+
+    // Real-time subscription for profiles table
+    const { status: realtimeStatus } = useRealtimeSubscription<Profile>({
+        table: 'profiles',
+        onInsert: useCallback(() => {
+            // Refetch to get storage and partner data
+            fetchProfiles();
+        }, [fetchProfiles]),
+        onUpdate: useCallback(() => {
+            // Refetch to update partner premium status
+            fetchProfiles();
+        }, [fetchProfiles]),
+        onDelete: useCallback((deleted: Profile) => {
+            setProfiles(prev => prev.filter(p => p.id !== deleted.id));
+            setFilteredProfiles(prev => prev.filter(p => p.id !== deleted.id));
+        }, []),
+        insertToast: {
+            enabled: true,
+            message: (payload) => `New user registered: ${payload.name || payload.email || 'Unknown'}`,
+            type: 'success',
+        },
+        debounceMs: 1000, // Debounce to avoid excessive refetches
+    });
+
+    useEffect(() => {
+        fetchProfiles();
+    }, [fetchProfiles]);
 
     useEffect(() => {
         if (!search.trim()) {
@@ -142,7 +167,10 @@ export function UsersPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+                        <RealtimeStatusIndicator status={realtimeStatus} showLabel />
+                    </div>
                     <p className="text-muted-foreground">
                         {profiles.length} registered user{profiles.length !== 1 ? 's' : ''}
                     </p>

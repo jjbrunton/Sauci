@@ -170,8 +170,8 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
                 <div className="flex-1 overflow-y-auto py-4">
                     {step === 'initial' ? (
                         <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                            <div className="bg-indigo-50 p-4 rounded-full">
-                                <ShieldCheck className="h-12 w-12 text-indigo-500" />
+                            <div className="bg-indigo-500/20 p-4 rounded-full">
+                                <ShieldCheck className="h-12 w-12 text-indigo-400" />
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-lg font-medium">Ready to analyze {questions.length} questions</h3>
@@ -247,18 +247,18 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
                                                                     {formatTargets(question.allowed_couple_genders)}
                                                                 </Badge>
                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100">
+                                                                <Badge variant="secondary" className="bg-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30">
                                                                     {formatTargets(suggestion.suggested_targets)}
                                                                 </Badge>
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className="text-xs">
                                                             <div className="flex items-center gap-1">
-                                                                <Badge variant="outline" className="text-muted-foreground border-orange-300">
+                                                                <Badge variant="outline" className="text-muted-foreground border-orange-500/50">
                                                                     {formatInitiator(question.target_user_genders)}
                                                                 </Badge>
                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                <Badge variant="secondary" className="bg-orange-100 text-orange-700 hover:bg-orange-100">
+                                                                <Badge variant="secondary" className="bg-orange-500/30 text-orange-300 hover:bg-orange-500/30">
                                                                     {formatInitiator(suggestion.suggested_initiator)}
                                                                 </Badge>
                                                             </div>

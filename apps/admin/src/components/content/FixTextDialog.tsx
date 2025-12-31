@@ -113,8 +113,8 @@ export function FixTextDialog({ open, onOpenChange, questions, isExplicit = fals
                 <div className="flex-1 overflow-y-auto py-4">
                     {step === 'initial' ? (
                         <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                            <div className="bg-purple-50 p-4 rounded-full">
-                                <Wand2 className="h-12 w-12 text-purple-500" />
+                            <div className="bg-purple-500/20 p-4 rounded-full">
+                                <Wand2 className="h-12 w-12 text-purple-400" />
                             </div>
                             <div className="space-y-2">
                                 <h3 className="text-lg font-medium">Ready to analyze {questions.length} questions</h3>
@@ -189,9 +189,9 @@ export function FixTextDialog({ open, onOpenChange, questions, isExplicit = fals
                                                             <ArrowRight className="h-4 w-4 text-muted-foreground" />
                                                         </TableCell>
                                                         <TableCell className="max-w-xs">
-                                                            <div className="text-sm font-medium text-purple-700">{suggestion.suggested_text}</div>
+                                                            <div className="text-sm font-medium text-purple-300">{suggestion.suggested_text}</div>
                                                             {suggestion.suggested_partner_text && (
-                                                                <div className="text-xs text-purple-600 mt-1 italic">
+                                                                <div className="text-xs text-purple-400 mt-1 italic">
                                                                     Partner: {suggestion.suggested_partner_text}
                                                                 </div>
                                                             )}

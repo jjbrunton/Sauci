@@ -241,7 +241,7 @@ export async function generateQuestions(
         2: 'TONE: Playful and flirty. Light teasing, fun activities, and cheeky suggestions. Mildly suggestive but NOTHING explicit or sexual. Think playful banter and innocent mischief.',
         3: 'TONE: Sensual and intimate. Passionate and suggestive content that implies intimacy without being graphic. Use tasteful language - "make love" rather than crude terms. Romantic but with heat. AVOID explicit sexual acts or crude terminology.',
         4: 'TONE: Spicy and bold. Adventurous sexual content with direct, natural language. Use everyday terms like "oral sex", "finger", "go down on", "handjob", "turn on". AVOID clinical/medical terms like "stimulate", "arousal", "genitals", "penetration". Write like real people talk about sex.',
-        5: 'TONE: Explicit and raw. NSFW content with blunt, dirty talk language. Use words like "fuck", "cock", "pussy", "cum", "suck", "eat out". NEVER use clinical terms like "intercourse", "stimulate", "genitalia", "fellatio", "cunnilingus". Write like uncensored sexting - direct, crude, and hot.',
+        5: 'TONE: Explicit adult content with NUANCED language. Use tasteful phrasing for common acts: "Have sex in X" (not "fuck in X"), "Perform oral" or "go down on" (not crude oral terms). BUT use crude/specific terms when they ARE the activity: "Cum on your partner\'s tits" (cum is the act), "Use a cock ring" (that\'s what it\'s called), "Edge your partner until they beg to cum". The rule: crude terms for specific acts/objects, tasteful terms for general sex/oral. NEVER sanitize "cum" to "come" - they have different meanings.',
     };
 
     const toneInstruction = toneInstructions[tone];
@@ -302,6 +302,14 @@ CRITICAL LANGUAGE RULES:
 - GOOD: "Send your partner a photo", "Spank your partner", "Give your partner..."
 - The card reader is the DOER. Their partner is "your partner".
 
+ANATOMICAL CONSISTENCY RULE:
+- NEVER combine male-specific and female-specific acts as alternatives in the same question.
+- A partner has ONE set of anatomy - don't offer "or" alternatives that require different anatomy.
+- BAD: "Finger or give your partner a handjob" (fingering = vagina, handjob = penis)
+- BAD: "Suck their cock or eat them out" (cock = male, eating out = female)
+- GOOD: "Give your partner a handjob" (single activity for target anatomy)
+- GOOD: "Go down on your partner" (gender-neutral oral phrasing)
+
 For each question, decide if it is SYMMETRIC (shared) or ASYMMETRIC (one does to the other):
 
 1. SYMMETRIC Activities (partner_text = null):
@@ -310,11 +318,19 @@ For each question, decide if it is SYMMETRIC (shared) or ASYMMETRIC (one does to
    - BAD: "Have you ever thought about...", "Do you think we should..."
 
 2. ASYMMETRIC Actions (requires partner_text):
-   - One partner does something TO/FOR the other.
-   - text = what the DOER does: "Give your partner X", "Do Y to your partner"
-   - partner_text = what the RECEIVER gets: "Receive X from your partner", "Have your partner do Y to you"
+   - One partner does something TO/FOR the other, or roles differ.
+   - text = what the INITIATOR does (their action/perspective)
+   - partner_text = what the RECEIVER does/experiences (their action/perspective)
    - ${asymmetricExamples}
    - BOTH texts must use "your partner" - never "me" or "I"
+   - IMPORTANT: partner_text should describe the RECEIVER's experience clearly:
+     - text: "Send your partner to the bathroom and follow a minute later"
+     - partner_text: "Go to the bathroom and wait for your partner to join you" (clear receiver instructions)
+     - NOT: "Wait for your partner to follow you" (confusing/wrong)
+   - When initiator CAUSES a response (moan, cum, beg, etc.), partner_text should frame as ALLOWING/RECEIVING, not performing:
+     - text: "Make your partner moan in public" → partner_text: "Let your partner make you moan in public"
+     - text: "Edge your partner until they beg" → partner_text: "Let your partner edge you until you beg"
+     - NOT: "Moan for your partner in public" (sounds like deliberate performance, not natural response)
 
 Required JSON structure:
 - text: The proposal (DOER's perspective, uses "your partner")
@@ -330,7 +346,7 @@ Mix symmetric and asymmetric proposals.`;
         2: 'You are a playful content writer for a couples relationship app. Generate fun, flirty content that helps couples have fun together. Always respond with valid JSON only.',
         3: 'You are a sensual content writer for a couples relationship app. Generate passionate, intimate content that helps couples explore their desires tastefully. Always respond with valid JSON only.',
         4: 'You are a bold content writer for an adult couples app. Write like a sex-positive friend giving suggestions - natural, direct, not clinical. Avoid medical terminology. Always respond with valid JSON only.',
-        5: 'You are an uninhibited adult content writer. Write like dirty talk or sexting - raw, blunt, using everyday explicit words. Never use clinical terms like intercourse, stimulate, genitalia. Always respond with valid JSON only.',
+        5: 'You are an adult content writer for a couples intimacy app. Use nuanced language: tasteful phrasing for general acts (have sex, perform oral) but crude specific terms when relevant (cum, cock ring, etc). Never use clinical terms. Always respond with valid JSON only.',
     };
 
     const response = await openai.chat.completions.create({
@@ -541,7 +557,7 @@ export async function polishContent(
     const openai = getOpenAI();
 
     const explicitInstruction = explicit
-        ? 'Do not censor yourself. If the content is already explicit, keep it that way or enhance usage of bolder terms if appropriate.'
+        ? 'Use nuanced language: tasteful phrasing for general acts ("have sex", "perform oral") but crude/specific terms when relevant to the activity ("cum on", "cock ring", "edge"). Do not over-sanitize - keep explicit terms that are essential to the activity. NEVER change "cum" to "come" - they have different meanings.'
         : 'CRITICAL: This is a NON-EXPLICIT pack. Keep it clean, romantic, and playful. Do NOT add any sexual acts, crude language, or NSFW content. If the original text contains explicit content, replace with tasteful romantic alternatives.';
 
     const contextMap = {
@@ -564,6 +580,10 @@ export async function polishContent(
      - DO NOT change it to something unrelated like "Go to the movies".
      - Polish the phrasing, grammar, and tone, but keep the core action IDENTICAL.
   3. TONE: Engaging, romantic, or spicy (depending on context), but direct.
+  4. ANATOMICAL CONSISTENCY: NEVER combine male-specific and female-specific acts as alternatives.
+     - BAD: "Finger or give your partner a handjob" (requires different anatomy)
+     - BAD: "Suck their cock or eat them out" (male vs female anatomy)
+     - If text has mixed anatomy alternatives, keep ONE activity and remove the incompatible one.
   `;
     }
 
@@ -630,19 +650,22 @@ INITIATOR OPTIONS: 'male', 'female', 'non-binary'
 
 RULES FOR COUPLE TARGETS (allowed_couple_genders):
 - Default to ALL (null) if the action is gender-neutral/universal (e.g. kissing, massage, generic sex, anal).
-- Limit ONLY if there is a clear anatomical requirement (e.g. genitalia specific).
+- Limit ONLY if there is a clear, explicit anatomical requirement (e.g. genitalia-specific terms).
+- SEX TOYS ARE GENDER-NEUTRAL: Vibrators, dildos, plugs, etc. can be used by ANYONE. Do NOT restrict based on toys.
+  - "Control your partner's vibrator" -> ALL couples, ANY initiator (vibrators work on any body)
+  - "Use a butt plug" -> ALL couples (everyone has a butt)
 
-Examples:
+Examples of ACTUAL restrictions:
 - "Blowjob" -> Needs penis -> Exclude F+F -> ['male+male', 'female+male']
 - "Lick pussy" -> Needs vagina -> Exclude M+M -> ['female+male', 'female+female']
+- "Vibrator", "dildo", "toy" -> NO restriction, works for everyone
 
 RULES FOR INITIATOR (target_user_genders):
 - ONLY relevant for TWO-PART questions (those with partner_text set).
 - Analyze the "text" field to determine who should see this card FIRST as the initiator.
-- Consider WHO the action is TYPICALLY intended for, not just who CAN physically perform it.
-- In M+F couples, consider the typical heterosexual context of sexual acts.
-- If text implies a specific gender role, set initiator accordingly.
-- If text is truly gender-neutral AND role-neutral, leave as null.
+- ONLY set initiator if there is an EXPLICIT anatomical requirement in the text.
+- SEX TOYS DO NOT IMPLY GENDER: "vibrator", "dildo", "toy", "plug" -> initiator: null (anyone can use/control toys)
+- If text is gender-neutral, leave as null. When in doubt, use null.
 
 Key considerations for initiator:
 1. Does the "text" describe receiving something from a penis? -> Female initiator (in M+F context)
@@ -699,6 +722,76 @@ export interface TextAnalysis {
     reason: string;
 }
 
+export interface ExtractedTopic {
+    name: string;
+    isNew: boolean;
+    existingTopicId?: string;
+}
+
+export interface TopicExtractionResult {
+    topics: ExtractedTopic[];
+    reasoning: string;
+}
+
+export async function extractTopicsFromPack(
+    packName: string,
+    packDescription: string | null,
+    questions: string[],
+    existingTopics: { id: string; name: string }[]
+): Promise<TopicExtractionResult> {
+    const openai = getOpenAI();
+
+    const existingTopicNames = existingTopics.map(t => t.name);
+    const existingTopicsJson = JSON.stringify(existingTopics);
+
+    const prompt = `Analyze the following question pack and extract relevant topics/kinks/interests that describe its content.
+
+PACK NAME: "${packName}"
+${packDescription ? `PACK DESCRIPTION: "${packDescription}"` : ''}
+
+QUESTIONS IN THIS PACK:
+${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+EXISTING TOPICS IN THE SYSTEM (prefer matching these when appropriate):
+${existingTopicNames.length > 0 ? existingTopicNames.join(', ') : 'None yet'}
+
+EXISTING TOPICS WITH IDs:
+${existingTopicsJson}
+
+INSTRUCTIONS:
+1. Identify 1-5 topics that best describe this pack's content
+2. Topics should be specific kinks, interests, or themes (e.g., "Bondage", "Exhibitionism", "Voyeurism", "Role Play", "Sensory Play", "Oral", "Anal", "Communication", "Romance", "Adventure")
+3. ALWAYS prefer matching an existing topic if one fits - use the EXACT name and include the existingTopicId
+4. Only suggest a new topic if nothing in the existing list is appropriate
+5. Topic names should be title case (e.g., "Bondage" not "bondage")
+6. Keep topics broad enough to be reusable across packs
+
+Return a JSON object with:
+- topics: Array of objects with:
+  - name: The topic name (use exact existing name if matching)
+  - isNew: false if matching an existing topic, true if suggesting a new one
+  - existingTopicId: The ID of the existing topic if isNew is false (from the EXISTING TOPICS WITH IDs list)
+- reasoning: Brief explanation of why these topics were chosen`;
+
+    const response = await openai.chat.completions.create({
+        model: getModel('fix'),
+        messages: [
+            {
+                role: 'system',
+                content: 'You are a content categorization expert for a couples intimacy app. You analyze question packs and identify relevant topics, kinks, and themes. Always prefer matching existing topics when possible. Always respond with valid JSON only.',
+            },
+            { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('No content generated');
+
+    return JSON.parse(content) as TopicExtractionResult;
+}
+
 export async function analyzeQuestionText(
     questions: { id: string; text: string; partner_text?: string | null }[],
     isExplicit: boolean = false
@@ -712,7 +805,7 @@ export async function analyzeQuestionText(
     }));
 
     const toneInstruction = isExplicit
-        ? 'TONE: This is an EXPLICIT pack. Use raw, direct, graphic language. Do NOT sanitize or euphemize explicit content. Keep crude terms like "cum", "fuck", "cock", etc. if they appear in the original.'
+        ? 'TONE: This is an EXPLICIT pack with NUANCED language. Use tasteful phrasing for common acts: "Have sex in X" (not "fuck in X"), "Perform oral" or "go down on" (not crude oral terms). BUT keep crude/specific terms when they ARE the activity: "Cum on your partner\'s tits" (cum is the act), "Use a cock ring" (that\'s the name), "Edge until they beg". The rule: crude terms for specific acts/objects, tasteful terms for general sex/oral. NEVER sanitize "cum" to "come" - they have different meanings.'
         : 'TONE: This is a NON-EXPLICIT pack. CRITICAL: Do NOT include any sexual acts, crude language, or NSFW content. Keep language romantic, sensual, or playful without crude/graphic terms. If explicit sexual content appears, replace with tasteful romantic alternatives or flag for removal.';
 
     // Use different examples based on explicit/non-explicit
@@ -744,8 +837,16 @@ For each question, decide if it is a SYMMETRIC activity (shared) or ASYMMETRIC a
    - BAD: "Have you ever thought about...", "Do you think we should...", "How about we..."
 
 2. ASYMMETRIC Actions (Two-Part Card - needs both text and partner_text):
-   - Use for actions where one partner does something TO the other.
+   - Use for actions where one partner does something TO/FOR the other, or where roles differ.
+   - text = what the INITIATOR does (their action/perspective)
+   - partner_text = what the RECEIVER does/experiences (their action/perspective)
    - ${asymmetricExamples}
+   - IMPORTANT: partner_text should describe the RECEIVER's experience clearly:
+     - text: "Send your partner to the bathroom and follow a minute later"
+     - partner_text: "Go to the bathroom and wait for your partner to join you" (NOT "Wait for your partner to follow you")
+   - When initiator CAUSES a response (moan, cum, beg, etc.), partner_text should frame as ALLOWING/RECEIVING:
+     - text: "Make your partner moan in public" → partner_text: "Let your partner make you moan in public"
+     - NOT: "Moan for your partner in public" (sounds like deliberate performance, not natural response)
    - BAD: "Would you like to...?" (Ambiguous who "me" is)
 
 CRITICAL RULES:
@@ -757,6 +858,11 @@ CRITICAL RULES:
 6. Use "your partner" instead of "me", "you", "him", "her" to keep it gender-neutral.
 7. If a question is ALREADY well-phrased, do NOT include it in the results.
 8. NEVER add explanatory text in parentheses - keep the proposal clean and simple.
+9. NEVER MIX ANATOMICALLY INCOMPATIBLE ACTIVITIES - Do NOT combine male-specific and female-specific acts as alternatives in the same question. A partner has ONE set of anatomy.
+   - BAD: "Finger or give your partner a handjob" (fingering = female anatomy, handjob = male anatomy)
+   - BAD: "Suck your partner's cock or eat them out" (cock = male, eating out = female)
+   - GOOD: Pick ONE activity appropriate for the question's target audience
+   - If a question has mixed anatomy alternatives, choose the one that fits the pack's theme or keep the first one
 
 Return a JSON object with a "suggestions" array containing ONLY questions that need improvement.
 Each object should have:
@@ -770,7 +876,7 @@ ${JSON.stringify(simplifiedQuestions)}
 `;
 
     const systemMessage = isExplicit
-        ? 'You are an uninhibited content editor for an adult couples app. You improve question phrasing to be direct, raw, and explicit while preserving the original intent. Do not censor or euphemize. Always respond with valid JSON only.'
+        ? 'You are an adult content editor for a couples intimacy app. Use nuanced language: tasteful phrasing for general acts (have sex, perform oral) but crude specific terms when relevant (cum, cock ring, etc). Preserve original intent. Always respond with valid JSON only.'
         : 'You are a professional content editor for a couples app. You improve question phrasing to be direct, actionable, and engaging while preserving the original intent. Always respond with valid JSON only.';
 
     const response = await openai.chat.completions.create({

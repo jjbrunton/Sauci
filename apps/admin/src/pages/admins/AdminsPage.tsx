@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -73,10 +75,63 @@ export function AdminsPage() {
     const [editIsSuperAdmin, setEditIsSuperAdmin] = useState(false);
     const [editPermissions, setEditPermissions] = useState<string[]>([]);
 
+    const fetchAdmins = useCallback(async () => {
+        setLoading(true);
+        try {
+            // First fetch admin users with permissions
+            const { data: adminData, error: adminError } = await supabase
+                .from('admin_users')
+                .select('id, user_id, role, permissions, created_at')
+                .order('created_at', { ascending: false });
+
+            if (adminError) throw adminError;
+
+            // Then fetch profiles for these users
+            // We do this manually to avoid relying on foreign key relationships if they aren't perfect
+            if (adminData && adminData.length > 0) {
+                const userIds = adminData.map(a => a.user_id);
+                const { data: profileData, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, name, email, avatar_url')
+                    .in('id', userIds);
+
+                if (profileError) throw profileError;
+
+                // Merge data
+                const joinedAdmins = adminData.map(admin => ({
+                    ...admin,
+                    permissions: (admin.permissions as string[]) || [],
+                    profile: profileData?.find(p => p.id === admin.user_id)
+                }));
+                setAdmins(joinedAdmins);
+            } else {
+                setAdmins([]);
+            }
+        } catch (error: unknown) {
+            console.error('Failed to load admins:', error);
+            toast.error("Failed to load admin users");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // Real-time subscription for admin_users table
+    const { status: realtimeStatus } = useRealtimeSubscription<AdminUser>({
+        table: 'admin_users',
+        onInsert: fetchAdmins,
+        onUpdate: fetchAdmins,
+        onDelete: fetchAdmins,
+        insertToast: {
+            enabled: true,
+            message: 'A new admin has been added',
+            type: 'info',
+        },
+    });
+
     // Initial load
     useEffect(() => {
         fetchAdmins();
-    }, []);
+    }, [fetchAdmins]);
 
     // Search users for adding
     useEffect(() => {
@@ -112,46 +167,6 @@ export function AdminsPage() {
         const debounce = setTimeout(searchUsers, 500);
         return () => clearTimeout(debounce);
     }, [userSearch, admins]);
-
-    const fetchAdmins = async () => {
-        setLoading(true);
-        try {
-            // First fetch admin users with permissions
-            const { data: adminData, error: adminError } = await supabase
-                .from('admin_users')
-                .select('id, user_id, role, permissions, created_at')
-                .order('created_at', { ascending: false });
-
-            if (adminError) throw adminError;
-
-            // Then fetch profiles for these users
-            // We do this manually to avoid relying on foreign key relationships if they aren't perfect
-            if (adminData && adminData.length > 0) {
-                const userIds = adminData.map(a => a.user_id);
-                const { data: profileData, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('id, name, email, avatar_url')
-                    .in('id', userIds);
-
-                if (profileError) throw profileError;
-
-                // Merge data
-                const joinedAdmins = adminData.map(admin => ({
-                    ...admin,
-                    permissions: (admin.permissions as string[]) || [],
-                    profile: profileData?.find(p => p.id === admin.user_id)
-                }));
-                setAdmins(joinedAdmins);
-            } else {
-                setAdmins([]);
-            }
-        } catch (error: any) {
-            console.error('Failed to load admins:', error);
-            toast.error("Failed to load admin users");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleAddAdmin = async () => {
         if (!selectedUser) return;
@@ -269,7 +284,10 @@ export function AdminsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Admin Management</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold tracking-tight">Admin Management</h1>
+                        <RealtimeStatusIndicator status={realtimeStatus} showLabel />
+                    </div>
                     <p className="text-muted-foreground">
                         Manage system administrators and their roles
                     </p>

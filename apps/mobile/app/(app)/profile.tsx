@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch, Image, ActionSheetIOS } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform, useWindowDimensions, TextInput, Modal, ActivityIndicator, Linking, Switch, ActionSheetIOS } from "react-native";
+import { Image } from "expo-image";
 import { useState, useMemo, useEffect } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore, useSubscriptionStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,6 +39,7 @@ export default function ProfileScreen() {
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [isResettingProgress, setIsResettingProgress] = useState(false);
     const [showPaywall, setShowPaywall] = useState(false);
     const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
     const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
@@ -381,6 +383,40 @@ export default function ProfileScreen() {
         );
     };
 
+    const handleResetProgress = async () => {
+        Alert.alert(
+            "Reset Progress",
+            "This will delete all your swipes, matches, and chat messages. You'll stay connected with your partner and can start fresh. This cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Reset",
+                    style: "destructive",
+                    onPress: async () => {
+                        setIsResettingProgress(true);
+                        try {
+                            const { error } = await supabase.functions.invoke("reset-couple-progress", {
+                                method: "DELETE",
+                            });
+
+                            if (error) throw error;
+
+                            // Clear local stores
+                            clearMatches();
+                            clearMessages();
+
+                            Alert.alert("Success", "Your progress has been reset. You can now start swiping again!");
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to reset progress. Please try again.");
+                        } finally {
+                            setIsResettingProgress(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const handleSignOut = () => {
         Alert.alert(
             "Sign Out",
@@ -437,6 +473,8 @@ export default function ProfileScreen() {
                                         <Image
                                             source={{ uri: user.avatar_url }}
                                             style={styles.avatarImage}
+                                            cachePolicy="disk"
+                                            transition={200}
                                         />
                                     ) : (
                                         <View style={styles.avatarInner}>
@@ -793,10 +831,50 @@ export default function ProfileScreen() {
                     </GlassCard>
                 </Animated.View>
 
+                {/* Reset Progress Section - Only show if in a couple */}
+                {couple && (
+                    <Animated.View
+                        entering={FadeInDown.delay(500).duration(500)}
+                        style={styles.section}
+                    >
+                        <Text style={styles.resetSectionTitle}>Reset Progress</Text>
+                        <GlassCard style={styles.resetCard}>
+                            <View style={styles.resetContent}>
+                                <View style={styles.resetInfo}>
+                                    <View style={styles.resetIconContainer}>
+                                        <Ionicons name="refresh" size={20} color={colors.warning} />
+                                    </View>
+                                    <View style={styles.resetTextContainer}>
+                                        <Text style={styles.resetTitle}>Start Fresh</Text>
+                                        <Text style={styles.resetDescription}>
+                                            Delete all swipes, matches, and chats while keeping your partner connection.
+                                        </Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    style={[styles.resetButton, isResettingProgress && styles.resetButtonDisabled]}
+                                    onPress={handleResetProgress}
+                                    disabled={isResettingProgress}
+                                    activeOpacity={0.7}
+                                >
+                                    {isResettingProgress ? (
+                                        <ActivityIndicator size="small" color={colors.warning} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="refresh-outline" size={16} color={colors.warning} />
+                                            <Text style={styles.resetButtonText}>Reset</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </GlassCard>
+                    </Animated.View>
+                )}
+
                 {/* Debug Section - Only show in development builds */}
                 {__DEV__ && (
                     <Animated.View
-                        entering={FadeInDown.delay(500).duration(500)}
+                        entering={FadeInDown.delay(couple ? 550 : 500).duration(500)}
                         style={styles.section}
                     >
                         <Text style={styles.debugSectionTitle}>Debug</Text>
@@ -883,7 +961,7 @@ export default function ProfileScreen() {
                 {/* Danger Zone - Only show if in a couple */}
                 {couple && (
                     <Animated.View
-                        entering={FadeInDown.delay(525).duration(500)}
+                        entering={FadeInDown.delay(600).duration(500)}
                         style={styles.section}
                     >
                         <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
@@ -915,7 +993,7 @@ export default function ProfileScreen() {
 
                 {/* Version */}
                 <Animated.View
-                    entering={FadeInDown.delay(couple ? 575 : 525).duration(500)}
+                    entering={FadeInDown.delay(couple ? 650 : 525).duration(500)}
                     style={styles.versionContainer}
                 >
                     <View style={styles.versionBadge}>
@@ -1348,6 +1426,69 @@ const styles = StyleSheet.create({
         backgroundColor: colors.warningLight,
         justifyContent: "center",
         alignItems: "center",
+    },
+    // Reset Progress styles
+    resetSectionTitle: {
+        ...typography.caption1,
+        color: colors.warning,
+        textTransform: "uppercase",
+        letterSpacing: 1.5,
+        marginBottom: spacing.sm,
+        marginLeft: spacing.xs,
+    },
+    resetCard: {
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        borderWidth: 1,
+    },
+    resetContent: {
+        gap: spacing.md,
+    },
+    resetInfo: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+    },
+    resetIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.warningLight,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    resetTextContainer: {
+        flex: 1,
+        marginLeft: spacing.md,
+    },
+    resetTitle: {
+        ...typography.headline,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    resetDescription: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        lineHeight: 20,
+    },
+    resetButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: colors.warningLight,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        gap: spacing.xs,
+        alignSelf: "flex-end",
+    },
+    resetButtonDisabled: {
+        opacity: 0.5,
+    },
+    resetButtonText: {
+        ...typography.subhead,
+        color: colors.warning,
+        fontWeight: "600",
     },
     // Danger Zone styles
     dangerSectionTitle: {

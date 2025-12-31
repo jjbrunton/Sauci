@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -216,54 +218,53 @@ export function UserDetailPage() {
         }
     };
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!userId) return;
+    const fetchData = useCallback(async () => {
+        if (!userId) return;
 
-            setLoading(true);
-            try {
-                // Fetch profile
-                const { data: profileData } = await supabase
+        setLoading(true);
+        try {
+            // Fetch profile
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
+
+            setProfile(profileData);
+
+            // Fetch partner if coupled
+            if (profileData?.couple_id) {
+                const { data: partnerData } = await supabase
                     .from('profiles')
-                    .select('*')
-                    .eq('id', userId)
+                    .select('id, name')
+                    .eq('couple_id', profileData.couple_id)
+                    .neq('id', userId)
                     .single();
 
-                setProfile(profileData);
+                setPartner(partnerData);
+            }
 
-                // Fetch partner if coupled
-                if (profileData?.couple_id) {
-                    const { data: partnerData } = await supabase
-                        .from('profiles')
-                        .select('id, name')
-                        .eq('couple_id', profileData.couple_id)
-                        .neq('id', userId)
-                        .single();
-
-                    setPartner(partnerData);
-                }
-
-                // Fetch responses with question and pack info
-                const { data: responseData } = await supabase
-                    .from('responses')
-                    .select(`
+            // Fetch responses with question and pack info
+            const { data: responseData } = await supabase
+                .from('responses')
+                .select(`
             id, answer, created_at,
             question:questions (
               id, text,
               pack:question_packs (name)
             )
           `)
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false })
-                    .limit(50);
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(50);
 
-                setResponses((responseData || []) as unknown as Response[]);
+            setResponses((responseData || []) as unknown as Response[]);
 
-                // Fetch matches if coupled
-                if (profileData?.couple_id) {
-                    const { data: matchData } = await supabase
-                        .from('matches')
-                        .select(`
+            // Fetch matches if coupled
+            if (profileData?.couple_id) {
+                const { data: matchData } = await supabase
+                    .from('matches')
+                    .select(`
               id, match_type, is_new, created_at,
               question:questions (id, text)
             `)
@@ -271,59 +272,79 @@ export function UserDetailPage() {
                         .order('created_at', { ascending: false })
                         .limit(50);
 
-                    // Get message counts for each match
-                    const matchIds = (matchData || []).map(m => m.id);
-                    const { data: messages } = await supabase
-                        .from('messages')
-                        .select('match_id')
-                        .in('match_id', matchIds);
+                // Get message counts for each match
+                const matchIds = (matchData || []).map(m => m.id);
+                const { data: messages } = await supabase
+                    .from('messages')
+                    .select('match_id')
+                    .in('match_id', matchIds);
 
-                    const messageCounts: Record<string, number> = {};
-                    messages?.forEach(m => {
-                        messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1;
-                    });
+                const messageCounts: Record<string, number> = {};
+                messages?.forEach(m => {
+                    messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1;
+                });
 
-                    setMatches(
-                        (matchData || []).map(m => ({
-                            ...m,
-                            message_count: messageCounts[m.id] || 0,
-                        })) as unknown as Match[]
-                    );
-                }
-
-                // Fetch media files uploaded by this user
-                const { data: mediaData } = await supabase
-                    .rpc('get_user_media_files', { user_id: userId });
-
-                if (mediaData && mediaData.length > 0) {
-                    // Calculate total storage
-                    const total = mediaData.reduce((sum: number, file: MediaFile) =>
-                        sum + (file.metadata?.size || 0), 0);
-                    setTotalStorage(total);
-
-                    // Get signed URLs for each file
-                    const mediaWithUrls = await Promise.all(
-                        mediaData.map(async (file: MediaFile) => {
-                            const { data: signedData } = await supabase.storage
-                                .from('chat-media')
-                                .createSignedUrl(file.name, 3600); // 1 hour expiry
-                            return {
-                                ...file,
-                                signedUrl: signedData?.signedUrl,
-                            };
-                        })
-                    );
-                    setMedia(mediaWithUrls);
-                }
-            } catch (error) {
-                console.error('Failed to load user data:', error);
-            } finally {
-                setLoading(false);
+                setMatches(
+                    (matchData || []).map(m => ({
+                        ...m,
+                        message_count: messageCounts[m.id] || 0,
+                    })) as unknown as Match[]
+                );
             }
-        };
 
-        fetchData();
+            // Fetch media files uploaded by this user
+            const { data: mediaData } = await supabase
+                .rpc('get_user_media_files', { user_id: userId });
+
+            if (mediaData && mediaData.length > 0) {
+                // Calculate total storage
+                const total = mediaData.reduce((sum: number, file: MediaFile) =>
+                    sum + (file.metadata?.size || 0), 0);
+                setTotalStorage(total);
+
+                // Get signed URLs for each file
+                const mediaWithUrls = await Promise.all(
+                    mediaData.map(async (file: MediaFile) => {
+                        const { data: signedData } = await supabase.storage
+                            .from('chat-media')
+                            .createSignedUrl(file.name, 3600); // 1 hour expiry
+                        return {
+                            ...file,
+                            signedUrl: signedData?.signedUrl,
+                        };
+                    })
+                );
+                setMedia(mediaWithUrls);
+            }
+        } catch (error) {
+            console.error('Failed to load user data:', error);
+        } finally {
+            setLoading(false);
+        }
     }, [userId]);
+
+    // Real-time subscription for this user's profile
+    const { status: profileStatus } = useRealtimeSubscription<Profile>({
+        table: 'profiles',
+        filter: userId ? `id=eq.${userId}` : undefined,
+        enabled: !!userId,
+        onUpdate: useCallback(({ new: updated }: { old: Profile; new: Profile }) => {
+            setProfile(updated);
+        }, []),
+    });
+
+    // Real-time subscription for this user's responses
+    const { status: responsesStatus } = useRealtimeSubscription<Response>({
+        table: 'responses',
+        filter: userId ? `user_id=eq.${userId}` : undefined,
+        enabled: !!userId,
+        onInsert: fetchData, // Refetch to get question/pack relations
+        onDelete: fetchData,
+    });
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     if (loading) {
         return (
@@ -363,6 +384,10 @@ export function UserDetailPage() {
                                 <h1 className="text-2xl font-bold">
                                     {profile.name || 'Unnamed User'}
                                 </h1>
+                                <RealtimeStatusIndicator
+                                    status={profileStatus === 'SUBSCRIBED' && responsesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profileStatus}
+                                    showLabel
+                                />
                                 {profile.is_premium && (
                                     <Badge className="bg-amber-500">
                                         <Crown className="h-3 w-3 mr-1" />
