@@ -166,4 +166,14 @@ export const Events = {
 
   // Invite events
   inviteCodeCopied: () => logEvent("invite_code_copied"),
+
+  // Tutorial events
+  tutorialStarted: (tutorial: "swipe" | "matches") =>
+    logEvent("tutorial_started", { tutorial }),
+  tutorialStepViewed: (tutorial: "swipe" | "matches", step: number, stepName: string) =>
+    logEvent("tutorial_step_viewed", { tutorial, step, step_name: stepName }),
+  tutorialCompleted: (tutorial: "swipe" | "matches") =>
+    logEvent("tutorial_completed", { tutorial }),
+  tutorialSkipped: (tutorial: "swipe" | "matches", atStep: number) =>
+    logEvent("tutorial_skipped", { tutorial, at_step: atStep }),
 };

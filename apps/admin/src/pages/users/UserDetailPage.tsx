@@ -34,7 +34,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, HardDrive, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Profile {
@@ -77,6 +77,18 @@ interface Match {
     message_count?: number;
 }
 
+interface MediaFile {
+    id: string;
+    name: string;
+    bucket_id: string;
+    created_at: string | null;
+    metadata: {
+        size: number;
+        mimetype: string;
+    };
+    signedUrl?: string;
+}
+
 const answerIcons = {
     yes: <ThumbsUp className="h-4 w-4 text-green-500" />,
     no: <ThumbsDown className="h-4 w-4 text-red-500" />,
@@ -89,12 +101,22 @@ const matchTypeLabels = {
     maybe_maybe: 'Both Maybe',
 };
 
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
 export function UserDetailPage() {
     const { userId } = useParams<{ userId: string }>();
     const [profile, setProfile] = useState<Profile | null>(null);
     const [partner, setPartner] = useState<Partner | null>(null);
     const [responses, setResponses] = useState<Response[]>([]);
     const [matches, setMatches] = useState<Match[]>([]);
+    const [media, setMedia] = useState<MediaFile[]>([]);
+    const [totalStorage, setTotalStorage] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -238,6 +260,31 @@ export function UserDetailPage() {
                             message_count: messageCounts[m.id] || 0,
                         })) as unknown as Match[]
                     );
+                }
+
+                // Fetch media files uploaded by this user
+                const { data: mediaData } = await supabase
+                    .rpc('get_user_media_files', { user_id: userId });
+
+                if (mediaData && mediaData.length > 0) {
+                    // Calculate total storage
+                    const total = mediaData.reduce((sum: number, file: MediaFile) =>
+                        sum + (file.metadata?.size || 0), 0);
+                    setTotalStorage(total);
+
+                    // Get signed URLs for each file
+                    const mediaWithUrls = await Promise.all(
+                        mediaData.map(async (file: MediaFile) => {
+                            const { data: signedData } = await supabase.storage
+                                .from('chat-media')
+                                .createSignedUrl(file.name, 3600); // 1 hour expiry
+                            return {
+                                ...file,
+                                signedUrl: signedData?.signedUrl,
+                            };
+                        })
+                    );
+                    setMedia(mediaWithUrls);
                 }
             } catch (error) {
                 console.error('Failed to load user data:', error);
@@ -392,6 +439,9 @@ export function UserDetailPage() {
                     <TabsTrigger value="matches" disabled={!profile.couple_id}>
                         Matches ({matches.length})
                     </TabsTrigger>
+                    <TabsTrigger value="media">
+                        Media ({media.length})
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="responses" className="mt-4">
@@ -476,6 +526,79 @@ export function UserDetailPage() {
                                     </CardContent>
                                 </Card>
                             ))}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="media" className="mt-4">
+                    {media.length === 0 ? (
+                        <Card className="flex flex-col items-center justify-center py-12">
+                            <Image className="h-12 w-12 text-muted-foreground mb-4" />
+                            <p className="text-muted-foreground">No media uploaded</p>
+                        </Card>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Storage Summary */}
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="flex items-center gap-3">
+                                        <HardDrive className="h-5 w-5 text-muted-foreground" />
+                                        <div>
+                                            <p className="font-medium">Total Storage Used</p>
+                                            <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
+                                        </div>
+                                        <div className="ml-auto text-sm text-muted-foreground">
+                                            {media.length} file{media.length !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Media Grid */}
+                            <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                                {media.map((file) => (
+                                    <Card key={file.id} className="overflow-hidden">
+                                        <div className="aspect-square bg-muted relative">
+                                            {file.signedUrl ? (
+                                                <img
+                                                    src={file.signedUrl}
+                                                    alt={file.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Image className="h-8 w-8 text-muted-foreground" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <CardContent className="p-3">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <div className="truncate text-muted-foreground">
+                                                    {formatBytes(file.metadata?.size || 0)}
+                                                </div>
+                                                {file.signedUrl && (
+                                                    <a
+                                                        href={file.signedUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-primary hover:underline flex items-center gap-1"
+                                                    >
+                                                        <ExternalLink className="h-3 w-3" />
+                                                    </a>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                {file.created_at
+                                                    ? format(new Date(file.created_at), 'MMM d, yyyy')
+                                                    : '—'}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </TabsContent>

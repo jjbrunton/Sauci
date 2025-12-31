@@ -19,6 +19,7 @@ import Animated, {
     runOnJS,
 } from "react-native-reanimated";
 import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
+import { Events } from "../lib/analytics";
 
 interface Props {
     onComplete: () => void;
@@ -109,6 +110,19 @@ export default function SwipeTutorial({ onComplete }: Props) {
 
     const currentStep_ = STEPS[currentStep];
     const isSwipeStep = currentStep_.isSwipe;
+
+    // Track tutorial started on mount
+    useEffect(() => {
+        Events.tutorialStarted("swipe");
+        Events.tutorialStepViewed("swipe", 0, STEPS[0].key);
+    }, []);
+
+    // Track step changes
+    useEffect(() => {
+        if (currentStep > 0) {
+            Events.tutorialStepViewed("swipe", currentStep, STEPS[currentStep].key);
+        }
+    }, [currentStep]);
 
     useEffect(() => {
         // Reset animations for current step
@@ -217,11 +231,13 @@ export default function SwipeTutorial({ onComplete }: Props) {
         if (currentStep < STEPS.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
+            Events.tutorialCompleted("swipe");
             onComplete();
         }
     };
 
     const handleSkip = () => {
+        Events.tutorialSkipped("swipe", currentStep);
         onComplete();
     };
 

@@ -313,7 +313,6 @@ export default function OnboardingScreen() {
                         </View>
 
                         <GlassCard style={styles.card}>
-                            <Text style={styles.label}>I'm using Sauci to...</Text>
                             <View style={styles.purposeList}>
                                 {PURPOSE_OPTIONS.map((option) => (
                                     <Pressable

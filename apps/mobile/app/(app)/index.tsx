@@ -1,6 +1,14 @@
 import { useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, useWindowDimensions } from "react-native";
-import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
+import Animated, {
+    FadeInDown,
+    FadeInRight,
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    Easing,
+} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore, useMatchStore, usePacksStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +32,28 @@ export default function HomeScreen() {
     const recentMatches = matches.slice(0, 3);
     const isWideScreen = width > MAX_CONTENT_WIDTH;
     const enabledPacksCount = packs.length;
+
+    // Subtle pulsating animation for the CTA icon
+    const pulseScale = useSharedValue(1);
+
+    useEffect(() => {
+        const startPulse = () => {
+            pulseScale.value = 1;
+            pulseScale.value = withRepeat(
+                withTiming(1.1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+        };
+        const timeout = setTimeout(startPulse, 100);
+        return () => clearTimeout(timeout);
+    }, []);
+
+    const pulseAnimatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: pulseScale.value }],
+        };
+    });
 
     return (
         <GradientBackground>
@@ -191,9 +221,9 @@ export default function HomeScreen() {
                                         Swipe through questions and discover what you both enjoy
                                     </Text>
                                 </View>
-                                <View style={styles.ctaIconContainer}>
+                                <Animated.View style={[styles.ctaIconContainer, pulseAnimatedStyle]}>
                                     <Ionicons name="flame" size={24} color={colors.text} />
-                                </View>
+                                </Animated.View>
                             </LinearGradient>
                         </TouchableOpacity>
                     </Animated.View>

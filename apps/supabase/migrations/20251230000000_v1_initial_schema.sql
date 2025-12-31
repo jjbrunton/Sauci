@@ -1028,6 +1028,7 @@ CREATE POLICY "Users can view own feedback screenshots"
   );
 
 -- Chat media policies
+-- IMPORTANT: Use storage.objects.name (not just "name") to avoid ambiguity with profiles.name
 CREATE POLICY "Users can view chat media in their matches"
   ON storage.objects FOR SELECT TO authenticated
   USING (
@@ -1035,7 +1036,7 @@ CREATE POLICY "Users can view chat media in their matches"
     AND EXISTS (
       SELECT 1 FROM matches m
       JOIN profiles p ON p.couple_id = m.couple_id
-      WHERE (storage.foldername(name))[1] = m.id::text
+      WHERE (storage.foldername(storage.objects.name))[1] = m.id::text
       AND p.id = auth.uid()
     )
   );
@@ -1047,7 +1048,7 @@ CREATE POLICY "Users can upload chat media to their matches"
     AND EXISTS (
       SELECT 1 FROM matches m
       JOIN profiles p ON p.couple_id = m.couple_id
-      WHERE (storage.foldername(name))[1] = m.id::text
+      WHERE (storage.foldername(storage.objects.name))[1] = m.id::text
       AND p.id = auth.uid()
     )
   );
@@ -1059,7 +1060,7 @@ CREATE POLICY "Users can delete their own chat media"
     AND EXISTS (
       SELECT 1 FROM matches m
       JOIN profiles p ON p.couple_id = m.couple_id
-      WHERE (storage.foldername(name))[1] = m.id::text
+      WHERE (storage.foldername(storage.objects.name))[1] = m.id::text
       AND p.id = auth.uid()
     )
   );

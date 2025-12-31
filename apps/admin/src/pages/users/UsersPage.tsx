@@ -14,7 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, Crown, Users, ChevronRight } from 'lucide-react';
+import { Search, Crown, Users, ChevronRight, HardDrive } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Profile {
@@ -25,6 +25,15 @@ interface Profile {
     is_premium: boolean | null;
     couple_id: string | null;
     created_at: string | null;
+    storage_bytes?: number;
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '—';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 export function UsersPage() {
@@ -37,14 +46,34 @@ export function UsersPage() {
         const fetchProfiles = async () => {
             setLoading(true);
             try {
-                const { data, error } = await supabase
+                // Fetch profiles
+                const { data: profilesData, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
-                setProfiles(data || []);
-                setFilteredProfiles(data || []);
+
+                // Fetch storage usage per user from storage.objects
+                const { data: storageData } = await supabase
+                    .rpc('get_user_storage_usage');
+
+                // Create a map of user_id -> storage_bytes
+                const storageMap: Record<string, number> = {};
+                if (storageData) {
+                    storageData.forEach((row: { owner: string; total_bytes: number }) => {
+                        storageMap[row.owner] = row.total_bytes;
+                    });
+                }
+
+                // Merge storage data with profiles
+                const profilesWithStorage = (profilesData || []).map(profile => ({
+                    ...profile,
+                    storage_bytes: storageMap[profile.id] || 0,
+                }));
+
+                setProfiles(profilesWithStorage);
+                setFilteredProfiles(profilesWithStorage);
             } catch (error) {
                 console.error('Failed to load profiles:', error);
             } finally {
@@ -114,6 +143,7 @@ export function UsersPage() {
                             <TableHead>Email</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Couple</TableHead>
+                            <TableHead>Storage</TableHead>
                             <TableHead>Joined</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
@@ -121,7 +151,7 @@ export function UsersPage() {
                     <TableBody>
                         {filteredProfiles.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                     {search ? 'No users found matching your search.' : 'No users yet.'}
                                 </TableCell>
                             </TableRow>
@@ -162,6 +192,16 @@ export function UsersPage() {
                                                 <Users className="h-3 w-3 mr-1" />
                                                 Paired
                                             </Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm">—</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        {profile.storage_bytes && profile.storage_bytes > 0 ? (
+                                            <div className="flex items-center gap-1 text-sm">
+                                                <HardDrive className="h-3 w-3 text-muted-foreground" />
+                                                {formatBytes(profile.storage_bytes)}
+                                            </div>
                                         ) : (
                                             <span className="text-muted-foreground text-sm">—</span>
                                         )}

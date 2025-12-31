@@ -28,8 +28,8 @@ export const colors = {
 
   // Text
   text: '#ffffff',
-  textSecondary: 'rgba(255, 255, 255, 0.6)',
-  textTertiary: 'rgba(255, 255, 255, 0.4)',
+  textSecondary: 'rgba(255, 255, 255, 0.7)', // Bumped from 0.6 for better contrast
+  textTertiary: 'rgba(255, 255, 255, 0.5)', // Bumped from 0.4 for accessibility
 
   // Semantic
   success: '#2ECC71',
@@ -38,6 +38,17 @@ export const colors = {
   warningLight: 'rgba(243, 156, 18, 0.15)',
   error: '#E74C3C',
   errorLight: 'rgba(231, 76, 60, 0.15)',
+
+  // Premium/Luxury
+  premium: {
+    gold: '#D4AF37',
+    goldLight: 'rgba(212, 175, 55, 0.15)',
+    goldGlow: 'rgba(212, 175, 55, 0.3)',
+    champagne: '#F7E7CE',
+    champagneLight: 'rgba(247, 231, 206, 0.1)',
+    rose: '#E8A4AE', // Lightened for accessibility (was #B76E79, now ~5.5:1 contrast)
+    roseLight: 'rgba(232, 164, 174, 0.15)',
+  },
 };
 
 export const gradients = {
@@ -51,6 +62,18 @@ export const gradients = {
   success: ['#2ECC71', '#27ae60'],
   warning: ['#F39C12', '#e67e22'],
   error: ['#E74C3C', '#c0392b'],
+  // Premium/Boutique gradients
+  premiumGold: ['#D4AF37', '#B8860B'],
+  premiumRose: ['#B76E79', '#8B4557'],
+  silkLight: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
+  laceTint: ['rgba(233, 69, 96, 0.15)', 'rgba(155, 89, 182, 0.15)'],
+  // Boutique pack card backgrounds
+  boutiqueRose: ['rgba(233, 69, 96, 0.4)', 'rgba(155, 89, 182, 0.4)'],
+  boutiquePurple: ['rgba(155, 89, 182, 0.4)', 'rgba(233, 69, 96, 0.4)'],
+  boutiqueDusty: ['rgba(183, 110, 121, 0.35)', 'rgba(139, 69, 87, 0.35)'],
+  boutiqueGold: ['rgba(212, 175, 55, 0.25)', 'rgba(184, 134, 11, 0.25)'],
+  boutiqueMidnight: ['rgba(22, 33, 62, 0.8)', 'rgba(13, 13, 26, 0.8)'],
+  boutiqueAmethyst: ['rgba(142, 68, 173, 0.4)', 'rgba(44, 62, 80, 0.4)'],
 };
 
 export const spacing = {

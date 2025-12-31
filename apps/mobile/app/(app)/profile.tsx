@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { supabase } from "../../src/lib/supabase";
 import { resetSwipeTutorial } from "../../src/lib/swipeTutorialSeen";
+import { resetMatchesTutorial } from "../../src/lib/matchesTutorialSeen";
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
@@ -815,6 +816,60 @@ export default function ProfileScreen() {
                                     <View style={styles.rowTextContainer}>
                                         <Text style={styles.rowValue}>Reset Swipe Tutorial</Text>
                                         <Text style={styles.rowLabel}>Show the tutorial again</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.chevronContainer}>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                </View>
+                            </TouchableOpacity>
+                            <View style={styles.preferencesDivider} />
+                            <TouchableOpacity
+                                style={styles.rowContainer}
+                                onPress={async () => {
+                                    await resetMatchesTutorial();
+                                    Alert.alert("Success", "Matches tutorial has been reset. It will show again next time you visit the matches screen.");
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.rowLeft}>
+                                    <View style={styles.debugIcon}>
+                                        <Ionicons name="heart" size={20} color={colors.warning} />
+                                    </View>
+                                    <View style={styles.rowTextContainer}>
+                                        <Text style={styles.rowValue}>Reset Matches Tutorial</Text>
+                                        <Text style={styles.rowLabel}>Show the tutorial again</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.chevronContainer}>
+                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                </View>
+                            </TouchableOpacity>
+                            <View style={styles.preferencesDivider} />
+                            <TouchableOpacity
+                                style={styles.rowContainer}
+                                onPress={async () => {
+                                    if (!user?.id) return;
+                                    try {
+                                        const { error } = await supabase
+                                            .from('profiles')
+                                            .update({ onboarding_completed: false })
+                                            .eq('id', user.id);
+                                        if (error) throw error;
+                                        await fetchUser();
+                                        Alert.alert("Success", "Onboarding has been reset. You will see the onboarding flow on next app launch.");
+                                    } catch (error) {
+                                        Alert.alert("Error", "Failed to reset onboarding.");
+                                    }
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.rowLeft}>
+                                    <View style={styles.debugIcon}>
+                                        <Ionicons name="school-outline" size={20} color={colors.warning} />
+                                    </View>
+                                    <View style={styles.rowTextContainer}>
+                                        <Text style={styles.rowValue}>Reset Onboarding</Text>
+                                        <Text style={styles.rowLabel}>Show onboarding flow again</Text>
                                     </View>
                                 </View>
                                 <View style={styles.chevronContainer}>

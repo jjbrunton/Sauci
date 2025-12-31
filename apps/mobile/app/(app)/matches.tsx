@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions } from "react-native";
 import { useMatchStore, useAuthStore } from "../../src/store";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -8,6 +8,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
+import MatchesTutorial from "../../src/components/MatchesTutorial";
+import { hasSeenMatchesTutorial, markMatchesTutorialSeen } from "../../src/lib/matchesTutorialSeen";
 
 const MAX_CONTENT_WIDTH = 500;
 
@@ -17,6 +19,27 @@ export default function MatchesScreen() {
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
+    const [showTutorial, setShowTutorial] = useState(false);
+
+    // Check if tutorial should be shown when screen is focused or matches change
+    useFocusEffect(
+        useCallback(() => {
+            const checkTutorial = async () => {
+                if (matches.length > 0) {
+                    const seen = await hasSeenMatchesTutorial();
+                    if (!seen) {
+                        setShowTutorial(true);
+                    }
+                }
+            };
+            checkTutorial();
+        }, [matches.length])
+    );
+
+    const handleTutorialComplete = async () => {
+        await markMatchesTutorialSeen();
+        setShowTutorial(false);
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -187,6 +210,11 @@ export default function MatchesScreen() {
                     }
                 />
             </View>
+
+            {/* Matches Tutorial Overlay */}
+            {showTutorial && (
+                <MatchesTutorial onComplete={handleTutorialComplete} />
+            )}
         </GradientBackground>
     );
 }
