@@ -34,12 +34,34 @@ export default function RedeemPage() {
 
     setIsLoading(true)
 
-    // TODO: Wire up to backend
-    // For now, just simulate a delay and show success
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/redeem-code`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            code: code.trim(),
+          }),
+        }
+      )
 
-    setIsLoading(false)
-    setIsRedeemed(true)
+      const data = await response.json()
+
+      if (data.success) {
+        setIsRedeemed(true)
+      } else {
+        setError(data.error || 'Failed to redeem code. Please try again.')
+      }
+    } catch (err) {
+      console.error('Redemption error:', err)
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   // Success state

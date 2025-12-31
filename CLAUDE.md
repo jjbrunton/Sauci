@@ -145,14 +145,15 @@ Promotional codes that grant users premium access. **Codes can only be redeemed 
 
 **Components:**
 - **Admin UI** (`apps/admin/src/pages/RedemptionCodesPage.tsx`) - Super admins can generate, manage, and view redemption codes
-- **Edge Function** (`apps/supabase/functions/redeem-code/`) - Validates and processes code redemption
-- **Database Function** (`redeem_code(p_code)`) - Atomic redemption with validation (active, not expired, has uses remaining, user hasn't redeemed)
+- **Edge Function** (`apps/supabase/functions/redeem-code/`) - Validates and processes code redemption (unauthenticated, accepts email + code)
+- **Database Function** (`redeem_code_by_email(p_email, p_code)`) - Atomic redemption with validation (active, not expired, has uses remaining, user hasn't redeemed)
+- **Web UI** (`apps/web/app/redeem/page.tsx`) - Public redemption page
 
 **Flow:**
 1. Admin generates code in admin dashboard
-2. User enters code on website (NOT mobile app)
-3. `redeem-code` edge function calls `redeem_code()` database function
-4. On success, user's `profiles.is_premium` is set to `true`
+2. User visits `/redeem` on website and enters email + code
+3. `redeem-code` edge function calls `redeem_code_by_email()` database function
+4. Database function looks up user by email, validates code, and sets `profiles.is_premium = true`
 
 **Important:** Do NOT add redemption code UI to the mobile app. Apple requires in-app purchases for premium features purchased within iOS apps.
 
