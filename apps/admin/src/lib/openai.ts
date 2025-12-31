@@ -56,6 +56,9 @@ export interface GeneratedQuestion {
     text: string;
     partner_text?: string;
     intensity: number;
+    requires_props?: string[] | null;
+    location_type?: 'home' | 'public' | 'outdoors' | 'travel' | 'anywhere';
+    effort_level?: 'spontaneous' | 'low' | 'medium' | 'planned';
 }
 
 export async function generatePack(
@@ -71,8 +74,8 @@ export async function generatePack(
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? 'Use crude, vulgar, and raw language. Be blunt and use everyday explicit words.'
-        : 'Use tasteful, refined language. Avoid crude or vulgar terms even for explicit content.';
+        ? 'CRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms throughout - "fuck", "cock", "pussy" etc.'
+        : '';
 
     const inspirationInstruction = inspiration
         ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your generation.`
@@ -132,14 +135,14 @@ This is NOT a Q&A app - it's about discovering shared interests in activities.`;
     return JSON.parse(content) as GeneratedPack;
 }
 
-// Tone levels for content generation (controls language/explicitness)
+// Wildness levels for content generation (controls how adventurous/extreme activities are)
 export const TONE_LEVELS = [
-    { level: 0, label: 'Clean', description: 'No romance or intimacy - communication, activities, fun' },
-    { level: 1, label: 'Romantic', description: 'Sweet, loving, emotional connection focus' },
-    { level: 2, label: 'Playful', description: 'Flirty, teasing, fun and lighthearted' },
-    { level: 3, label: 'Sensual', description: 'Intimate, passionate, suggestive but tasteful' },
-    { level: 4, label: 'Spicy', description: 'Bold, adventurous, mildly explicit' },
-    { level: 5, label: 'Explicit', description: 'Raw, graphic, NSFW content' },
+    { level: 0, label: 'Everyday', description: 'Non-romantic activities - games, cooking, conversations' },
+    { level: 1, label: 'Sweet', description: 'Romantic but innocent - compliments, date nights, cuddles' },
+    { level: 2, label: 'Flirty', description: 'Playful teasing - flirty texts, light touching, innuendo' },
+    { level: 3, label: 'Intimate', description: 'Sensual but soft - massage, making out, showering together' },
+    { level: 4, label: 'Sexual', description: 'Standard sexual activities - oral, sex, toys' },
+    { level: 5, label: 'Wild', description: 'Extreme/kinky - public sex, creampies, BDSM, exhibitionism' },
 ] as const;
 
 export type ToneLevel = 0 | 1 | 2 | 3 | 4 | 5;
@@ -222,8 +225,8 @@ export async function generateQuestions(
     const isExplicit = tone >= 4;
 
     const crudeLangInstruction = crudeLang
-        ? '\n\nCRUDE LANGUAGE: Use crude, vulgar, raw language throughout. Be blunt, direct, and use everyday explicit words like people actually use in real life. Avoid euphemisms or clinical terms.'
-        : '\n\nLANGUAGE STYLE: Use tasteful, refined language. Avoid crude or vulgar terms. For explicit content, use direct but non-crude terms (e.g., "oral sex" not "blowjob", "have sex" not "fuck").';
+        ? '\n\nCRUDE LANGUAGE OVERRIDE: Ignore nuanced language rules. Use crude, vulgar terms throughout - "fuck" instead of "have sex", "suck cock" instead of "perform oral", etc. Be raw and direct like uncensored sexting.'
+        : ''; // Let the wildness level instructions handle language style
 
     const inspirationInstruction = inspiration
         ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide the types of questions you generate.`
@@ -236,12 +239,12 @@ export async function generateQuestions(
             : 'Vary the intensity levels from 1 to 5 across the questions for good variety.';
 
     const toneInstructions: Record<ToneLevel, string> = {
-        0: 'TONE: Completely clean and non-romantic. Focus on communication, teamwork, fun activities, personal growth, and bonding WITHOUT any romantic or sexual undertones. Think conversation starters, bucket list activities, games, challenges, and getting to know each other better. NO flirting, NO romance, NO intimacy references.',
-        1: 'TONE: Romantic and sweet. Focus on emotional connection, love, and tenderness. Keep content clean and wholesome - NO sexual content whatsoever. Think date nights, compliments, and heartfelt moments.',
-        2: 'TONE: Playful and flirty. Light teasing, fun activities, and cheeky suggestions. Mildly suggestive but NOTHING explicit or sexual. Think playful banter and innocent mischief.',
-        3: 'TONE: Sensual and intimate. Passionate and suggestive content that implies intimacy without being graphic. Use tasteful language - "make love" rather than crude terms. Romantic but with heat. AVOID explicit sexual acts or crude terminology.',
-        4: 'TONE: Spicy and bold. Adventurous sexual content with direct, natural language. Use everyday terms like "oral sex", "finger", "go down on", "handjob", "turn on". AVOID clinical/medical terms like "stimulate", "arousal", "genitals", "penetration". Write like real people talk about sex.',
-        5: 'TONE: Explicit adult content with NUANCED language. Use tasteful phrasing for common acts: "Have sex in X" (not "fuck in X"), "Perform oral" or "go down on" (not crude oral terms). BUT use crude/specific terms when they ARE the activity: "Cum on your partner\'s tits" (cum is the act), "Use a cock ring" (that\'s what it\'s called), "Edge your partner until they beg to cum". The rule: crude terms for specific acts/objects, tasteful terms for general sex/oral. NEVER sanitize "cum" to "come" - they have different meanings.',
+        0: 'WILDNESS LEVEL: EVERYDAY. Generate non-romantic activities only. Focus on communication, teamwork, fun, personal growth, and bonding WITHOUT any romantic or sexual undertones. Examples: "Cook a new recipe together", "Play a board game", "Send your partner a compliment while they\'re at work", "Plan a weekend adventure". NO flirting, NO romance, NO intimacy.',
+        1: 'WILDNESS LEVEL: SWEET. Generate romantic but innocent activities. Focus on emotional connection, love, and tenderness. Examples: "Write your partner a love letter", "Plan a surprise date night", "Cuddle and watch the sunset", "Give your partner a back massage". NO sexual content.',
+        2: 'WILDNESS LEVEL: FLIRTY. Generate playful, teasing activities with light innuendo. Examples: "Send a flirty text during the day", "Whisper something suggestive in your partner\'s ear", "Give your partner a lingering kiss goodbye". Suggestive but NOT explicitly sexual.',
+        3: 'WILDNESS LEVEL: INTIMATE. Generate sensual activities that imply intimacy without being graphic. Examples: "Give your partner a full-body massage", "Shower together", "Make out somewhere unexpected", "Sleep naked together". Passionate but soft - no explicit sex acts.',
+        4: 'WILDNESS LEVEL: SEXUAL. Generate standard sexual activities. Examples: "Go down on your partner", "Have sex in a new position", "Use a vibrator together", "Wake your partner up with oral". Direct language, avoid clinical terms. This is vanilla sex - adventurous but not extreme.',
+        5: 'WILDNESS LEVEL: WILD. Generate extreme, kinky, or taboo activities. Think: public sex, exhibitionism, BDSM, risky situations, intense kinks. Examples: "Get creampied by your partner and go to dinner", "Have sex somewhere you might get caught", "Let your partner tie you up and use you", "Edge each other for an hour before allowing release". Push boundaries. Use crude terms when they ARE the activity (cum, cock ring) but tasteful phrasing for general acts (have sex, not fuck). NEVER sanitize "cum" to "come".',
     };
 
     const toneInstruction = toneInstructions[tone];
@@ -336,17 +339,155 @@ Required JSON structure:
 - text: The proposal (DOER's perspective, uses "your partner")
 - partner_text: For asymmetric only - RECEIVER's perspective (also uses "your partner")
 - intensity: 1-5 based on INTENSITY LEVELS above.
+- requires_props: (optional) Array of items needed, e.g., ["blindfold", "ice"], or null if nothing special needed
+- location_type: (optional) "home" | "public" | "outdoors" | "travel" | "anywhere"
+- effort_level: (optional) "spontaneous" | "low" | "medium" | "planned"
+
+SENTENCE VARIETY - Vary your sentence openers. Do NOT start every question the same way:
+- GOOD variety: "Give your partner...", "Surprise your partner with...", "Try...", "Explore...", "Whisper...", "Tease your partner by...", "Wake your partner up with...", "Send your partner..."
+- BAD: Starting 5 questions with "Give your partner..."
+
+AVOID CLICHÉS - These are overused and boring:
+- "Candlelit dinner", "rose petals", "bubble bath together", "Netflix and chill", "breakfast in bed" (unless the pack specifically calls for classics)
+- Generic romance movie tropes - be more creative and specific
+
+LENGTH GUIDELINES:
+- Aim for 5-12 words per question
+- Too short (<4 words): "Kiss passionately" - lacks context
+- Too long (>15 words): Feels like instructions, not a proposal
+- Sweet spot: "Blindfold your partner and feed them mystery foods"
+
+SEMANTIC UNIQUENESS - Avoid generating questions that are essentially the same activity:
+- BAD: "Give your partner oral" AND "Go down on your partner" (same thing)
+- BAD: "Have sex in the shower" AND "Make love in the shower" (same thing)
+- Each question should be a genuinely DIFFERENT activity
+
+ACTIVITY DIVERSITY - Within a batch, ensure variety:
+- Mix activity TYPES: Don't generate 5 oral questions in a row
+- Mix LOCATIONS: Home, public, outdoors, travel, car, etc.
+- Mix EFFORT LEVELS: Quick/spontaneous AND planned/elaborate
+- Mix WHO GIVES/RECEIVES: Balance of initiator-focused and receiver-focused activities
+
+PACK COHESION - Questions should fit the pack theme:
+- If pack is "Public Adventures", don't include "Cuddle in bed"
+- If pack is "Gentle Romance", don't include intense BDSM
+- Stay true to the pack name and description
+
+RELATIONSHIP CONTEXT - Don't assume:
+- Not all couples live together (avoid "when you wake up together" unless appropriate)
+- Not all couples have been intimate before (context-dependent)
+- Some activities need privacy others don't have (roommates, kids)
+
+BDSM/KINK SAFETY - For bondage, power play, or edge play content:
+- Include implicit consent framing where appropriate: "If you're both comfortable...", "With your partner's enthusiastic consent..."
+- For restraint activities, the receiver's card should emphasize their agency: "Let your partner restrain you" not "Be restrained"
+- Avoid activities that could cause harm without proper knowledge (breath play, suspension, etc.) unless the pack is specifically for experienced practitioners
+
+PARTNER_TEXT APPEAL - Make the receiver's version equally enticing:
+- BAD: text: "Give your partner a sensual massage" → partner_text: "Receive a massage from your partner" (boring, clinical)
+- GOOD: text: "Give your partner a sensual massage" → partner_text: "Let your partner's hands explore and relax your body"
+- The receiver should feel excited reading their card, not like they're just an object
+
+=== FEW-SHOT EXAMPLES ===
+Study these examples carefully. They demonstrate the quality, style, and format expected:
+
+SYMMETRIC EXAMPLES (partner_text = null, both do the same thing):
+{
+  "text": "Skinny dip together somewhere secluded",
+  "partner_text": null,
+  "intensity": 3,
+  "location_type": "outdoors",
+  "effort_level": "planned"
+}
+{
+  "text": "Have sex in a place you might get caught",
+  "partner_text": null,
+  "intensity": 5,
+  "location_type": "public",
+  "effort_level": "spontaneous"
+}
+{
+  "text": "Cook a meal together wearing only aprons",
+  "partner_text": null,
+  "intensity": 3,
+  "location_type": "home",
+  "effort_level": "low"
+}
+{
+  "text": "Share your deepest fantasy with each other",
+  "partner_text": null,
+  "intensity": 2,
+  "location_type": "anywhere",
+  "effort_level": "spontaneous"
+}
+
+ASYMMETRIC EXAMPLES (different roles, needs partner_text):
+{
+  "text": "Blindfold your partner and tease them with ice",
+  "partner_text": "Let your partner blindfold you and tease your senses with ice",
+  "intensity": 4,
+  "requires_props": ["blindfold", "ice"],
+  "location_type": "home",
+  "effort_level": "low"
+}
+{
+  "text": "Wake your partner up with oral",
+  "partner_text": "Let your partner wake you up with their mouth on you",
+  "intensity": 4,
+  "location_type": "home",
+  "effort_level": "spontaneous"
+}
+{
+  "text": "Tie your partner's hands and have your way with them",
+  "partner_text": "Let your partner tie your hands and surrender control",
+  "intensity": 5,
+  "requires_props": ["restraints"],
+  "location_type": "home",
+  "effort_level": "low"
+}
+{
+  "text": "Write a dirty note and hide it for your partner to find",
+  "partner_text": "Discover a dirty note your partner hid for you",
+  "intensity": 2,
+  "location_type": "anywhere",
+  "effort_level": "low"
+}
+{
+  "text": "Send your partner to the bathroom and follow a minute later",
+  "partner_text": "Go to the bathroom and wait for your partner to join you",
+  "intensity": 4,
+  "location_type": "public",
+  "effort_level": "spontaneous"
+}
+{
+  "text": "Edge your partner until they beg to cum",
+  "partner_text": "Let your partner edge you until you're begging for release",
+  "intensity": 5,
+  "location_type": "home",
+  "effort_level": "medium"
+}
+
+BAD EXAMPLES (DO NOT generate like these):
+❌ { "text": "Would you want to try a massage?", ... } // Wishy-washy question
+❌ { "text": "Give your partner oral", "partner_text": "Receive oral from your partner", ... } // Boring partner_text
+❌ { "text": "Candlelit dinner with rose petals", ... } // Cliché
+❌ { "text": "Moan for your partner in public", ... } // Sounds like performance, not natural
+❌ { "text": "Finger or give your partner a handjob", ... } // Mixed anatomy
+❌ { "text": "Make love", ... } // Too vague, lacks context
+❌ { "text": "Take your partner to a romantic restaurant and order wine and have a lovely conversation about your future together", ... } // Way too long
+
+=== END EXAMPLES ===
 
 Return a JSON object with a "questions" array.
-Mix symmetric and asymmetric proposals.`;
+Mix symmetric and asymmetric proposals. Vary sentence openers. Be creative and specific.`;
 
     const systemMessages: Record<ToneLevel, string> = {
-        0: 'You are a content writer for a couples app focused on communication, activities, and bonding. Generate clean, non-romantic content like conversation starters, fun challenges, and activities. No romance or intimacy. Always respond with valid JSON only.',
-        1: 'You are a romantic content writer for a couples relationship app. Generate sweet, wholesome content that helps couples connect emotionally. Always respond with valid JSON only.',
-        2: 'You are a playful content writer for a couples relationship app. Generate fun, flirty content that helps couples have fun together. Always respond with valid JSON only.',
-        3: 'You are a sensual content writer for a couples relationship app. Generate passionate, intimate content that helps couples explore their desires tastefully. Always respond with valid JSON only.',
-        4: 'You are a bold content writer for an adult couples app. Write like a sex-positive friend giving suggestions - natural, direct, not clinical. Avoid medical terminology. Always respond with valid JSON only.',
-        5: 'You are an adult content writer for a couples intimacy app. Use nuanced language: tasteful phrasing for general acts (have sex, perform oral) but crude specific terms when relevant (cum, cock ring, etc). Never use clinical terms. Always respond with valid JSON only.',
+        0: 'You are a content writer for a couples app. Generate everyday activities focused on bonding, communication, and fun. No romance or intimacy. Always respond with valid JSON only.',
+        1: 'You are a content writer for a couples app. Generate sweet, romantic activities that help couples connect emotionally. Keep it innocent and wholesome. Always respond with valid JSON only.',
+        2: 'You are a content writer for a couples app. Generate flirty, playful activities with light teasing and innuendo. Suggestive but not sexual. Always respond with valid JSON only.',
+        3: 'You are a content writer for a couples app. Generate intimate, sensual activities that imply passion without being explicit. Always respond with valid JSON only.',
+        4: 'You are a content writer for an adult couples app. Generate sexual activities with direct, natural language. Write like a sex-positive friend - not clinical. Always respond with valid JSON only.',
+        5: 'You are a content writer for an adult couples app. Generate wild, extreme, kinky activities that push boundaries. Use crude terms when they ARE the act (cum, cock ring) but tasteful phrasing for general sex/oral. Never use clinical terms. Always respond with valid JSON only.',
     };
 
     const response = await openai.chat.completions.create({
@@ -426,8 +567,8 @@ export async function suggestCategories(
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? '\nUse crude, vulgar, and raw language in the names and descriptions.'
-        : '\nUse tasteful, refined language. Avoid crude or vulgar terms.';
+        ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the names and descriptions.'
+        : '';
 
     const inspirationInstruction = inspiration
         ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your category suggestions.`
@@ -494,8 +635,8 @@ export async function suggestPacks(
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? '\nUse crude, vulgar, and raw language in the pack names and descriptions.'
-        : '\nUse tasteful, refined language. Avoid crude or vulgar terms.';
+        ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the pack names and descriptions.'
+        : '';
 
     const inspirationInstruction = inspiration
         ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your pack suggestions.`
@@ -569,6 +710,7 @@ export async function polishContent(
     };
 
     let additionalRules = '';
+    let fewShotExamples = '';
     if (type === 'question' || type === 'partner_text') {
         additionalRules = `
   IMPORTANT RULES - READ CAREFULLY:
@@ -585,19 +727,35 @@ export async function polishContent(
      - BAD: "Suck their cock or eat them out" (male vs female anatomy)
      - If text has mixed anatomy alternatives, keep ONE activity and remove the incompatible one.
   `;
+        fewShotExamples = `
+  === FEW-SHOT EXAMPLES ===
+  ${type === 'question' ? `
+  "Would you want to give me a massage?" → "Give your partner a sensual massage"
+  "Have you ever thought about sex in public?" → "Have sex somewhere you might get caught"
+  "maybe we could try using a blindfold sometime" → "Blindfold your partner and tease their senses"
+  "cum on partner" → "Cum on your partner" (keep "cum", don't change to "come")
+  ` : `
+  "Receive a massage from your partner" → "Let your partner's hands work the tension from your body"
+  "Get oral from your partner" → "Let your partner pleasure you with their mouth"
+  "Be tied up" → "Let your partner tie you up and surrender control"
+  "Moan for your partner" → "Let your partner make you moan"
+  `}
+  === END EXAMPLES ===
+  `;
     }
 
     const prompt = `Please polish, improve, and tidy up the following text, which is used as ${contextMap[type] || 'text in the app'}.
-  
+
   Original text: "${text}"
-  
+
   ${explicitInstruction}
-  
+
   ${additionalRules}
+  ${fewShotExamples}
 
   Make it concise, engaging, and grammatically correct.
   Maintain the original intent and meaning.
-  
+
   Return a JSON object with:
   - polished: The improved text string`;
 
@@ -851,7 +1009,7 @@ For each question, decide if it is a SYMMETRIC activity (shared) or ASYMMETRIC a
 
 CRITICAL RULES:
 1. PRESERVE THE CORE ACTION - Do NOT change what the question is about. Only improve phrasing.
-2. Keep text SHORT and DIRECT - no explanatory parentheticals.
+2. Keep text SHORT and DIRECT - no explanatory parentheticals. Aim for 5-12 words.
 3. Remove wishy-washy language: "Would you want to...", "Have you ever...", "Do you think...", "...fantasy"
 4. Make it direct and actionable.
 5. For asymmetric cards, ensure text is initiator-focused and partner_text is receiver-focused.
@@ -863,6 +1021,43 @@ CRITICAL RULES:
    - BAD: "Suck your partner's cock or eat them out" (cock = male, eating out = female)
    - GOOD: Pick ONE activity appropriate for the question's target audience
    - If a question has mixed anatomy alternatives, choose the one that fits the pack's theme or keep the first one
+10. MAKE PARTNER_TEXT APPEALING - Don't just grammatically flip the text. Make the receiver feel excited:
+    - BAD: "Receive a massage from your partner" (boring, clinical)
+    - GOOD: "Let your partner's hands explore and relax your body" (enticing)
+11. FLAG CLICHÉS for improvement - "candlelit dinner", "rose petals", "bubble bath", "Netflix and chill" are overused
+
+=== FEW-SHOT EXAMPLES ===
+These show how to fix common issues:
+
+FIXING WISHY-WASHY LANGUAGE:
+Input: { "text": "Would you want to try giving your partner a massage?", "partner_text": null }
+Output: { "suggested_text": "Give your partner a sensual full-body massage", "suggested_partner_text": "Let your partner's hands work the tension from your body", "reason": "Removed question format, made it direct, added appealing partner_text" }
+
+FIXING BORING PARTNER_TEXT:
+Input: { "text": "Go down on your partner", "partner_text": "Receive oral from your partner" }
+Output: { "suggested_text": "Go down on your partner", "suggested_partner_text": "Let your partner pleasure you with their mouth", "reason": "Partner text was clinical/boring, made it enticing" }
+
+FIXING CAUSED-RESPONSE FRAMING:
+Input: { "text": "Make your partner moan in public", "partner_text": "Moan for your partner in public" }
+Output: { "suggested_text": "Make your partner moan in public", "suggested_partner_text": "Let your partner make you moan in public", "reason": "Partner text sounded like deliberate performance, reframed as allowing/receiving" }
+
+FIXING MIXED ANATOMY:
+Input: { "text": "Finger or give your partner a handjob at a movie theater", "partner_text": "Get fingered or a handjob at a movie theater" }
+Output: { "suggested_text": "Touch your partner intimately at a movie theater", "suggested_partner_text": "Let your partner touch you intimately at a movie theater", "reason": "Mixed male/female anatomy, made it gender-neutral" }
+
+FIXING CONFUSING PARTNER_TEXT:
+Input: { "text": "Send your partner to the bathroom and follow them", "partner_text": "Wait for your partner to follow you" }
+Output: { "suggested_text": "Send your partner to the bathroom and follow a minute later", "suggested_partner_text": "Go to the bathroom and wait for your partner to join you", "reason": "Partner text was confusing, clarified receiver's action" }
+
+FIXING TOO LONG:
+Input: { "text": "Take your partner out to a nice romantic restaurant where you can have a lovely dinner together and share your dreams for the future", "partner_text": null }
+Output: { "suggested_text": "Plan a surprise dinner date at a special restaurant", "suggested_partner_text": null, "reason": "Way too long, condensed to core action" }
+
+ALREADY GOOD (do not include in suggestions):
+Input: { "text": "Blindfold your partner and feed them mysterious foods", "partner_text": "Let your partner blindfold you and tantalize your taste buds" }
+(No output - this is already well-phrased)
+
+=== END EXAMPLES ===
 
 Return a JSON object with a "suggestions" array containing ONLY questions that need improvement.
 Each object should have:

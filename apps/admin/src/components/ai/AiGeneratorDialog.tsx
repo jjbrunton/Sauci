@@ -180,10 +180,10 @@ export function AiGeneratorDialog({
                         </div>
                     )}
 
-                    {/* Tone Selector for Questions */}
+                    {/* Wildness Level Selector for Questions */}
                     {type === 'questions' && (
                         <div className="space-y-2">
-                            <Label>Content Tone</Label>
+                            <Label>Wildness Level</Label>
                             <div className="flex flex-wrap gap-2">
                                 {TONE_LEVELS.map((t) => (
                                     <Button
@@ -205,7 +205,7 @@ export function AiGeneratorDialog({
                         </div>
                     )}
 
-                    {/* Explicit Toggle for other generators */}
+                    {/* Wild/Explicit Toggle for other generators */}
                     {(type === 'category-ideas' || type === 'category-pack-ideas' || type === 'pack') && (
                         <div className="flex items-center space-x-2">
                             <Switch
@@ -213,19 +213,19 @@ export function AiGeneratorDialog({
                                 checked={isExplicit}
                                 onCheckedChange={(checked) => setTone(checked ? 5 : 3)}
                             />
-                            <Label htmlFor="explicit-mode">Suggest Explicit Ideas</Label>
+                            <Label htmlFor="explicit-mode">Include Wild/Adult Ideas</Label>
                         </div>
                     )}
 
-                    {/* Crude Language Toggle */}
+                    {/* Crude Language Override Toggle */}
                     <div className="flex items-center space-x-2">
                         <Switch
                             id="crude-lang"
                             checked={crudeLang}
                             onCheckedChange={setCrudeLang}
                         />
-                        <Label htmlFor="crude-lang">Crude Language</Label>
-                        <span className="text-xs text-muted-foreground">(vulgar, raw, everyday explicit words)</span>
+                        <Label htmlFor="crude-lang">Crude Language Override</Label>
+                        <span className="text-xs text-muted-foreground">(use "fuck", "suck cock" etc. instead of tasteful phrasing)</span>
                     </div>
 
                     {/* Inspiration/Suggestions Textarea */}
