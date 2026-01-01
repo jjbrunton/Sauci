@@ -84,9 +84,10 @@ export default function AppLayout() {
     const wentToBackgroundAt = useRef<number | null>(null);
 
     // Check if we're on screens that should hide the tab bar
-    const isOnOnboarding = segments.includes("onboarding");
-    const isOnPairing = segments.includes("pairing");
-    const isOnChat = segments.includes("chat");
+    const segmentStrings = segments as string[];
+    const isOnOnboarding = segmentStrings.includes("onboarding");
+    const isOnPairing = segmentStrings.includes("pairing");
+    const isOnChat = segmentStrings.includes("chat");
     const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat;
 
     // Redirect to login when not authenticated, or to onboarding if not completed
@@ -309,10 +310,16 @@ export default function AppLayout() {
                         .single();
 
                     if (match) {
+                        // Handle the joined question data from the query
+                        const questionData = match.question;
+                        const questionText = Array.isArray(questionData)
+                            ? questionData[0]?.text
+                            : (questionData as { text: string } | null)?.text;
+
                         addMessage({
                             ...newMessage,
                             delivered_at: newMessage.delivered_at || new Date().toISOString(),
-                            match: match as { id: string; question: { text: string } },
+                            match: { id: match.id, question: { text: questionText || "" } },
                         });
                     }
                 }

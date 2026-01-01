@@ -20,12 +20,27 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 // Safely import Apple Authentication - may not be available in Expo Go
 let AppleAuthentication: typeof import("expo-apple-authentication") | null = null;
+let GoogleSignin: typeof import("@react-native-google-signin/google-signin").GoogleSignin | null = null;
 
 if (Platform.OS === "ios") {
     try {
         AppleAuthentication = require("expo-apple-authentication");
     } catch {
         AppleAuthentication = null;
+    }
+}
+
+if (Platform.OS === "android") {
+    try {
+        const googleModule = require("@react-native-google-signin/google-signin");
+        GoogleSignin = googleModule.GoogleSignin;
+        if (GoogleSignin) {
+            GoogleSignin.configure({
+                webClientId: "764866133492-e78o2rh3rdjc4rfj2j6r2j77b065kggm.apps.googleusercontent.com",
+            });
+        }
+    } catch {
+        GoogleSignin = null;
     }
 }
 import { supabase } from "../../src/lib/supabase";
@@ -55,6 +70,7 @@ export default function LoginScreen() {
     const [isSignUp, setIsSignUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+    const [isGoogleAuthAvailable, setIsGoogleAuthAvailable] = useState(false);
     const { isAuthenticated } = useAuthStore();
 
     // Check Apple Auth availability asynchronously
@@ -65,6 +81,13 @@ export default function LoginScreen() {
             }).catch(() => {
                 setIsAppleAuthAvailable(false);
             });
+        }
+    }, []);
+
+    // Check Google Auth availability
+    useEffect(() => {
+        if (Platform.OS === "android" && GoogleSignin) {
+            setIsGoogleAuthAvailable(true);
         }
     }, []);
 
@@ -297,6 +320,43 @@ export default function LoginScreen() {
 
             if (error) {
                 Alert.alert("Error", getAuthError(error));
+            }
+        }
+    };
+
+    const handleGoogleSignIn = async () => {
+        console.log("[Google Sign In] Starting, isGoogleAuthAvailable:", isGoogleAuthAvailable, "GoogleSignin:", !!GoogleSignin);
+
+        if (isGoogleAuthAvailable && GoogleSignin) {
+            try {
+                console.log("[Google Sign In] Checking Play Services...");
+                await GoogleSignin.hasPlayServices();
+
+                console.log("[Google Sign In] Calling signIn...");
+                const response = await GoogleSignin.signIn();
+                console.log("[Google Sign In] Got response, type:", response.type);
+
+                if (response.type === "success" && response.data.idToken) {
+                    console.log("[Google Sign In] Got idToken, signing in with Supabase...");
+                    const { error } = await supabase.auth.signInWithIdToken({
+                        provider: "google",
+                        token: response.data.idToken,
+                    });
+
+                    if (error) {
+                        console.log("[Google Sign In] Supabase error:", error.message);
+                        Alert.alert("Error", getAuthError(error));
+                    } else {
+                        Events.signIn("google");
+                    }
+                } else if (response.type === "cancelled") {
+                    console.log("[Google Sign In] User cancelled");
+                } else {
+                    Alert.alert("Error", "No identity token received from Google");
+                }
+            } catch (e: any) {
+                console.log("[Google Sign In] Caught error:", e.code, e.message);
+                Alert.alert("Error", "Google sign in failed. Please try again.");
             }
         }
     };
@@ -540,38 +600,66 @@ export default function LoginScreen() {
                             </GlassCard>
                         </Animated.View>
 
-                        {/* Social Sign In */}
-                        <Animated.View
-                            entering={FadeInDown.delay(300).duration(600).springify()}
-                            style={styles.socialContainer}
-                        >
-                            <View style={styles.divider}>
-                                <View style={styles.dividerLine} />
-                                <Text style={styles.dividerText}>or continue with</Text>
-                                <View style={styles.dividerLine} />
-                            </View>
+                        {/* Social Sign In - iOS only */}
+                        {Platform.OS === "ios" && (
+                            <Animated.View
+                                entering={FadeInDown.delay(300).duration(600).springify()}
+                                style={styles.socialContainer}
+                            >
+                                <View style={styles.divider}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>or continue with</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
 
-                            <View style={styles.socialButtons}>
-                                {isAppleAuthAvailable && AppleAuthentication ? (
-                                    <AppleAuthentication.AppleAuthenticationButton
-                                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                                        cornerRadius={12}
-                                        style={styles.appleButton}
-                                        onPress={handleAppleSignIn}
-                                    />
-                                ) : (
+                                <View style={styles.socialButtons}>
+                                    {isAppleAuthAvailable && AppleAuthentication ? (
+                                        <AppleAuthentication.AppleAuthenticationButton
+                                            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                                            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                                            cornerRadius={12}
+                                            style={styles.appleButton}
+                                            onPress={handleAppleSignIn}
+                                        />
+                                    ) : (
+                                        <GlassButton
+                                            variant="secondary"
+                                            onPress={handleAppleSignIn}
+                                            icon={<Ionicons name="logo-apple" size={20} color={colors.text} />}
+                                            style={styles.socialButton}
+                                        >
+                                            Apple
+                                        </GlassButton>
+                                    )}
+                                </View>
+                            </Animated.View>
+                        )}
+
+                        {/* Social Sign In - Android (Google) */}
+                        {Platform.OS === "android" && isGoogleAuthAvailable && (
+                            <Animated.View
+                                entering={FadeInDown.delay(300).duration(600).springify()}
+                                style={styles.socialContainer}
+                            >
+                                <View style={styles.divider}>
+                                    <View style={styles.dividerLine} />
+                                    <Text style={styles.dividerText}>or continue with</Text>
+                                    <View style={styles.dividerLine} />
+                                </View>
+
+                                <View style={styles.socialButtons}>
                                     <GlassButton
                                         variant="secondary"
-                                        onPress={handleAppleSignIn}
-                                        icon={<Ionicons name="logo-apple" size={20} color={colors.text} />}
+                                        onPress={handleGoogleSignIn}
+                                        icon={<Ionicons name="logo-google" size={20} color={colors.text} />}
                                         style={styles.socialButton}
+                                        fullWidth
                                     >
-                                        Apple
+                                        Continue with Google
                                     </GlassButton>
-                                )}
-                            </View>
-                        </Animated.View>
+                                </View>
+                            </Animated.View>
+                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

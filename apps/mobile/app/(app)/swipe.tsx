@@ -2,7 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import Animated, {
+    FadeIn,
+    FadeInUp,
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withSequence,
+    withTiming,
+    interpolate,
+    Easing,
+} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../src/lib/supabase";
 import { usePacksStore, useAuthStore } from "../../src/store";
@@ -26,6 +36,74 @@ export default function SwipeScreen() {
     const { enabledPackIds, fetchPacks } = usePacksStore();
     const { partner, couple } = useAuthStore();
     const hasTrackedExhausted = useRef(false);
+
+    // Ambient orb breathing animations
+    const orbBreathing1 = useSharedValue(0);
+    const orbBreathing2 = useSharedValue(0);
+    const orbDrift = useSharedValue(0);
+    const shimmerPosition = useSharedValue(-1);
+
+    useEffect(() => {
+        // Primary orb breathing - 6 second cycle
+        orbBreathing1.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+
+        // Secondary orb breathing - offset timing for variation
+        orbBreathing2.value = withRepeat(
+            withSequence(
+                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+
+        // Subtle vertical drift - 8 second cycle
+        orbDrift.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+
+        // Progress bar shimmer sweep - 2.5 second cycle
+        shimmerPosition.value = withRepeat(
+            withTiming(2, { duration: 2500, easing: Easing.linear }),
+            -1,
+            false
+        );
+    }, []);
+
+    const orbStyle1 = useAnimatedStyle(() => ({
+        opacity: interpolate(orbBreathing1.value, [0, 1], [0.25, 0.5]),
+        transform: [
+            { translateY: interpolate(orbDrift.value, [0, 1], [0, -20]) },
+            { scale: interpolate(orbBreathing1.value, [0, 1], [1, 1.1]) },
+        ],
+    }));
+
+    const orbStyle2 = useAnimatedStyle(() => ({
+        opacity: interpolate(orbBreathing2.value, [0, 1], [0.2, 0.4]),
+        transform: [
+            { translateY: interpolate(orbDrift.value, [0, 1], [20, 0]) },
+            { scale: interpolate(orbBreathing2.value, [0, 1], [1, 1.1]) },
+        ],
+    }));
+
+    const shimmerStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(shimmerPosition.value, [-1, 2], [-60, 220]) },
+        ],
+    }));
 
     useEffect(() => {
         fetchPacks().then(() => fetchQuestions());
@@ -323,6 +401,24 @@ export default function SwipeScreen() {
 
     return (
         <GradientBackground>
+            {/* Ambient Orbs */}
+            <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
+                <LinearGradient
+                    colors={[colors.primaryGlow, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 1, y: 1 }}
+                />
+            </Animated.View>
+            <Animated.View style={[styles.ambientOrb, styles.orbBottomLeft, orbStyle2]} pointerEvents="none">
+                <LinearGradient
+                    colors={[colors.secondaryGlow, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 0, y: 0 }}
+                />
+            </Animated.View>
+
             <View style={styles.container}>
                 {/* Header */}
                 <Animated.View
@@ -333,7 +429,7 @@ export default function SwipeScreen() {
                         <Text style={styles.progressText}>
                             {currentIndex + 1} of {questions.length}
                         </Text>
-                        <View style={styles.progressBar}>
+                        <View style={[styles.progressBar, styles.progressBarEnhanced]}>
                             <Animated.View
                                 style={[
                                     styles.progressFill,
@@ -346,6 +442,15 @@ export default function SwipeScreen() {
                                     end={{ x: 1, y: 0 }}
                                     style={styles.progressGradient}
                                 />
+                                {/* Shimmer sweep */}
+                                <Animated.View style={[styles.progressShimmer, shimmerStyle]}>
+                                    <LinearGradient
+                                        colors={['transparent', 'rgba(255,255,255,0.3)', 'transparent']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={StyleSheet.absoluteFill}
+                                    />
+                                </Animated.View>
                             </Animated.View>
                         </View>
                     </View>
@@ -353,9 +458,14 @@ export default function SwipeScreen() {
 
                 {/* Card Stack */}
                 <View style={styles.cardContainer}>
-                    {/* Background card (next) */}
+                    {/* Third card (deepest) */}
+                    {questions[currentIndex + 2] && (
+                        <View style={[styles.stackCard, styles.stackCardThird]} />
+                    )}
+
+                    {/* Second card */}
                     {questions[currentIndex + 1] && (
-                        <View style={styles.backgroundCard} />
+                        <View style={[styles.stackCard, styles.stackCardSecond]} />
                     )}
 
                     {/* Active card */}
@@ -395,6 +505,26 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
+    // Ambient orbs - more visible
+    ambientOrb: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+    },
+    orbTopRight: {
+        top: 60,
+        right: -40,
+    },
+    orbBottomLeft: {
+        bottom: 180,
+        left: -40,
+    },
+    orbGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 150,
+    },
     header: {
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
@@ -415,21 +545,35 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         overflow: "hidden",
     },
+    progressBarEnhanced: {
+        height: 8,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: colors.glass.borderLight,
+        ...shadows.glow(colors.primaryGlow),
+    },
     progressFill: {
         height: "100%",
-        borderRadius: 3,
+        borderRadius: 4,
         overflow: "hidden",
     },
     progressGradient: {
         flex: 1,
-        borderRadius: 3,
+        borderRadius: 4,
+    },
+    progressShimmer: {
+        position: 'absolute',
+        width: 60,
+        height: '100%',
+        top: 0,
     },
     cardContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
     },
-    backgroundCard: {
+    // Card stack
+    stackCard: {
         position: "absolute",
         width: "85%",
         height: 480,
@@ -437,9 +581,16 @@ const styles = StyleSheet.create({
         borderRadius: radius.xxl,
         borderWidth: 1,
         borderColor: colors.glass.border,
+    },
+    stackCardSecond: {
         transform: [{ scale: 0.95 }, { translateY: 12 }],
         opacity: 0.5,
         ...shadows.md,
+    },
+    stackCardThird: {
+        transform: [{ scale: 0.90 }, { translateY: 24 }],
+        opacity: 0.25,
+        ...shadows.sm,
     },
     hintContainer: {
         alignItems: "center",

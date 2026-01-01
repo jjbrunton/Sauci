@@ -66,7 +66,13 @@
       ],
       "@sentry/react-native",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.861972684340-0u2as8i5equfhmhmvjihottkf0ig7237"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

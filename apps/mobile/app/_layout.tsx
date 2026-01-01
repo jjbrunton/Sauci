@@ -24,7 +24,7 @@ import React, { useEffect, useRef } from "react";
 import { Platform, View, AppState, AppStateStatus } from "react-native";
 
 // Suppress useLayoutEffect warning on server-side rendering
-if (Platform.OS === "web" && typeof window === "undefined") {
+if (Platform.OS === "web" && typeof globalThis.window === "undefined") {
     React.useLayoutEffect = useEffect;
     // Also silence the warning in case some libraries ignore the monkey-patch
     const originalError = console.error;

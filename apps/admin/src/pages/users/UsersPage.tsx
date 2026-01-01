@@ -16,7 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, Crown, Users, ChevronRight, HardDrive } from 'lucide-react';
+import { Search, Crown, Users, ChevronRight, HardDrive, MailWarning } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Profile {
@@ -27,6 +27,8 @@ interface Profile {
     is_premium: boolean | null;
     couple_id: string | null;
     created_at: string | null;
+    last_sign_in_at: string | null;
+    email_confirmed_at: string | null;
     storage_bytes?: number;
     partner_is_premium?: boolean;
 }
@@ -48,11 +50,9 @@ export function UsersPage() {
     const fetchProfiles = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch profiles
+            // Fetch profiles with auth info (includes last_sign_in_at)
             const { data: profilesData, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .rpc('get_profiles_with_auth_info');
 
             if (error) throw error;
 
@@ -197,13 +197,14 @@ export function UsersPage() {
                             <TableHead>Couple</TableHead>
                             <TableHead>Storage</TableHead>
                             <TableHead>Joined</TableHead>
+                            <TableHead>Last Active</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredProfiles.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                                     {search ? 'No users found matching your search.' : 'No users yet.'}
                                 </TableCell>
                             </TableRow>
@@ -224,7 +225,14 @@ export function UsersPage() {
                                         </Link>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
-                                        {profile.email || '—'}
+                                        <div className="flex items-center gap-1.5">
+                                            {profile.email || '—'}
+                                            {profile.email && !profile.email_confirmed_at && (
+                                                <span title="Email not verified">
+                                                    <MailWarning className="h-3.5 w-3.5 text-amber-500" />
+                                                </span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         {profile.is_premium ? (
@@ -267,6 +275,11 @@ export function UsersPage() {
                                         {profile.created_at
                                             ? format(new Date(profile.created_at), 'MMM d, yyyy')
                                             : '—'}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {profile.last_sign_in_at
+                                            ? format(new Date(profile.last_sign_in_at), 'MMM d, yyyy h:mm a')
+                                            : 'Never'}
                                     </TableCell>
                                     <TableCell>
                                         <Link to={`/users/${profile.id}`}>

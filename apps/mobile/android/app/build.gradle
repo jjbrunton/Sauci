@@ -93,7 +93,7 @@ android {
         applicationId 'com.sauci.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
+        versionCode 3
         versionName "1.0.0"
     }
     signingConfigs {
@@ -104,10 +104,10 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('upload-keystore.jks')
-            storePassword System.getenv("KEYSTORE_PASSWORD") ?: "changeit"
-            keyAlias 'upload'
-            keyPassword System.getenv("KEY_PASSWORD") ?: "changeit"
+            storeFile file('../sauci-release.keystore')
+            storePassword "create01"
+            keyAlias 'sauci'
+            keyPassword "create01"
         }
     }
     buildTypes {

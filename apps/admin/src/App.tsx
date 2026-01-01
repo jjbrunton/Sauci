@@ -15,6 +15,7 @@ import { AdminsPage } from '@/pages/admins/AdminsPage';
 import { RedemptionCodesPage } from '@/pages/RedemptionCodesPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { UsageInsightsPage } from '@/pages/UsageInsightsPage';
+import { UserActivityPage } from '@/pages/activity/UserActivityPage';
 import { AiSettingsPage } from '@/pages/AiSettingsPage';
 import { AppSettingsPage } from '@/pages/AppSettingsPage';
 
@@ -93,6 +94,14 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
                                     <UsageInsightsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/activity"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_ACTIVITY}>
+                                    <UserActivityPage />
                                 </ProtectedRoute>
                             }
                         />

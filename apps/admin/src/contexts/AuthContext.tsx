@@ -18,6 +18,7 @@ export const PERMISSION_KEYS = {
     VIEW_MEDIA: 'view_media',
     VIEW_MATCHES: 'view_matches',
     VIEW_RESPONSES: 'view_responses',
+    VIEW_ACTIVITY: 'view_activity',
     // System permissions
     MANAGE_CODES: 'manage_codes',
     MANAGE_ADMINS: 'manage_admins',
@@ -38,6 +39,7 @@ export const PERMISSION_METADATA: Record<PermissionKey, { label: string; descrip
     [PERMISSION_KEYS.VIEW_MEDIA]: { label: 'Can view media', description: 'View user photos and media', group: 'users' },
     [PERMISSION_KEYS.VIEW_MATCHES]: { label: 'Can view matches', description: 'View user matches and match details', group: 'users' },
     [PERMISSION_KEYS.VIEW_RESPONSES]: { label: 'Can view responses', description: 'View user question responses', group: 'users' },
+    [PERMISSION_KEYS.VIEW_ACTIVITY]: { label: 'Can view activity', description: 'View user activity feed (responses, matches, messages, signups)', group: 'users' },
     [PERMISSION_KEYS.MANAGE_CODES]: { label: 'Can manage redemption codes', description: 'Create and view redemption codes', group: 'system' },
     [PERMISSION_KEYS.MANAGE_ADMINS]: { label: 'Can manage admins', description: 'Add/remove admin users and change permissions', group: 'system' },
     [PERMISSION_KEYS.MANAGE_AI_CONFIG]: { label: 'Can manage AI settings', description: 'Configure AI models, API keys, and council mode', group: 'system' },

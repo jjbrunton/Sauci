@@ -15,6 +15,8 @@ import {
     Bot,
     Smartphone,
     X,
+    Home,
+    Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -28,6 +30,14 @@ interface NavItem {
     icon: React.ReactNode;
     requiredPermission?: PermissionKey;
 }
+
+const dashboardNav: NavItem[] = [
+    {
+        label: 'Dashboard',
+        href: '/',
+        icon: <Home className="h-5 w-5" />,
+    },
+];
 
 const contentNav: NavItem[] = [
     {
@@ -44,6 +54,12 @@ const usersNav: NavItem[] = [
         href: '/users',
         icon: <Users className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.VIEW_USERS,
+    },
+    {
+        label: 'User Activity',
+        href: '/activity',
+        icon: <Activity className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.VIEW_ACTIVITY,
     },
     {
         label: 'Usage Insights',
@@ -112,7 +128,9 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     const NavLink = ({ item }: { item: NavItem }) => {
         if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
 
-        const isActive = location.pathname.startsWith(item.href);
+        const isActive = item.href === '/'
+            ? location.pathname === '/'
+            : location.pathname.startsWith(item.href);
 
         return (
             <Link
@@ -214,6 +232,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
             {/* Navigation */}
             <div className="flex-1 space-y-6 overflow-auto px-3 py-2">
+                <NavSection title="Dashboard" items={dashboardNav} />
                 <NavSection title="Content" items={contentNav} />
                 <NavSection title="Users" items={usersNav} />
                 <NavSection title="System" items={systemNav} />
@@ -310,6 +329,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
                     {/* Navigation */}
                     <div className="flex-1 space-y-6 overflow-auto px-3 py-4">
+                        <NavSection title="Dashboard" items={dashboardNav} />
                         <NavSection title="Content" items={contentNav} />
                         <NavSection title="Users" items={usersNav} />
                         <NavSection title="System" items={systemNav} />

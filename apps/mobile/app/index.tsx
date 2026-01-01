@@ -30,7 +30,7 @@ export default function Index() {
     }
 
     // Otherwise go to home
-    return <Redirect href="/(app)/" />;
+    return <Redirect href="/(app)" />;
 }
 
 const styles = StyleSheet.create({

@@ -726,8 +726,8 @@ export default function ProfileScreen() {
                                     <Ionicons name="flame" size={20} color={colors.text} />
                                 </LinearGradient>
                                 <View style={styles.rowTextContainer}>
-                                    <Text style={styles.rowValue}>Explicit Content</Text>
-                                    <Text style={styles.rowLabel}>Show 18+ question packs</Text>
+                                    <Text style={styles.rowValue}>Spicy Content</Text>
+                                    <Text style={styles.rowLabel}>Show spicy question packs</Text>
                                 </View>
                             </View>
                             <Switch

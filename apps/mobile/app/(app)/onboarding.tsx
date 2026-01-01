@@ -410,7 +410,7 @@ export default function OnboardingScreen() {
                                         Show me everything
                                     </Text>
                                     <Text style={styles.explicitDescription}>
-                                        Include 18+ question packs
+                                        Include spicy question packs
                                     </Text>
                                 </View>
                                 <View style={[

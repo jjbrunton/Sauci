@@ -31,7 +31,7 @@ export default function PairingScreen() {
     // Redirect if already paired
     useEffect(() => {
         if (couple && partner) {
-            router.replace("/(app)/");
+            router.replace("/(app)");
         }
     }, [couple, partner]);
 
@@ -124,7 +124,7 @@ export default function PairingScreen() {
             Events.coupleJoined();
 
             Alert.alert("Success", "You are now paired!", [
-                { text: "Let's Go", onPress: () => router.replace("/(app)/") }
+                { text: "Let's Go", onPress: () => router.replace("/(app)") }
             ]);
         } catch (error: any) {
             Alert.alert("Error", getPairingError(error));

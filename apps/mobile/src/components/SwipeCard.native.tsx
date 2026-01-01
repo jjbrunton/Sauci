@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Platform, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, TouchableOpacity } from "react-native-gesture-handler";
 import { BlurView } from "expo-blur";
@@ -7,11 +7,14 @@ import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
+    withRepeat,
+    withSequence,
     runOnJS,
     interpolate,
     Extrapolate,
     withTiming,
     interpolateColor,
+    Easing,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
@@ -48,8 +51,23 @@ export default function SwipeCard({ question, onSwipe }: Props) {
     const translateY = useSharedValue(0);
     const rotation = useSharedValue(0);
     const scale = useSharedValue(1);
+    const shadowExpand = useSharedValue(0);
+    const idleBreathing = useSharedValue(0);
+    const isGesturing = useSharedValue(false);
 
     const context = useSharedValue({ x: 0, y: 0 });
+
+    // Subtle idle breathing animation
+    useEffect(() => {
+        idleBreathing.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+    }, []);
 
     const gesture = Gesture.Pan()
         .activeOffsetX([-15, 15])
@@ -57,6 +75,8 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         .onStart(() => {
             context.value = { x: translateX.value, y: translateY.value };
             scale.value = withTiming(1.02, { duration: animations.timing.fast });
+            shadowExpand.value = withTiming(1, { duration: animations.timing.fast });
+            isGesturing.value = true;
         })
         .onUpdate((event) => {
             translateX.value = event.translationX + context.value.x;
@@ -70,6 +90,8 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         })
         .onEnd(() => {
             scale.value = withTiming(1, { duration: animations.timing.fast });
+            shadowExpand.value = withTiming(0, { duration: animations.timing.fast });
+            isGesturing.value = false;
 
             if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
                 const direction = translateX.value > 0 ? "right" : "left";
@@ -94,13 +116,28 @@ export default function SwipeCard({ question, onSwipe }: Props) {
             }
         });
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [
-            { translateX: translateX.value },
-            { translateY: translateY.value },
-            { rotate: `${rotation.value}deg` },
-            { scale: scale.value },
-        ],
+    const animatedStyle = useAnimatedStyle(() => {
+        // Apply idle breathing only when card is at rest
+        const idleOffset = isGesturing.value ? 0 : interpolate(idleBreathing.value, [0, 1], [0, -6]);
+
+        return {
+            transform: [
+                { translateX: translateX.value },
+                { translateY: translateY.value + idleOffset },
+                { rotate: `${rotation.value}deg` },
+                { scale: scale.value },
+            ],
+        };
+    });
+
+    // Dynamic shadow for card lift effect
+    const cardShadowStyle = useAnimatedStyle(() => ({
+        shadowOpacity: interpolate(shadowExpand.value, [0, 1], [0.3, 0.5]),
+        shadowRadius: interpolate(shadowExpand.value, [0, 1], [24, 36]),
+        shadowOffset: {
+            width: 0,
+            height: interpolate(shadowExpand.value, [0, 1], [12, 18]),
+        },
     }));
 
     const overlayStyle = (direction: "left" | "right" | "up" | "down") =>
@@ -159,7 +196,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
         <>
             <View style={[styles.cardWrapper, { width: cardWidth }]}>
                 <GestureDetector gesture={gesture}>
-                    <Animated.View style={[styles.cardOuter, animatedStyle, shadows.xl]}>
+                    <Animated.View style={[styles.cardOuter, animatedStyle, cardShadowStyle, { shadowColor: '#000' }]}>
                         {useBlur ? (
                             <BlurView
                                 intensity={blur.medium}
@@ -171,6 +208,8 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                                     overlayStyle={overlayStyle}
                                     handleButtonPress={handleButtonPress}
                                     onFeedbackPress={handleFeedbackPress}
+                                    translateX={translateX}
+                                    translateY={translateY}
                                 />
                             </BlurView>
                         ) : (
@@ -180,9 +219,13 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                                     overlayStyle={overlayStyle}
                                     handleButtonPress={handleButtonPress}
                                     onFeedbackPress={handleFeedbackPress}
+                                    translateX={translateX}
+                                    translateY={translateY}
                                 />
                             </View>
                         )}
+                        {/* Inner border highlight for depth */}
+                        <View style={styles.innerBorder} pointerEvents="none" />
                     </Animated.View>
                 </GestureDetector>
             </View>
@@ -202,12 +245,36 @@ function CardContent({
     overlayStyle,
     handleButtonPress,
     onFeedbackPress,
+    translateX,
+    translateY,
 }: {
     question: Props['question'];
     overlayStyle: (direction: "left" | "right" | "up" | "down") => any;
     handleButtonPress: (direction: "left" | "right" | "up") => void;
     onFeedbackPress: () => void;
+    translateX: Animated.SharedValue<number>;
+    translateY: Animated.SharedValue<number>;
 }) {
+    const isHighIntensity = question.intensity >= 3;
+
+    // Badge scale animation based on swipe progress
+    const badgeScaleStyle = (direction: "left" | "right" | "up" | "down") =>
+        useAnimatedStyle(() => {
+            let progress = 0;
+            if (direction === "right") {
+                progress = interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolate.CLAMP);
+            } else if (direction === "left") {
+                progress = interpolate(translateX.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolate.CLAMP);
+            } else if (direction === "up") {
+                progress = interpolate(translateY.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolate.CLAMP);
+            } else {
+                progress = interpolate(translateY.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolate.CLAMP);
+            }
+            return {
+                transform: [{ scale: interpolate(progress, [0, 0.5, 1], [0.8, 1, 1.1]) }],
+            };
+        });
+
     return (
         <>
             {/* Top highlight */}
@@ -216,6 +283,24 @@ function CardContent({
                 style={styles.highlight}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
+                pointerEvents="none"
+            />
+
+            {/* Left edge highlight */}
+            <LinearGradient
+                colors={['rgba(255,255,255,0.08)', 'transparent']}
+                style={styles.edgeHighlightLeft}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                pointerEvents="none"
+            />
+
+            {/* Right edge highlight */}
+            <LinearGradient
+                colors={['transparent', 'rgba(255,255,255,0.08)']}
+                style={styles.edgeHighlightRight}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
                 pointerEvents="none"
             />
 
@@ -229,31 +314,53 @@ function CardContent({
                 />
             </View>
 
-            {/* Overlays */}
+            {/* Overlays with gradient badges */}
             <Animated.View style={[styles.overlay, overlayStyle("right")]} pointerEvents="none">
-                <View style={[styles.overlayBadge, { backgroundColor: colors.success }]}>
+                <Animated.View style={[styles.overlayBadge, badgeScaleStyle("right")]}>
+                    <LinearGradient
+                        colors={gradients.success as [string, string]}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
                     <Text style={styles.overlayText}>YES</Text>
-                </View>
+                </Animated.View>
             </Animated.View>
             <Animated.View style={[styles.overlay, overlayStyle("left")]} pointerEvents="none">
-                <View style={[styles.overlayBadge, { backgroundColor: colors.error }]}>
+                <Animated.View style={[styles.overlayBadge, badgeScaleStyle("left")]}>
+                    <LinearGradient
+                        colors={gradients.error as [string, string]}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
                     <Text style={styles.overlayText}>NO</Text>
-                </View>
+                </Animated.View>
             </Animated.View>
             <Animated.View style={[styles.overlay, overlayStyle("up")]} pointerEvents="none">
-                <View style={[styles.overlayBadge, { backgroundColor: colors.warning }]}>
+                <Animated.View style={[styles.overlayBadge, badgeScaleStyle("up")]}>
+                    <LinearGradient
+                        colors={gradients.warning as [string, string]}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
                     <Text style={styles.overlayText}>MAYBE</Text>
-                </View>
+                </Animated.View>
             </Animated.View>
             <Animated.View style={[styles.overlay, overlayStyle("down")]} pointerEvents="none">
-                <View style={[styles.overlayBadge, { backgroundColor: colors.textTertiary }]}>
+                <Animated.View style={[styles.overlayBadge, badgeScaleStyle("down")]}>
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.textTertiary }]} />
                     <Text style={styles.overlayText}>SKIP</Text>
-                </View>
+                </Animated.View>
             </Animated.View>
 
             {/* Content */}
             <View style={styles.content}>
-                <View style={styles.intensityContainer}>
+                <View style={[
+                    styles.intensityContainer,
+                    isHighIntensity && styles.intensityContainerHigh
+                ]}>
                     {[...Array(question.intensity)].map((_, i) => (
                         <Ionicons key={i} name="flame" size={16} color={colors.primary} />
                     ))}
@@ -299,26 +406,57 @@ function ActionButton({
     icon: string;
     small?: boolean;
 }) {
+    const buttonScale = useSharedValue(1);
+    const buttonGlow = useSharedValue(0);
+
+    const handlePressIn = () => {
+        buttonScale.value = withSpring(0.92, animations.spring);
+        buttonGlow.value = withTiming(1, { duration: 150 });
+    };
+
+    const handlePressOut = () => {
+        buttonScale.value = withSpring(1, animations.spring);
+        buttonGlow.value = withTiming(0, { duration: 200 });
+    };
+
+    const buttonAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: buttonScale.value }],
+        shadowOpacity: interpolate(buttonGlow.value, [0, 1], [0.3, 0.6]),
+        shadowRadius: interpolate(buttonGlow.value, [0, 1], [8, 16]),
+    }));
+
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-            <LinearGradient
-                colors={buttonColors}
-                style={[
-                    styles.actionButton,
-                    small && styles.actionButtonSmall,
-                    shadows.md,
-                ]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <View style={styles.buttonHighlight} />
+        <TouchableOpacity
+            onPress={onPress}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={1}
+        >
+            <Animated.View style={[
+                styles.actionButton,
+                small && styles.actionButtonSmall,
+                buttonAnimatedStyle,
+                { shadowColor: buttonColors[0] }
+            ]}>
+                <LinearGradient
+                    colors={buttonColors}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                />
+                <LinearGradient
+                    colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.05)']}
+                    style={styles.buttonHighlight}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                />
                 <Ionicons
                     name={icon as any}
                     size={small ? 20 : 28}
                     color={colors.text}
                     style={styles.buttonIcon}
                 />
-            </LinearGradient>
+            </Animated.View>
         </TouchableOpacity>
     );
 }
@@ -358,6 +496,30 @@ const styles = StyleSheet.create({
         right: 0,
         height: 80,
     },
+    edgeHighlightLeft: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        bottom: 0,
+        width: 60,
+    },
+    edgeHighlightRight: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 60,
+    },
+    innerBorder: {
+        position: 'absolute',
+        top: 2,
+        left: 2,
+        right: 2,
+        bottom: 2,
+        borderRadius: radius.xxl - 2,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
     feedbackButton: {
         position: 'absolute',
         top: spacing.md,
@@ -388,6 +550,11 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         gap: 2,
     },
+    intensityContainerHigh: {
+        borderWidth: 1,
+        borderColor: colors.primary,
+        ...shadows.glow(colors.primaryGlow),
+    },
     text: {
         ...typography.title2,
         color: colors.text,
@@ -414,6 +581,7 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
         transform: [{ rotate: "-15deg" }],
+        overflow: 'hidden',
     },
     overlayText: {
         fontSize: 36,
@@ -446,7 +614,8 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         height: "50%",
-        backgroundColor: "rgba(255, 255, 255, 0.15)",
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
     },
     buttonIcon: {
         zIndex: 1,

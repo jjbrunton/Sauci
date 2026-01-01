@@ -145,6 +145,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
             <Animated.View
                 style={[
                     styles.card,
+                    webStyles.card as any,
                     {
                         width: cardWidth,
                         transform: [
@@ -206,7 +207,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                             <Ionicons key={i} name="flame" size={16} color="#e94560" />
                         ))}
                     </View>
-                    <Text style={[styles.text, question.is_two_part ? styles.twoPartText : null]}>{question.text}</Text>
+                    <Text style={[styles.text, question.partner_text ? styles.twoPartText : null]}>{question.text}</Text>
                 </View>
 
                 <View style={styles.footer}>
@@ -218,6 +219,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                                 hoveredButton === "no" && styles.buttonHovered,
                             ]}
                             onPress={() => onSwipe("left")}
+                            // @ts-expect-error - web-only props
                             onMouseEnter={() => setHoveredButton("no")}
                             onMouseLeave={() => setHoveredButton(null)}
                             activeOpacity={0.7}
@@ -233,6 +235,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                                 hoveredButton === "maybe" && styles.buttonHovered,
                             ]}
                             onPress={() => onSwipe("up")}
+                            // @ts-expect-error - web-only props
                             onMouseEnter={() => setHoveredButton("maybe")}
                             onMouseLeave={() => setHoveredButton(null)}
                             activeOpacity={0.7}
@@ -248,6 +251,7 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                                 hoveredButton === "yes" && styles.buttonHovered,
                             ]}
                             onPress={() => onSwipe("right")}
+                            // @ts-expect-error - web-only props
                             onMouseEnter={() => setHoveredButton("yes")}
                             onMouseLeave={() => setHoveredButton(null)}
                             activeOpacity={0.7}
@@ -269,6 +273,12 @@ export default function SwipeCard({ question, onSwipe }: Props) {
     );
 }
 
+// Separate web-only styles that TypeScript doesn't recognize
+const webStyles = {
+    card: { cursor: "grab" as const },
+    actionButton: { transition: "transform 0.2s ease, box-shadow 0.2s ease" },
+};
+
 const styles = StyleSheet.create({
     card: {
         position: "absolute",
@@ -287,7 +297,6 @@ const styles = StyleSheet.create({
         shadowRadius: 4.65,
         elevation: 8,
         overflow: "hidden",
-        cursor: "grab",
     },
     feedbackButton: {
         position: 'absolute',
@@ -402,7 +411,6 @@ const styles = StyleSheet.create({
         elevation: 8,
         borderWidth: 2,
         overflow: "hidden",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease",
     },
     noButton: {
         backgroundColor: "#E74C3C",

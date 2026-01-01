@@ -20,9 +20,7 @@ export async function initAnalytics() {
     posthog = new PostHog(apiKey, {
       host,
       // Disable automatic capture in production for privacy
-      captureApplicationLifecycleEvents: true,
-      captureDeepLinks: true,
-      recordScreenViews: false, // We'll track manually for more control
+      captureAppLifecycleEvents: true,
     });
 
     isInitialized = true;
