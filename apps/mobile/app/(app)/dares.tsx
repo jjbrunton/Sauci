@@ -1,12 +1,31 @@
-import { View, Text, StyleSheet, Platform } from "react-native";
+import { View, Text, StyleSheet, Platform, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { GradientBackground } from "../../src/components/ui";
-import { colors, spacing, radius, typography } from "../../src/theme";
+import { colors, spacing, radius, typography, animations } from "../../src/theme";
+import { useFeatureInterest } from "../../src/hooks/useFeatureInterest";
 
 const ACCENT_COLOR = colors.premium.gold;
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 export default function DaresScreen() {
+    const { isInterested, isLoading, isToggling, toggleInterest, isAuthenticated } =
+        useFeatureInterest("dares");
+
+    const scale = useSharedValue(1);
+    const animatedButtonStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
+
+    const handlePressIn = () => {
+        scale.value = withSpring(0.96, animations.spring);
+    };
+
+    const handlePressOut = () => {
+        scale.value = withSpring(1, animations.spring);
+    };
+
     return (
         <GradientBackground>
             <View style={styles.container}>
@@ -61,6 +80,41 @@ export default function DaresScreen() {
 
                     {/* Bottom teaser */}
                     <Text style={styles.teaser}>Are you ready to play?</Text>
+
+                    {/* Interest button */}
+                    {isAuthenticated && !isLoading && (
+                        <Animated.View
+                            entering={FadeIn.delay(500).duration(400)}
+                            style={styles.interestButtonContainer}
+                        >
+                            <AnimatedPressable
+                                onPress={toggleInterest}
+                                onPressIn={handlePressIn}
+                                onPressOut={handlePressOut}
+                                disabled={isToggling}
+                                style={[
+                                    styles.interestButton,
+                                    isInterested && styles.interestButtonActive,
+                                    animatedButtonStyle,
+                                ]}
+                            >
+                                {isToggling ? (
+                                    <ActivityIndicator size="small" color={ACCENT_COLOR} />
+                                ) : (
+                                    <>
+                                        <Ionicons
+                                            name={isInterested ? "checkmark-circle" : "notifications-outline"}
+                                            size={16}
+                                            color={ACCENT_COLOR}
+                                        />
+                                        <Text style={styles.interestButtonText}>
+                                            {isInterested ? "You're on the list!" : "I'm interested"}
+                                        </Text>
+                                    </>
+                                )}
+                            </AnimatedPressable>
+                        </Animated.View>
+                    )}
                 </Animated.View>
             </View>
         </GradientBackground>
@@ -166,5 +220,29 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: colors.textTertiary,
         textAlign: 'center',
+    },
+    interestButtonContainer: {
+        marginTop: spacing.xl,
+    },
+    interestButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.2)',
+        gap: spacing.sm,
+    },
+    interestButtonActive: {
+        backgroundColor: 'rgba(212, 175, 55, 0.15)',
+        borderColor: 'rgba(212, 175, 55, 0.3)',
+    },
+    interestButtonText: {
+        ...typography.subhead,
+        fontWeight: '600',
+        color: ACCENT_COLOR,
     },
 });
