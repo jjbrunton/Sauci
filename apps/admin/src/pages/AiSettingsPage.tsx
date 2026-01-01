@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAiConfig, AiConfig } from '@/hooks/useAiConfig';
+import { useAiConfig, AiConfig, CouncilGenerator } from '@/hooks/useAiConfig';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Save, Eye, EyeOff, AlertTriangle, Bot, Users, Sparkles, RefreshCw } from 'lucide-react';
+import { Save, Eye, EyeOff, AlertTriangle, Bot, Users, Sparkles, RefreshCw, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -46,6 +46,11 @@ export function AiSettingsPage() {
     // Initialize form data when config loads
     useEffect(() => {
         if (config) {
+            // Handle generators array - default to one generator with the legacy model or default
+            const generators: CouncilGenerator[] = config.council_generators && config.council_generators.length > 0
+                ? config.council_generators
+                : [{ model: config.council_generator_model || 'anthropic/claude-3.5-sonnet' }];
+
             setFormData({
                 openrouter_api_key: config.openrouter_api_key || '',
                 default_model: config.default_model || '',
@@ -54,6 +59,7 @@ export function AiSettingsPage() {
                 model_polish: config.model_polish || '',
                 council_enabled: config.council_enabled || false,
                 council_generator_model: config.council_generator_model || '',
+                council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
             });
             setHasChanges(false);
@@ -84,6 +90,10 @@ export function AiSettingsPage() {
 
     const handleReset = () => {
         if (config) {
+            const generators: CouncilGenerator[] = config.council_generators && config.council_generators.length > 0
+                ? config.council_generators
+                : [{ model: config.council_generator_model || 'anthropic/claude-3.5-sonnet' }];
+
             setFormData({
                 openrouter_api_key: config.openrouter_api_key || '',
                 default_model: config.default_model || '',
@@ -92,10 +102,33 @@ export function AiSettingsPage() {
                 model_polish: config.model_polish || '',
                 council_enabled: config.council_enabled || false,
                 council_generator_model: config.council_generator_model || '',
+                council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
             });
             setHasChanges(false);
         }
+    };
+
+    // Helper functions for managing generators array
+    const generators = (formData.council_generators as CouncilGenerator[]) || [{ model: 'anthropic/claude-3.5-sonnet' }];
+
+    const addGenerator = () => {
+        const newGenerators = [...generators, { model: '' }];
+        handleChange('council_generators', newGenerators);
+    };
+
+    const removeGenerator = (index: number) => {
+        if (generators.length <= 1) {
+            toast.error('You must have at least one generator');
+            return;
+        }
+        const newGenerators = generators.filter((_, i) => i !== index);
+        handleChange('council_generators', newGenerators);
+    };
+
+    const updateGeneratorModel = (index: number, model: string) => {
+        const newGenerators = generators.map((g, i) => i === index ? { ...g, model } : g);
+        handleChange('council_generators', newGenerators);
     };
 
     if (!canManage) {
@@ -318,7 +351,7 @@ export function AiSettingsPage() {
                         Council Mode
                     </CardTitle>
                     <CardDescription>
-                        Enable multi-model review for quality assurance. A second AI model reviews generated content.
+                        Enable multi-model review for quality assurance. Multiple generators can compete, and a reviewer picks the best output.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -326,7 +359,7 @@ export function AiSettingsPage() {
                         <div className="space-y-0.5">
                             <Label htmlFor="council-enabled">Enable Council Mode</Label>
                             <p className="text-xs text-muted-foreground">
-                                When enabled, generated questions are reviewed by a second AI model
+                                When enabled, generators run in parallel and a reviewer selects the best result
                             </p>
                         </div>
                         <Switch
@@ -339,34 +372,76 @@ export function AiSettingsPage() {
                     {formData.council_enabled && (
                         <>
                             <Separator />
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="council-generator">Generator Model</Label>
-                                    <Input
-                                        id="council-generator"
-                                        value={formData.council_generator_model || ''}
-                                        onChange={(e) => handleChange('council_generator_model', e.target.value)}
-                                        placeholder="anthropic/claude-3.5-sonnet"
-                                        list="generation-models"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Model used to generate content (overrides model_generate in council mode)
-                                    </p>
+
+                            {/* Generators Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label>Generator Models ({generators.length})</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Models that generate content in parallel. The reviewer picks the best output.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={addGenerator}
+                                    >
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Add Generator
+                                    </Button>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="council-reviewer">Reviewer Model</Label>
-                                    <Input
-                                        id="council-reviewer"
-                                        value={formData.council_reviewer_model || ''}
-                                        onChange={(e) => handleChange('council_reviewer_model', e.target.value)}
-                                        placeholder="google/gemini-pro-1.5"
-                                        list="review-models"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Model used to review and score generated content
-                                    </p>
+                                <div className="space-y-3">
+                                    {generators.map((gen, index) => (
+                                        <div key={index} className="flex items-center gap-2">
+                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                                                {index + 1}
+                                            </div>
+                                            <Input
+                                                value={gen.model}
+                                                onChange={(e) => updateGeneratorModel(index, e.target.value)}
+                                                placeholder={index === 0 ? "anthropic/claude-3.5-sonnet" : "Enter model ID..."}
+                                                list="generation-models"
+                                                className="flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => removeGenerator(index)}
+                                                disabled={generators.length <= 1}
+                                                className="text-destructive hover:text-destructive"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
                                 </div>
+
+                                {generators.length > 1 && (
+                                    <p className="text-xs text-muted-foreground">
+                                        All {generators.length} generators will run in parallel. The reviewer will compare all outputs and select the best one.
+                                    </p>
+                                )}
+                            </div>
+
+                            <Separator />
+
+                            {/* Reviewer Section */}
+                            <div className="space-y-2">
+                                <Label htmlFor="council-reviewer">Reviewer Model</Label>
+                                <Input
+                                    id="council-reviewer"
+                                    value={formData.council_reviewer_model || ''}
+                                    onChange={(e) => handleChange('council_reviewer_model', e.target.value)}
+                                    placeholder="google/gemini-pro-1.5"
+                                    list="review-models"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Model used to review, score, and select the best generated content
+                                </p>
                             </div>
 
                             <datalist id="review-models">
@@ -381,8 +456,8 @@ export function AiSettingsPage() {
                                 <AlertTriangle className="h-4 w-4" />
                                 <AlertTitle>Usage Note</AlertTitle>
                                 <AlertDescription>
-                                    Council mode uses two AI calls per generation, which increases API costs.
-                                    It's recommended to use different model providers to get diverse perspectives.
+                                    Council mode uses {generators.length + 1} AI call{generators.length + 1 > 1 ? 's' : ''} per generation ({generators.length} generator{generators.length > 1 ? 's' : ''} + 1 reviewer), which increases API costs.
+                                    Using different model providers gives diverse perspectives.
                                 </AlertDescription>
                             </Alert>
                         </>

@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/config';
 
+export interface CouncilGenerator {
+    model: string;
+}
+
 export interface AiConfig {
     id: string;
     openrouter_api_key: string | null;
@@ -9,7 +13,8 @@ export interface AiConfig {
     model_fix: string | null;
     model_polish: string | null;
     council_enabled: boolean;
-    council_generator_model: string | null;
+    council_generator_model: string | null; // Legacy - kept for backwards compatibility
+    council_generators: CouncilGenerator[] | null; // New array of generators
     council_reviewer_model: string | null;
     updated_at: string | null;
     updated_by: string | null;

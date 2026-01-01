@@ -28,6 +28,7 @@ import {
     type ToneLevel,
     type QuestionReview,
     type CouncilGenerationResult,
+    type GenerationCandidate,
 } from '@/lib/openai';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
@@ -81,6 +82,8 @@ export function AiGeneratorDialog({
     const [reviews, setReviews] = useState<QuestionReview[]>([]);
     const [reviewSummary, setReviewSummary] = useState<CouncilGenerationResult['summary']>(null);
     const [reviewMetadata, setReviewMetadata] = useState<CouncilGenerationResult['metadata'] | null>(null);
+    const [selectedGeneratorIndex, setSelectedGeneratorIndex] = useState<number | null>(null);
+    const [allCandidates, setAllCandidates] = useState<GenerationCandidate[] | null>(null);
     const [filter, setFilter] = useState<'all' | 'pass' | 'flag' | 'reject'>('all');
 
     // Selection state for questions
@@ -115,6 +118,8 @@ export function AiGeneratorDialog({
         setReviews([]);
         setReviewSummary(null);
         setReviewMetadata(null);
+        setSelectedGeneratorIndex(null);
+        setAllCandidates(null);
         setFilter('all');
 
         try {
@@ -147,6 +152,8 @@ export function AiGeneratorDialog({
                 setReviews(reviewList);
                 setReviewSummary(result.summary);
                 setReviewMetadata(result.metadata);
+                setSelectedGeneratorIndex(result.selectedGeneratorIndex);
+                setAllCandidates(result.allCandidates);
 
                 // Smart selection based on review results
                 if (reviewList.length > 0) {
@@ -162,10 +169,13 @@ export function AiGeneratorDialog({
                     // Show toast with summary
                     if (result.summary) {
                         const { passed, flagged, rejected } = result.summary;
+                        const generatorInfo = allCandidates && allCandidates.length > 1 && result.selectedGeneratorIndex !== null
+                            ? ` (from generator ${result.selectedGeneratorIndex + 1})`
+                            : '';
                         if (rejected > 0) {
-                            toast.warning(`Review complete: ${passed} passed, ${flagged} flagged, ${rejected} rejected`);
+                            toast.warning(`Review complete: ${passed} passed, ${flagged} flagged, ${rejected} rejected${generatorInfo}`);
                         } else {
-                            toast.success(`Review complete: ${passed} passed, ${flagged} flagged`);
+                            toast.success(`Review complete: ${passed} passed, ${flagged} flagged${generatorInfo}`);
                         }
                     }
                 } else {
@@ -242,6 +252,8 @@ export function AiGeneratorDialog({
         setReviews([]);
         setReviewSummary(null);
         setReviewMetadata(null);
+        setSelectedGeneratorIndex(null);
+        setAllCandidates(null);
         setFilter('all');
         onOpenChange(false);
     };
@@ -369,9 +381,9 @@ export function AiGeneratorDialog({
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         {loadingStep === 'generating' && councilConfig.enabled
-                                            ? 'Step 1/2: Generating...'
+                                            ? `Step 1/2: Generating${councilConfig.generators.length > 1 ? ` with ${councilConfig.generators.length} models` : ''}...`
                                             : loadingStep === 'reviewing'
-                                                ? 'Step 2/2: Reviewing...'
+                                                ? 'Step 2/2: Reviewing & selecting best...'
                                                 : 'Generating...'}
                                     </>
                                 ) : (
@@ -383,7 +395,8 @@ export function AiGeneratorDialog({
                             </Button>
                             {councilConfig.enabled && type === 'questions' && !loading && (
                                 <p className="text-xs text-muted-foreground text-center">
-                                    Council mode enabled - questions will be reviewed by a second model
+                                    Council mode: {councilConfig.generators.length} generator{councilConfig.generators.length > 1 ? 's' : ''} + reviewer
+                                    {councilConfig.generators.length > 1 && ' (best output will be selected)'}
                                 </p>
                             )}
                         </div>
@@ -426,10 +439,23 @@ export function AiGeneratorDialog({
                                         </span>
                                     </div>
                                     {reviewMetadata && (
-                                        <p className="text-xs text-muted-foreground">
-                                            Generated in {(reviewMetadata.generationTime / 1000).toFixed(1)}s
-                                            {reviewMetadata.reviewTime > 0 && ` • Reviewed in ${(reviewMetadata.reviewTime / 1000).toFixed(1)}s`}
-                                        </p>
+                                        <div className="text-xs text-muted-foreground space-y-1">
+                                            <p>
+                                                Generated in {(reviewMetadata.totalGenerationTime / 1000).toFixed(1)}s
+                                                {reviewMetadata.reviewTime > 0 && ` • Reviewed in ${(reviewMetadata.reviewTime / 1000).toFixed(1)}s`}
+                                            </p>
+                                            {allCandidates && allCandidates.length > 1 && selectedGeneratorIndex !== null && (
+                                                <p className="text-primary font-medium">
+                                                    Selected: Generator {selectedGeneratorIndex + 1} of {allCandidates.length}
+                                                    {' '}({allCandidates[selectedGeneratorIndex]?.generatorModel.split('/').pop()})
+                                                </p>
+                                            )}
+                                            {reviewMetadata.generatorModels.length > 1 && (
+                                                <p>
+                                                    Compared {reviewMetadata.generatorModels.length} generators: {reviewMetadata.generatorModels.map(m => m.split('/').pop()).join(', ')}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             )}
