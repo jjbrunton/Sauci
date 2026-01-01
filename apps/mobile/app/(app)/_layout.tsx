@@ -149,12 +149,10 @@ export default function AppLayout() {
                 router.push('/(app)/swipe');
                 break;
             case 'dares':
-                // TODO: Navigate to dares screen
-                console.log('Dares pressed - not yet implemented');
+                router.push('/(app)/dares');
                 break;
             case 'quiz':
-                // TODO: Navigate to quiz screen
-                console.log('Quiz pressed - not yet implemented');
+                router.push('/(app)/quiz');
                 break;
         }
     }, [router, closeRadialMenu]);
@@ -605,6 +603,18 @@ export default function AppLayout() {
                 />
                 <Tabs.Screen
                     name="onboarding"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="dares"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="quiz"
                     options={{
                         href: null, // Hide from tab bar
                     }}

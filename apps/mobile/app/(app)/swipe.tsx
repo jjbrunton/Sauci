@@ -270,34 +270,68 @@ export default function SwipeScreen() {
 
     // Show "pair with partner" prompt when user doesn't have a partner yet
     if (!partner) {
+        const PAIR_ACCENT = colors.premium.rose;
         return (
-            <GradientBackground showAccent>
+            <GradientBackground>
                 <View style={styles.centerContainer}>
                     <Animated.View
                         entering={FadeInUp.duration(600).springify()}
-                        style={styles.emptyContent}
+                        style={styles.waitingContent}
                     >
-                        <LinearGradient
-                            colors={gradients.primary as [string, string]}
-                            style={styles.pairIconContainer}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                        {/* Icon */}
+                        <View style={styles.waitingIconContainer}>
+                            <Ionicons name="heart" size={36} color={PAIR_ACCENT} />
+                        </View>
+
+                        {/* Title section */}
+                        <Text style={styles.waitingLabel}>{couple ? "ALMOST THERE" : "CONNECT"}</Text>
+                        <Text style={styles.waitingTitle}>{couple ? "Waiting" : "Pair Up"}</Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.waitingSeparator}>
+                            <View style={styles.waitingSeparatorLine} />
+                            <View style={styles.waitingSeparatorDiamond} />
+                            <View style={styles.waitingSeparatorLine} />
+                        </View>
+
+                        {/* Status badge */}
+                        <Animated.View
+                            entering={FadeIn.delay(300).duration(400)}
+                            style={styles.waitingBadge}
                         >
-                            <Ionicons name="heart" size={48} color={colors.text} />
-                        </LinearGradient>
-                        <Text style={styles.pairTitle}>
-                            {couple ? "Waiting for your partner" : "Pair with your partner"}
-                        </Text>
-                        <Text style={styles.emptySubtitle}>
+                            <Text style={styles.waitingBadgeText}>{couple ? "INVITE SENT" : "MADE FOR TWO"}</Text>
+                        </Animated.View>
+
+                        {/* Description */}
+                        <Text style={styles.waitingDescription}>
                             {couple
                                 ? "Share your invite code so they can join you. Once paired, you'll both answer questions and discover what you agree on!"
                                 : "Sauci is made for two! Connect with your partner to start answering questions together and discover what you have in common."
                             }
                         </Text>
+
+                        {/* Feature hints */}
+                        <View style={styles.waitingFeatures}>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="lock-closed-outline" size={16} color={PAIR_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Private and secure</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="sparkles" size={16} color={PAIR_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Discover hidden desires</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="chatbubble-ellipses-outline" size={16} color={PAIR_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Chat about your matches</Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom teaser */}
+                        <Text style={styles.waitingTeaser}>{couple ? "Your partner is just a code away" : "Begin your intimate journey together"}</Text>
+
                         <GlassButton
                             onPress={() => router.push("/pairing")}
-                            style={{ marginTop: spacing.xl }}
-                            size="lg"
+                            style={{ marginTop: spacing.lg }}
                         >
                             {couple ? "View Invite Code" : "Pair Now"}
                         </GlassButton>
@@ -309,27 +343,62 @@ export default function SwipeScreen() {
 
     // Show "waiting for partner" message when user is too far ahead
     if (isBlocked && gapInfo) {
+        const WAITING_ACCENT = colors.premium.rose;
         return (
-            <GradientBackground showAccent>
+            <GradientBackground>
                 <View style={styles.centerContainer}>
                     <Animated.View
                         entering={FadeInUp.duration(600).springify()}
-                        style={styles.emptyContent}
+                        style={styles.waitingContent}
                     >
-                        <LinearGradient
-                            colors={gradients.warning as [string, string]}
-                            style={styles.pairIconContainer}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
+                        {/* Icon */}
+                        <View style={styles.waitingIconContainer}>
+                            <Ionicons name="hourglass-outline" size={36} color={WAITING_ACCENT} />
+                        </View>
+
+                        {/* Title section */}
+                        <Text style={styles.waitingLabel}>PATIENCE</Text>
+                        <Text style={styles.waitingTitle}>Waiting</Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.waitingSeparator}>
+                            <View style={styles.waitingSeparatorLine} />
+                            <View style={styles.waitingSeparatorDiamond} />
+                            <View style={styles.waitingSeparatorLine} />
+                        </View>
+
+                        {/* Status badge */}
+                        <Animated.View
+                            entering={FadeIn.delay(300).duration(400)}
+                            style={styles.waitingBadge}
                         >
-                            <Ionicons name="hourglass-outline" size={48} color={colors.text} />
-                        </LinearGradient>
-                        <Text style={styles.pairTitle}>
-                            Waiting for your partner
+                            <Text style={styles.waitingBadgeText}>{gapInfo.unanswered} UNANSWERED</Text>
+                        </Animated.View>
+
+                        {/* Description */}
+                        <Text style={styles.waitingDescription}>
+                            You're ahead by {gapInfo.unanswered} questions. Give your partner some time to catch up so you can discover matches together.
                         </Text>
-                        <Text style={styles.emptySubtitle}>
-                            You've answered {gapInfo.unanswered} questions that your partner hasn't seen yet. Give them some time to catch up!
-                        </Text>
+
+                        {/* Feature hints */}
+                        <View style={styles.waitingFeatures}>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="heart-outline" size={16} color={WAITING_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Matches happen together</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="notifications-outline" size={16} color={WAITING_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>We'll notify your partner</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="refresh-outline" size={16} color={WAITING_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Check back anytime</Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom teaser */}
+                        <Text style={styles.waitingTeaser}>Good things come to those who wait</Text>
+
                         <GlassButton
                             variant="secondary"
                             onPress={checkAnswerGap}
@@ -345,20 +414,62 @@ export default function SwipeScreen() {
 
     // Show "no packs enabled" message when not viewing a specific pack and no packs are enabled
     if (!packId && enabledPackIds.length === 0) {
+        const NO_PACKS_ACCENT = colors.premium.rose;
         return (
-            <GradientBackground showAccent>
+            <GradientBackground>
                 <View style={styles.centerContainer}>
                     <Animated.View
                         entering={FadeInUp.duration(600).springify()}
-                        style={styles.emptyContent}
+                        style={styles.waitingContent}
                     >
-                        <View style={styles.noPacksIconContainer}>
-                            <Ionicons name="layers-outline" size={64} color={colors.textTertiary} />
+                        {/* Icon */}
+                        <View style={styles.waitingIconContainer}>
+                            <Ionicons name="layers-outline" size={36} color={NO_PACKS_ACCENT} />
                         </View>
-                        <Text style={styles.emptyTitle}>No packs enabled</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Enable at least one question pack to start playing.
+
+                        {/* Title section */}
+                        <Text style={styles.waitingLabel}>GET STARTED</Text>
+                        <Text style={styles.waitingTitle}>Choose Packs</Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.waitingSeparator}>
+                            <View style={styles.waitingSeparatorLine} />
+                            <View style={styles.waitingSeparatorDiamond} />
+                            <View style={styles.waitingSeparatorLine} />
+                        </View>
+
+                        {/* Status badge */}
+                        <Animated.View
+                            entering={FadeIn.delay(300).duration(400)}
+                            style={styles.waitingBadge}
+                        >
+                            <Text style={styles.waitingBadgeText}>NO PACKS ENABLED</Text>
+                        </Animated.View>
+
+                        {/* Description */}
+                        <Text style={styles.waitingDescription}>
+                            Select the question packs that interest you and your partner. Each pack explores different aspects of your relationship.
                         </Text>
+
+                        {/* Feature hints */}
+                        <View style={styles.waitingFeatures}>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="flame-outline" size={16} color={NO_PACKS_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>From playful to passionate</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="shield-checkmark-outline" size={16} color={NO_PACKS_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Safe space to explore</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="infinite-outline" size={16} color={NO_PACKS_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>New packs added regularly</Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom teaser */}
+                        <Text style={styles.waitingTeaser}>Your journey of discovery awaits</Text>
+
                         <GlassButton
                             onPress={() => router.push("/packs")}
                             style={{ marginTop: spacing.lg }}
@@ -372,20 +483,62 @@ export default function SwipeScreen() {
     }
 
     if (currentIndex >= questions.length) {
+        const CAUGHT_UP_ACCENT = colors.premium.rose;
         return (
-            <GradientBackground showAccent>
+            <GradientBackground>
                 <View style={styles.centerContainer}>
                     <Animated.View
                         entering={FadeInUp.duration(600).springify()}
-                        style={styles.emptyContent}
+                        style={styles.waitingContent}
                     >
-                        <View style={styles.emptyIconContainer}>
-                            <Ionicons name="checkmark-circle" size={64} color={colors.primary} />
+                        {/* Icon */}
+                        <View style={styles.caughtUpIconContainer}>
+                            <Ionicons name="checkmark" size={36} color={CAUGHT_UP_ACCENT} />
                         </View>
-                        <Text style={styles.emptyTitle}>All caught up!</Text>
-                        <Text style={styles.emptySubtitle}>
-                            Check back later for more questions or try a different pack.
+
+                        {/* Title section */}
+                        <Text style={styles.caughtUpLabel}>COMPLETE</Text>
+                        <Text style={styles.waitingTitle}>All Caught Up</Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.waitingSeparator}>
+                            <View style={styles.waitingSeparatorLine} />
+                            <View style={styles.waitingSeparatorDiamond} />
+                            <View style={styles.waitingSeparatorLine} />
+                        </View>
+
+                        {/* Status badge */}
+                        <Animated.View
+                            entering={FadeIn.delay(300).duration(400)}
+                            style={styles.waitingBadge}
+                        >
+                            <Text style={styles.waitingBadgeText}>YOU'RE AHEAD</Text>
+                        </Animated.View>
+
+                        {/* Description */}
+                        <Text style={styles.waitingDescription}>
+                            You've answered all available questions. New questions are added regularly, or explore different packs.
                         </Text>
+
+                        {/* Feature hints */}
+                        <View style={styles.waitingFeatures}>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="sparkles" size={16} color={CAUGHT_UP_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>New questions weekly</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="layers-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Try different packs</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="chatbubbles-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                <Text style={styles.waitingFeatureText}>Chat about your matches</Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom teaser */}
+                        <Text style={styles.waitingTeaser}>More ways to connect are on the way</Text>
+
                         <GlassButton
                             variant="secondary"
                             onPress={fetchQuestions}
@@ -600,54 +753,119 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         color: colors.textTertiary,
     },
-    emptyContent: {
-        alignItems: "center",
-        paddingHorizontal: spacing.xl,
-    },
-    emptyIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: colors.primaryLight,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: spacing.lg,
-    },
-    pairIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: spacing.xl,
-        ...shadows.lg,
-    },
-    pairTitle: {
-        ...typography.title1,
-        color: colors.text,
-        marginBottom: spacing.md,
-        textAlign: "center",
-    },
-    noPacksIconContainer: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: colors.glass.background,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: spacing.lg,
-    },
-    emptyTitle: {
-        ...typography.title2,
-        color: colors.text,
-        marginBottom: spacing.sm,
-    },
-    emptySubtitle: {
-        ...typography.body,
-        color: colors.textSecondary,
-        textAlign: "center",
-    },
     bottomSpacer: {
         height: Platform.OS === 'ios' ? 100 : 80,
+    },
+    // Premium "waiting for partner" styles
+    waitingContent: {
+        width: '100%',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+    },
+    waitingIconContainer: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: 'rgba(232, 164, 174, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(232, 164, 174, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.xl,
+    },
+    waitingLabel: {
+        ...typography.caption1,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.premium.rose,
+        textAlign: 'center',
+        marginBottom: spacing.xs,
+    },
+    waitingTitle: {
+        ...typography.largeTitle,
+        color: colors.text,
+        textAlign: 'center',
+    },
+    waitingSeparator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: spacing.lg,
+        width: 140,
+    },
+    waitingSeparatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(232, 164, 174, 0.3)',
+    },
+    waitingSeparatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: colors.premium.rose,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.md,
+        opacity: 0.6,
+    },
+    waitingBadge: {
+        backgroundColor: 'rgba(232, 164, 174, 0.1)',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: 'rgba(232, 164, 174, 0.2)',
+        marginBottom: spacing.xl,
+    },
+    waitingBadgeText: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 2,
+        color: colors.premium.rose,
+    },
+    waitingDescription: {
+        ...typography.body,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: spacing.xl,
+        paddingHorizontal: spacing.md,
+    },
+    waitingFeatures: {
+        marginBottom: spacing.xl,
+    },
+    waitingFeatureItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.sm,
+    },
+    waitingFeatureText: {
+        ...typography.subhead,
+        color: colors.text,
+        marginLeft: spacing.sm,
+    },
+    waitingTeaser: {
+        ...typography.footnote,
+        fontStyle: 'italic',
+        color: colors.textTertiary,
+        textAlign: 'center',
+    },
+    // Caught up specific styles
+    caughtUpIconContainer: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: 'rgba(232, 164, 174, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(232, 164, 174, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.xl,
+    },
+    caughtUpLabel: {
+        ...typography.caption1,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.premium.rose,
+        textAlign: 'center',
+        marginBottom: spacing.xs,
     },
 });
