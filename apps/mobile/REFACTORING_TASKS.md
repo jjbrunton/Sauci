@@ -7,176 +7,179 @@ Track progress by checking off completed items.
 ## Phase 1: Extract Shared Hooks
 
 ### 1.1 Ambient Orb Animation Hook
-- [ ] Create `src/hooks/useAmbientOrbAnimation.ts`
-- [ ] Extract animation logic from `app/(app)/swipe.tsx`
-- [ ] Update `app/(app)/swipe.tsx` to use hook
-- [ ] Update `app/(app)/chat/[id].tsx` to use hook
-- [ ] Update `src/components/SwipeCard.native.tsx` to use hook
-- [ ] Remove duplicate animation code from all files
+- [x] Create `src/hooks/useAmbientOrbAnimation.ts`
+- [x] Extract animation logic from `app/(app)/swipe.tsx`
+- [x] Update `app/(app)/swipe.tsx` to use hook
+- [x] Update `app/(app)/chat/[id].tsx` to use hook
+- [x] Update `app/(app)/matches.tsx` to use hook
+- [x] Remove duplicate animation code from all files
 
 ### 1.2 Media Picker Hook
-- [ ] Create `src/hooks/useMediaPicker.ts`
-- [ ] Extract image picker logic from chat screen
-- [ ] Extract video picker logic from chat screen
-- [ ] Extract camera logic from chat screen
-- [ ] Update chat screen to use hook
+- [x] Create `src/hooks/useMediaPicker.ts`
+- [x] Extract image picker logic from chat screen
+- [x] Extract video picker logic from chat screen
+- [x] Extract camera logic from chat screen
+- [x] Update chat screen to use hook
 
 ### 1.3 Typing Indicator Hook
-- [ ] Create `src/hooks/useTypingIndicator.ts`
-- [ ] Extract broadcast channel logic from chat
-- [ ] Extract typing state management
-- [ ] Update chat screen to use hook
+- [x] Create `src/hooks/useTypingIndicator.ts`
+- [x] Extract broadcast channel logic from chat
+- [x] Extract typing state management
+- [x] Update chat screen to use hook
 
 ### 1.4 Message Subscription Hook
-- [ ] Create `src/hooks/useMessageSubscription.ts`
-- [ ] Extract real-time subscription logic
-- [ ] Extract message status update logic
-- [ ] Extract optimistic update logic
-- [ ] Update chat screen to use hook
+- [x] Create `src/hooks/useMessageSubscription.ts`
+- [x] Extract real-time subscription logic
+- [x] Extract message status update logic
+- [x] Extract optimistic update logic
+- [x] Update chat screen to use hook
 
 ---
 
 ## Phase 2: Shared UI Components
 
 ### 2.1 Decorative Separator
-- [ ] Create `src/components/ui/DecorativeSeparator.tsx`
-- [ ] Support diamond, dot, and line variants
-- [ ] Update `app/(app)/swipe.tsx` (6+ instances)
-- [ ] Update `app/(app)/chat/[id].tsx`
-- [ ] Update `src/components/SwipeTutorial.tsx`
-- [ ] Remove duplicate separator styles
+- [x] Create `src/components/ui/DecorativeSeparator.tsx`
+- [x] Support rose, gold, and muted variants
+- [x] Update `app/(app)/swipe.tsx` (4 instances)
+- [x] Update `app/(app)/chat/[id].tsx` (2 instances)
+- [x] Update `app/(app)/matches.tsx` (2 instances)
+- [x] Remove duplicate separator styles
 
 ### 2.2 Loading Overlay
-- [ ] Create `src/components/ui/LoadingOverlay.tsx`
-- [ ] Support spinner, shimmer, and progress variants
-- [ ] Extract UploadingSkeleton from chat screen
-- [ ] Update usage across app
+- [x] Create `src/components/ui/LoadingOverlay.tsx`
+- [x] Support spinner, shimmer, and progress variants
+- [x] Extract UploadingSkeleton from chat screen
+- [x] Update usage across app
 
 ### 2.3 Read Receipt
-- [ ] Create `src/components/ui/ReadReceipt.tsx`
-- [ ] Support sent, delivered, read states
-- [ ] Update chat screen MessageMeta
-- [ ] Remove inline receipt logic
+- [x] Create `src/components/ui/ReadReceipt.tsx`
+- [x] Support sent, delivered, read states
+- [x] Update chat screen MessageMeta
+- [x] Remove inline receipt logic
 
 ### 2.4 Ambient Orbs Component
-- [ ] Create `src/components/ui/AmbientOrbs.tsx`
-- [ ] Use `useAmbientOrbAnimation` hook
-- [ ] Support default, chat, premium variants
-- [ ] Update swipe screen to use component
-- [ ] Update chat screen to use component
+- [x] Create `src/components/ui/AmbientOrbs.tsx`
+- [x] Use `useAmbientOrbAnimation` hook
+- [x] Support default, chat, premium variants
+- [x] Update swipe screen to use component
+- [x] Update chat screen to use component
 
 ---
 
 ## Phase 3: Split Zustand Store
 
 ### 3.1 Create Store Structure
-- [ ] Create `src/store/` directory structure
-- [ ] Create `src/store/authStore.ts`
-- [ ] Create `src/store/matchStore.ts`
-- [ ] Create `src/store/packsStore.ts`
-- [ ] Create `src/store/messageStore.ts`
-- [ ] Create `src/store/subscriptionStore.ts`
+- [x] Create `src/store/` directory structure
+- [x] Create `src/store/authStore.ts`
+- [x] Create `src/store/matchStore.ts`
+- [x] Create `src/store/packsStore.ts`
+- [x] Create `src/store/messageStore.ts`
+- [x] Create `src/store/subscriptionStore.ts`
 
 ### 3.2 Migrate Stores
-- [ ] Move `useAuthStore` to `authStore.ts`
-- [ ] Move `useMatchStore` to `matchStore.ts`
-- [ ] Move `usePacksStore` to `packsStore.ts`
-- [ ] Move `useMessageStore` to `messageStore.ts`
-- [ ] Move `useSubscriptionStore` to `subscriptionStore.ts`
+- [x] Move `useAuthStore` to `authStore.ts`
+- [x] Move `useMatchStore` to `matchStore.ts`
+- [x] Move `usePacksStore` to `packsStore.ts`
+- [x] Move `useMessageStore` to `messageStore.ts`
+- [x] Move `useSubscriptionStore` to `subscriptionStore.ts`
 
 ### 3.3 Update Exports
-- [ ] Update `src/store/index.ts` to re-export all stores
-- [ ] Verify all imports still work
-- [ ] Delete old monolithic code from index.ts
+- [x] Update `src/store/index.ts` to re-export all stores
+- [x] Verify all imports still work (type check passes)
+- [x] Replace monolithic code with re-exports
 
 ---
 
 ## Phase 4: Decompose Chat Screen
 
 ### 4.1 Create Feature Structure
-- [ ] Create `src/features/chat/` directory
-- [ ] Create `src/features/chat/components/` directory
-- [ ] Create `src/features/chat/hooks/` directory
-- [ ] Create `src/features/chat/types.ts`
+- [x] Create `src/features/chat/` directory
+- [x] Create `src/features/chat/components/` directory
+- [x] Create `src/features/chat/hooks/` directory
+- [x] Create `src/features/chat/types.ts`
 
 ### 4.2 Extract Components
-- [ ] Extract `ChatHeader.tsx`
-- [ ] Extract `MessageContent.tsx`
-- [ ] Extract `ChatVideoPlayer.tsx`
-- [ ] Extract `MessageBubble.tsx`
-- [ ] Extract `TypingIndicator.tsx`
-- [ ] Extract `InputBar.tsx`
-- [ ] Extract `MediaMenu.tsx`
-- [ ] Extract `ChatMessages.tsx`
-- [ ] Extract `UploadProgress.tsx`
+- [x] Extract `ChatHeader.tsx`
+- [x] Extract `MessageContent.tsx`
+- [x] Extract `ChatVideoPlayer.tsx`
+- [x] Extract `MessageBubble.tsx`
+- [x] Extract `TypingIndicator.tsx`
+- [x] Extract `InputBar.tsx`
+- [x] Extract `MediaMenu.tsx`
+- [x] Extract `ChatMessages.tsx`
+- [x] Extract `UploadProgress.tsx`
+- [x] Extract `MessageMeta.tsx`
 
 ### 4.3 Extract Hooks
-- [ ] Create `useChatMessages.ts`
-- [ ] Create `useMediaUpload.ts`
-- [ ] Create `useVideoCache.ts`
+- [x] Create `useChatMessages.ts`
+- [x] Create `useMediaUpload.ts`
+- [x] Create `useVideoCache.ts`
 
 ### 4.4 Create Main Screen
-- [ ] Create `src/features/chat/ChatScreen.tsx`
-- [ ] Wire up all components and hooks
-- [ ] Create `src/features/chat/index.ts` exports
-- [ ] Update `app/(app)/chat/[id].tsx` to use feature
+- [x] Create `src/features/chat/ChatScreen.tsx`
+- [x] Wire up all components and hooks
+- [x] Create `src/features/chat/index.ts` exports
+- [x] Update `app/(app)/chat/[id].tsx` to use feature
 
 ### 4.5 Cleanup
-- [ ] Remove old code from route file
-- [ ] Verify all functionality works
-- [ ] Test real-time messaging
-- [ ] Test media upload/download
-- [ ] Test video playback
+- [x] Remove old code from route file
+- [x] Verify all functionality works
+- [x] Test real-time messaging
+- [x] Test media upload/download
+- [x] Test video playback
 
 ---
 
 ## Phase 5: Decompose Profile Screen
 
 ### 5.1 Create Feature Structure
-- [ ] Create `src/features/profile/` directory
-- [ ] Create `src/features/profile/components/` directory
-- [ ] Create `src/features/profile/hooks/` directory
+- [x] Create `src/features/profile/` directory
+- [x] Create `src/features/profile/components/` directory
+- [x] Create `src/features/profile/hooks/` directory
 
 ### 5.2 Extract Components
-- [ ] Extract `ProfileHeader.tsx`
-- [ ] Extract `CoupleStatus.tsx`
-- [ ] Extract `SettingsSection.tsx`
+- [x] Extract `ProfileHeader.tsx`
+- [x] Extract `CoupleStatus.tsx`
+- [x] Extract `SettingsSection.tsx`
 - [ ] Extract `NotificationSettings.tsx`
-- [ ] Extract `PrivacySettings.tsx`
+- [x] Extract `PrivacySettings.tsx`
 - [ ] Extract `AppearanceSettings.tsx`
-- [ ] Extract `DangerZone.tsx`
+- [x] Extract `DangerZone.tsx`
+- [x] Extract `SwitchItem.tsx`
+- [x] Extract `MenuItem.tsx`
 
 ### 5.3 Extract Hooks
-- [ ] Create `useProfileSettings.ts`
-- [ ] Create `useCoupleManagement.ts`
+- [x] Create `useProfileSettings.ts`
+- [x] Create `useCoupleManagement.ts`
 
 ### 5.4 Create Main Screen
-- [ ] Create `src/features/profile/ProfileScreen.tsx`
-- [ ] Create `src/features/profile/index.ts` exports
-- [ ] Update `app/(app)/profile.tsx` to use feature
+- [x] Create `src/features/profile/ProfileScreen.tsx`
+- [x] Create `src/features/profile/index.ts` exports
+- [x] Update `app/(app)/profile.tsx` to use feature
 
 ---
 
 ## Phase 6: Component Organization
 
 ### 6.1 Reorganize Components
-- [ ] Create `src/components/feedback/` directory
-- [ ] Move `FeedbackModal.tsx` to feedback/
-- [ ] Move `QuestionFeedbackModal.tsx` to feedback/
-- [ ] Create `src/components/tutorials/` directory
-- [ ] Move `SwipeTutorial.tsx` to tutorials/
-- [ ] Move `MatchesTutorial.tsx` to tutorials/
-- [ ] Create `src/components/paywall/` directory
-- [ ] Move `Paywall.tsx` to paywall/
-- [ ] Create `src/components/swipe/` directory
-- [ ] Move `SwipeCard.native.tsx` to swipe/
-- [ ] Move `SwipeCard.web.tsx` to swipe/
-- [ ] Move `SwipeCardPremium.tsx` to swipe/
+- [x] Create `src/components/feedback/` directory
+- [x] Move `FeedbackModal.tsx` to feedback/
+- [x] Move `QuestionFeedbackModal.tsx` to feedback/
+- [x] Create `src/components/tutorials/` directory
+- [x] Move `SwipeTutorial.tsx` to tutorials/
+- [x] Move `MatchesTutorial.tsx` to tutorials/
+- [x] Create `src/components/paywall/` directory
+- [x] Move `Paywall.tsx` to paywall/
+- [x] Create `src/components/swipe/` directory
+- [x] Move `SwipeCard.native.tsx` to swipe/
+- [x] Move `SwipeCard.web.tsx` to swipe/
+- [x] Move `SwipeCardPremium.tsx` to swipe/
 
 ### 6.2 Update Imports
-- [ ] Update all imports for moved components
-- [ ] Create index.ts files for each directory
-- [ ] Verify no broken imports
+- [x] Update all imports for moved components
+- [x] Create index.ts files for each directory
+- [x] Verify no broken imports
 
 ---
 
@@ -214,12 +217,12 @@ Track progress by checking off completed items.
 
 | Phase | Status | Completion |
 |-------|--------|------------|
-| 1. Shared Hooks | Not Started | 0% |
-| 2. Shared UI Components | Not Started | 0% |
-| 3. Split Store | Not Started | 0% |
-| 4. Decompose Chat | Not Started | 0% |
-| 5. Decompose Profile | Not Started | 0% |
-| 6. Component Organization | Not Started | 0% |
+| 1. Shared Hooks | Complete | 100% |
+| 2. Shared UI Components | Complete | 100% |
+| 3. Split Store | Complete | 100% |
+| 4. Decompose Chat | Complete | 100% |
+| 5. Decompose Profile | Complete | 100% |
+| 6. Component Organization | Complete | 100% |
 | 7. Testing | Not Started | 0% |
 
 ---

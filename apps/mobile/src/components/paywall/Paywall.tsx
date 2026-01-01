@@ -12,10 +12,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSubscriptionStore } from "../store";
-import { colors, gradients, spacing, radius, typography } from "../theme";
-import type { PurchasesPackage } from "../lib/revenuecat";
-import { Events } from "../lib/analytics";
+import { useSubscriptionStore } from "../../store";
+import { colors, gradients, spacing, radius, typography } from "../../theme";
+import type { PurchasesPackage } from "../../lib/revenuecat";
+import { Events } from "../../lib/analytics";
 
 interface PaywallProps {
     visible: boolean;
@@ -330,7 +330,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                 style={[
                                     styles.purchaseButton,
                                     (!selectedPackage || isPurchasing) &&
-                                        styles.purchaseButtonDisabled,
+                                    styles.purchaseButtonDisabled,
                                 ]}
                                 onPress={handlePurchase}
                                 disabled={!selectedPackage || isPurchasing}

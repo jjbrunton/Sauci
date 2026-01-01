@@ -17,8 +17,8 @@ import Animated, {
     Easing,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
-import { QuestionFeedbackModal } from "./QuestionFeedbackModal";
+import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../../theme";
+import { QuestionFeedbackModal } from "../feedback";
 
 // Haptics helper - not supported on web
 const triggerHaptic = async (style: 'light' | 'medium' | 'heavy' = 'medium') => {

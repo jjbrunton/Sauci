@@ -8,7 +8,6 @@ import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withRepeat,
-    withSequence,
     withTiming,
     interpolate,
     Easing,
@@ -16,13 +15,14 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../../src/lib/supabase";
 import { usePacksStore, useAuthStore } from "../../src/store";
+import { useAmbientOrbAnimation } from "../../src/hooks";
 import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
 import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipeTutorialSeen";
 import { invokeWithAuthRetry } from "../../src/lib/authErrorHandler";
 // import SwipeCard from "../../src/components/SwipeCard";
-import SwipeCard from "../../src/components/SwipeCardPremium"; // PoC: Premium styling
-import SwipeTutorial from "../../src/components/SwipeTutorial";
-import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { SwipeCardPremium as SwipeCard } from "../../src/components/swipe"; // PoC: Premium styling
+import { SwipeTutorial } from "../../src/components/tutorials";
+import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
 import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 
@@ -39,43 +39,12 @@ export default function SwipeScreen() {
     const hasTrackedExhausted = useRef(false);
 
     // Ambient orb breathing animations
-    const orbBreathing1 = useSharedValue(0);
-    const orbBreathing2 = useSharedValue(0);
-    const orbDrift = useSharedValue(0);
+    const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
+
+    // Progress bar shimmer animation
     const shimmerPosition = useSharedValue(-1);
 
     useEffect(() => {
-        // Primary orb breathing - 6 second cycle
-        orbBreathing1.value = withRepeat(
-            withSequence(
-                withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-
-        // Secondary orb breathing - offset timing for variation
-        orbBreathing2.value = withRepeat(
-            withSequence(
-                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-
-        // Subtle vertical drift - 8 second cycle
-        orbDrift.value = withRepeat(
-            withSequence(
-                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-
         // Progress bar shimmer sweep - 2.5 second cycle
         shimmerPosition.value = withRepeat(
             withTiming(2, { duration: 2500, easing: Easing.linear }),
@@ -83,22 +52,6 @@ export default function SwipeScreen() {
             false
         );
     }, []);
-
-    const orbStyle1 = useAnimatedStyle(() => ({
-        opacity: interpolate(orbBreathing1.value, [0, 1], [0.25, 0.5]),
-        transform: [
-            { translateY: interpolate(orbDrift.value, [0, 1], [0, -20]) },
-            { scale: interpolate(orbBreathing1.value, [0, 1], [1, 1.1]) },
-        ],
-    }));
-
-    const orbStyle2 = useAnimatedStyle(() => ({
-        opacity: interpolate(orbBreathing2.value, [0, 1], [0.2, 0.4]),
-        transform: [
-            { translateY: interpolate(orbDrift.value, [0, 1], [20, 0]) },
-            { scale: interpolate(orbBreathing2.value, [0, 1], [1, 1.1]) },
-        ],
-    }));
 
     const shimmerStyle = useAnimatedStyle(() => ({
         transform: [
@@ -308,12 +261,7 @@ export default function SwipeScreen() {
                         <Text style={styles.waitingLabel}>{couple ? "ALMOST THERE" : "CONNECT"}</Text>
                         <Text style={styles.waitingTitle}>{couple ? "Waiting" : "Pair Up"}</Text>
 
-                        {/* Decorative separator */}
-                        <View style={styles.waitingSeparator}>
-                            <View style={styles.waitingSeparatorLine} />
-                            <View style={styles.waitingSeparatorDiamond} />
-                            <View style={styles.waitingSeparatorLine} />
-                        </View>
+                        <DecorativeSeparator variant="rose" />
 
                         {/* Status badge */}
                         <Animated.View
@@ -381,12 +329,7 @@ export default function SwipeScreen() {
                         <Text style={styles.waitingLabel}>PATIENCE</Text>
                         <Text style={styles.waitingTitle}>Waiting</Text>
 
-                        {/* Decorative separator */}
-                        <View style={styles.waitingSeparator}>
-                            <View style={styles.waitingSeparatorLine} />
-                            <View style={styles.waitingSeparatorDiamond} />
-                            <View style={styles.waitingSeparatorLine} />
-                        </View>
+                        <DecorativeSeparator variant="rose" />
 
                         {/* Status badge */}
                         <Animated.View
@@ -452,12 +395,7 @@ export default function SwipeScreen() {
                         <Text style={styles.waitingLabel}>GET STARTED</Text>
                         <Text style={styles.waitingTitle}>Choose Packs</Text>
 
-                        {/* Decorative separator */}
-                        <View style={styles.waitingSeparator}>
-                            <View style={styles.waitingSeparatorLine} />
-                            <View style={styles.waitingSeparatorDiamond} />
-                            <View style={styles.waitingSeparatorLine} />
-                        </View>
+                        <DecorativeSeparator variant="rose" />
 
                         {/* Status badge */}
                         <Animated.View
@@ -521,12 +459,7 @@ export default function SwipeScreen() {
                         <Text style={styles.caughtUpLabel}>COMPLETE</Text>
                         <Text style={styles.waitingTitle}>All Caught Up</Text>
 
-                        {/* Decorative separator */}
-                        <View style={styles.waitingSeparator}>
-                            <View style={styles.waitingSeparatorLine} />
-                            <View style={styles.waitingSeparatorDiamond} />
-                            <View style={styles.waitingSeparatorLine} />
-                        </View>
+                        <DecorativeSeparator variant="rose" />
 
                         {/* Status badge */}
                         <Animated.View
@@ -821,26 +754,6 @@ const styles = StyleSheet.create({
         ...typography.largeTitle,
         color: colors.text,
         textAlign: 'center',
-    },
-    waitingSeparator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: spacing.lg,
-        width: 140,
-    },
-    waitingSeparatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: 'rgba(232, 164, 174, 0.3)',
-    },
-    waitingSeparatorDiamond: {
-        width: 6,
-        height: 6,
-        backgroundColor: colors.premium.rose,
-        transform: [{ rotate: '45deg' }],
-        marginHorizontal: spacing.md,
-        opacity: 0.6,
     },
     waitingBadge: {
         backgroundColor: 'rgba(232, 164, 174, 0.1)',

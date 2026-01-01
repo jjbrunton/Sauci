@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Check, CheckCheck, Eye } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Eye, Video as VideoIcon } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
@@ -32,6 +32,7 @@ interface Message {
     user_id: string;
     content: string | null;
     media_path: string | null;
+    media_type: 'image' | 'video' | null;
     created_at: string;
     read_at: string | null;
     media_viewed_at: string | null;
@@ -113,6 +114,79 @@ function ChatImage({ mediaPath }: { mediaPath: string }) {
             className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
             onClick={() => window.open(url, '_blank')}
         />
+    );
+}
+
+
+function ChatVideo({ mediaPath }: { mediaPath: string }) {
+    const [url, setUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!mediaPath) return;
+        const getUrl = async () => {
+            try {
+                // Handle legacy full URLs
+                let path = mediaPath;
+                if (path.startsWith('http')) {
+                    const parts = path.split('/chat-media/');
+                    if (parts.length > 1) {
+                        path = decodeURIComponent(parts[1]);
+                    }
+                }
+
+                const { data, error } = await supabase.storage
+                    .from('chat-media')
+                    .createSignedUrl(path, 3600);
+
+                if (error) {
+                    console.error('Error creating signed URL for video:', error);
+                    setError(error.message);
+                    return;
+                }
+
+                if (data?.signedUrl) {
+                    setUrl(data.signedUrl);
+                }
+            } catch (err) {
+                console.error('Unexpected error loading video:', err);
+                setError('Failed to load');
+            }
+        };
+        getUrl();
+    }, [mediaPath]);
+
+    if (error) {
+        return (
+            <div className="h-48 w-64 rounded-lg bg-muted flex flex-col items-center justify-center border border-red-200 p-2">
+                <VideoIcon className="h-8 w-8 text-red-400 mb-2" />
+                <span className="text-xs text-red-500 text-center">Failed to load video</span>
+                <span className="text-[10px] text-muted-foreground mt-1 text-center truncate w-full" title={error}>
+                    {error}
+                </span>
+            </div>
+        );
+    }
+
+    if (!url) {
+        return (
+            <div className="h-48 w-64 rounded-lg bg-muted flex items-center justify-center">
+                <Skeleton className="h-full w-full rounded-lg" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative">
+            <video
+                src={url}
+                controls
+                className="max-w-xs rounded-lg"
+                preload="metadata"
+            >
+                Your browser does not support the video tag.
+            </video>
+        </div>
     );
 }
 
@@ -337,7 +411,11 @@ export function MatchChatPage() {
                                                 {message.media_path && (
                                                     <div className="mt-2">
                                                         <div className="relative group">
-                                                            <ChatImage mediaPath={message.media_path} />
+                                                            {message.media_type === 'video' ? (
+                                                                <ChatVideo mediaPath={message.media_path} />
+                                                            ) : (
+                                                                <ChatImage mediaPath={message.media_path} />
+                                                            )}
                                                             {message.media_viewed_at && (
                                                                 <Badge
                                                                     variant="secondary"

@@ -41,6 +41,7 @@ const PACK_TYPES: PackTypeCard[] = [
         colorRgba: "rgba(212, 175, 55, ",
         gradient: ["rgba(212, 175, 55, 0.25)", "rgba(184, 134, 11, 0.25)"],
         comingSoon: true,
+        route: "/(app)/dares",
     },
     {
         id: "quiz",
@@ -51,6 +52,7 @@ const PACK_TYPES: PackTypeCard[] = [
         colorRgba: "rgba(232, 164, 174, ",
         gradient: ["rgba(232, 164, 174, 0.25)", "rgba(212, 145, 155, 0.25)"],
         comingSoon: true,
+        route: "/(app)/quiz",
     },
 ];
 
@@ -63,7 +65,7 @@ export default function PackTypeSelection() {
     }, []);
 
     const handlePackTypePress = (packType: PackTypeCard) => {
-        if (!packType.comingSoon && packType.route) {
+        if (packType.route) {
             router.push(packType.route as any);
         }
     };
@@ -105,7 +107,6 @@ export default function PackTypeSelection() {
                                     pressed && !packType.comingSoon && styles.cardPressed,
                                     packType.comingSoon && styles.cardDisabled,
                                 ]}
-                                disabled={packType.comingSoon}
                             >
                                 <LinearGradient
                                     colors={packType.gradient as [string, string]}

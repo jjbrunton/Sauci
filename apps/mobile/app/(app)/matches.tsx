@@ -10,17 +10,11 @@ import Animated, {
     FadeInDown,
     FadeInRight,
     FadeInUp,
-    useSharedValue,
-    useAnimatedStyle,
-    withRepeat,
-    withSequence,
-    withTiming,
-    interpolate,
-    Easing,
 } from "react-native-reanimated";
-import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
+import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
+import { useAmbientOrbAnimation } from "../../src/hooks";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
-import MatchesTutorial from "../../src/components/MatchesTutorial";
+import { MatchesTutorial } from "../../src/components/tutorials";
 import { hasSeenMatchesTutorial, markMatchesTutorialSeen } from "../../src/lib/matchesTutorialSeen";
 
 // Premium color palette
@@ -40,58 +34,7 @@ export default function MatchesScreen() {
     const [showTutorial, setShowTutorial] = useState(false);
 
     // Ambient orb breathing animations
-    const orbBreathing1 = useSharedValue(0);
-    const orbBreathing2 = useSharedValue(0);
-    const orbDrift = useSharedValue(0);
-
-    useEffect(() => {
-        // Primary orb breathing - 6 second cycle
-        orbBreathing1.value = withRepeat(
-            withSequence(
-                withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-
-        // Secondary orb breathing - offset timing for variation
-        orbBreathing2.value = withRepeat(
-            withSequence(
-                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-
-        // Subtle vertical drift - 8 second cycle
-        orbDrift.value = withRepeat(
-            withSequence(
-                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
-                withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) })
-            ),
-            -1,
-            true
-        );
-    }, []);
-
-    const orbStyle1 = useAnimatedStyle(() => ({
-        opacity: interpolate(orbBreathing1.value, [0, 1], [0.25, 0.5]),
-        transform: [
-            { translateY: interpolate(orbDrift.value, [0, 1], [0, -20]) },
-            { scale: interpolate(orbBreathing1.value, [0, 1], [1, 1.1]) },
-        ],
-    }));
-
-    const orbStyle2 = useAnimatedStyle(() => ({
-        opacity: interpolate(orbBreathing2.value, [0, 1], [0.2, 0.4]),
-        transform: [
-            { translateY: interpolate(orbDrift.value, [0, 1], [20, 0]) },
-            { scale: interpolate(orbBreathing2.value, [0, 1], [1, 1.1]) },
-        ],
-    }));
+    const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
 
     // Check if tutorial should be shown when screen is focused or matches change
     useFocusEffect(
@@ -268,11 +211,7 @@ export default function MatchesScreen() {
                         <Text style={styles.headerTitle}>Matches</Text>
 
                         {/* Decorative separator */}
-                        <View style={styles.headerSeparator}>
-                            <View style={styles.headerSeparatorLine} />
-                            <View style={styles.headerSeparatorDiamond} />
-                            <View style={styles.headerSeparatorLine} />
-                        </View>
+                        <DecorativeSeparator variant="gold" />
 
                         {/* Count badge */}
                         <View style={styles.countBadgePremium}>
@@ -311,11 +250,7 @@ export default function MatchesScreen() {
                             <Text style={styles.emptyTitlePremium}>No Matches Yet</Text>
 
                             {/* Decorative separator */}
-                            <View style={styles.emptySeparator}>
-                                <View style={styles.emptySeparatorLine} />
-                                <View style={styles.emptySeparatorDiamond} />
-                                <View style={styles.emptySeparatorLine} />
-                            </View>
+                            <DecorativeSeparator variant="rose" />
 
                             {/* Status badge */}
                             <Animated.View
@@ -422,26 +357,6 @@ const styles = StyleSheet.create({
         ...typography.largeTitle,
         color: colors.text,
         textAlign: 'center',
-    },
-    headerSeparator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: spacing.md,
-        width: 100,
-    },
-    headerSeparatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: `${ACCENT_RGBA}0.3)`,
-    },
-    headerSeparatorDiamond: {
-        width: 6,
-        height: 6,
-        backgroundColor: ACCENT,
-        transform: [{ rotate: '45deg' }],
-        marginHorizontal: spacing.sm,
-        opacity: 0.6,
     },
     countBadgePremium: {
         flexDirection: 'row',
@@ -615,26 +530,6 @@ const styles = StyleSheet.create({
         ...typography.largeTitle,
         color: colors.text,
         textAlign: 'center',
-    },
-    emptySeparator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: spacing.lg,
-        width: 140,
-    },
-    emptySeparatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: `${ROSE_RGBA}0.3)`,
-    },
-    emptySeparatorDiamond: {
-        width: 6,
-        height: 6,
-        backgroundColor: ROSE,
-        transform: [{ rotate: '45deg' }],
-        marginHorizontal: spacing.md,
-        opacity: 0.6,
     },
     emptyBadge: {
         backgroundColor: `${ROSE_RGBA}0.1)`,

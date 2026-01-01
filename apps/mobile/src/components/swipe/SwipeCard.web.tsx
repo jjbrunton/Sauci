@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { View, Text, StyleSheet, Animated, PanResponder, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { QuestionFeedbackModal } from "./QuestionFeedbackModal";
+import { QuestionFeedbackModal } from "../feedback";
 
 const MAX_CARD_WIDTH = 400;
 const SWIPE_THRESHOLD = 100;

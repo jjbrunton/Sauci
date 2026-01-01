@@ -71,7 +71,7 @@ const usersNav: NavItem[] = [
         label: 'Feedback',
         href: '/feedback',
         icon: <MessageSquareText className="h-5 w-5" />,
-        requiredPermission: PERMISSION_KEYS.VIEW_USERS,
+        requiredPermission: PERMISSION_KEYS.MANAGE_FEEDBACK,
     },
 ];
 

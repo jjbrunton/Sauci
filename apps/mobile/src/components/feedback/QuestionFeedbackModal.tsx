@@ -11,10 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../lib/supabase';
-import { getDeviceInfo } from '../lib/deviceInfo';
-import { useAuthStore } from '../store';
-import { colors, gradients, spacing, radius, typography } from '../theme';
+import { supabase } from '../../lib/supabase';
+import { getDeviceInfo } from '../../lib/deviceInfo';
+import { useAuthStore } from '../../store';
+import { colors, gradients, spacing, radius, typography } from '../../theme';
 
 interface QuestionFeedbackModalProps {
     visible: boolean;

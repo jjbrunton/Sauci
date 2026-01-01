@@ -18,8 +18,8 @@ import Animated, {
     Easing,
     runOnJS,
 } from "react-native-reanimated";
-import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../theme";
-import { Events } from "../lib/analytics";
+import { colors, gradients, radius, shadows, blur, typography, spacing, animations } from "../../theme";
+import { Events } from "../../lib/analytics";
 
 interface Props {
     onComplete: () => void;

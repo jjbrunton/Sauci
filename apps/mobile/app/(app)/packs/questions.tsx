@@ -15,7 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { GradientBackground } from "../../../src/components/ui";
-import { Paywall } from "../../../src/components/Paywall";
+import { Paywall } from "../../../src/components/paywall";
 import { PackTeaser } from "../../../src/components/PackTeaser";
 import { colors, spacing, radius, typography } from "../../../src/theme";
 import type { QuestionPack, Category } from "../../../src/types";

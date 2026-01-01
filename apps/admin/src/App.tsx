@@ -134,7 +134,7 @@ function App() {
                         <Route
                             path="/feedback"
                             element={
-                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_FEEDBACK}>
                                     <FeedbackPage />
                                 </ProtectedRoute>
                             }

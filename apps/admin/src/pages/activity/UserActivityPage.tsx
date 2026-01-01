@@ -31,6 +31,8 @@ import {
     MessageCircle,
     UserPlus,
     Image as ImageIcon,
+    Video as VideoIcon,
+    ExternalLink,
 } from 'lucide-react';
 
 // Types
@@ -75,6 +77,7 @@ interface MessageActivity {
     user_id: string;
     content: string | null;
     media_path: string | null;
+    media_type: 'image' | 'video' | null;
     created_at: string;
     profile: {
         id: string;
@@ -232,7 +235,7 @@ export function UserActivityPage() {
             const { data: messagesData, error: messagesError } = await supabase
                 .from('messages')
                 .select(`
-                    id, user_id, content, media_path, created_at,
+                    id, user_id, content, media_path, media_type, created_at,
                     match:matches(
                         id,
                         question:questions(text)
@@ -267,6 +270,7 @@ export function UserActivityPage() {
                 user_id: item.user_id,
                 content: item.content,
                 media_path: item.media_path,
+                media_type: item.media_type,
                 created_at: item.created_at,
                 profile: profilesMap[item.user_id] || null,
                 match: item.match ? {
@@ -545,18 +549,19 @@ export function UserActivityPage() {
                                     <TableHead>Message</TableHead>
                                     <TableHead>Context</TableHead>
                                     <TableHead>Time</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loading.messages ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8">
+                                        <TableCell colSpan={5} className="text-center py-8">
                                             <div className="flex justify-center"><Skeleton className="h-6 w-32" /></div>
                                         </TableCell>
                                     </TableRow>
                                 ) : messages.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                                             No messages yet.
                                         </TableCell>
                                     </TableRow>
@@ -567,8 +572,11 @@ export function UserActivityPage() {
                                             <TableCell className="max-w-[300px]">
                                                 {item.media_path ? (
                                                     <span className="inline-flex items-center gap-1 text-muted-foreground">
-                                                        <ImageIcon className="h-4 w-4" />
-                                                        [Media]
+                                                        {item.media_type === 'video' ? (
+                                                            <><VideoIcon className="h-4 w-4" /> [Video]</>
+                                                        ) : (
+                                                            <><ImageIcon className="h-4 w-4" /> [Image]</>
+                                                        )}
                                                     </span>
                                                 ) : (
                                                     <span className="truncate block">
@@ -583,6 +591,19 @@ export function UserActivityPage() {
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                                                 {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                                            </TableCell>
+                                            <TableCell>
+                                                {item.match && item.profile ? (
+                                                    <Link
+                                                        to={`/users/${item.profile.id}/matches/${item.match.id}`}
+                                                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                                                    >
+                                                        <ExternalLink className="h-3 w-3" />
+                                                        View Chat
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">-</span>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))

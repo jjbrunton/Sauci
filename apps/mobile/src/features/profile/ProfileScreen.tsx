@@ -1,0 +1,533 @@
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { GradientBackground, GlassCard } from '../../components/ui';
+import { FeedbackModal } from '../../components/feedback';
+import { Paywall } from '../../components/paywall';
+import { colors, featureColors, spacing, typography, radius, shadows } from '../../theme';
+import { useAuthStore, useSubscriptionStore } from '../../store';
+import { resetSwipeTutorial } from '../../lib/swipeTutorialSeen';
+import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
+import { supabase } from '../../lib/supabase'; // Needed for debug reset
+
+// Hooks
+import { useProfileSettings, useCoupleManagement } from './hooks';
+
+// Components
+import { ProfileHeader, CoupleStatus, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
+
+const MAX_CONTENT_WIDTH = 500;
+const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
+
+export function ProfileScreen() {
+    const { width } = useWindowDimensions();
+    const isWideScreen = width > MAX_CONTENT_WIDTH;
+
+    const { user, partner, couple, fetchUser } = useAuthStore();
+    const { subscription } = useSubscriptionStore();
+
+    // Hooks
+    const settings = useProfileSettings();
+    const {
+        handleUnpair,
+        handleDeleteRelationship,
+        handleResetProgress,
+        isResettingProgress,
+        handleSignOut,
+        navigateToPairing
+    } = useCoupleManagement();
+
+    const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
+
+    // Derived formatting
+    const isOwnSubscription = user?.is_premium && subscription.isProUser;
+    const hasPremiumAccess = user?.is_premium || partner?.is_premium || subscription.isProUser;
+
+    const formatExpirationDate = (date: Date | null | string) => {
+        if (!date) return "Never";
+        const d = new Date(date);
+        return d.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    };
+
+    return (
+        <GradientBackground>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={[
+                    styles.contentContainer,
+                    isWideScreen && styles.contentContainerWide,
+                ]}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Header title */}
+                <Animated.View
+                    entering={FadeInDown.delay(100).duration(500)}
+                    style={styles.header}
+                >
+                    <Text style={styles.headerLabel}>YOUR SAUCI</Text>
+                    <Text style={styles.title}>Settings</Text>
+                    <View style={styles.separator}>
+                        <View style={styles.separatorLine} />
+                        <View style={styles.separatorDiamond} />
+                        <View style={styles.separatorLine} />
+                    </View>
+                </Animated.View>
+
+                {/* Profile Header */}
+                <ProfileHeader
+                    user={user}
+                    isUploadingAvatar={settings.isUploadingAvatar}
+                    isEditingName={settings.isEditingName}
+                    newName={settings.newName}
+                    isUpdatingName={settings.isUpdatingName}
+                    onAvatarPress={settings.handleAvatarPress}
+                    onNewNameChange={settings.setNewName}
+                    onUpdateName={settings.handleUpdateName}
+                    onCancelEditName={settings.handleCancelEditName}
+                    onStartEditingName={() => settings.setIsEditingName(true)}
+                />
+
+                {/* Partner */}
+                <CoupleStatus
+                    partner={partner}
+                    couple={couple}
+                    onUnpair={handleUnpair}
+                    onPairingPress={navigateToPairing}
+                />
+
+                {/* Subscription Section */}
+                <SettingsSection title="Subscription" delay={350}>
+                    {hasPremiumAccess ? (
+                        <View style={styles.rowContainer}>
+                            <View style={styles.rowLeft}>
+                                <LinearGradient
+                                    colors={ACCENT_GRADIENT}
+                                    style={styles.partnerIconGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Ionicons name="star" size={20} color={colors.text} />
+                                </LinearGradient>
+                                <View style={styles.rowTextContainer}>
+                                    <Text style={styles.rowValue}>Pro Member</Text>
+                                    <Text style={styles.rowLabel}>
+                                        {isOwnSubscription
+                                            ? `Renews ${formatExpirationDate(subscription.expirationDate)}`
+                                            : "Via partner's subscription"
+                                        }
+                                    </Text>
+                                </View>
+                            </View>
+                            {isOwnSubscription && (
+                                <TouchableOpacity
+                                    style={styles.manageButton}
+                                    onPress={settings.handleManageSubscription}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.manageButtonText}>Manage</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    ) : (
+                        <TouchableOpacity
+                            style={styles.rowContainer}
+                            onPress={() => settings.setShowPaywall(true)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.rowLeft}>
+                                <View style={styles.emptyPartnerIcon}>
+                                    <Ionicons name="star-outline" size={20} color={colors.textTertiary} />
+                                </View>
+                                <View style={styles.rowTextContainer}>
+                                    <Text style={styles.rowValueMuted}>Free Plan</Text>
+                                    <Text style={styles.rowLabel}>Upgrade to unlock all packs</Text>
+                                </View>
+                            </View>
+                            <LinearGradient
+                                colors={ACCENT_GRADIENT}
+                                style={styles.upgradeButton}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                            >
+                                <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* Restore Purchases Link */}
+                    {!hasPremiumAccess && (
+                        <TouchableOpacity
+                            style={styles.restoreLink}
+                            onPress={settings.handleRestorePurchases}
+                            disabled={settings.isPurchasing}
+                        >
+                            <Text style={styles.restoreLinkText}>
+                                {settings.isPurchasing ? "Restoring..." : "Restore Purchases"}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                </SettingsSection>
+
+                {/* Preferences */}
+                <PrivacySettings
+                    showExplicit={settings.showExplicit}
+                    isUpdatingExplicit={settings.isUpdatingExplicit}
+                    onExplicitToggle={settings.handleExplicitToggle}
+                    biometricAvailable={settings.biometricAvailable}
+                    biometricEnabled={settings.biometricEnabled}
+                    biometricType={settings.biometricType}
+                    isUpdatingBiometric={settings.isUpdatingBiometric}
+                    onBiometricToggle={settings.handleBiometricToggle}
+                />
+
+                {/* Account */}
+                <SettingsSection title="Account" delay={425}>
+                    <MenuItem
+                        icon="log-out-outline"
+                        label="Sign Out"
+                        onPress={handleSignOut}
+                        variant="danger"
+                        showChevron={true}
+                    />
+                </SettingsSection>
+
+                {/* Support */}
+                <SettingsSection title="Support" delay={475}>
+                    <MenuItem
+                        icon="chatbubble-ellipses-outline"
+                        label="Send Feedback"
+                        description="Report bugs or request features"
+                        onPress={() => setShowFeedbackModal(true)}
+                    />
+                </SettingsSection>
+
+                {/* Reset Progress Layout */}
+                {couple && (
+                    <SettingsSection title="Reset Progress" delay={500}>
+                        <View style={styles.resetContent}>
+                            <View style={styles.resetInfo}>
+                                <View style={styles.resetIconContainer}>
+                                    <Ionicons name="refresh" size={20} color={colors.warning} />
+                                </View>
+                                <View style={styles.resetTextContainer}>
+                                    <Text style={styles.resetTitle}>Start Fresh</Text>
+                                    <Text style={styles.resetDescription}>
+                                        Delete all swipes, matches, and chats while keeping your partner connection.
+                                    </Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.resetButton, isResettingProgress && styles.resetButtonDisabled]}
+                                onPress={handleResetProgress}
+                                disabled={isResettingProgress}
+                                activeOpacity={0.7}
+                            >
+                                {isResettingProgress ? (
+                                    <ActivityIndicator size="small" color={colors.warning} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="refresh-outline" size={16} color={colors.warning} />
+                                        <Text style={styles.resetButtonText}>Reset</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </SettingsSection>
+                )}
+
+                {/* Debug Section */}
+                {__DEV__ && (
+                    <SettingsSection title="Debug" delay={550}>
+                        <MenuItem
+                            icon="refresh"
+                            label="Reset Swipe Tutorial"
+                            description="Show the tutorial again"
+                            onPress={async () => {
+                                await resetSwipeTutorial();
+                                Alert.alert("Success", "Swipe tutorial has been reset.");
+                            }}
+                            variant="danger"
+                        // Using danger just for yellow/warning color simulation via props? No, MenuItem uses error color for danger.
+                        // I'll stick to default and standard styling or custom if needed. 
+                        // The original used warning color (yellow). 
+                        // I will use default for now.
+                        />
+                        <View style={styles.preferencesDivider} />
+                        <MenuItem
+                            icon="heart"
+                            label="Reset Matches Tutorial"
+                            description="Show the tutorial again"
+                            onPress={async () => {
+                                await resetMatchesTutorial();
+                                Alert.alert("Success", "Matches tutorial has been reset.");
+                            }}
+                        />
+                        <View style={styles.preferencesDivider} />
+                        <MenuItem
+                            icon="school-outline"
+                            label="Reset Onboarding"
+                            description="Show onboarding flow again"
+                            onPress={async () => {
+                                if (!user?.id) return;
+                                try {
+                                    const { error } = await supabase
+                                        .from('profiles')
+                                        .update({ onboarding_completed: false })
+                                        .eq('id', user.id);
+                                    if (error) throw error;
+                                    await fetchUser();
+                                    Alert.alert("Success", "Onboarding has been reset.");
+                                } catch (error) {
+                                    Alert.alert("Error", "Failed to reset onboarding.");
+                                }
+                            }}
+                        />
+                    </SettingsSection>
+                )}
+
+                {/* Danger Zone */}
+                {couple && (
+                    <DangerZone onDeleteRelationship={handleDeleteRelationship} />
+                )}
+
+                {/* Version */}
+                <Animated.View
+                    entering={FadeInDown.delay(couple ? 650 : 525).duration(500)}
+                    style={styles.versionContainer}
+                >
+                    <View style={styles.versionBadge}>
+                        <Ionicons name="heart" size={12} color={featureColors.profile.accent} />
+                        <Text style={styles.version}>Sauci v1.0.0</Text>
+                    </View>
+                </Animated.View>
+
+                <View style={styles.bottomSpacer} />
+            </ScrollView>
+
+            {/* Modals */}
+            <FeedbackModal
+                visible={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+            />
+            <Paywall
+                visible={settings.showPaywall}
+                onClose={() => settings.setShowPaywall(false)}
+            />
+        </GradientBackground>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    contentContainer: {
+        paddingBottom: Platform.OS === 'ios' ? 100 : 80,
+    },
+    contentContainerWide: {
+        alignSelf: 'center',
+        width: '100%',
+        maxWidth: MAX_CONTENT_WIDTH,
+    },
+    header: {
+        paddingTop: 60,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
+        alignItems: 'center',
+    },
+    headerLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.secondary,
+        marginBottom: spacing.xs,
+    },
+    title: {
+        ...typography.largeTitle,
+        color: colors.text,
+        textAlign: 'center',
+    },
+    separator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: spacing.md,
+        width: 100,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(155, 89, 182, 0.3)',
+    },
+    separatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: colors.secondary,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.sm,
+        opacity: 0.6,
+    },
+    // Shared row styles
+    rowContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: spacing.sm,
+    },
+    rowLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    partnerIconGradient: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    emptyPartnerIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.glass.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    rowTextContainer: {
+        marginLeft: spacing.md,
+        flex: 1,
+    },
+    rowValue: {
+        ...typography.body,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    rowValueMuted: {
+        ...typography.body,
+        fontWeight: '600',
+        color: colors.textSecondary,
+    },
+    rowLabel: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        marginTop: 2,
+    },
+    preferencesDivider: {
+        height: 1,
+        backgroundColor: colors.glass.border,
+        marginVertical: spacing.md,
+    },
+    // Subscription styles
+    manageButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        backgroundColor: colors.glass.background,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+    },
+    manageButtonText: {
+        ...typography.subhead,
+        color: colors.secondary,
+        fontWeight: "600",
+    },
+    upgradeButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+    },
+    upgradeButtonText: {
+        ...typography.subhead,
+        color: colors.text,
+        fontWeight: "600",
+    },
+    restoreLink: {
+        alignItems: "center",
+        marginTop: spacing.sm,
+        padding: spacing.sm,
+    },
+    restoreLinkText: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    // Reset Progress Styles
+    resetContent: {
+        gap: spacing.md,
+    },
+    resetInfo: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+    },
+    resetIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.warningLight,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    resetTextContainer: {
+        flex: 1,
+        marginLeft: spacing.md,
+    },
+    resetTitle: {
+        ...typography.headline,
+        color: colors.text,
+        marginBottom: spacing.xs,
+    },
+    resetDescription: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        lineHeight: 20,
+    },
+    resetButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: colors.warningLight,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        gap: spacing.xs,
+        alignSelf: "flex-end",
+    },
+    resetButtonDisabled: {
+        opacity: 0.5,
+    },
+    resetButtonText: {
+        ...typography.subhead,
+        color: colors.warning,
+        fontWeight: "600",
+    },
+    // Version Badge
+    versionContainer: {
+        alignItems: "center",
+        marginTop: spacing.lg,
+    },
+    versionBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.glass.background,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        gap: spacing.xs,
+    },
+    version: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+    },
+    bottomSpacer: {
+        height: spacing.lg,
+    },
+});

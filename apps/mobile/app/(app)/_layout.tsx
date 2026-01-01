@@ -604,9 +604,9 @@ export default function AppLayout() {
                 <Tabs.Screen
                     name="profile"
                     options={{
-                        title: "Profile",
+                        title: "Settings",
                         tabBarIcon: ({ color, size }) => (
-                            <Ionicons name="person" size={size} color={color} />
+                            <Ionicons name="settings" size={size} color={color} />
                         ),
                     }}
                 />
@@ -793,8 +793,8 @@ export default function AppLayout() {
                         <View style={styles.matchTypeBadge}>
                             <Text style={styles.matchTypeText}>
                                 {matchNotification?.match_type === 'yes_yes' ? 'YES + YES' :
-                                 matchNotification?.match_type === 'yes_maybe' ? 'YES + MAYBE' :
-                                 'MAYBE + MAYBE'}
+                                    matchNotification?.match_type === 'yes_maybe' ? 'YES + MAYBE' :
+                                        'MAYBE + MAYBE'}
                             </Text>
                         </View>
                         <Pressable style={styles.dismissButton} onPress={dismissNotification}>

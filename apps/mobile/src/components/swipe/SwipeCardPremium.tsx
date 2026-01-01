@@ -23,7 +23,7 @@ import Animated, {
     FadeIn,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, gradients, featureColors, radius, shadows, blur, typography, spacing, animations } from "../theme";
+import { colors, gradients, featureColors, radius, shadows, blur, typography, spacing, animations } from "../../theme";
 
 // Use feature colors for consistency
 const { accent: ACCENT } = featureColors.dares;
@@ -33,8 +33,8 @@ const { accent: ROSE } = featureColors.quiz;
 // Gold: #D4AF37 = rgb(212, 175, 55)
 // Rose: #E8A4AE = rgb(232, 164, 174)
 const rgba = {
-  gold: (opacity: number) => `rgba(212, 175, 55, ${opacity})`,
-  rose: (opacity: number) => `rgba(232, 164, 174, ${opacity})`,
+    gold: (opacity: number) => `rgba(212, 175, 55, ${opacity})`,
+    rose: (opacity: number) => `rgba(232, 164, 174, ${opacity})`,
 };
 
 // Haptics helper

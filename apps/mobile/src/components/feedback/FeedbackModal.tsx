@@ -17,11 +17,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
-import { supabase } from '../lib/supabase';
-import { getDeviceInfo } from '../lib/deviceInfo';
-import { useAuthStore } from '../store';
-import { colors, gradients, spacing, radius, typography } from '../theme';
-import type { FeedbackType } from '../types';
+import { supabase } from '../../lib/supabase';
+import { getDeviceInfo } from '../../lib/deviceInfo';
+import { useAuthStore } from '../../store';
+import { colors, gradients, spacing, radius, typography } from '../../theme';
+import type { FeedbackType } from '../../types';
 
 interface FeedbackModalProps {
     visible: boolean;
