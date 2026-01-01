@@ -21,6 +21,8 @@ export default function SwipeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [isBlocked, setIsBlocked] = useState(false);
+    const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
     const { enabledPackIds, fetchPacks } = usePacksStore();
     const { partner, couple } = useAuthStore();
     const hasTrackedExhausted = useRef(false);
@@ -30,6 +32,36 @@ export default function SwipeScreen() {
         checkTutorial();
         hasTrackedExhausted.current = false; // Reset when pack changes
     }, [packId]);
+
+    // Check if user is too far ahead of partner (called when questions empty or after swipe)
+    const checkAnswerGap = async (): Promise<boolean> => {
+        if (!couple || !partner) {
+            setIsBlocked(false);
+            return false;
+        }
+
+        try {
+            const { data, error } = await supabase.rpc('get_answer_gap_status');
+
+            if (error) {
+                console.error('Error checking answer gap:', error);
+                return false;
+            }
+
+            if (data && data.length > 0) {
+                const result = data[0];
+                setIsBlocked(result.is_blocked);
+                setGapInfo({
+                    unanswered: result.unanswered_by_partner,
+                    threshold: result.threshold
+                });
+                return result.is_blocked;
+            }
+        } catch (error) {
+            console.error('Failed to check answer gap:', error);
+        }
+        return false;
+    };
 
     // Track when all questions are exhausted
     useEffect(() => {
@@ -83,6 +115,14 @@ export default function SwipeScreen() {
             // Filter out recently skipped questions
             const filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
 
+            // If no questions returned and user has partner, check if it's due to answer gap
+            if (filtered.length === 0 && partner && !packId) {
+                await checkAnswerGap();
+            } else {
+                // Reset blocked state if we have questions
+                setIsBlocked(false);
+            }
+
             const sorted = filtered.sort((a: any, b: any) => {
                 let scoreA = Math.random();
                 let scoreB = Math.random();
@@ -132,6 +172,8 @@ export default function SwipeScreen() {
                 console.error("Submit response error:", error);
             } else {
                 Events.questionAnswered(answer, question.pack_id);
+                // Check if we've hit the answer gap threshold
+                await checkAnswerGap();
             }
         } catch (error) {
             console.error("Failed to submit response", error);
@@ -180,6 +222,42 @@ export default function SwipeScreen() {
                             size="lg"
                         >
                             {couple ? "View Invite Code" : "Pair Now"}
+                        </GlassButton>
+                    </Animated.View>
+                </View>
+            </GradientBackground>
+        );
+    }
+
+    // Show "waiting for partner" message when user is too far ahead
+    if (isBlocked && gapInfo) {
+        return (
+            <GradientBackground showAccent>
+                <View style={styles.centerContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.emptyContent}
+                    >
+                        <LinearGradient
+                            colors={gradients.warning as [string, string]}
+                            style={styles.pairIconContainer}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            <Ionicons name="hourglass-outline" size={48} color={colors.text} />
+                        </LinearGradient>
+                        <Text style={styles.pairTitle}>
+                            Waiting for your partner
+                        </Text>
+                        <Text style={styles.emptySubtitle}>
+                            You've answered {gapInfo.unanswered} questions that your partner hasn't seen yet. Give them some time to catch up!
+                        </Text>
+                        <GlassButton
+                            variant="secondary"
+                            onPress={checkAnswerGap}
+                            style={{ marginTop: spacing.lg }}
+                        >
+                            Check Again
                         </GlassButton>
                     </Animated.View>
                 </View>

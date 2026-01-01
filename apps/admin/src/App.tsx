@@ -16,6 +16,7 @@ import { RedemptionCodesPage } from '@/pages/RedemptionCodesPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { UsageInsightsPage } from '@/pages/UsageInsightsPage';
 import { AiSettingsPage } from '@/pages/AiSettingsPage';
+import { AppSettingsPage } from '@/pages/AppSettingsPage';
 
 function App() {
     return (
@@ -134,6 +135,14 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_AI_CONFIG}>
                                     <AiSettingsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/app-settings"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_APP_CONFIG}>
+                                    <AppSettingsPage />
                                 </ProtectedRoute>
                             }
                         />

@@ -67,7 +67,7 @@ export function PacksPage() {
             description: '',
             icon: '💕',
             is_premium: false,
-            is_public: true,
+            is_public: false,
             is_explicit: false,
         },
         (pack) => ({
@@ -267,7 +267,7 @@ export function PacksPage() {
                 description: result.description,
                 icon: result.icon || '💕',
                 is_premium: false,
-                is_public: true,
+                is_public: false,
                 is_explicit: false,
             });
             setAiDialogOpen(false);

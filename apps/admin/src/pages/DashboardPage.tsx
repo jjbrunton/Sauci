@@ -165,13 +165,13 @@ export function DashboardPage() {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {/* Header */}
             <div className="relative">
-                <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+                <div className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl hidden xl:block" />
                 <div className="relative">
-                    <div className="flex items-center gap-3 mb-2">
-                        <h1 className="text-4xl font-bold tracking-tight">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h1 className="text-2xl md:text-3xl xl:text-4xl font-bold tracking-tight">
                             Dashboard
                         </h1>
                         <RealtimeStatusIndicator
@@ -179,7 +179,7 @@ export function DashboardPage() {
                             showLabel
                         />
                     </div>
-                    <p className="text-muted-foreground text-lg">
+                    <p className="text-muted-foreground text-sm md:text-base">
                         Welcome back. Here's what's happening with Sauci.
                     </p>
                 </div>

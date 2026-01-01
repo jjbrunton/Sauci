@@ -22,6 +22,7 @@ export const PERMISSION_KEYS = {
     MANAGE_CODES: 'manage_codes',
     MANAGE_ADMINS: 'manage_admins',
     MANAGE_AI_CONFIG: 'manage_ai_config',
+    MANAGE_APP_CONFIG: 'manage_app_config',
     VIEW_AUDIT_LOGS: 'view_audit_logs',
 } as const;
 
@@ -40,6 +41,7 @@ export const PERMISSION_METADATA: Record<PermissionKey, { label: string; descrip
     [PERMISSION_KEYS.MANAGE_CODES]: { label: 'Can manage redemption codes', description: 'Create and view redemption codes', group: 'system' },
     [PERMISSION_KEYS.MANAGE_ADMINS]: { label: 'Can manage admins', description: 'Add/remove admin users and change permissions', group: 'system' },
     [PERMISSION_KEYS.MANAGE_AI_CONFIG]: { label: 'Can manage AI settings', description: 'Configure AI models, API keys, and council mode', group: 'system' },
+    [PERMISSION_KEYS.MANAGE_APP_CONFIG]: { label: 'Can manage app settings', description: 'Configure mobile app behavior settings', group: 'system' },
     [PERMISSION_KEYS.VIEW_AUDIT_LOGS]: { label: 'Can view audit logs', description: 'Access audit log history', group: 'system' },
 };
 

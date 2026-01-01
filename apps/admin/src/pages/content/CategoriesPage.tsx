@@ -224,12 +224,12 @@ export function CategoriesPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
-                    <p className="text-muted-foreground">
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Categories</h1>
+                    <p className="text-muted-foreground text-sm">
                         Organize your question packs into categories
                     </p>
                 </div>
@@ -238,7 +238,8 @@ export function CategoriesPage() {
                         <DialogTrigger asChild>
                             <Button onClick={form.openCreate}>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Add Category
+                                <span className="hidden sm:inline">Add Category</span>
+                                <span className="sm:hidden">Add</span>
                             </Button>
                         </DialogTrigger>
                         <Button variant="outline" onClick={() => setAiIdeasOpen(true)}>

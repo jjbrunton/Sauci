@@ -30,7 +30,7 @@ export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
         };
     }, [open]);
 
-    const handleEmojiSelect = (emoji: any) => {
+    const handleEmojiSelect = (emoji: { native: string; id: string; name: string }) => {
         onChange(emoji.native);
         setOpen(false);
     };

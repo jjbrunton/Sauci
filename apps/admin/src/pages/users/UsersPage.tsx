@@ -163,19 +163,19 @@ export function UsersPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Users</h1>
                         <RealtimeStatusIndicator status={realtimeStatus} showLabel />
                     </div>
-                    <p className="text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                         {profiles.length} registered user{profiles.length !== 1 ? 's' : ''}
                     </p>
                 </div>
-                <div className="relative w-64">
+                <div className="relative w-full sm:w-64">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         placeholder="Search users..."
@@ -187,7 +187,7 @@ export function UsersPage() {
             </div>
 
             {/* Users Table */}
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -211,17 +211,17 @@ export function UsersPage() {
                             filteredProfiles.map((profile) => (
                                 <TableRow key={profile.id}>
                                     <TableCell>
-                                        <div className="flex items-center gap-3">
+                                        <Link to={`/users/${profile.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                                             <Avatar className="h-9 w-9">
                                                 <AvatarImage src={profile.avatar_url || undefined} />
                                                 <AvatarFallback>
                                                     {profile.name?.charAt(0).toUpperCase() || 'U'}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <span className="font-medium">
+                                            <span className="font-medium hover:text-primary transition-colors">
                                                 {profile.name || 'Unnamed User'}
                                             </span>
-                                        </div>
+                                        </Link>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         {profile.email || '—'}
