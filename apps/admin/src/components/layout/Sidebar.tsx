@@ -12,6 +12,7 @@ import {
     Ticket,
     MessageSquareText,
     Target,
+    Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -62,6 +63,12 @@ const systemNav: NavItem[] = [
         href: '/admins',
         icon: <Shield className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.MANAGE_ADMINS,
+    },
+    {
+        label: 'AI Settings',
+        href: '/ai-settings',
+        icon: <Bot className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_AI_CONFIG,
     },
     {
         label: 'Redemption Codes',

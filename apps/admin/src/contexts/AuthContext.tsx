@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../config';
 import type { User, Session } from '@supabase/supabase-js';
+import { preloadAiConfig, clearAiConfigCache } from '@/hooks/useAiConfig';
 
 // Define admin roles
 export type AdminRole = 'pack_creator' | 'super_admin';
@@ -20,6 +21,7 @@ export const PERMISSION_KEYS = {
     // System permissions
     MANAGE_CODES: 'manage_codes',
     MANAGE_ADMINS: 'manage_admins',
+    MANAGE_AI_CONFIG: 'manage_ai_config',
     VIEW_AUDIT_LOGS: 'view_audit_logs',
 } as const;
 
@@ -37,6 +39,7 @@ export const PERMISSION_METADATA: Record<PermissionKey, { label: string; descrip
     [PERMISSION_KEYS.VIEW_RESPONSES]: { label: 'Can view responses', description: 'View user question responses', group: 'users' },
     [PERMISSION_KEYS.MANAGE_CODES]: { label: 'Can manage redemption codes', description: 'Create and view redemption codes', group: 'system' },
     [PERMISSION_KEYS.MANAGE_ADMINS]: { label: 'Can manage admins', description: 'Add/remove admin users and change permissions', group: 'system' },
+    [PERMISSION_KEYS.MANAGE_AI_CONFIG]: { label: 'Can manage AI settings', description: 'Configure AI models, API keys, and council mode', group: 'system' },
     [PERMISSION_KEYS.VIEW_AUDIT_LOGS]: { label: 'Can view audit logs', description: 'Access audit log history', group: 'system' },
 };
 
@@ -77,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const storedPermissions = localStorage.getItem(PERMISSIONS_KEY);
             if (storedPermissions) {
                 setPermissions(JSON.parse(storedPermissions));
+                // Preload AI config if user has an existing session (non-blocking)
+                preloadAiConfig().catch(console.error);
             }
 
             setLoading(false);
@@ -128,11 +133,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(perms));
         setPermissions(perms);
+
+        // Preload AI config after successful login (non-blocking)
+        preloadAiConfig().catch(console.error);
     };
 
     const logout = async () => {
         localStorage.removeItem(PERMISSIONS_KEY);
         setPermissions(null);
+        clearAiConfigCache();
         await supabase.auth.signOut();
     };
 

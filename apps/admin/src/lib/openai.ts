@@ -1,51 +1,148 @@
 import OpenAI from 'openai';
+import { getCachedAiConfig, preloadAiConfig, type AiConfig } from '@/hooks/useAiConfig';
 
 // Note: In production, this should be called from a backend/edge function
 // to avoid exposing the API key
 
+// Cache for the OpenAI instance to avoid recreating on every call
+let cachedOpenAI: OpenAI | null = null;
+let cachedApiKey: string | null = null;
+
 const getOpenAI = () => {
-    const openRouterKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+    // First, try to get API key from remote config
+    const remoteConfig = getCachedAiConfig();
+    const remoteKey = remoteConfig?.openrouter_api_key;
+
+    // Fall back to env vars if remote config not available
+    const openRouterKey = remoteKey || import.meta.env.VITE_OPENROUTER_API_KEY;
     const openAIKey = import.meta.env.VITE_OPENAI_API_KEY;
 
+    // Check if we can reuse cached instance
+    if (cachedOpenAI && cachedApiKey === openRouterKey) {
+        return cachedOpenAI;
+    }
+
     if (openRouterKey) {
-        return new OpenAI({
+        cachedOpenAI = new OpenAI({
             apiKey: openRouterKey,
             baseURL: 'https://openrouter.ai/api/v1',
             dangerouslyAllowBrowser: true,
         });
+        cachedApiKey = openRouterKey;
+        return cachedOpenAI;
     }
 
     if (!openAIKey) {
-        throw new Error('VITE_OPENAI_API_KEY or VITE_OPENROUTER_API_KEY is missing');
+        throw new Error('OpenRouter API key not configured. Please configure it in AI Settings or set VITE_OPENROUTER_API_KEY environment variable.');
     }
 
-    return new OpenAI({
+    cachedOpenAI = new OpenAI({
         apiKey: openAIKey,
         dangerouslyAllowBrowser: true,
     });
+    cachedApiKey = openAIKey;
+    return cachedOpenAI;
 };
 
 type ModelPurpose = 'generate' | 'fix' | 'polish';
 
 const getModel = (purpose?: ModelPurpose) => {
+    // First, try to get model from remote config
+    const remoteConfig = getCachedAiConfig();
+
     // Granular model selection by purpose
-    // Falls back to VITE_AI_MODEL, then to default
+    // Priority: remote config > env vars > default
     const defaultModel = 'gpt-4o-mini';
-    const fallback = import.meta.env.VITE_AI_MODEL || defaultModel;
+
+    // Get fallback model (remote config default > env var > hardcoded default)
+    const fallback = remoteConfig?.default_model || import.meta.env.VITE_AI_MODEL || defaultModel;
 
     if (!purpose) return fallback;
 
     switch (purpose) {
         case 'generate':
-            return import.meta.env.VITE_AI_MODEL_GENERATE || fallback;
+            return remoteConfig?.model_generate || import.meta.env.VITE_AI_MODEL_GENERATE || fallback;
         case 'fix':
-            return import.meta.env.VITE_AI_MODEL_FIX || fallback;
+            return remoteConfig?.model_fix || import.meta.env.VITE_AI_MODEL_FIX || fallback;
         case 'polish':
-            return import.meta.env.VITE_AI_MODEL_POLISH || fallback;
+            return remoteConfig?.model_polish || import.meta.env.VITE_AI_MODEL_POLISH || fallback;
         default:
             return fallback;
     }
 };
+
+// =============================================================================
+// COUNCIL CONFIGURATION - Multi-model review system
+// =============================================================================
+
+export interface CouncilConfig {
+    enabled: boolean;
+    generatorModel: string;
+    reviewerModel: string;
+}
+
+export function getCouncilConfig(): CouncilConfig {
+    // First, try to get config from remote
+    const remoteConfig = getCachedAiConfig();
+
+    if (remoteConfig) {
+        return {
+            enabled: remoteConfig.council_enabled || false,
+            generatorModel: remoteConfig.council_generator_model || 'anthropic/claude-3.5-sonnet',
+            reviewerModel: remoteConfig.council_reviewer_model || 'google/gemini-pro-1.5',
+        };
+    }
+
+    // Fall back to env vars
+    return {
+        enabled: import.meta.env.VITE_COUNCIL_ENABLED === 'true',
+        generatorModel: import.meta.env.VITE_COUNCIL_GENERATOR_MODEL || 'anthropic/claude-3.5-sonnet',
+        reviewerModel: import.meta.env.VITE_COUNCIL_REVIEWER_MODEL || 'google/gemini-pro-1.5',
+    };
+}
+
+/**
+ * Initialize AI config by preloading from Supabase
+ * Call this on app startup to ensure config is available
+ */
+export async function initializeAiConfig(): Promise<AiConfig | null> {
+    return preloadAiConfig();
+}
+
+export interface QuestionReview {
+    index: number;
+    verdict: 'pass' | 'flag' | 'reject';
+    issues: string[];
+    suggestions?: string;
+    scores: {
+        guidelineCompliance: number;
+        creativity: number;
+        clarity: number;
+        intensityAccuracy: number;
+    };
+}
+
+export interface ReviewResult {
+    reviews: QuestionReview[];
+    summary: {
+        passed: number;
+        flagged: number;
+        rejected: number;
+        overallQuality: number;
+    };
+}
+
+export interface CouncilGenerationResult {
+    questions: GeneratedQuestion[];
+    reviews: QuestionReview[];
+    summary: ReviewResult['summary'] | null;
+    metadata: {
+        generatorModel: string;
+        reviewerModel: string | null;
+        generationTime: number;
+        reviewTime: number;
+    };
+}
 
 export interface GeneratedPack {
     name: string;
@@ -312,6 +409,12 @@ ANATOMICAL CONSISTENCY RULE:
 - BAD: "Suck their cock or eat them out" (cock = male, eating out = female)
 - GOOD: "Give your partner a handjob" (single activity for target anatomy)
 - GOOD: "Go down on your partner" (gender-neutral oral phrasing)
+
+TIMELESS LANGUAGE RULE:
+- NEVER use time-specific words like "tonight", "now", "today", "this evening", "right now"
+- Activities are proposals that couples may do at ANY time in the future
+- BAD: "Give your partner a massage tonight", "Text your partner right now"
+- GOOD: "Give your partner a massage", "Send your partner a flirty text"
 
 For each question, decide if it is SYMMETRIC (shared) or ASYMMETRIC (one does to the other):
 
@@ -1092,4 +1195,248 @@ ${JSON.stringify(simplifiedQuestions)}
 
     const parsed = JSON.parse(content);
     return parsed.suggestions || [];
+}
+
+// =============================================================================
+// COUNCIL REVIEW FUNCTIONS
+// =============================================================================
+
+const REVIEW_GUIDELINES = `
+REVIEW CRITERIA - Score each 1-10:
+
+1. GUIDELINE COMPLIANCE:
+   - Uses "your partner" (not "me", "I", "you", "him", "her")
+   - Card is a proposal, not a question ("Have dinner" not "Would you want to have dinner?")
+   - No wishy-washy language ("Would you...", "Have you ever...", "Do you think...")
+   - No time-specific words ("tonight", "now", "today", "right now") - activities should be timeless
+   - Appropriate length (5-12 words ideal)
+
+2. CREATIVITY:
+   - Not cliche (avoid: candlelit dinner, rose petals, bubble bath, Netflix and chill)
+   - Specific and engaging (not generic)
+   - Good variety in sentence openers
+
+3. CLARITY:
+   - Clear, actionable proposal
+   - Partner text (if present) clearly describes receiver's experience
+   - No confusing or ambiguous phrasing
+
+4. INTENSITY ACCURACY:
+   Level 1 (Light): Talking, emotional sharing, compliments, non-sexual
+   Level 2 (Mild): Holding hands, hugging, cuddling, gentle kisses, flirty texts
+   Level 3 (Moderate): Making out, sensual massage, sexy/suggestive photos, teasing
+   Level 4 (Spicy): Oral sex, fingering, handjobs, nudes, explicit photos/sexting
+   Level 5 (Intense): Sex, anal, kinks, BDSM, explicit videos, threesomes
+
+5. ANATOMICAL CONSISTENCY:
+   - No mixed male/female anatomy in alternatives
+   - BAD: "Finger or give your partner a handjob"
+   - GOOD: Pick one activity
+
+6. PARTNER TEXT QUALITY (if applicable):
+   - Engaging and enticing, not clinical
+   - BAD: "Receive oral from your partner"
+   - GOOD: "Let your partner pleasure you with their mouth"
+   - When initiator causes a response, frame as allowing: "Let your partner make you moan"
+`;
+
+export async function reviewGeneratedQuestions(
+    questions: GeneratedQuestion[],
+    packContext: { name: string; description?: string | null; isExplicit: boolean; tone: ToneLevel }
+): Promise<ReviewResult> {
+    const openai = getOpenAI();
+    const config = getCouncilConfig();
+
+    // Null safety check
+    if (!questions || questions.length === 0) {
+        return {
+            reviews: [],
+            summary: { passed: 0, flagged: 0, rejected: 0, overallQuality: 0 },
+        };
+    }
+
+    const questionsForReview = questions.map((q, i) => ({
+        index: i,
+        text: q.text,
+        partner_text: q.partner_text || null,
+        intensity: q.intensity,
+        location_type: q.location_type,
+        effort_level: q.effort_level,
+    }));
+
+    const toneDescription = TONE_LEVELS.find(t => t.level === packContext.tone)?.label || 'Unknown';
+
+    const prompt = `You are a quality reviewer for a couples intimacy app. Review each generated question against our guidelines.
+
+PACK CONTEXT:
+- Pack Name: "${packContext.name}"
+${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
+- Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
+- Tone Level: ${packContext.tone} (${toneDescription})
+
+${REVIEW_GUIDELINES}
+
+VERDICT RULES:
+- PASS: All scores >= 7, no major issues
+- FLAG: Any score 5-7, or minor issues worth noting (admin should review but can use)
+- REJECT: Any score < 5, or major violations (mixed anatomy, wrong intensity, severe guideline violation)
+
+QUESTIONS TO REVIEW:
+${JSON.stringify(questionsForReview, null, 2)}
+
+Return a JSON object with:
+{
+  "reviews": [
+    {
+      "index": 0,
+      "verdict": "pass" | "flag" | "reject",
+      "issues": ["Issue 1", "Issue 2"],
+      "suggestions": "Optional improvement suggestion",
+      "scores": {
+        "guidelineCompliance": 8,
+        "creativity": 7,
+        "clarity": 9,
+        "intensityAccuracy": 8
+      }
+    }
+  ]
+}
+
+Review ALL questions. Be thorough but fair - only flag/reject for genuine issues.`;
+
+    const response = await openai.chat.completions.create({
+        model: config.reviewerModel,
+        messages: [
+            {
+                role: 'system',
+                content: 'You are a quality assurance reviewer for a couples intimacy app. You evaluate generated questions for guideline compliance, creativity, clarity, and accuracy. Be thorough but fair. Always respond with valid JSON only.',
+            },
+            { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('No review content generated');
+
+    // Strip markdown code blocks if present (some models ignore response_format)
+    let jsonContent = content.trim();
+    if (jsonContent.startsWith('```')) {
+        // Remove opening ```json or ``` and closing ```
+        jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+    }
+
+    const parsed = JSON.parse(jsonContent);
+    const reviews: QuestionReview[] = parsed.reviews || [];
+
+    // Calculate summary
+    const passed = reviews.filter(r => r.verdict === 'pass').length;
+    const flagged = reviews.filter(r => r.verdict === 'flag').length;
+    const rejected = reviews.filter(r => r.verdict === 'reject').length;
+
+    // Calculate overall quality as average of all scores
+    let totalScore = 0;
+    let scoreCount = 0;
+    for (const review of reviews) {
+        if (review.scores) {
+            totalScore += review.scores.guidelineCompliance || 0;
+            totalScore += review.scores.creativity || 0;
+            totalScore += review.scores.clarity || 0;
+            totalScore += review.scores.intensityAccuracy || 0;
+            scoreCount += 4;
+        }
+    }
+    const overallQuality = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 10) / 10 : 0;
+
+    return {
+        reviews,
+        summary: {
+            passed,
+            flagged,
+            rejected,
+            overallQuality,
+        },
+    };
+}
+
+export async function generateQuestionsWithCouncil(
+    packName: string,
+    count: number = 10,
+    intensity?: number,
+    tone: ToneLevel = 3,
+    packDescription?: string,
+    existingQuestions?: string[],
+    crudeLang: boolean = false,
+    inspiration?: string
+): Promise<CouncilGenerationResult> {
+    const config = getCouncilConfig();
+
+    // Step 1: Generate questions
+    const startGen = Date.now();
+    const questions = await generateQuestions(
+        packName,
+        count,
+        intensity,
+        tone,
+        packDescription,
+        existingQuestions,
+        crudeLang,
+        inspiration
+    );
+    const genTime = Date.now() - startGen;
+
+    // Step 2: Review if council is enabled
+    if (!config.enabled) {
+        return {
+            questions,
+            reviews: [],
+            summary: null,
+            metadata: {
+                generatorModel: getModel('generate'),
+                reviewerModel: null,
+                generationTime: genTime,
+                reviewTime: 0,
+            },
+        };
+    }
+
+    const startReview = Date.now();
+    const isExplicit = tone >= 4;
+
+    try {
+        const reviewResult = await reviewGeneratedQuestions(questions, {
+            name: packName,
+            description: packDescription,
+            isExplicit,
+            tone,
+        });
+        const reviewTime = Date.now() - startReview;
+
+        return {
+            questions,
+            reviews: reviewResult.reviews,
+            summary: reviewResult.summary,
+            metadata: {
+                generatorModel: config.generatorModel,
+                reviewerModel: config.reviewerModel,
+                generationTime: genTime,
+                reviewTime,
+            },
+        };
+    } catch (error) {
+        // If review fails, return questions without review (with warning in metadata)
+        console.error('Council review failed:', error);
+        return {
+            questions,
+            reviews: [],
+            summary: null,
+            metadata: {
+                generatorModel: config.generatorModel,
+                reviewerModel: null, // null indicates review failed
+                generationTime: genTime,
+                reviewTime: 0,
+            },
+        };
+    }
 }
