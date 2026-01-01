@@ -35,35 +35,65 @@ interface PlayTabButtonProps {
     children?: React.ReactNode;
     onPress?: (e: any) => void;
     accessibilityState?: { selected?: boolean };
+    isMenuOpen?: boolean;
+    onToggleMenu?: () => void;
 }
 
-function PlayTabButton({ onPress, accessibilityState }: PlayTabButtonProps) {
+interface RadialMenuItem {
+    id: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    angle: number; // degrees from top (0 = top, -45 = left, 45 = right)
+    color?: string;
+}
+
+const RADIAL_MENU_ITEMS: RadialMenuItem[] = [
+    { id: 'dares', icon: 'flash', label: 'Dares', angle: -50, color: '#FF6B35' },
+    { id: 'match', icon: 'flame', label: 'Match', angle: 0 },
+    { id: 'quiz', icon: 'help-circle', label: 'Quiz', angle: 50, color: '#7B68EE' },
+];
+
+const RADIAL_DISTANCE = 100; // Distance from center button
+
+// Store for sharing state between PlayTabButton and AppLayout
+let globalMenuToggle: (() => void) | null = null;
+let globalMenuOpen = false;
+
+function PlayTabButton({ accessibilityState }: PlayTabButtonProps) {
     const isSelected = accessibilityState?.selected;
+    const [, forceUpdate] = useState({});
+
+    // Subscribe to global state changes
+    useEffect(() => {
+        const interval = setInterval(() => {
+            forceUpdate({});
+        }, 50);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
-        <Pressable
-            onPress={onPress}
-            style={styles.playButtonContainer}
-        >
+        <View style={styles.playButtonContainer}>
             {/* Outer glow effect */}
             <View style={[styles.playButtonGlow, isSelected && styles.playButtonGlowActive]} />
 
-            {/* Circle container */}
-            <View style={styles.playButtonCircle}>
-                <LinearGradient
-                    colors={gradients.primary as [string, string]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.playButtonGradient}
-                >
-                    <Ionicons
-                        name="flame"
-                        size={32}
-                        color={colors.text}
-                    />
-                </LinearGradient>
-            </View>
-        </Pressable>
+            {/* Main circle button */}
+            <Pressable onPress={() => globalMenuToggle?.()}>
+                <Animated.View style={styles.playButtonCircle}>
+                    <LinearGradient
+                        colors={gradients.primary as [string, string]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.playButtonGradient}
+                    >
+                        <Ionicons
+                            name={globalMenuOpen ? "close" : "flame"}
+                            size={32}
+                            color={colors.text}
+                        />
+                    </LinearGradient>
+                </Animated.View>
+            </Pressable>
+        </View>
     );
 }
 
@@ -82,6 +112,60 @@ export default function AppLayout() {
     const [isLocked, setIsLocked] = useState(false);
     const hasCheckedInitialBiometric = useRef(false);
     const wentToBackgroundAt = useRef<number | null>(null);
+
+    // Radial menu state
+    const [isRadialMenuOpen, setIsRadialMenuOpen] = useState(false);
+    const radialMenuAnim = useRef(new Animated.Value(0)).current;
+
+    const toggleRadialMenu = useCallback(() => {
+        const toValue = isRadialMenuOpen ? 0 : 1;
+        setIsRadialMenuOpen(!isRadialMenuOpen);
+        globalMenuOpen = !isRadialMenuOpen;
+
+        Animated.spring(radialMenuAnim, {
+            toValue,
+            useNativeDriver: true,
+            tension: 100,
+            friction: 8,
+        }).start();
+    }, [isRadialMenuOpen, radialMenuAnim]);
+
+    const closeRadialMenu = useCallback(() => {
+        setIsRadialMenuOpen(false);
+        globalMenuOpen = false;
+        Animated.timing(radialMenuAnim, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: true,
+        }).start();
+    }, [radialMenuAnim]);
+
+    const handleRadialMenuItemPress = useCallback((itemId: string) => {
+        closeRadialMenu();
+
+        // Navigate based on item
+        switch (itemId) {
+            case 'match':
+                router.push('/(app)/swipe');
+                break;
+            case 'dares':
+                // TODO: Navigate to dares screen
+                console.log('Dares pressed - not yet implemented');
+                break;
+            case 'quiz':
+                // TODO: Navigate to quiz screen
+                console.log('Quiz pressed - not yet implemented');
+                break;
+        }
+    }, [router, closeRadialMenu]);
+
+    // Register global menu toggle for PlayTabButton
+    useEffect(() => {
+        globalMenuToggle = toggleRadialMenu;
+        return () => {
+            globalMenuToggle = null;
+        };
+    }, [toggleRadialMenu]);
 
     // Check if we're on screens that should hide the tab bar
     const segmentStrings = segments as string[];
@@ -527,6 +611,78 @@ export default function AppLayout() {
                 />
             </Tabs>
 
+            {/* Radial Menu Overlay */}
+            {isRadialMenuOpen && (
+                <Pressable
+                    style={radialStyles.overlay}
+                    onPress={closeRadialMenu}
+                />
+            )}
+
+            {/* Radial Menu Items - positioned above the center button */}
+            <Animated.View
+                style={[
+                    radialStyles.menuContainer,
+                    { opacity: radialMenuAnim },
+                ]}
+                pointerEvents={isRadialMenuOpen ? 'auto' : 'none'}
+            >
+                {RADIAL_MENU_ITEMS.map((item) => {
+                    // Convert angle to radians and calculate position
+                    const angleRad = (item.angle - 90) * (Math.PI / 180); // -90 to make 0 = top
+                    const translateX = Math.cos(angleRad) * RADIAL_DISTANCE;
+                    const translateY = Math.sin(angleRad) * RADIAL_DISTANCE;
+
+                    const itemScale = radialMenuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.3, 1],
+                    });
+
+                    const itemTranslateX = radialMenuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, translateX],
+                    });
+
+                    const itemTranslateY = radialMenuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, translateY],
+                    });
+
+                    return (
+                        <Animated.View
+                            key={item.id}
+                            style={[
+                                radialStyles.menuItem,
+                                {
+                                    transform: [
+                                        { translateX: itemTranslateX },
+                                        { translateY: itemTranslateY },
+                                        { scale: itemScale },
+                                    ],
+                                },
+                            ]}
+                        >
+                            <Pressable
+                                onPress={() => handleRadialMenuItemPress(item.id)}
+                                style={radialStyles.menuItemButton}
+                            >
+                                <View style={[
+                                    radialStyles.menuItemCircle,
+                                    item.color ? { backgroundColor: item.color } : null,
+                                ]}>
+                                    <Ionicons
+                                        name={item.icon}
+                                        size={22}
+                                        color={colors.text}
+                                    />
+                                </View>
+                                <Text style={radialStyles.menuItemLabel}>{item.label}</Text>
+                            </Pressable>
+                        </Animated.View>
+                    );
+                })}
+            </Animated.View>
+
             {/* Match Notification Overlay - Using Animated.View instead of Modal for Android compatibility */}
             {matchNotification && (
                 <Animated.View
@@ -754,5 +910,51 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+});
+
+// Radial menu styles
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
+
+const radialStyles = StyleSheet.create({
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        zIndex: 998,
+    },
+    menuContainer: {
+        position: 'absolute',
+        bottom: TAB_BAR_HEIGHT + 30, // Position above tab bar, centered on button
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+        zIndex: 999,
+    },
+    menuItem: {
+        position: 'absolute',
+        alignItems: 'center',
+    },
+    menuItemButton: {
+        alignItems: 'center',
+    },
+    menuItemCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadows.lg,
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    menuItemLabel: {
+        ...typography.caption1,
+        color: colors.text,
+        marginTop: 6,
+        fontWeight: '600',
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
     },
 });
