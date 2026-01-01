@@ -5,6 +5,8 @@ export interface CouncilGenerator {
     model: string;
 }
 
+export type CouncilSelectionMode = 'whole_set' | 'cherry_pick';
+
 export interface AiConfig {
     id: string;
     openrouter_api_key: string | null;
@@ -16,6 +18,8 @@ export interface AiConfig {
     council_generator_model: string | null; // Legacy - kept for backwards compatibility
     council_generators: CouncilGenerator[] | null; // New array of generators
     council_reviewer_model: string | null;
+    council_selection_mode: CouncilSelectionMode | null; // 'whole_set' or 'cherry_pick'
+    cherry_pick_ensure_intensity_distribution: boolean | null; // Balance intensity levels in cherry-pick mode
     updated_at: string | null;
     updated_by: string | null;
 }

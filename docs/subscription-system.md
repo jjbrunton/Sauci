@@ -199,7 +199,8 @@ The `get_recommended_questions()` function also filters premium packs:
 
 | Variable | Location | Purpose |
 |----------|----------|---------|
-| `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` | Mobile app | RevenueCat public SDK key |
+| `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` | Mobile app | RevenueCat iOS public SDK key |
+| `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` | Mobile app | RevenueCat Android public SDK key |
 | `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID` | Mobile app | Entitlement identifier (default: "pro") |
 | `REVENUECAT_API_KEY` | Edge functions | RevenueCat secret API key |
 | `REVENUECAT_ENTITLEMENT_ID` | Edge functions | Server-side entitlement check |

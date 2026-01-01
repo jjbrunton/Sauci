@@ -1,30 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useEntityForm } from '@/hooks/useEntityForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Loader2, Crown, Eye, EyeOff, Flame, Heart, Tags, X } from 'lucide-react';
+import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Flame, Heart, Tags, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
-import { AIPolishButton } from '@/components/ai/AIPolishButton';
 import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
+import { PackFormDialog, type PackFormData } from '@/components/content/PackFormDialog';
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface Category {
     id: string;
@@ -52,31 +43,48 @@ interface QuestionPack {
     topics?: Topic[];
 }
 
+// =============================================================================
+// Component
+// =============================================================================
+
 export function PacksPage() {
     const { categoryId } = useParams<{ categoryId: string }>();
+
+    // Data state
     const [category, setCategory] = useState<Category | null>(null);
     const [packs, setPacks] = useState<QuestionPack[]>([]);
     const [loading, setLoading] = useState(true);
-    const [dialogOpen, setDialogOpen] = useState(false);
     const [aiDialogOpen, setAiDialogOpen] = useState(false);
-    const [editingPack, setEditingPack] = useState<QuestionPack | null>(null);
-    const [saving, setSaving] = useState(false);
     const [extractTopicsDialogOpen, setExtractTopicsDialogOpen] = useState(false);
     const [extractTopicsPack, setExtractTopicsPack] = useState<QuestionPack | null>(null);
     const [allTopics, setAllTopics] = useState<Topic[]>([]);
     const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
 
-    // Form state
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        icon: '💕',
-        is_premium: false,
-        is_public: true,
-        is_explicit: false,
-    });
+    // Form state using the hook
+    const form = useEntityForm<PackFormData, QuestionPack>(
+        {
+            name: '',
+            description: '',
+            icon: '💕',
+            is_premium: false,
+            is_public: true,
+            is_explicit: false,
+        },
+        (pack) => ({
+            name: pack.name,
+            description: pack.description || '',
+            icon: pack.icon || '💕',
+            is_premium: pack.is_premium,
+            is_public: pack.is_public,
+            is_explicit: pack.is_explicit,
+        })
+    );
 
-    const fetchData = async () => {
+    // =============================================================================
+    // Data Fetching
+    // =============================================================================
+
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch category info
@@ -86,7 +94,6 @@ export function PacksPage() {
                     .select('id, name, icon')
                     .eq('id', categoryId)
                     .single();
-
                 setCategory(cat);
             }
 
@@ -151,87 +158,68 @@ export function PacksPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [categoryId]);
 
     useEffect(() => {
         fetchData();
-    }, [categoryId]);
+    }, [fetchData]);
 
-    const openCreateDialog = () => {
-        setEditingPack(null);
-        setFormData({
-            name: '',
-            description: '',
-            icon: '💕',
-            is_premium: false,
-            is_public: true,
-            is_explicit: false,
-        });
+    // =============================================================================
+    // Handlers
+    // =============================================================================
+
+    const openCreate = () => {
+        form.openCreate();
         setSelectedTopicIds(new Set());
-        setDialogOpen(true);
     };
 
-    const openEditDialog = (pack: QuestionPack) => {
-        setEditingPack(pack);
-        setFormData({
-            name: pack.name,
-            description: pack.description || '',
-            icon: pack.icon || '💕',
-            is_premium: pack.is_premium,
-            is_public: pack.is_public,
-            is_explicit: pack.is_explicit,
-        });
+    const openEdit = (pack: QuestionPack) => {
+        form.openEdit(pack);
         setSelectedTopicIds(new Set(pack.topics?.map(t => t.id) || []));
-        setDialogOpen(true);
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim()) {
+        if (!form.formData.name.trim()) {
             toast.error('Name is required');
             return;
         }
 
-        setSaving(true);
+        form.setSaving(true);
         try {
             let packId: string;
 
-            if (editingPack) {
-                const { error } = await auditedSupabase.update('question_packs', editingPack.id, {
-                    name: formData.name,
-                    description: formData.description || null,
-                    icon: formData.icon || null,
-                    is_premium: formData.is_premium,
-                    is_public: formData.is_public,
-                    is_explicit: formData.is_explicit,
+            if (form.editingItem) {
+                const { error } = await auditedSupabase.update('question_packs', form.editingItem.id, {
+                    name: form.formData.name,
+                    description: form.formData.description || null,
+                    icon: form.formData.icon || null,
+                    is_premium: form.formData.is_premium,
+                    is_public: form.formData.is_public,
+                    is_explicit: form.formData.is_explicit,
                 });
-
                 if (error) throw error;
-                packId = editingPack.id;
+                packId = form.editingItem.id;
             } else {
                 const { data, error } = await supabase
                     .from('question_packs')
                     .insert({
-                        name: formData.name,
-                        description: formData.description || null,
-                        icon: formData.icon || null,
-                        is_premium: formData.is_premium,
-                        is_public: formData.is_public,
-                        is_explicit: formData.is_explicit,
+                        name: form.formData.name,
+                        description: form.formData.description || null,
+                        icon: form.formData.icon || null,
+                        is_premium: form.formData.is_premium,
+                        is_public: form.formData.is_public,
+                        is_explicit: form.formData.is_explicit,
                         category_id: categoryId || null,
                         sort_order: packs.length,
                     })
                     .select('id')
                     .single();
-
                 if (error) throw error;
                 packId = data.id;
             }
 
-            // Update topics - delete existing and insert new
-            await supabase
-                .from('pack_topics')
-                .delete()
-                .eq('pack_id', packId);
+            // Update topics
+            await supabase.from('pack_topics').delete().eq('pack_id', packId);
 
             if (selectedTopicIds.size > 0) {
                 const { error: topicsError } = await supabase
@@ -242,18 +230,17 @@ export function PacksPage() {
                             topic_id: topicId,
                         }))
                     );
-
                 if (topicsError) throw topicsError;
             }
 
-            toast.success(editingPack ? 'Pack updated' : 'Pack created');
-            setDialogOpen(false);
+            toast.success(form.isEditing ? 'Pack updated' : 'Pack created');
+            form.close();
             fetchData();
         } catch (error) {
             toast.error('Failed to save pack');
             console.error(error);
         } finally {
-            setSaving(false);
+            form.setSaving(false);
         }
     };
 
@@ -264,7 +251,6 @@ export function PacksPage() {
 
         try {
             const { error } = await auditedSupabase.delete('question_packs', pack.id);
-
             if (error) throw error;
             toast.success('Pack deleted');
             fetchData();
@@ -274,19 +260,52 @@ export function PacksPage() {
         }
     };
 
-    const handleAiGenerated = (result: any) => {
-        // Handle pack generation
+    const handleAiGenerated = (result: { name?: string; description?: string; icon?: string }) => {
         if (result.description) {
-            setFormData({
-                ...formData,
-                name: result.name,
+            form.openCreateWith({
+                name: result.name || '',
                 description: result.description,
                 icon: result.icon || '💕',
+                is_premium: false,
+                is_public: true,
+                is_explicit: false,
             });
             setAiDialogOpen(false);
-            setDialogOpen(true);
+            setSelectedTopicIds(new Set());
         }
     };
+
+    const handleMove = async (pack: QuestionPack, direction: 'up' | 'down') => {
+        const currentIndex = packs.findIndex(p => p.id === pack.id);
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (targetIndex < 0 || targetIndex >= packs.length) return;
+
+        const targetPack = packs[targetIndex];
+
+        try {
+            const currentOrder = pack.sort_order ?? currentIndex;
+            const targetOrder = targetPack.sort_order ?? targetIndex;
+
+            await Promise.all([
+                auditedSupabase.update('question_packs', pack.id, { sort_order: targetOrder }),
+                auditedSupabase.update('question_packs', targetPack.id, { sort_order: currentOrder }),
+            ]);
+
+            // Optimistic update
+            const newPacks = [...packs];
+            [newPacks[currentIndex], newPacks[targetIndex]] = [newPacks[targetIndex], newPacks[currentIndex]];
+            setPacks(newPacks);
+        } catch (error) {
+            toast.error('Failed to reorder packs');
+            console.error(error);
+            fetchData();
+        }
+    };
+
+    // =============================================================================
+    // Render
+    // =============================================================================
 
     if (loading) {
         return (
@@ -329,195 +348,26 @@ export function PacksPage() {
                         <Sparkles className="mr-2 h-4 w-4" />
                         Ideas
                     </Button>
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button onClick={openCreateDialog}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Pack
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {editingPack ? 'Edit Pack' : 'Create Pack'}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {editingPack
-                                        ? 'Update the pack details below.'
-                                        : 'Add a new question pack to this category.'}
-                                </DialogDescription>
-                            </DialogHeader>
-
-                            <div className="space-y-4 py-4">
-                                <div className="space-y-2">
-                                    <Label>Icon</Label>
-                                    <EmojiPicker
-                                        value={formData.icon}
-                                        onChange={(emoji) => setFormData(d => ({ ...d, icon: emoji }))}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="name">Name</Label>
-                                        <AIPolishButton
-                                            text={formData.name}
-                                            type="pack_name"
-                                            onPolished={(val) => setFormData(d => ({ ...d, name: val }))}
-                                        />
-                                    </div>
-                                    <Input
-                                        id="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData(d => ({ ...d, name: e.target.value }))}
-                                        placeholder="e.g., 36 Questions to Fall in Love"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <Label htmlFor="description">Description</Label>
-                                        <AIPolishButton
-                                            text={formData.description}
-                                            type="pack_description"
-                                            onPolished={(val) => setFormData(d => ({ ...d, description: val }))}
-                                        />
-                                    </div>
-                                    <Textarea
-                                        id="description"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData(d => ({ ...d, description: e.target.value }))}
-                                        placeholder="Describe this pack..."
-                                        rows={3}
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label>Premium Pack</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Only available to premium users
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        checked={formData.is_premium}
-                                        onCheckedChange={(checked) =>
-                                            setFormData(d => ({ ...d, is_premium: checked }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label>Public</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Visible to all users by default
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        checked={formData.is_public}
-                                        onCheckedChange={(checked) =>
-                                            setFormData(d => ({ ...d, is_public: checked }))
-                                        }
-                                    />
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label>Explicit Content</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                            Contains adult or mature content
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        checked={formData.is_explicit}
-                                        onCheckedChange={(checked) =>
-                                            setFormData(d => ({ ...d, is_explicit: checked }))
-                                        }
-                                    />
-                                </div>
-
-                                {/* Topics */}
-                                <div className="space-y-2">
-                                    <Label>Topics</Label>
-                                    <p className="text-sm text-muted-foreground">
-                                        Select topics/kinks for filtering
-                                    </p>
-                                    {/* Selected topics */}
-                                    {selectedTopicIds.size > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                            {Array.from(selectedTopicIds).map(id => {
-                                                const topic = allTopics.find(t => t.id === id);
-                                                if (!topic) return null;
-                                                return (
-                                                    <Badge
-                                                        key={id}
-                                                        variant="secondary"
-                                                        className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
-                                                        onClick={() => {
-                                                            const next = new Set(selectedTopicIds);
-                                                            next.delete(id);
-                                                            setSelectedTopicIds(next);
-                                                        }}
-                                                    >
-                                                        {topic.name}
-                                                        <X className="h-3 w-3 ml-1" />
-                                                    </Badge>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                    {/* Available topics */}
-                                    {allTopics.length > 0 ? (
-                                        <div className="flex flex-wrap gap-1 p-2 border rounded-md max-h-32 overflow-y-auto">
-                                            {allTopics
-                                                .filter(t => !selectedTopicIds.has(t.id))
-                                                .map(topic => (
-                                                    <Badge
-                                                        key={topic.id}
-                                                        variant="outline"
-                                                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                                                        onClick={() => {
-                                                            const next = new Set(selectedTopicIds);
-                                                            next.add(topic.id);
-                                                            setSelectedTopicIds(next);
-                                                        }}
-                                                    >
-                                                        <Plus className="h-3 w-3 mr-1" />
-                                                        {topic.name}
-                                                    </Badge>
-                                                ))}
-                                            {allTopics.filter(t => !selectedTopicIds.has(t.id)).length === 0 && (
-                                                <span className="text-xs text-muted-foreground">All topics selected</span>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs text-muted-foreground italic">
-                                            No topics yet. Use "Extract Topics" on a pack to create some.
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <DialogFooter>
-                                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                                    Cancel
-                                </Button>
-                                <Button onClick={handleSave} disabled={saving}>
-                                    {saving ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        'Save'
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                    <Button onClick={openCreate}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Pack
+                    </Button>
                 </div>
             </div>
+
+            {/* Pack Form Dialog */}
+            <PackFormDialog
+                open={form.dialogOpen}
+                onOpenChange={form.setDialogOpen}
+                formData={form.formData}
+                onFormChange={form.setFormData}
+                onSave={handleSave}
+                saving={form.saving}
+                isEditing={form.isEditing}
+                allTopics={allTopics}
+                selectedTopicIds={selectedTopicIds}
+                onTopicsChange={setSelectedTopicIds}
+            />
 
             {/* AI Generator Dialog */}
             <AiGeneratorDialog
@@ -554,7 +404,7 @@ export function PacksPage() {
                             <Sparkles className="mr-2 h-4 w-4" />
                             Ideas
                         </Button>
-                        <Button onClick={openCreateDialog}>
+                        <Button onClick={openCreate}>
                             <Plus className="mr-2 h-4 w-4" />
                             Add Pack
                         </Button>
@@ -562,11 +412,33 @@ export function PacksPage() {
                 </Card>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {packs.map((pack) => (
+                    {packs.map((pack, index) => (
                         <Card key={pack.id} className="group hover:shadow-md transition-shadow">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
-                                    <div className="text-4xl mb-2">{pack.icon || '💕'}</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleMove(pack, 'up')}
+                                                disabled={index === 0}
+                                            >
+                                                <ChevronUp className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleMove(pack, 'down')}
+                                                disabled={index === packs.length - 1}
+                                            >
+                                                <ChevronDown className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="text-4xl mb-2">{pack.icon || '💕'}</div>
+                                    </div>
                                     <div className="flex items-center gap-1">
                                         {pack.is_premium && (
                                             <Badge variant="default" className="bg-amber-500">
@@ -615,7 +487,7 @@ export function PacksPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => openEditDialog(pack)}
+                                            onClick={() => openEdit(pack)}
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>

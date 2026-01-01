@@ -1,0 +1,260 @@
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
+import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Plus, Loader2, X } from 'lucide-react';
+import { AIPolishButton } from '@/components/ai/AIPolishButton';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+interface Topic {
+    id: string;
+    name: string;
+}
+
+export interface PackFormData {
+    name: string;
+    description: string;
+    icon: string;
+    is_premium: boolean;
+    is_public: boolean;
+    is_explicit: boolean;
+}
+
+export interface PackFormDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    formData: PackFormData;
+    onFormChange: (data: PackFormData) => void;
+    onSave: () => void;
+    saving: boolean;
+    isEditing: boolean;
+    allTopics: Topic[];
+    selectedTopicIds: Set<string>;
+    onTopicsChange: (topicIds: Set<string>) => void;
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
+export function PackFormDialog({
+    open,
+    onOpenChange,
+    formData,
+    onFormChange,
+    onSave,
+    saving,
+    isEditing,
+    allTopics,
+    selectedTopicIds,
+    onTopicsChange,
+}: PackFormDialogProps) {
+    const setField = <K extends keyof PackFormData>(field: K, value: PackFormData[K]) => {
+        onFormChange({ ...formData, [field]: value });
+    };
+
+    const addTopic = (topicId: string) => {
+        const next = new Set(selectedTopicIds);
+        next.add(topicId);
+        onTopicsChange(next);
+    };
+
+    const removeTopic = (topicId: string) => {
+        const next = new Set(selectedTopicIds);
+        next.delete(topicId);
+        onTopicsChange(next);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>
+                        {isEditing ? 'Edit Pack' : 'Create Pack'}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {isEditing
+                            ? 'Update the pack details below.'
+                            : 'Add a new question pack to this category.'}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4 py-4">
+                    {/* Icon */}
+                    <div className="space-y-2">
+                        <Label>Icon</Label>
+                        <EmojiPicker
+                            value={formData.icon}
+                            onChange={(emoji) => setField('icon', emoji)}
+                        />
+                    </div>
+
+                    {/* Name */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="name">Name</Label>
+                            <AIPolishButton
+                                text={formData.name}
+                                type="pack_name"
+                                onPolished={(val) => setField('name', val)}
+                            />
+                        </div>
+                        <Input
+                            id="name"
+                            value={formData.name}
+                            onChange={(e) => setField('name', e.target.value)}
+                            placeholder="e.g., 36 Questions to Fall in Love"
+                        />
+                    </div>
+
+                    {/* Description */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="description">Description</Label>
+                            <AIPolishButton
+                                text={formData.description}
+                                type="pack_description"
+                                onPolished={(val) => setField('description', val)}
+                            />
+                        </div>
+                        <Textarea
+                            id="description"
+                            value={formData.description}
+                            onChange={(e) => setField('description', e.target.value)}
+                            placeholder="Describe this pack..."
+                            rows={3}
+                        />
+                    </div>
+
+                    {/* Premium Toggle */}
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label>Premium Pack</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Only available to premium users
+                            </p>
+                        </div>
+                        <Switch
+                            checked={formData.is_premium}
+                            onCheckedChange={(checked) => setField('is_premium', checked)}
+                        />
+                    </div>
+
+                    {/* Public Toggle */}
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label>Public</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Visible to all users by default
+                            </p>
+                        </div>
+                        <Switch
+                            checked={formData.is_public}
+                            onCheckedChange={(checked) => setField('is_public', checked)}
+                        />
+                    </div>
+
+                    {/* Explicit Toggle */}
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label>Explicit Content</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Contains adult or mature content
+                            </p>
+                        </div>
+                        <Switch
+                            checked={formData.is_explicit}
+                            onCheckedChange={(checked) => setField('is_explicit', checked)}
+                        />
+                    </div>
+
+                    {/* Topics */}
+                    <div className="space-y-2">
+                        <Label>Topics</Label>
+                        <p className="text-sm text-muted-foreground">
+                            Select topics/kinks for filtering
+                        </p>
+
+                        {/* Selected topics */}
+                        {selectedTopicIds.size > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                                {Array.from(selectedTopicIds).map(id => {
+                                    const topic = allTopics.find(t => t.id === id);
+                                    if (!topic) return null;
+                                    return (
+                                        <Badge
+                                            key={id}
+                                            variant="secondary"
+                                            className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                            onClick={() => removeTopic(id)}
+                                        >
+                                            {topic.name}
+                                            <X className="h-3 w-3 ml-1" />
+                                        </Badge>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Available topics */}
+                        {allTopics.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 p-2 border rounded-md max-h-32 overflow-y-auto">
+                                {allTopics
+                                    .filter(t => !selectedTopicIds.has(t.id))
+                                    .map(topic => (
+                                        <Badge
+                                            key={topic.id}
+                                            variant="outline"
+                                            className="cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                                            onClick={() => addTopic(topic.id)}
+                                        >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            {topic.name}
+                                        </Badge>
+                                    ))}
+                                {allTopics.filter(t => !selectedTopicIds.has(t.id)).length === 0 && (
+                                    <span className="text-xs text-muted-foreground">All topics selected</span>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs text-muted-foreground italic">
+                                No topics yet. Use "Extract Topics" on a pack to create some.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={onSave} disabled={saving}>
+                        {saving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            'Save'
+                        )}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

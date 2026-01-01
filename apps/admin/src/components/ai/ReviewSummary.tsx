@@ -1,0 +1,133 @@
+import { CheckCircle2, AlertTriangle, XCircle, Cherry, Bot } from 'lucide-react';
+import type {
+    CouncilGenerationResult,
+    GenerationCandidate,
+    CherryPickResult,
+    CouncilSelectionMode,
+} from '@/lib/openai';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+interface ReviewSummaryProps {
+    summary: CouncilGenerationResult['summary'];
+    metadata: CouncilGenerationResult['metadata'] | null;
+    selectionMode: CouncilSelectionMode;
+    allCandidates: GenerationCandidate[] | null;
+    selectedGeneratorIndex: number | null;
+    cherryPickResult: CherryPickResult | null;
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
+export function ReviewSummary({
+    summary,
+    metadata,
+    selectionMode,
+    allCandidates,
+    selectedGeneratorIndex,
+    cherryPickResult,
+}: ReviewSummaryProps) {
+    if (!summary) {
+        return null;
+    }
+
+    return (
+        <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1 text-green-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {summary.passed} Passed
+                    </span>
+                    <span className="flex items-center gap-1 text-yellow-600">
+                        <AlertTriangle className="h-4 w-4" />
+                        {summary.flagged} Flagged
+                    </span>
+                    <span className="flex items-center gap-1 text-red-600">
+                        <XCircle className="h-4 w-4" />
+                        {summary.rejected} Rejected
+                    </span>
+                </div>
+                <span className="text-sm font-medium">
+                    Quality: {summary.overallQuality}/10
+                </span>
+            </div>
+
+            {metadata && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                    <p>
+                        Generated in {(metadata.totalGenerationTime / 1000).toFixed(1)}s
+                        {metadata.reviewTime > 0 && ` • Reviewed in ${(metadata.reviewTime / 1000).toFixed(1)}s`}
+                    </p>
+
+                    {/* Cherry-pick mode info */}
+                    {selectionMode === 'cherry_pick' && cherryPickResult && (
+                        <div className="flex items-center gap-2 text-primary font-medium">
+                            <Cherry className="h-3 w-3" />
+                            <span>
+                                Cherry-picked from pool of {cherryPickResult.poolSize} questions
+                                {cherryPickResult.duplicatesRemoved > 0 &&
+                                    ` • ${cherryPickResult.duplicatesRemoved} duplicate${cherryPickResult.duplicatesRemoved > 1 ? 's' : ''} removed`
+                                }
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Whole-set mode info */}
+                    {selectionMode === 'whole_set' && allCandidates && allCandidates.length > 1 && selectedGeneratorIndex !== null && (
+                        <p className="text-primary font-medium">
+                            Selected: Generator {selectedGeneratorIndex + 1} of {allCandidates.length}
+                            {' '}({allCandidates[selectedGeneratorIndex]?.generatorModel.split('/').pop()})
+                        </p>
+                    )}
+
+                    {metadata.generatorModels.length > 1 && (
+                        <p>
+                            Compared {metadata.generatorModels.length} generators: {metadata.generatorModels.map(m => m.split('/').pop()).join(', ')}
+                        </p>
+                    )}
+
+                    {/* Intensity distribution for cherry-pick */}
+                    {selectionMode === 'cherry_pick' && cherryPickResult && Object.keys(cherryPickResult.intensityDistribution).length > 0 && (
+                        <p>
+                            Intensity distribution: {Object.entries(cherryPickResult.intensityDistribution)
+                                .sort(([a], [b]) => Number(a) - Number(b))
+                                .map(([level, count]) => `L${level}:${count}`)
+                                .join(', ')}
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// =============================================================================
+// Simple Model Badge (for non-council generation)
+// =============================================================================
+
+interface ModelBadgeProps {
+    model: string;
+    generationTime?: number;
+}
+
+export function ModelBadge({ model, generationTime }: ModelBadgeProps) {
+    const formatModelName = (m: string) => {
+        const parts = m.split('/');
+        return parts.length > 1 ? parts[parts.length - 1] : m;
+    };
+
+    return (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Bot className="h-3 w-3" />
+            <span>Generated by {formatModelName(model)}</span>
+            {generationTime && generationTime > 0 && (
+                <span>in {(generationTime / 1000).toFixed(1)}s</span>
+            )}
+        </div>
+    );
+}

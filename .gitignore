@@ -53,3 +53,4 @@ coverage/
 .temp/
 .tmp/
 *.tmp
+nul

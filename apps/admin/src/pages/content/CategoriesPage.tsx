@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { useEntityForm } from '@/hooks/useEntityForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,10 +19,14 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Package, Pencil, Trash2, Sparkles, Loader2, Lightbulb } from 'lucide-react';
+import { Plus, Package, Pencil, Trash2, Sparkles, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
+
+// =============================================================================
+// Types
+// =============================================================================
 
 interface Category {
     id: string;
@@ -33,22 +38,37 @@ interface Category {
     pack_count?: number;
 }
 
+interface CategoryFormData {
+    name: string;
+    description: string;
+    icon: string;
+}
+
+// =============================================================================
+// Component
+// =============================================================================
+
 export function CategoriesPage() {
+    // Data state
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
-    const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-    const [saving, setSaving] = useState(false);
     const [aiIdeasOpen, setAiIdeasOpen] = useState(false);
 
-    // Form state
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        icon: '📚',
-    });
+    // Form state using the new hook
+    const form = useEntityForm<CategoryFormData, Category>(
+        { name: '', description: '', icon: '📚' },
+        (category) => ({
+            name: category.name,
+            description: category.description || '',
+            icon: category.icon || '📚',
+        })
+    );
 
-    const fetchCategories = async () => {
+    // =============================================================================
+    // Data Fetching
+    // =============================================================================
+
+    const fetchCategories = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch categories with pack count
@@ -83,77 +103,59 @@ export function CategoriesPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchCategories();
-    }, []);
+    }, [fetchCategories]);
 
-    const openCreateDialog = () => {
-        setEditingCategory(null);
-        setFormData({ name: '', description: '', icon: '📚' });
-        setDialogOpen(true);
-    };
+    // =============================================================================
+    // Handlers
+    // =============================================================================
 
-    const openEditDialog = (category: Category) => {
-        setEditingCategory(category);
-        setFormData({
-            name: category.name,
-            description: category.description || '',
-            icon: category.icon || '📚',
-        });
-        setDialogOpen(true);
-    };
-
-    const handleAiIdea = (idea: any) => {
+    const handleAiIdea = (idea: { name: string; description?: string; icon?: string }) => {
         setAiIdeasOpen(false);
-        setEditingCategory(null);
-        setFormData({
+        form.openCreateWith({
             name: idea.name,
             description: idea.description || '',
-            icon: idea.icon,
+            icon: idea.icon || '📚',
         });
-        setDialogOpen(true);
     };
 
     const handleSave = async () => {
-        if (!formData.name.trim()) {
+        if (!form.formData.name.trim()) {
             toast.error('Name is required');
             return;
         }
 
-        setSaving(true);
+        form.setSaving(true);
         try {
-            if (editingCategory) {
-                // Update
-                const { error } = await auditedSupabase.update('categories', editingCategory.id, {
-                    name: formData.name,
-                    description: formData.description || null,
-                    icon: formData.icon || null,
-                });
+            const data = {
+                name: form.formData.name,
+                description: form.formData.description || null,
+                icon: form.formData.icon || null,
+            };
 
+            if (form.editingItem) {
+                const { error } = await auditedSupabase.update('categories', form.editingItem.id, data);
                 if (error) throw error;
                 toast.success('Category updated');
             } else {
-                // Create
                 const { error } = await auditedSupabase.insert('categories', {
-                    name: formData.name,
-                    description: formData.description || null,
-                    icon: formData.icon || null,
+                    ...data,
                     sort_order: categories.length,
                 });
-
                 if (error) throw error;
                 toast.success('Category created');
             }
 
-            setDialogOpen(false);
+            form.close();
             fetchCategories();
         } catch (error) {
             toast.error('Failed to save category');
             console.error(error);
         } finally {
-            setSaving(false);
+            form.setSaving(false);
         }
     };
 
@@ -164,7 +166,6 @@ export function CategoriesPage() {
 
         try {
             const { error } = await auditedSupabase.delete('categories', category.id);
-
             if (error) throw error;
             toast.success('Category deleted');
             fetchCategories();
@@ -173,6 +174,38 @@ export function CategoriesPage() {
             console.error(error);
         }
     };
+
+    const handleMove = async (category: Category, direction: 'up' | 'down') => {
+        const currentIndex = categories.findIndex(c => c.id === category.id);
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (targetIndex < 0 || targetIndex >= categories.length) return;
+
+        const targetCategory = categories[targetIndex];
+
+        try {
+            const currentOrder = category.sort_order ?? currentIndex;
+            const targetOrder = targetCategory.sort_order ?? targetIndex;
+
+            await Promise.all([
+                auditedSupabase.update('categories', category.id, { sort_order: targetOrder }),
+                auditedSupabase.update('categories', targetCategory.id, { sort_order: currentOrder }),
+            ]);
+
+            // Optimistic update
+            const newCategories = [...categories];
+            [newCategories[currentIndex], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[currentIndex]];
+            setCategories(newCategories);
+        } catch (error) {
+            toast.error('Failed to reorder categories');
+            console.error(error);
+            fetchCategories();
+        }
+    };
+
+    // =============================================================================
+    // Render
+    // =============================================================================
 
     if (loading) {
         return (
@@ -201,9 +234,9 @@ export function CategoriesPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <Dialog open={form.dialogOpen} onOpenChange={form.setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button onClick={openCreateDialog}>
+                            <Button onClick={form.openCreate}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add Category
                             </Button>
@@ -215,10 +248,10 @@ export function CategoriesPage() {
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>
-                                    {editingCategory ? 'Edit Category' : 'Create Category'}
+                                    {form.isEditing ? 'Edit Category' : 'Create Category'}
                                 </DialogTitle>
                                 <DialogDescription>
-                                    {editingCategory
+                                    {form.isEditing
                                         ? 'Update the category details below.'
                                         : 'Add a new category to organize your question packs.'}
                                 </DialogDescription>
@@ -228,8 +261,8 @@ export function CategoriesPage() {
                                 <div className="space-y-2">
                                     <Label>Icon</Label>
                                     <EmojiPicker
-                                        value={formData.icon}
-                                        onChange={(emoji) => setFormData(d => ({ ...d, icon: emoji }))}
+                                        value={form.formData.icon}
+                                        onChange={(emoji) => form.setField('icon', emoji)}
                                     />
                                 </div>
 
@@ -237,15 +270,15 @@ export function CategoriesPage() {
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="name">Name</Label>
                                         <AIPolishButton
-                                            text={formData.name}
+                                            text={form.formData.name}
                                             type="category_name"
-                                            onPolished={(val) => setFormData(d => ({ ...d, name: val }))}
+                                            onPolished={(val) => form.setField('name', val)}
                                         />
                                     </div>
                                     <Input
                                         id="name"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData(d => ({ ...d, name: e.target.value }))}
+                                        value={form.formData.name}
+                                        onChange={(e) => form.setField('name', e.target.value)}
                                         placeholder="e.g., Romance"
                                     />
                                 </div>
@@ -254,15 +287,15 @@ export function CategoriesPage() {
                                     <div className="flex items-center justify-between">
                                         <Label htmlFor="description">Description</Label>
                                         <AIPolishButton
-                                            text={formData.description}
+                                            text={form.formData.description}
                                             type="pack_description"
-                                            onPolished={(val) => setFormData(d => ({ ...d, description: val }))}
+                                            onPolished={(val) => form.setField('description', val)}
                                         />
                                     </div>
                                     <Textarea
                                         id="description"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData(d => ({ ...d, description: e.target.value }))}
+                                        value={form.formData.description}
+                                        onChange={(e) => form.setField('description', e.target.value)}
                                         placeholder="Describe this category..."
                                         rows={3}
                                     />
@@ -270,11 +303,11 @@ export function CategoriesPage() {
                             </div>
 
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                                <Button variant="outline" onClick={form.close}>
                                     Cancel
                                 </Button>
-                                <Button onClick={handleSave} disabled={saving}>
-                                    {saving ? (
+                                <Button onClick={handleSave} disabled={form.saving}>
+                                    {form.saving ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                             Saving...
@@ -297,23 +330,45 @@ export function CategoriesPage() {
                     <p className="text-muted-foreground mb-4">
                         Create your first category to get started
                     </p>
-                    <Button onClick={openCreateDialog}>
+                    <Button onClick={form.openCreate}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Category
                     </Button>
                 </Card>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((category) => (
+                    {categories.map((category, index) => (
                         <Card key={category.id} className="group hover:shadow-md transition-shadow">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
-                                    <div className="text-4xl mb-2">{category.icon || '📚'}</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleMove(category, 'up')}
+                                                disabled={index === 0}
+                                            >
+                                                <ChevronUp className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6"
+                                                onClick={() => handleMove(category, 'down')}
+                                                disabled={index === categories.length - 1}
+                                            >
+                                                <ChevronDown className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="text-4xl mb-2">{category.icon || '📚'}</div>
+                                    </div>
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => openEditDialog(category)}
+                                            onClick={() => form.openEdit(category)}
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -347,6 +402,7 @@ export function CategoriesPage() {
                     ))}
                 </div>
             )}
+
             {/* AI Dialog */}
             <AiGeneratorDialog
                 open={aiIdeasOpen}

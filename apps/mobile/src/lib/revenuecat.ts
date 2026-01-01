@@ -2,8 +2,14 @@ import { Platform } from "react-native";
 
 const REVENUECAT_IOS_API_KEY =
     process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || "";
+const REVENUECAT_ANDROID_API_KEY =
+    process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || "";
 const ENTITLEMENT_ID =
     process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "pro"; // Your RevenueCat entitlement identifier
+
+function getApiKey(): string {
+    return Platform.OS === "ios" ? REVENUECAT_IOS_API_KEY : REVENUECAT_ANDROID_API_KEY;
+}
 
 export interface SubscriptionState {
     isProUser: boolean;
@@ -48,7 +54,7 @@ class RevenueCatService {
     private Purchases: any = null;
 
     isAvailable(): boolean {
-        return Platform.OS === "ios";
+        return Platform.OS === "ios" || Platform.OS === "android";
     }
 
     private async loadPurchases(): Promise<boolean> {
@@ -67,15 +73,17 @@ class RevenueCatService {
     async initialize(userId?: string): Promise<void> {
         if (this.initialized) return;
 
-        // Only initialize on iOS
-        if (Platform.OS !== "ios") {
-            console.log("RevenueCat: Skipping initialization on non-iOS platform");
+        // Only initialize on iOS and Android
+        if (Platform.OS !== "ios" && Platform.OS !== "android") {
+            console.log("RevenueCat: Skipping initialization on unsupported platform");
             return;
         }
 
+        const apiKey = getApiKey();
+
         // Skip if API key is missing or placeholder
-        if (!REVENUECAT_IOS_API_KEY || REVENUECAT_IOS_API_KEY === "your_revenuecat_ios_api_key") {
-            console.log("RevenueCat: Skipping - no valid API key configured");
+        if (!apiKey || apiKey.startsWith("your_revenuecat")) {
+            console.log(`RevenueCat: Skipping - no valid ${Platform.OS} API key configured`);
             return;
         }
 
@@ -86,11 +94,11 @@ class RevenueCatService {
             // Always enable debug logging for now to diagnose issues
             this.Purchases.setLogLevel(this.Purchases.LOG_LEVEL?.DEBUG || 4);
 
-            const keyPrefix = REVENUECAT_IOS_API_KEY.substring(0, 10);
-            console.log("RevenueCat: Configuring with API key prefix:", keyPrefix + "...");
+            const keyPrefix = apiKey.substring(0, 10);
+            console.log(`RevenueCat: Configuring ${Platform.OS} with API key prefix:`, keyPrefix + "...");
 
             await this.Purchases.configure({
-                apiKey: REVENUECAT_IOS_API_KEY,
+                apiKey: apiKey,
                 appUserID: userId,
             });
 

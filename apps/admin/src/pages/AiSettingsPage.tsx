@@ -9,26 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Save, Eye, EyeOff, AlertTriangle, Bot, Users, Sparkles, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { Save, Eye, EyeOff, AlertTriangle, Bot, Sparkles, RefreshCw, Plus, Trash2, Package, Cherry } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-
-// Popular OpenRouter models for suggestions
-const POPULAR_MODELS = {
-    generation: [
-        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-        { id: 'openai/gpt-4o', name: 'GPT-4o' },
-        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' },
-        { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
-        { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Llama 3.1 405B' },
-    ],
-    review: [
-        { id: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5' },
-        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet' },
-        { id: 'openai/gpt-4o', name: 'GPT-4o' },
-        { id: 'anthropic/claude-3-opus', name: 'Claude 3 Opus' },
-    ],
-};
+import { ModelCombobox } from '@/components/ModelCombobox';
 
 export function AiSettingsPage() {
     const { hasPermission, isSuperAdmin } = useAuth();
@@ -61,6 +45,8 @@ export function AiSettingsPage() {
                 council_generator_model: config.council_generator_model || '',
                 council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
+                council_selection_mode: config.council_selection_mode || 'whole_set',
+                cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
             });
             setHasChanges(false);
         }
@@ -104,6 +90,8 @@ export function AiSettingsPage() {
                 council_generator_model: config.council_generator_model || '',
                 council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
+                council_selection_mode: config.council_selection_mode || 'whole_set',
+                cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
             });
             setHasChanges(false);
         }
@@ -274,12 +262,10 @@ export function AiSettingsPage() {
                 <CardContent className="space-y-6">
                     <div className="space-y-2">
                         <Label htmlFor="default-model">Default Model</Label>
-                        <Input
-                            id="default-model"
+                        <ModelCombobox
                             value={formData.default_model || ''}
-                            onChange={(e) => handleChange('default_model', e.target.value)}
+                            onChange={(value) => handleChange('default_model', value)}
                             placeholder="openai/gpt-4o-mini"
-                            list="generation-models"
                         />
                         <p className="text-xs text-muted-foreground">
                             Fallback model when no specific model is configured
@@ -288,122 +274,68 @@ export function AiSettingsPage() {
 
                     <Separator />
 
-                    <div className="grid md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="model-generate">Generation Model</Label>
-                            <Input
-                                id="model-generate"
-                                value={formData.model_generate || ''}
-                                onChange={(e) => handleChange('model_generate', e.target.value)}
-                                placeholder="Uses default"
-                                list="generation-models"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                For generating questions & content
-                            </p>
+                    {/* Generation Section - changes based on council mode */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label>Question Generation</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    {formData.council_enabled
+                                        ? 'Multiple models generate in parallel, reviewer picks the best'
+                                        : 'Single model generates content directly'}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Label htmlFor="council-toggle" className="text-xs text-muted-foreground">
+                                    Council Mode
+                                </Label>
+                                <Switch
+                                    id="council-toggle"
+                                    checked={formData.council_enabled || false}
+                                    onCheckedChange={(checked: boolean) => handleChange('council_enabled', checked)}
+                                />
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="model-fix">Analysis Model</Label>
-                            <Input
-                                id="model-fix"
-                                value={formData.model_fix || ''}
-                                onChange={(e) => handleChange('model_fix', e.target.value)}
-                                placeholder="Uses default"
-                                list="generation-models"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                For analyzing & fixing content
-                            </p>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="model-polish">Polish Model</Label>
-                            <Input
-                                id="model-polish"
-                                value={formData.model_polish || ''}
-                                onChange={(e) => handleChange('model_polish', e.target.value)}
-                                placeholder="Uses default"
-                                list="generation-models"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                For polishing & improving text
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Datalist for model suggestions */}
-                    <datalist id="generation-models">
-                        {POPULAR_MODELS.generation.map((model) => (
-                            <option key={model.id} value={model.id}>
-                                {model.name}
-                            </option>
-                        ))}
-                    </datalist>
-                </CardContent>
-            </Card>
-
-            {/* Council Configuration */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Council Mode
-                    </CardTitle>
-                    <CardDescription>
-                        Enable multi-model review for quality assurance. Multiple generators can compete, and a reviewer picks the best output.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                            <Label htmlFor="council-enabled">Enable Council Mode</Label>
-                            <p className="text-xs text-muted-foreground">
-                                When enabled, generators run in parallel and a reviewer selects the best result
-                            </p>
-                        </div>
-                        <Switch
-                            id="council-enabled"
-                            checked={formData.council_enabled || false}
-                            onCheckedChange={(checked: boolean) => handleChange('council_enabled', checked)}
-                        />
-                    </div>
-
-                    {formData.council_enabled && (
-                        <>
-                            <Separator />
-
-                            {/* Generators Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <Label>Generator Models ({generators.length})</Label>
-                                        <p className="text-xs text-muted-foreground">
-                                            Models that generate content in parallel. The reviewer picks the best output.
-                                        </p>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={addGenerator}
-                                    >
-                                        <Plus className="h-4 w-4 mr-1" />
-                                        Add Generator
-                                    </Button>
-                                </div>
-
+                        {!formData.council_enabled ? (
+                            /* Single generator mode */
+                            <div className="space-y-2">
+                                <Label htmlFor="model-generate">Generation Model</Label>
+                                <ModelCombobox
+                                    value={formData.model_generate || ''}
+                                    onChange={(value) => handleChange('model_generate', value)}
+                                    placeholder="Uses default model"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    For questions, category ideas, and pack ideas
+                                </p>
+                            </div>
+                        ) : (
+                            /* Council mode - multiple generators + reviewer */
+                            <div className="space-y-4 pl-4 border-l-2 border-primary/30">
+                                {/* Generators */}
                                 <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-sm">Generators ({generators.length})</Label>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addGenerator}
+                                        >
+                                            <Plus className="h-4 w-4 mr-1" />
+                                            Add
+                                        </Button>
+                                    </div>
                                     {generators.map((gen, index) => (
                                         <div key={index} className="flex items-center gap-2">
-                                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
                                                 {index + 1}
                                             </div>
-                                            <Input
+                                            <ModelCombobox
                                                 value={gen.model}
-                                                onChange={(e) => updateGeneratorModel(index, e.target.value)}
-                                                placeholder={index === 0 ? "anthropic/claude-3.5-sonnet" : "Enter model ID..."}
-                                                list="generation-models"
+                                                onChange={(value) => updateGeneratorModel(index, value)}
+                                                placeholder={index === 0 ? "anthropic/claude-3.5-sonnet" : "Select model..."}
                                                 className="flex-1"
                                             />
                                             <Button
@@ -412,7 +344,7 @@ export function AiSettingsPage() {
                                                 size="icon"
                                                 onClick={() => removeGenerator(index)}
                                                 disabled={generators.length <= 1}
-                                                className="text-destructive hover:text-destructive"
+                                                className="text-destructive hover:text-destructive h-8 w-8"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -420,48 +352,127 @@ export function AiSettingsPage() {
                                     ))}
                                 </div>
 
-                                {generators.length > 1 && (
+                                {/* Reviewer */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="council-reviewer" className="text-sm">Reviewer Model</Label>
+                                    <ModelCombobox
+                                        value={formData.council_reviewer_model || ''}
+                                        onChange={(value) => handleChange('council_reviewer_model', value)}
+                                        placeholder="google/gemini-pro-1.5"
+                                    />
                                     <p className="text-xs text-muted-foreground">
-                                        All {generators.length} generators will run in parallel. The reviewer will compare all outputs and select the best one.
+                                        Reviews outputs and selects the best
                                     </p>
+                                </div>
+
+                                {/* Selection Mode */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm">Selection Mode</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div
+                                            className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                                                formData.council_selection_mode === 'whole_set'
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'hover:bg-accent'
+                                            }`}
+                                            onClick={() => handleChange('council_selection_mode', 'whole_set')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Package className="h-4 w-4" />
+                                                <span className="text-sm font-medium">Whole Set</span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Pick best complete set
+                                            </p>
+                                        </div>
+                                        <div
+                                            className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                                                formData.council_selection_mode === 'cherry_pick'
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'hover:bg-accent'
+                                            }`}
+                                            onClick={() => handleChange('council_selection_mode', 'cherry_pick')}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Cherry className="h-4 w-4" />
+                                                <span className="text-sm font-medium">Cherry Pick</span>
+                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Mix best from each
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Cherry-pick intensity option */}
+                                {formData.council_selection_mode === 'cherry_pick' && (
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label className="text-sm">Ensure Intensity Variety</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Balance across intensity levels 1-5
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={formData.cherry_pick_ensure_intensity_distribution ?? true}
+                                            onCheckedChange={(checked: boolean) =>
+                                                handleChange('cherry_pick_ensure_intensity_distribution', checked)
+                                            }
+                                        />
+                                    </div>
                                 )}
-                            </div>
 
-                            <Separator />
-
-                            {/* Reviewer Section */}
-                            <div className="space-y-2">
-                                <Label htmlFor="council-reviewer">Reviewer Model</Label>
-                                <Input
-                                    id="council-reviewer"
-                                    value={formData.council_reviewer_model || ''}
-                                    onChange={(e) => handleChange('council_reviewer_model', e.target.value)}
-                                    placeholder="google/gemini-pro-1.5"
-                                    list="review-models"
-                                />
                                 <p className="text-xs text-muted-foreground">
-                                    Model used to review, score, and select the best generated content
+                                    Uses {generators.length + 1} API calls ({generators.length} generator{generators.length > 1 ? 's' : ''} + reviewer)
                                 </p>
                             </div>
+                        )}
 
-                            <datalist id="review-models">
-                                {POPULAR_MODELS.review.map((model) => (
-                                    <option key={model.id} value={model.id}>
-                                        {model.name}
-                                    </option>
-                                ))}
-                            </datalist>
+                        {/* Ideas Model - shown when council mode is ON (since council only applies to questions) */}
+                        {formData.council_enabled && (
+                            <div className="space-y-2">
+                                <Label htmlFor="model-generate">Ideas Model</Label>
+                                <ModelCombobox
+                                    value={formData.model_generate || ''}
+                                    onChange={(value) => handleChange('model_generate', value)}
+                                    placeholder="Uses default model"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    For category ideas and pack ideas (council mode only applies to questions)
+                                </p>
+                            </div>
+                        )}
+                    </div>
 
-                            <Alert>
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Usage Note</AlertTitle>
-                                <AlertDescription>
-                                    Council mode uses {generators.length + 1} AI call{generators.length + 1 > 1 ? 's' : ''} per generation ({generators.length} generator{generators.length > 1 ? 's' : ''} + 1 reviewer), which increases API costs.
-                                    Using different model providers gives diverse perspectives.
-                                </AlertDescription>
-                            </Alert>
-                        </>
-                    )}
+                    <Separator />
+
+                    {/* Other models - always visible */}
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="model-fix">Analysis Model</Label>
+                            <ModelCombobox
+                                value={formData.model_fix || ''}
+                                onChange={(value) => handleChange('model_fix', value)}
+                                placeholder="Uses default model"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                For analyzing & fixing content
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="model-polish">Polish Model</Label>
+                            <ModelCombobox
+                                value={formData.model_polish || ''}
+                                onChange={(value) => handleChange('model_polish', value)}
+                                placeholder="Uses default model"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                For polishing & improving text
+                            </p>
+                        </div>
+                    </div>
+
                 </CardContent>
             </Card>
         </div>
