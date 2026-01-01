@@ -121,6 +121,19 @@ export function PackTeaser({
                     <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
                 </Animated.View>
                 <Animated.View style={[styles.content, contentStyle]}>
+                    {/* Premium gradient background */}
+                    <LinearGradient
+                        colors={['rgba(22, 33, 62, 0.98)', 'rgba(13, 13, 26, 1)']}
+                        style={StyleSheet.absoluteFill}
+                    />
+                    {/* Top silk highlight */}
+                    <LinearGradient
+                        colors={['rgba(212, 175, 55, 0.08)', 'transparent']}
+                        style={styles.silkHighlight}
+                    />
+                    {/* Premium border accent */}
+                    <View style={styles.premiumBorderAccent} />
+
                     <ScrollView
                         showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.scrollContent}
@@ -136,12 +149,35 @@ export function PackTeaser({
 
                         {/* Header */}
                         <View style={styles.header}>
-                            <View style={styles.iconContainer}>
-                                <Text style={styles.packEmoji}>{packIcon || "📦"}</Text>
+                            {/* Premium label */}
+                            <Text style={styles.label}>PREMIUM COLLECTION</Text>
+
+                            {/* Icon with glow */}
+                            <View style={styles.iconWrapper}>
+                                <View style={styles.iconContainer}>
+                                    <LinearGradient
+                                        colors={['rgba(212, 175, 55, 0.15)', 'rgba(184, 134, 11, 0.1)']}
+                                        style={StyleSheet.absoluteFill}
+                                    />
+                                    <Text style={styles.packEmoji}>{packIcon || "📦"}</Text>
+                                </View>
+                                {/* Crown badge */}
+                                <View style={styles.crownBadge}>
+                                    <Ionicons name="star" size={12} color={colors.premium.gold} />
+                                </View>
                             </View>
+
                             <Text style={styles.title}>{packName}</Text>
+
+                            {/* Decorative separator */}
+                            <View style={styles.separator}>
+                                <View style={styles.separatorLine} />
+                                <View style={styles.separatorDiamond} />
+                                <View style={styles.separatorLine} />
+                            </View>
+
                             <Text style={styles.subtitle}>
-                                Preview a few questions from this pack
+                                Preview a few questions from this exclusive pack
                             </Text>
                         </View>
 
@@ -149,7 +185,7 @@ export function PackTeaser({
                         <View style={styles.questionsContainer}>
                             {isLoading ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator color={colors.primary} size="large" />
+                                    <ActivityIndicator color={colors.premium.gold} size="large" />
                                     <Text style={styles.loadingText}>
                                         Loading preview...
                                     </Text>
@@ -159,12 +195,12 @@ export function PackTeaser({
                                     <View key={question.id} style={styles.questionCard}>
                                         <View style={styles.questionHeader}>
                                             <View style={styles.intensityContainer}>
-                                                {[...Array(question.intensity)].map((_, i) => (
+                                                {[...Array(5)].map((_, i) => (
                                                     <Ionicons
                                                         key={i}
-                                                        name="flame"
+                                                        name={i < question.intensity ? "flame" : "flame-outline"}
                                                         size={12}
-                                                        color={colors.primary}
+                                                        color={i < question.intensity ? colors.premium.gold : 'rgba(255, 255, 255, 0.2)'}
                                                     />
                                                 ))}
                                             </View>
@@ -188,40 +224,39 @@ export function PackTeaser({
                         {questions.length > 0 && (
                             <View style={styles.moreHint}>
                                 <Ionicons
-                                    name="lock-closed"
+                                    name="diamond"
                                     size={16}
-                                    color={colors.textTertiary}
+                                    color={colors.premium.gold}
                                 />
                                 <Text style={styles.moreHintText}>
-                                    + many more questions to unlock
+                                    + many more exclusive questions to unlock
                                 </Text>
                             </View>
                         )}
 
                         {/* Unlock Button */}
                         <View style={styles.actions}>
-                            <TouchableOpacity
+                            <Pressable
                                 style={styles.unlockButton}
                                 onPress={onUnlock}
-                                activeOpacity={0.8}
                             >
                                 <LinearGradient
-                                    colors={gradients.primary as [string, string]}
+                                    colors={[colors.premium.gold, colors.premium.goldDark]}
                                     style={styles.unlockButtonGradient}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
                                 >
                                     <Ionicons
-                                        name="star"
-                                        size={20}
-                                        color={colors.text}
+                                        name="diamond"
+                                        size={18}
+                                        color={colors.background}
                                         style={{ marginRight: spacing.sm }}
                                     />
                                     <Text style={styles.unlockButtonText}>
                                         Unlock with Pro
                                     </Text>
                                 </LinearGradient>
-                            </TouchableOpacity>
+                            </Pressable>
                         </View>
                     </ScrollView>
                 </Animated.View>
@@ -237,16 +272,35 @@ const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        backgroundColor: "rgba(0, 0, 0, 0.85)",
     },
     content: {
-        backgroundColor: colors.backgroundLight,
+        backgroundColor: colors.background,
         borderTopLeftRadius: radius.xxl,
         borderTopRightRadius: radius.xxl,
         maxHeight: "85%",
         borderWidth: 1,
         borderBottomWidth: 0,
-        borderColor: colors.glass.border,
+        borderColor: 'rgba(212, 175, 55, 0.2)',
+        overflow: 'hidden',
+    },
+    silkHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 150,
+        borderTopLeftRadius: radius.xxl,
+        borderTopRightRadius: radius.xxl,
+    },
+    premiumBorderAccent: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        backgroundColor: colors.premium.gold,
+        opacity: 0.4,
     },
     scrollContent: {
         padding: spacing.lg,
@@ -260,36 +314,98 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: colors.glass.background,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
         justifyContent: "center",
         alignItems: "center",
         zIndex: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     header: {
         alignItems: "center",
         marginBottom: spacing.xl,
     },
-    iconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: colors.glass.background,
-        justifyContent: "center",
-        alignItems: "center",
+    label: {
+        ...typography.caption1,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.premium.gold,
+        textAlign: 'center',
         marginBottom: spacing.md,
     },
+    iconWrapper: {
+        position: 'relative',
+        marginBottom: spacing.md,
+    },
+    iconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        justifyContent: "center",
+        alignItems: "center",
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: colors.premium.gold,
+        shadowColor: colors.premium.gold,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.6,
+        shadowRadius: 20,
+        elevation: 12,
+    },
+    crownBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: colors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.premium.gold,
+        shadowColor: colors.premium.gold,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 4,
+        elevation: 4,
+    },
     packEmoji: {
-        fontSize: 36,
+        fontSize: 40,
     },
     title: {
         ...typography.title1,
         color: colors.text,
         marginBottom: spacing.xs,
+        textShadowColor: 'rgba(212, 175, 55, 0.3)',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 10,
+    },
+    separator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: spacing.md,
+        width: 140,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(212, 175, 55, 0.3)',
+    },
+    separatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: colors.premium.gold,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.md,
+        opacity: 0.8,
     },
     subtitle: {
         ...typography.body,
         color: colors.textSecondary,
         textAlign: "center",
+        lineHeight: 24,
     },
     questionsContainer: {
         marginBottom: spacing.lg,
@@ -305,10 +421,10 @@ const styles = StyleSheet.create({
         marginTop: spacing.md,
     },
     questionCard: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: 'rgba(22, 33, 62, 0.4)',
         borderRadius: radius.lg,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: 'rgba(212, 175, 55, 0.15)',
         padding: spacing.md,
     },
     questionHeader: {
@@ -319,20 +435,23 @@ const styles = StyleSheet.create({
     },
     intensityContainer: {
         flexDirection: "row",
-        backgroundColor: colors.primaryLight,
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
         paddingHorizontal: spacing.sm,
         paddingVertical: 4,
         borderRadius: radius.full,
-        gap: 1,
+        gap: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.15)',
     },
     questionNumber: {
         ...typography.caption2,
-        color: colors.textTertiary,
+        color: colors.premium.champagne,
+        opacity: 0.7,
     },
     questionText: {
         ...typography.body,
         color: colors.text,
-        lineHeight: 22,
+        lineHeight: 24,
     },
     emptyContainer: {
         alignItems: "center",
@@ -347,11 +466,19 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         marginBottom: spacing.lg,
-        gap: spacing.xs,
+        gap: spacing.sm,
+        backgroundColor: 'rgba(212, 175, 55, 0.08)',
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.full,
+        alignSelf: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.15)',
     },
     moreHintText: {
         ...typography.caption1,
-        color: colors.textTertiary,
+        color: colors.premium.champagne,
+        fontWeight: '500',
     },
     actions: {
         marginBottom: spacing.md,
@@ -359,6 +486,11 @@ const styles = StyleSheet.create({
     unlockButton: {
         borderRadius: radius.lg,
         overflow: "hidden",
+        shadowColor: colors.premium.gold,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
     unlockButtonGradient: {
         flexDirection: "row",
@@ -368,7 +500,8 @@ const styles = StyleSheet.create({
     },
     unlockButtonText: {
         ...typography.headline,
-        color: colors.text,
+        color: colors.background,
+        fontWeight: '700',
     },
 });
 

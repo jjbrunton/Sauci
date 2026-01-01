@@ -19,7 +19,8 @@ import { usePacksStore, useAuthStore } from "../../src/store";
 import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
 import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipeTutorialSeen";
 import { invokeWithAuthRetry } from "../../src/lib/authErrorHandler";
-import SwipeCard from "../../src/components/SwipeCard";
+// import SwipeCard from "../../src/components/SwipeCard";
+import SwipeCard from "../../src/components/SwipeCardPremium"; // PoC: Premium styling
 import SwipeTutorial from "../../src/components/SwipeTutorial";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { Events } from "../../src/lib/analytics";
@@ -115,6 +116,7 @@ export default function SwipeScreen() {
     const checkAnswerGap = async (): Promise<boolean> => {
         if (!couple || !partner) {
             setIsBlocked(false);
+            setGapInfo(null);
             return false;
         }
 
@@ -129,10 +131,15 @@ export default function SwipeScreen() {
             if (data && data.length > 0) {
                 const result = data[0];
                 setIsBlocked(result.is_blocked);
-                setGapInfo({
-                    unanswered: result.unanswered_by_partner,
-                    threshold: result.threshold
-                });
+                // Only set gap info if threshold is enabled (> 0)
+                if (result.threshold > 0) {
+                    setGapInfo({
+                        unanswered: result.unanswered_by_partner,
+                        threshold: result.threshold
+                    });
+                } else {
+                    setGapInfo(null);
+                }
                 return result.is_blocked;
             }
         } catch (error) {
@@ -140,6 +147,18 @@ export default function SwipeScreen() {
         }
         return false;
     };
+
+    // Calculate effective total questions (accounting for gap limit)
+    const effectiveTotal = (() => {
+        if (!gapInfo || gapInfo.threshold === 0) {
+            // No gap limit active, show all questions
+            return questions.length;
+        }
+        // remaining = how many more questions until blocked
+        const remaining = gapInfo.threshold - gapInfo.unanswered;
+        // effective total = current position + remaining (capped by actual questions)
+        return Math.min(questions.length, currentIndex + Math.max(0, remaining));
+    })();
 
     // Track when all questions are exhausted
     useEffect(() => {
@@ -193,12 +212,14 @@ export default function SwipeScreen() {
             // Filter out recently skipped questions
             const filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
 
-            // If no questions returned and user has partner, check if it's due to answer gap
-            if (filtered.length === 0 && partner && !packId) {
+            // Always check answer gap when user has partner and not viewing specific pack
+            // This gives us the gap info for accurate counter display
+            if (partner && !packId) {
                 await checkAnswerGap();
             } else {
-                // Reset blocked state if we have questions
+                // Reset blocked state if no partner or viewing specific pack
                 setIsBlocked(false);
+                setGapInfo(null);
             }
 
             const sorted = filtered.sort((a: any, b: any) => {
@@ -554,10 +575,10 @@ export default function SwipeScreen() {
 
     return (
         <GradientBackground>
-            {/* Ambient Orbs */}
+            {/* Ambient Orbs - Premium gold/rose */}
             <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
                 <LinearGradient
-                    colors={[colors.primaryGlow, 'transparent']}
+                    colors={[colors.premium.goldGlow, 'transparent']}
                     style={styles.orbGradient}
                     start={{ x: 0.5, y: 0.5 }}
                     end={{ x: 1, y: 1 }}
@@ -565,7 +586,7 @@ export default function SwipeScreen() {
             </Animated.View>
             <Animated.View style={[styles.ambientOrb, styles.orbBottomLeft, orbStyle2]} pointerEvents="none">
                 <LinearGradient
-                    colors={[colors.secondaryGlow, 'transparent']}
+                    colors={['rgba(232, 164, 174, 0.2)', 'transparent']}
                     style={styles.orbGradient}
                     start={{ x: 0.5, y: 0.5 }}
                     end={{ x: 0, y: 0 }}
@@ -579,26 +600,23 @@ export default function SwipeScreen() {
                     style={styles.header}
                 >
                     <View style={styles.progressContainer}>
+                        {/* Premium label */}
+                        <Text style={styles.progressLabel}>EXPLORE</Text>
                         <Text style={styles.progressText}>
-                            {currentIndex + 1} of {questions.length}
+                            {currentIndex + 1} of {effectiveTotal || questions.length}
                         </Text>
-                        <View style={[styles.progressBar, styles.progressBarEnhanced]}>
+                        <View style={[styles.progressBar, styles.progressBarPremium]}>
                             <Animated.View
                                 style={[
                                     styles.progressFill,
-                                    { width: `${((currentIndex + 1) / questions.length) * 100}%` }
+                                    styles.progressFillPremium,
+                                    { width: `${((currentIndex + 1) / (effectiveTotal || questions.length || 1)) * 100}%` }
                                 ]}
                             >
-                                <LinearGradient
-                                    colors={gradients.primary as [string, string]}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 0 }}
-                                    style={styles.progressGradient}
-                                />
                                 {/* Shimmer sweep */}
                                 <Animated.View style={[styles.progressShimmer, shimmerStyle]}>
                                     <LinearGradient
-                                        colors={['transparent', 'rgba(255,255,255,0.3)', 'transparent']}
+                                        colors={['transparent', 'rgba(212, 175, 55, 0.5)', 'transparent']}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 0 }}
                                         style={StyleSheet.absoluteFill}
@@ -629,12 +647,12 @@ export default function SwipeScreen() {
                     />
                 </View>
 
-                {/* Hint */}
+                {/* Hint - Premium styling */}
                 <Animated.View
                     entering={FadeIn.delay(500).duration(400)}
                     style={styles.hintContainer}
                 >
-                    <Text style={styles.hintText}>Swipe or tap to answer</Text>
+                    <Text style={styles.hintTextPremium}>Swipe or tap to answer</Text>
                 </Animated.View>
 
                 {/* Bottom spacing for tab bar */}
@@ -686,6 +704,13 @@ const styles = StyleSheet.create({
     progressContainer: {
         alignItems: "center",
     },
+    progressLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.premium.gold,
+        marginBottom: spacing.xs,
+    },
     progressText: {
         ...typography.subhead,
         color: colors.textSecondary,
@@ -698,17 +723,22 @@ const styles = StyleSheet.create({
         borderRadius: 3,
         overflow: "hidden",
     },
-    progressBarEnhanced: {
-        height: 8,
-        borderRadius: 4,
+    progressBarPremium: {
+        width: 140,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
         borderWidth: 1,
-        borderColor: colors.glass.borderLight,
-        ...shadows.glow(colors.primaryGlow),
+        borderColor: 'rgba(212, 175, 55, 0.15)',
     },
     progressFill: {
         height: "100%",
         borderRadius: 4,
         overflow: "hidden",
+    },
+    progressFillPremium: {
+        backgroundColor: 'rgba(212, 175, 55, 0.5)',
+        borderRadius: 2,
     },
     progressGradient: {
         flex: 1,
@@ -725,24 +755,24 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    // Card stack
+    // Card stack - Premium styling
     stackCard: {
         position: "absolute",
         width: "85%",
-        height: 480,
-        backgroundColor: colors.glass.backgroundLight,
-        borderRadius: radius.xxl,
+        height: 500,
+        backgroundColor: '#0d0d1a',
+        borderRadius: radius.xl,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: 'rgba(212, 175, 55, 0.15)',
     },
     stackCardSecond: {
         transform: [{ scale: 0.95 }, { translateY: 12 }],
-        opacity: 0.5,
+        opacity: 0.4,
         ...shadows.md,
     },
     stackCardThird: {
         transform: [{ scale: 0.90 }, { translateY: 24 }],
-        opacity: 0.25,
+        opacity: 0.2,
         ...shadows.sm,
     },
     hintContainer: {
@@ -752,6 +782,12 @@ const styles = StyleSheet.create({
     hintText: {
         ...typography.caption1,
         color: colors.textTertiary,
+    },
+    hintTextPremium: {
+        ...typography.caption1,
+        fontStyle: 'italic',
+        color: colors.textTertiary,
+        letterSpacing: 0.5,
     },
     bottomSpacer: {
         height: Platform.OS === 'ios' ? 100 : 80,

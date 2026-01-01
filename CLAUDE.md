@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important: Design Guidelines
+
+**Always read `apps/mobile/DESIGN.md` before making UI/UX changes to the mobile app.** This file contains the design system, visual language, and styling patterns that must be followed for consistency. Agents and subagents should read this file when:
+- Creating new screens or components
+- Modifying existing UI elements
+- Adding animations or visual effects
+- Working with colors, typography, or spacing
+
 ## Project Overview
 
 Sauci is a couples intimacy app featuring swipeable question packs with partner matching. Users swipe on questions (yes/no/maybe), and when both partners answer positively, a "match" is created that unlocks a chat thread for that question.

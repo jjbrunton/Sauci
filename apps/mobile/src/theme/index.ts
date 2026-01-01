@@ -42,13 +42,28 @@ export const colors = {
   // Premium/Luxury
   premium: {
     gold: '#D4AF37',
+    goldDark: '#B8860B',
     goldLight: 'rgba(212, 175, 55, 0.15)',
     goldGlow: 'rgba(212, 175, 55, 0.3)',
     champagne: '#F7E7CE',
     champagneLight: 'rgba(247, 231, 206, 0.1)',
-    rose: '#E8A4AE', // Lightened for accessibility (was #B76E79, now ~5.5:1 contrast)
+    rose: '#E8A4AE',
+    roseDark: '#D4919B',
     roseLight: 'rgba(232, 164, 174, 0.15)',
+    roseGlow: 'rgba(232, 164, 174, 0.3)',
   },
+
+  // Swipe response overlays
+  overlay: {
+    yes: 'rgba(46, 204, 113, 0.4)',
+    no: 'rgba(231, 76, 60, 0.4)',
+    maybe: 'rgba(243, 156, 18, 0.4)',
+    skip: 'rgba(108, 117, 125, 0.4)',
+  },
+
+  // Muted/disabled
+  muted: '#6c757d',
+  mutedLight: 'rgba(108, 117, 125, 0.15)',
 };
 
 export const gradients = {
@@ -64,7 +79,7 @@ export const gradients = {
   error: ['#E74C3C', '#c0392b'],
   // Premium/Boutique gradients
   premiumGold: ['#D4AF37', '#B8860B'],
-  premiumRose: ['#B76E79', '#8B4557'],
+  premiumRose: ['#E8A4AE', '#D4919B'],
   silkLight: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0.02)'],
   laceTint: ['rgba(233, 69, 96, 0.15)', 'rgba(155, 89, 182, 0.15)'],
   // Boutique pack card backgrounds
@@ -75,6 +90,55 @@ export const gradients = {
   boutiqueMidnight: ['rgba(22, 33, 62, 0.8)', 'rgba(13, 13, 26, 0.8)'],
   boutiqueAmethyst: ['rgba(142, 68, 173, 0.4)', 'rgba(44, 62, 80, 0.4)'],
 };
+
+// Feature-specific color mapping
+// Each feature has a consistent accent color for icons, buttons, and highlights
+export const featureColors = {
+  swipe: {
+    accent: colors.primary,
+    accentDark: colors.primaryDark,
+    accentLight: colors.primaryLight,
+    accentGlow: colors.primaryGlow,
+    gradient: gradients.primary,
+  },
+  match: {
+    accent: colors.primary,
+    accentDark: colors.primaryDark,
+    accentLight: colors.primaryLight,
+    accentGlow: colors.primaryGlow,
+    gradient: gradients.primary,
+  },
+  quiz: {
+    accent: colors.premium.rose,
+    accentDark: colors.premium.roseDark,
+    accentLight: colors.premium.roseLight,
+    accentGlow: colors.premium.roseGlow,
+    gradient: gradients.premiumRose,
+  },
+  dares: {
+    accent: colors.premium.gold,
+    accentDark: colors.premium.goldDark,
+    accentLight: colors.premium.goldLight,
+    accentGlow: colors.premium.goldGlow,
+    gradient: gradients.premiumGold,
+  },
+  chat: {
+    accent: colors.primary,
+    accentDark: colors.primaryDark,
+    accentLight: colors.primaryLight,
+    accentGlow: colors.primaryGlow,
+    gradient: gradients.primary,
+  },
+  profile: {
+    accent: colors.secondary,
+    accentDark: colors.secondaryDark,
+    accentLight: colors.secondaryLight,
+    accentGlow: colors.secondaryGlow,
+    gradient: gradients.primaryReverse,
+  },
+} as const;
+
+export type FeatureName = keyof typeof featureColors;
 
 export const spacing = {
   xs: 4,
@@ -222,6 +286,7 @@ export const animations = {
 export const theme = {
   colors,
   gradients,
+  featureColors,
   spacing,
   radius,
   typography,

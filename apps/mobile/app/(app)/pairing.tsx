@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     header: {
-        paddingTop: Platform.OS === "ios" ? 60 : 40,
+        paddingTop: 60,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.lg,
         flexDirection: "row",

@@ -44,13 +44,28 @@ interface RadialMenuItem {
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
     angle: number; // degrees from top (0 = top, -45 = left, 45 = right)
-    color?: string;
+    variant: 'primary' | 'gold' | 'rose' | 'muted';
 }
 
+// Brand color palette for navigation
+const NAV_COLORS = {
+    // Primary brand colors (from logo)
+    primary: colors.primary,
+    primaryRgba: 'rgba(233, 69, 96, ',
+    secondary: colors.secondary,
+    secondaryRgba: 'rgba(155, 89, 182, ',
+    // Feature-specific colors
+    gold: colors.premium.gold,
+    goldRgba: 'rgba(212, 175, 55, ',
+    rose: colors.premium.rose,
+    roseRgba: 'rgba(232, 164, 174, ',
+    dark: '#0d0d1a',
+};
+
 const RADIAL_MENU_ITEMS: RadialMenuItem[] = [
-    { id: 'dares', icon: 'flash', label: 'Dares', angle: -50, color: '#FF6B35' },
-    { id: 'match', icon: 'flame', label: 'Match', angle: 0 },
-    { id: 'quiz', icon: 'help-circle', label: 'Quiz', angle: 50, color: '#7B68EE' },
+    { id: 'dares', icon: 'flash', label: 'Dares', angle: -50, variant: 'gold' },
+    { id: 'match', icon: 'flame', label: 'Match', angle: 0, variant: 'primary' },
+    { id: 'quiz', icon: 'help-circle', label: 'Quiz', angle: 50, variant: 'rose' },
 ];
 
 const RADIAL_DISTANCE = 100; // Distance from center button
@@ -73,24 +88,26 @@ function PlayTabButton({ accessibilityState }: PlayTabButtonProps) {
 
     return (
         <View style={styles.playButtonContainer}>
-            {/* Outer glow effect */}
+            {/* Outer glow effect - primary brand */}
             <View style={[styles.playButtonGlow, isSelected && styles.playButtonGlowActive]} />
 
-            {/* Main circle button */}
+            {/* Main circle button - premium dark with primary gradient border */}
             <Pressable onPress={() => globalMenuToggle?.()}>
                 <Animated.View style={styles.playButtonCircle}>
-                    <LinearGradient
-                        colors={gradients.primary as [string, string]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.playButtonGradient}
-                    >
+                    <View style={styles.playButtonInner}>
+                        {/* Silk highlight at top - primary gradient */}
+                        <LinearGradient
+                            colors={[`${NAV_COLORS.primaryRgba}0.2)`, `${NAV_COLORS.secondaryRgba}0.1)`, 'transparent']}
+                            style={styles.playButtonHighlight}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        />
                         <Ionicons
                             name={globalMenuOpen ? "close" : "flame"}
-                            size={32}
-                            color={colors.text}
+                            size={28}
+                            color={globalMenuOpen ? colors.textSecondary : NAV_COLORS.primary}
                         />
-                    </LinearGradient>
+                    </View>
                 </Animated.View>
             </Pressable>
         </View>
@@ -524,8 +541,8 @@ export default function AppLayout() {
                     tabBarBackground: () => <TabBarBackground />,
                     tabBarStyle: shouldHideTabBar ? { display: 'none' } : {
                         position: 'absolute',
-                        backgroundColor: 'rgba(18, 18, 18, 0.85)',
-                        borderTopColor: colors.glass.border,
+                        backgroundColor: 'rgba(13, 13, 26, 0.92)',
+                        borderTopColor: 'rgba(233, 69, 96, 0.2)', // primary brand color
                         borderTopWidth: 1,
                         paddingTop: 8,
                         paddingBottom: Platform.OS === 'ios' ? 28 : 8,
@@ -533,10 +550,11 @@ export default function AppLayout() {
                         elevation: 0,
                     },
                     tabBarActiveTintColor: colors.primary,
-                    tabBarInactiveTintColor: '#fff',
+                    tabBarInactiveTintColor: colors.textSecondary,
                     tabBarLabelStyle: {
-                        fontSize: 11,
-                        fontWeight: "600",
+                        fontSize: 10,
+                        fontWeight: "500",
+                        letterSpacing: 0.5,
                     },
                 }}
             >
@@ -574,9 +592,12 @@ export default function AppLayout() {
                         ),
                         tabBarBadge: (newMatchesCount + unreadCount) > 0 ? (newMatchesCount + unreadCount) : undefined,
                         tabBarBadgeStyle: {
-                            backgroundColor: colors.primary,
-                            fontSize: 10,
+                            backgroundColor: colors.premium.rose,
+                            fontSize: 9,
                             fontWeight: '600',
+                            minWidth: 16,
+                            height: 16,
+                            borderRadius: 8,
                         },
                     }}
                 />
@@ -658,6 +679,43 @@ export default function AppLayout() {
                         outputRange: [0, translateY],
                     });
 
+                    // Brand and feature variant colors
+                    const getVariantStyles = () => {
+                        switch (item.variant) {
+                            case 'primary':
+                                return {
+                                    bg: `${NAV_COLORS.primaryRgba}0.15)`,
+                                    border: `${NAV_COLORS.primaryRgba}0.35)`,
+                                    icon: NAV_COLORS.primary,
+                                    label: NAV_COLORS.primary,
+                                };
+                            case 'gold':
+                                return {
+                                    bg: `${NAV_COLORS.goldRgba}0.15)`,
+                                    border: `${NAV_COLORS.goldRgba}0.35)`,
+                                    icon: NAV_COLORS.gold,
+                                    label: NAV_COLORS.gold,
+                                };
+                            case 'rose':
+                                return {
+                                    bg: `${NAV_COLORS.roseRgba}0.15)`,
+                                    border: `${NAV_COLORS.roseRgba}0.35)`,
+                                    icon: NAV_COLORS.rose,
+                                    label: NAV_COLORS.rose,
+                                };
+                            case 'muted':
+                            default:
+                                return {
+                                    bg: 'rgba(255, 255, 255, 0.08)',
+                                    border: 'rgba(255, 255, 255, 0.15)',
+                                    icon: colors.textSecondary,
+                                    label: colors.textSecondary,
+                                };
+                        }
+                    };
+
+                    const variantStyles = getVariantStyles();
+
                     return (
                         <Animated.View
                             key={item.id}
@@ -678,15 +736,20 @@ export default function AppLayout() {
                             >
                                 <View style={[
                                     radialStyles.menuItemCircle,
-                                    item.color ? { backgroundColor: item.color } : null,
+                                    {
+                                        backgroundColor: variantStyles.bg,
+                                        borderColor: variantStyles.border,
+                                    },
                                 ]}>
                                     <Ionicons
                                         name={item.icon}
                                         size={22}
-                                        color={colors.text}
+                                        color={variantStyles.icon}
                                     />
                                 </View>
-                                <Text style={radialStyles.menuItemLabel}>{item.label}</Text>
+                                <Text style={[radialStyles.menuItemLabel, { color: variantStyles.label }]}>
+                                    {item.label}
+                                </Text>
                             </Pressable>
                         </Animated.View>
                     );
@@ -890,7 +953,7 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         marginTop: 2,
     },
-    // Play button styles
+    // Play button styles - Premium boutique
     playButtonContainer: {
         flex: 1,
         alignItems: 'center',
@@ -899,22 +962,37 @@ const styles = StyleSheet.create({
     },
     playButtonGlow: {
         position: 'absolute',
-        width: 72,
-        height: 72,
-        borderRadius: 36,
+        width: 76,
+        height: 76,
+        borderRadius: 38,
         backgroundColor: colors.primaryGlow,
-        opacity: 0.5,
+        opacity: 0.4,
     },
     playButtonGlowActive: {
-        opacity: 1,
+        opacity: 0.7,
         ...shadows.glow(colors.primary),
     },
     playButtonCircle: {
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 64,
+        height: 64,
+        borderRadius: 32,
         overflow: 'hidden',
+        borderWidth: 1.5,
+        borderColor: 'rgba(233, 69, 96, 0.4)', // primary brand
         ...shadows.lg,
+    },
+    playButtonInner: {
+        flex: 1,
+        backgroundColor: '#0d0d1a',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playButtonHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
     },
     playButtonGradient: {
         flex: 1,
@@ -923,13 +1001,13 @@ const styles = StyleSheet.create({
     },
 });
 
-// Radial menu styles
+// Radial menu styles - Premium boutique
 const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
 
 const radialStyles = StyleSheet.create({
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        backgroundColor: 'rgba(13, 13, 26, 0.85)',
         zIndex: 998,
     },
     menuContainer: {
@@ -948,21 +1026,23 @@ const radialStyles = StyleSheet.create({
         alignItems: 'center',
     },
     menuItemCircle: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
-        backgroundColor: colors.primary,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(22, 33, 62, 0.9)',
         justifyContent: 'center',
         alignItems: 'center',
-        ...shadows.lg,
-        borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.2)',
+        ...shadows.md,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
     },
     menuItemLabel: {
-        ...typography.caption1,
+        ...typography.caption2,
         color: colors.text,
-        marginTop: 6,
-        fontWeight: '600',
+        marginTop: 8,
+        fontWeight: '500',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
         textShadowColor: 'rgba(0, 0, 0, 0.5)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 2,

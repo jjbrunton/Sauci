@@ -211,8 +211,18 @@ export const useMatchStore = create<MatchState>((set, get) => ({
             unreadCount: unreadCounts[match.id] || 0
         }));
 
-        const newCount = data.filter((m) => m.is_new).length;
-        set({ matches: data, newMatchesCount: newCount });
+        // Sort: unread messages first, then by most recent
+        const sortedData = data.sort((a, b) => {
+            // First priority: matches with unread messages
+            if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+            if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+
+            // Second priority: most recent first
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+        const newCount = sortedData.filter((m) => m.is_new).length;
+        set({ matches: sortedData, newMatchesCount: newCount });
     },
 
     markAsSeen: async (matchId) => {

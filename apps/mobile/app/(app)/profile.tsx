@@ -22,9 +22,11 @@ import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { FeedbackModal } from "../../src/components/FeedbackModal";
 import { Paywall } from "../../src/components/Paywall";
 import { Events } from "../../src/lib/analytics";
-import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
+import { colors, gradients, spacing, radius, typography, shadows, featureColors } from "../../src/theme";
 
 const MAX_CONTENT_WIDTH = 500;
+const ACCENT_COLOR = featureColors.profile.accent;
+const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 
 export default function ProfileScreen() {
     const { user, partner, couple, signOut, fetchCouple, fetchUser } = useAuthStore();
@@ -447,7 +449,13 @@ export default function ProfileScreen() {
                     entering={FadeInDown.delay(100).duration(500)}
                     style={styles.header}
                 >
+                    <Text style={styles.headerLabel}>SETTINGS</Text>
                     <Text style={styles.title}>Profile</Text>
+                    <View style={styles.separator}>
+                        <View style={styles.separatorLine} />
+                        <View style={styles.separatorDiamond} />
+                        <View style={styles.separatorLine} />
+                    </View>
                 </Animated.View>
 
                 {/* Profile Card */}
@@ -464,7 +472,7 @@ export default function ProfileScreen() {
                                 style={styles.avatarTouchable}
                             >
                                 <LinearGradient
-                                    colors={gradients.primary as [string, string]}
+                                    colors={ACCENT_GRADIENT}
                                     style={styles.avatarGradient}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
@@ -560,7 +568,7 @@ export default function ProfileScreen() {
                             <View style={styles.rowContainer}>
                                 <View style={styles.rowLeft}>
                                     <LinearGradient
-                                        colors={gradients.primary as [string, string]}
+                                        colors={ACCENT_GRADIENT}
                                         style={styles.partnerIconGradient}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
@@ -590,7 +598,7 @@ export default function ProfileScreen() {
                             >
                                 <View style={styles.rowLeft}>
                                     <LinearGradient
-                                        colors={gradients.primary as [string, string]}
+                                        colors={ACCENT_GRADIENT}
                                         style={styles.partnerIconGradient}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
@@ -640,7 +648,7 @@ export default function ProfileScreen() {
                             <View style={styles.rowContainer}>
                                 <View style={styles.rowLeft}>
                                     <LinearGradient
-                                        colors={gradients.primary as [string, string]}
+                                        colors={ACCENT_GRADIENT}
                                         style={styles.partnerIconGradient}
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 1 }}
@@ -683,7 +691,7 @@ export default function ProfileScreen() {
                                     </View>
                                 </View>
                                 <LinearGradient
-                                    colors={gradients.primary as [string, string]}
+                                    colors={ACCENT_GRADIENT}
                                     style={styles.upgradeButton}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
@@ -718,7 +726,7 @@ export default function ProfileScreen() {
                         <View style={styles.rowContainer}>
                             <View style={styles.rowLeft}>
                                 <LinearGradient
-                                    colors={gradients.primary as [string, string]}
+                                    colors={ACCENT_GRADIENT}
                                     style={styles.partnerIconGradient}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
@@ -734,8 +742,8 @@ export default function ProfileScreen() {
                                 value={showExplicit}
                                 onValueChange={handleExplicitToggle}
                                 disabled={isUpdatingExplicit}
-                                trackColor={{ false: colors.glass.border, true: colors.primaryLight }}
-                                thumbColor={showExplicit ? colors.primary : colors.textTertiary}
+                                trackColor={{ false: colors.glass.border, true: colors.secondaryLight }}
+                                thumbColor={showExplicit ? ACCENT_COLOR : colors.textTertiary}
                                 ios_backgroundColor={colors.glass.border}
                             />
                         </View>
@@ -745,7 +753,7 @@ export default function ProfileScreen() {
                                 <View style={styles.rowContainer}>
                                     <View style={styles.rowLeft}>
                                         <LinearGradient
-                                            colors={gradients.primary as [string, string]}
+                                            colors={ACCENT_GRADIENT}
                                             style={styles.partnerIconGradient}
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
@@ -765,8 +773,8 @@ export default function ProfileScreen() {
                                         value={biometricEnabled}
                                         onValueChange={handleBiometricToggle}
                                         disabled={isUpdatingBiometric}
-                                        trackColor={{ false: colors.glass.border, true: colors.primaryLight }}
-                                        thumbColor={biometricEnabled ? colors.primary : colors.textTertiary}
+                                        trackColor={{ false: colors.glass.border, true: colors.secondaryLight }}
+                                        thumbColor={biometricEnabled ? ACCENT_COLOR : colors.textTertiary}
                                         ios_backgroundColor={colors.glass.border}
                                     />
                                 </View>
@@ -812,7 +820,7 @@ export default function ProfileScreen() {
                         >
                             <View style={styles.rowLeft}>
                                 <LinearGradient
-                                    colors={gradients.primary as [string, string]}
+                                    colors={ACCENT_GRADIENT}
                                     style={styles.partnerIconGradient}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
@@ -997,7 +1005,7 @@ export default function ProfileScreen() {
                     style={styles.versionContainer}
                 >
                     <View style={styles.versionBadge}>
-                        <Ionicons name="heart" size={12} color={colors.primary} />
+                        <Ionicons name="heart" size={12} color={ACCENT_COLOR} />
                         <Text style={styles.version}>Sauci v1.0.0</Text>
                     </View>
                 </Animated.View>
@@ -1125,11 +1133,40 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.md,
+        alignItems: 'center',
+    },
+    headerLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: colors.secondary,
+        marginBottom: spacing.xs,
     },
     title: {
-        ...typography.title1,
+        ...typography.largeTitle,
         color: colors.text,
+        textAlign: 'center',
+    },
+    separator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: spacing.md,
+        width: 100,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(155, 89, 182, 0.3)',
+    },
+    separatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: colors.secondary,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.sm,
+        opacity: 0.6,
     },
     profileSection: {
         paddingHorizontal: spacing.lg,
@@ -1186,7 +1223,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.secondary,
         justifyContent: "center",
         alignItems: "center",
         borderWidth: 3,
@@ -1227,7 +1264,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.glass.background,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: colors.primary,
+        borderColor: colors.secondary,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         minWidth: 200,
@@ -1250,7 +1287,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.secondary,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -1364,7 +1401,7 @@ const styles = StyleSheet.create({
     },
     manageButtonText: {
         ...typography.subhead,
-        color: colors.primary,
+        color: colors.secondary,
         fontWeight: "600",
     },
     upgradeButton: {

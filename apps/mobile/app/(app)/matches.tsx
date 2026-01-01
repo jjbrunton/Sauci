@@ -5,11 +5,29 @@ import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
-import { GradientBackground, GlassCard } from "../../src/components/ui";
+import Animated, {
+    FadeIn,
+    FadeInDown,
+    FadeInRight,
+    FadeInUp,
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withSequence,
+    withTiming,
+    interpolate,
+    Easing,
+} from "react-native-reanimated";
+import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 import MatchesTutorial from "../../src/components/MatchesTutorial";
 import { hasSeenMatchesTutorial, markMatchesTutorialSeen } from "../../src/lib/matchesTutorialSeen";
+
+// Premium color palette
+const ACCENT = colors.premium.gold;
+const ACCENT_RGBA = 'rgba(212, 175, 55, ';
+const ROSE = colors.premium.rose;
+const ROSE_RGBA = 'rgba(232, 164, 174, ';
 
 const MAX_CONTENT_WIDTH = 500;
 
@@ -20,6 +38,60 @@ export default function MatchesScreen() {
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
     const [showTutorial, setShowTutorial] = useState(false);
+
+    // Ambient orb breathing animations
+    const orbBreathing1 = useSharedValue(0);
+    const orbBreathing2 = useSharedValue(0);
+    const orbDrift = useSharedValue(0);
+
+    useEffect(() => {
+        // Primary orb breathing - 6 second cycle
+        orbBreathing1.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 3000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+
+        // Secondary orb breathing - offset timing for variation
+        orbBreathing2.value = withRepeat(
+            withSequence(
+                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+
+        // Subtle vertical drift - 8 second cycle
+        orbDrift.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 4000, easing: Easing.inOut(Easing.sin) }),
+                withTiming(0, { duration: 4000, easing: Easing.inOut(Easing.sin) })
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const orbStyle1 = useAnimatedStyle(() => ({
+        opacity: interpolate(orbBreathing1.value, [0, 1], [0.25, 0.5]),
+        transform: [
+            { translateY: interpolate(orbDrift.value, [0, 1], [0, -20]) },
+            { scale: interpolate(orbBreathing1.value, [0, 1], [1, 1.1]) },
+        ],
+    }));
+
+    const orbStyle2 = useAnimatedStyle(() => ({
+        opacity: interpolate(orbBreathing2.value, [0, 1], [0.2, 0.4]),
+        transform: [
+            { translateY: interpolate(orbDrift.value, [0, 1], [20, 0]) },
+            { scale: interpolate(orbBreathing2.value, [0, 1], [1, 1.1]) },
+        ],
+    }));
 
     // Check if tutorial should be shown when screen is focused or matches change
     useFocusEffect(
@@ -78,52 +150,77 @@ export default function MatchesScreen() {
                     onPress={() => router.push(`/chat/${item.id}`)}
                     activeOpacity={0.8}
                 >
-                    <GlassCard style={styles.matchCard}>
+                    <View style={styles.matchCardPremium}>
+                        {/* Subtle gradient background */}
+                        <LinearGradient
+                            colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
+                            style={StyleSheet.absoluteFill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        />
+                        {/* Top silk highlight */}
+                        <LinearGradient
+                            colors={[`${ACCENT_RGBA}0.06)`, 'transparent']}
+                            style={styles.cardSilkHighlight}
+                            start={{ x: 0.5, y: 0 }}
+                            end={{ x: 0.5, y: 1 }}
+                        />
+
                         <View style={styles.matchRow}>
-                            <LinearGradient
-                                colors={isYesYes ? gradients.primary as [string, string] : [colors.glass.background, colors.glass.background]}
-                                style={styles.iconContainer}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            >
+                            {/* Premium icon container */}
+                            <View style={[
+                                styles.iconContainerPremium,
+                                isYesYes && styles.iconContainerYesYes
+                            ]}>
                                 <Ionicons
                                     name={isYesYes ? "heart" : "heart-half"}
-                                    size={22}
-                                    color={isYesYes ? colors.text : colors.primary}
+                                    size={20}
+                                    color={isYesYes ? ACCENT : ROSE}
                                 />
-                            </LinearGradient>
+                            </View>
+
                             <View style={styles.content}>
-                                <Text style={styles.questionText} numberOfLines={2}>
+                                <Text style={styles.questionTextPremium} numberOfLines={2}>
                                     {userText}
                                 </Text>
                                 {item.question.partner_text && (
-                                    <Text style={styles.partnerText} numberOfLines={1}>
+                                    <Text style={styles.partnerTextPremium} numberOfLines={1}>
                                         Partner: {partnerText}
                                     </Text>
                                 )}
                                 <View style={styles.metaRow}>
-                                    <View style={[styles.tag, isYesYes && styles.tagHighlight]}>
-                                        <Text style={[styles.tagText, isYesYes && styles.tagTextHighlight]}>
+                                    <View style={[
+                                        styles.tagPremium,
+                                        isYesYes && styles.tagPremiumHighlight
+                                    ]}>
+                                        <Text style={[
+                                            styles.tagTextPremium,
+                                            isYesYes && styles.tagTextPremiumHighlight
+                                        ]}>
                                             {isYesYes ? "YES + YES" : "YES + MAYBE"}
                                         </Text>
                                     </View>
-                                    <Text style={styles.date}>
+                                    <Text style={styles.datePremium}>
                                         {new Date(item.created_at).toLocaleDateString()}
                                     </Text>
                                 </View>
                             </View>
+
                             <View style={styles.rightSection}>
                                 {item.unreadCount > 0 && (
-                                    <View style={styles.unreadBadge}>
-                                        <Ionicons name="chatbubble" size={12} color={colors.text} />
+                                    <View style={styles.unreadBadgePremium}>
+                                        <Ionicons name="chatbubble" size={10} color={colors.text} />
                                     </View>
                                 )}
-                                <View style={styles.chevronContainer}>
-                                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                                <View style={styles.chevronContainerPremium}>
+                                    <Ionicons name="chevron-forward" size={16} color={`${ACCENT_RGBA}0.6)`} />
                                 </View>
                             </View>
                         </View>
-                    </GlassCard>
+
+                        {/* Premium border */}
+                        <View style={styles.cardPremiumBorder} pointerEvents="none" />
+                    </View>
                 </TouchableOpacity>
             </Animated.View>
         );
@@ -141,21 +238,48 @@ export default function MatchesScreen() {
 
     return (
         <GradientBackground>
+            {/* Ambient Orbs - Premium gold/rose */}
+            <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
+                <LinearGradient
+                    colors={[colors.premium.goldGlow, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 1, y: 1 }}
+                />
+            </Animated.View>
+            <Animated.View style={[styles.ambientOrb, styles.orbBottomLeft, orbStyle2]} pointerEvents="none">
+                <LinearGradient
+                    colors={[`${ROSE_RGBA}0.2)`, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 0, y: 0 }}
+                />
+            </Animated.View>
+
             <View style={styles.container}>
+                {/* Premium Header */}
                 <Animated.View
-                    entering={FadeInDown.duration(400)}
+                    entering={FadeIn.duration(400)}
                     style={[styles.header, isWideScreen && styles.headerWide]}
                 >
-                    <View style={styles.headerTop}>
-                        <Text style={styles.title}>Matches</Text>
-                        <View style={styles.countBadge}>
-                            <Ionicons name="heart" size={14} color={colors.primary} />
-                            <Text style={styles.countText}>{matches.length}</Text>
+                    <View style={styles.headerContent}>
+                        {/* Premium label */}
+                        <Text style={styles.headerLabel}>DISCOVER</Text>
+                        <Text style={styles.headerTitle}>Matches</Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.headerSeparator}>
+                            <View style={styles.headerSeparatorLine} />
+                            <View style={styles.headerSeparatorDiamond} />
+                            <View style={styles.headerSeparatorLine} />
+                        </View>
+
+                        {/* Count badge */}
+                        <View style={styles.countBadgePremium}>
+                            <Ionicons name="heart" size={12} color={ACCENT} />
+                            <Text style={styles.countTextPremium}>{matches.length} {matches.length === 1 ? 'MATCH' : 'MATCHES'}</Text>
                         </View>
                     </View>
-                    <Text style={styles.subtitle}>
-                        Discover what you both enjoy together
-                    </Text>
                 </Animated.View>
 
                 <FlatList
@@ -174,38 +298,63 @@ export default function MatchesScreen() {
                     }
                     ListEmptyComponent={
                         <Animated.View
-                            entering={FadeInDown.delay(200).duration(400)}
-                            style={styles.emptyContainer}
+                            entering={FadeInUp.duration(600).springify()}
+                            style={styles.emptyContent}
                         >
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.emptyIconGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
+                            {/* Premium icon */}
+                            <View style={styles.emptyIconContainerPremium}>
+                                <Ionicons name="heart-outline" size={36} color={ROSE} />
+                            </View>
+
+                            {/* Title section */}
+                            <Text style={styles.emptyLabel}>BEGIN</Text>
+                            <Text style={styles.emptyTitlePremium}>No Matches Yet</Text>
+
+                            {/* Decorative separator */}
+                            <View style={styles.emptySeparator}>
+                                <View style={styles.emptySeparatorLine} />
+                                <View style={styles.emptySeparatorDiamond} />
+                                <View style={styles.emptySeparatorLine} />
+                            </View>
+
+                            {/* Status badge */}
+                            <Animated.View
+                                entering={FadeIn.delay(300).duration(400)}
+                                style={styles.emptyBadge}
                             >
-                                <View style={styles.emptyIconInner}>
-                                    <Ionicons name="heart-outline" size={40} color={colors.primary} />
-                                </View>
-                            </LinearGradient>
-                            <Text style={styles.emptyTitle}>No matches yet</Text>
-                            <Text style={styles.emptyText}>
-                                Keep swiping to find things you both enjoy!
+                                <Text style={styles.emptyBadgeText}>START EXPLORING</Text>
+                            </Animated.View>
+
+                            {/* Description */}
+                            <Text style={styles.emptyDescription}>
+                                Answer questions together to discover what you both enjoy. Matches appear when you agree!
                             </Text>
-                            <TouchableOpacity
-                                style={styles.emptyButton}
+
+                            {/* Feature hints */}
+                            <View style={styles.emptyFeatures}>
+                                <View style={styles.emptyFeatureItem}>
+                                    <Ionicons name="heart" size={16} color={ROSE} />
+                                    <Text style={styles.emptyFeatureText}>Swipe right for yes</Text>
+                                </View>
+                                <View style={styles.emptyFeatureItem}>
+                                    <Ionicons name="sparkles" size={16} color={ROSE} />
+                                    <Text style={styles.emptyFeatureText}>Match when you both agree</Text>
+                                </View>
+                                <View style={styles.emptyFeatureItem}>
+                                    <Ionicons name="chatbubbles-outline" size={16} color={ROSE} />
+                                    <Text style={styles.emptyFeatureText}>Chat about your matches</Text>
+                                </View>
+                            </View>
+
+                            {/* Bottom teaser */}
+                            <Text style={styles.emptyTeaser}>Your first match is just a swipe away</Text>
+
+                            <GlassButton
                                 onPress={() => router.push("/(app)/swipe")}
-                                activeOpacity={0.8}
+                                style={{ marginTop: spacing.lg }}
                             >
-                                <LinearGradient
-                                    colors={gradients.primary as [string, string]}
-                                    style={styles.emptyButtonGradient}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    <Ionicons name="flame" size={18} color={colors.text} />
-                                    <Text style={styles.emptyButtonText}>Start Swiping</Text>
-                                </LinearGradient>
-                            </TouchableOpacity>
+                                Start Swiping
+                            </GlassButton>
                         </Animated.View>
                     }
                 />
@@ -228,47 +377,93 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
+    // Ambient orbs
+    ambientOrb: {
+        position: 'absolute',
+        width: 300,
+        height: 300,
+        borderRadius: 150,
+    },
+    orbTopRight: {
+        top: 60,
+        right: -40,
+    },
+    orbBottomLeft: {
+        bottom: 180,
+        left: -40,
+    },
+    orbGradient: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 150,
+    },
+    // Premium Header
     header: {
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.md,
     },
     headerWide: {
         alignSelf: 'center',
         width: '100%',
         maxWidth: MAX_CONTENT_WIDTH,
     },
-    headerTop: {
-        flexDirection: 'row',
+    headerContent: {
         alignItems: 'center',
-        justifyContent: 'space-between',
     },
-    title: {
-        ...typography.title1,
+    headerLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: ACCENT,
+        marginBottom: spacing.xs,
+    },
+    headerTitle: {
+        ...typography.largeTitle,
         color: colors.text,
+        textAlign: 'center',
     },
-    countBadge: {
+    headerSeparator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.primaryLight,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        justifyContent: 'center',
+        marginVertical: spacing.md,
+        width: 100,
+    },
+    headerSeparatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: `${ACCENT_RGBA}0.3)`,
+    },
+    headerSeparatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: ACCENT,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.sm,
+        opacity: 0.6,
+    },
+    countBadgePremium: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
         borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: `${ACCENT_RGBA}0.2)`,
         gap: spacing.xs,
     },
-    countText: {
-        ...typography.subhead,
-        color: colors.text,
+    countTextPremium: {
+        ...typography.caption2,
         fontWeight: '600',
+        letterSpacing: 2,
+        color: ACCENT,
     },
-    subtitle: {
-        ...typography.subhead,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
-    },
+    // List
     list: {
         padding: spacing.lg,
-        paddingTop: 0,
+        paddingTop: spacing.sm,
         paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
     listWide: {
@@ -276,32 +471,60 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: MAX_CONTENT_WIDTH,
     },
-    matchCard: {
+    // Premium Match Card
+    matchCardPremium: {
         marginBottom: spacing.sm,
+        borderRadius: radius.lg,
+        overflow: 'hidden',
+        padding: spacing.md,
+    },
+    cardSilkHighlight: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 60,
+    },
+    cardPremiumBorder: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: `${ACCENT_RGBA}0.15)`,
     },
     matchRow: {
         flexDirection: "row",
         alignItems: "center",
     },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    iconContainerPremium: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: `${ROSE_RGBA}0.1)`,
+        borderWidth: 1,
+        borderColor: `${ROSE_RGBA}0.2)`,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
     },
+    iconContainerYesYes: {
+        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        borderColor: `${ACCENT_RGBA}0.2)`,
+    },
     content: {
         flex: 1,
     },
-    questionText: {
-        ...typography.body,
+    questionTextPremium: {
+        ...typography.subhead,
         color: colors.text,
         fontWeight: "600",
         marginBottom: spacing.xs,
-        lineHeight: 22,
+        lineHeight: 20,
     },
-    partnerText: {
+    partnerTextPremium: {
         ...typography.caption1,
         color: colors.textSecondary,
         fontStyle: "italic",
@@ -312,27 +535,31 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
     },
-    tag: {
-        backgroundColor: colors.glass.background,
+    tagPremium: {
+        backgroundColor: `${ROSE_RGBA}0.1)`,
         paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
+        paddingVertical: 3,
         borderRadius: radius.sm,
+        borderWidth: 1,
+        borderColor: `${ROSE_RGBA}0.15)`,
     },
-    tagHighlight: {
-        backgroundColor: colors.primaryLight,
+    tagPremiumHighlight: {
+        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        borderColor: `${ACCENT_RGBA}0.2)`,
     },
-    tagText: {
+    tagTextPremium: {
         ...typography.caption2,
-        color: colors.textSecondary,
-        fontWeight: "700",
-        letterSpacing: 0.5,
+        color: ROSE,
+        fontWeight: "600",
+        letterSpacing: 1,
     },
-    tagTextHighlight: {
-        color: colors.primary,
+    tagTextPremiumHighlight: {
+        color: ACCENT,
     },
-    date: {
+    datePremium: {
         ...typography.caption2,
         color: colors.textTertiary,
+        fontStyle: 'italic',
     },
     rightSection: {
         flexDirection: 'row',
@@ -340,70 +567,115 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
         marginLeft: spacing.sm,
     },
-    unreadBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: colors.primary,
+    unreadBadgePremium: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: ACCENT,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    chevronContainer: {
+    chevronContainerPremium: {
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: colors.glass.background,
+        backgroundColor: `${ACCENT_RGBA}0.08)`,
+        borderWidth: 1,
+        borderColor: `${ACCENT_RGBA}0.15)`,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    emptyContainer: {
-        alignItems: "center",
-        paddingVertical: spacing.xxl,
-        paddingHorizontal: spacing.lg,
+    // Premium Empty State
+    emptyContent: {
+        width: '100%',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xl,
     },
-    emptyIconGradient: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+    emptyIconContainerPremium: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: `${ROSE_RGBA}0.1)`,
+        borderWidth: 1,
+        borderColor: `${ROSE_RGBA}0.2)`,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: spacing.lg,
-        ...shadows.lg,
-    },
-    emptyIconInner: {
-        width: 88,
-        height: 88,
-        borderRadius: 44,
-        backgroundColor: colors.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyTitle: {
-        ...typography.title2,
-        color: colors.text,
-        marginBottom: spacing.sm,
-    },
-    emptyText: {
-        ...typography.body,
-        color: colors.textSecondary,
-        textAlign: "center",
         marginBottom: spacing.xl,
     },
-    emptyButton: {
-        borderRadius: radius.full,
-        overflow: 'hidden',
-        ...shadows.md,
+    emptyLabel: {
+        ...typography.caption1,
+        fontWeight: '600',
+        letterSpacing: 3,
+        color: ROSE,
+        textAlign: 'center',
+        marginBottom: spacing.xs,
     },
-    emptyButtonGradient: {
+    emptyTitlePremium: {
+        ...typography.largeTitle,
+        color: colors.text,
+        textAlign: 'center',
+    },
+    emptySeparator: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md,
-        gap: spacing.sm,
+        justifyContent: 'center',
+        marginVertical: spacing.lg,
+        width: 140,
     },
-    emptyButtonText: {
-        ...typography.body,
-        color: colors.text,
+    emptySeparatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: `${ROSE_RGBA}0.3)`,
+    },
+    emptySeparatorDiamond: {
+        width: 6,
+        height: 6,
+        backgroundColor: ROSE,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.md,
+        opacity: 0.6,
+    },
+    emptyBadge: {
+        backgroundColor: `${ROSE_RGBA}0.1)`,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: `${ROSE_RGBA}0.2)`,
+        marginBottom: spacing.xl,
+    },
+    emptyBadgeText: {
+        ...typography.caption2,
         fontWeight: '600',
+        letterSpacing: 2,
+        color: ROSE,
+    },
+    emptyDescription: {
+        ...typography.body,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: spacing.xl,
+        paddingHorizontal: spacing.md,
+    },
+    emptyFeatures: {
+        marginBottom: spacing.xl,
+    },
+    emptyFeatureItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.sm,
+    },
+    emptyFeatureText: {
+        ...typography.subhead,
+        color: colors.text,
+        marginLeft: spacing.sm,
+    },
+    emptyTeaser: {
+        ...typography.footnote,
+        fontStyle: 'italic',
+        color: colors.textTertiary,
+        textAlign: 'center',
     },
 });

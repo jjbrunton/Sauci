@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, useWind
 import Animated, {
     FadeInDown,
     FadeInRight,
+    FadeIn,
     useSharedValue,
     useAnimatedStyle,
     withRepeat,
@@ -17,6 +18,7 @@ import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
 const MAX_CONTENT_WIDTH = 500;
+const ACCENT_COLOR = colors.primary;
 
 export default function HomeScreen() {
     const { user, partner, couple } = useAuthStore();
@@ -35,12 +37,18 @@ export default function HomeScreen() {
 
     // Subtle pulsating animation for the CTA icon
     const pulseScale = useSharedValue(1);
+    const glowOpacity = useSharedValue(0.3);
 
     useEffect(() => {
         const startPulse = () => {
             pulseScale.value = 1;
             pulseScale.value = withRepeat(
-                withTiming(1.1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+                withTiming(1.1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true
+            );
+            glowOpacity.value = withRepeat(
+                withTiming(0.6, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
                 -1,
                 true
             );
@@ -49,11 +57,13 @@ export default function HomeScreen() {
         return () => clearTimeout(timeout);
     }, []);
 
-    const pulseAnimatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: pulseScale.value }],
-        };
-    });
+    const pulseAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pulseScale.value }],
+    }));
+
+    const glowAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: glowOpacity.value,
+    }));
 
     return (
         <GradientBackground>
@@ -66,57 +76,53 @@ export default function HomeScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={[styles.innerContainer, isWideScreen && styles.innerContainerWide]}>
-                    {/* Header */}
+                    {/* Premium Header */}
                     <Animated.View
-                        entering={FadeInDown.delay(100).duration(500)}
+                        entering={FadeInDown.delay(100).duration(600).springify()}
                         style={styles.header}
                     >
-                        <View style={styles.headerLeft}>
-                            <Text style={styles.greeting}>
-                                Hey, {user?.name || "there"}
-                            </Text>
-                            {partner ? (
-                                <View style={styles.partnerBadge}>
-                                    <Ionicons name="heart" size={12} color={colors.primary} />
-                                    <Text style={styles.partnerText}>
-                                        {partner.name || partner.email?.split('@')[0] || 'Partner'}
-                                    </Text>
-                                </View>
-                            ) : couple ? (
-                                <TouchableOpacity
-                                    style={styles.waitingBadge}
-                                    onPress={() => router.push("/(app)/pairing")}
-                                >
-                                    <Ionicons name="hourglass-outline" size={12} color={colors.primary} />
-                                    <Text style={styles.waitingText}>Waiting for partner</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <TouchableOpacity
-                                    style={styles.pairBadge}
-                                    onPress={() => router.push("/(app)/pairing")}
-                                >
-                                    <Ionicons name="add-circle-outline" size={12} color={colors.textTertiary} />
-                                    <Text style={styles.pairText}>Pair with partner</Text>
-                                </TouchableOpacity>
-                            )}
+                        {/* Greeting section */}
+                        <Text style={styles.label}>WELCOME BACK</Text>
+                        <Text style={styles.greeting}>
+                            {user?.name || "Beautiful"}
+                        </Text>
+
+                        {/* Decorative separator */}
+                        <View style={styles.separator}>
+                            <View style={styles.separatorLine} />
+                            <View style={styles.separatorDiamond} />
+                            <View style={styles.separatorLine} />
                         </View>
-                        <TouchableOpacity
-                            onPress={() => router.push("/(app)/profile")}
-                            activeOpacity={0.8}
-                        >
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.avatarGradient}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
+
+                        {/* Partner badge */}
+                        {partner ? (
+                            <Animated.View
+                                entering={FadeIn.delay(300).duration(400)}
+                                style={styles.partnerBadge}
                             >
-                                <View style={styles.avatarInner}>
-                                    <Text style={styles.avatarText}>
-                                        {user?.name?.[0]?.toUpperCase() || "U"}
-                                    </Text>
-                                </View>
-                            </LinearGradient>
-                        </TouchableOpacity>
+                                <Ionicons name="heart" size={12} color={ACCENT_COLOR} />
+                                <Text style={styles.partnerText}>
+                                    Connected with {partner.name || partner.email?.split('@')[0] || 'Partner'}
+                                </Text>
+                            </Animated.View>
+                        ) : couple ? (
+                            <TouchableOpacity
+                                style={styles.waitingBadge}
+                                onPress={() => router.push("/(app)/pairing")}
+                            >
+                                <Ionicons name="hourglass-outline" size={12} color={ACCENT_COLOR} />
+                                <Text style={styles.waitingText}>Waiting for partner</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.pairBadge}
+                                onPress={() => router.push("/(app)/pairing")}
+                            >
+                                <Ionicons name="add-circle-outline" size={12} color={colors.textTertiary} />
+                                <Text style={styles.pairText}>Connect with your partner</Text>
+                            </TouchableOpacity>
+                        )}
+
                     </Animated.View>
 
                     {/* Stats Row */}
@@ -129,24 +135,17 @@ export default function HomeScreen() {
                             onPress={() => router.push("/(app)/matches")}
                             activeOpacity={0.7}
                         >
-                            <GlassCard>
-                                <View style={styles.statContent}>
-                                    <LinearGradient
-                                        colors={matches.length > 0 ? gradients.primary as [string, string] : [colors.glass.background, colors.glass.background]}
-                                        style={styles.statIcon}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <Ionicons
-                                            name="heart"
-                                            size={18}
-                                            color={matches.length > 0 ? colors.text : colors.primary}
-                                        />
-                                    </LinearGradient>
-                                    <Text style={styles.statNumber}>{matches.length}</Text>
-                                    <Text style={styles.statLabel}>Matches</Text>
+                            <View style={[styles.statCard, matches.length > 0 && styles.statCardActive]}>
+                                <View style={[styles.statIcon, matches.length > 0 && styles.statIconActive]}>
+                                    <Ionicons
+                                        name="heart"
+                                        size={18}
+                                        color={matches.length > 0 ? colors.text : ACCENT_COLOR}
+                                    />
                                 </View>
-                            </GlassCard>
+                                <Text style={styles.statNumber}>{matches.length}</Text>
+                                <Text style={styles.statLabel}>Matches</Text>
+                            </View>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -154,24 +153,17 @@ export default function HomeScreen() {
                             onPress={() => router.push("/(app)/packs")}
                             activeOpacity={0.7}
                         >
-                            <GlassCard>
-                                <View style={styles.statContent}>
-                                    <LinearGradient
-                                        colors={enabledPacksCount > 0 ? gradients.primary as [string, string] : [colors.glass.background, colors.glass.background]}
-                                        style={styles.statIcon}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <Ionicons
-                                            name="layers"
-                                            size={18}
-                                            color={enabledPacksCount > 0 ? colors.text : colors.primary}
-                                        />
-                                    </LinearGradient>
-                                    <Text style={styles.statNumber}>{enabledPacksCount}</Text>
-                                    <Text style={styles.statLabel}>Packs</Text>
+                            <View style={[styles.statCard, enabledPacksCount > 0 && styles.statCardActive]}>
+                                <View style={[styles.statIcon, enabledPacksCount > 0 && styles.statIconActive]}>
+                                    <Ionicons
+                                        name="layers"
+                                        size={18}
+                                        color={enabledPacksCount > 0 ? colors.text : ACCENT_COLOR}
+                                    />
                                 </View>
-                            </GlassCard>
+                                <Text style={styles.statNumber}>{enabledPacksCount}</Text>
+                                <Text style={styles.statLabel}>Packs</Text>
+                            </View>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -179,24 +171,17 @@ export default function HomeScreen() {
                             onPress={() => router.push("/(app)/matches")}
                             activeOpacity={0.7}
                         >
-                            <GlassCard>
-                                <View style={styles.statContent}>
-                                    <LinearGradient
-                                        colors={newMatchesCount > 0 ? gradients.primary as [string, string] : [colors.glass.background, colors.glass.background]}
-                                        style={styles.statIcon}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
-                                    >
-                                        <Ionicons
-                                            name="sparkles"
-                                            size={18}
-                                            color={newMatchesCount > 0 ? colors.text : colors.primary}
-                                        />
-                                    </LinearGradient>
-                                    <Text style={styles.statNumber}>{newMatchesCount}</Text>
-                                    <Text style={styles.statLabel}>New</Text>
+                            <View style={[styles.statCard, newMatchesCount > 0 && styles.statCardActive]}>
+                                <View style={[styles.statIcon, newMatchesCount > 0 && styles.statIconActive]}>
+                                    <Ionicons
+                                        name="sparkles"
+                                        size={18}
+                                        color={newMatchesCount > 0 ? colors.text : ACCENT_COLOR}
+                                    />
                                 </View>
-                            </GlassCard>
+                                <Text style={styles.statNumber}>{newMatchesCount}</Text>
+                                <Text style={styles.statLabel}>New</Text>
+                            </View>
                         </TouchableOpacity>
                     </Animated.View>
 
@@ -209,22 +194,28 @@ export default function HomeScreen() {
                             onPress={() => router.push("/(app)/swipe")}
                             activeOpacity={0.9}
                         >
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.ctaCard}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            >
-                                <View style={styles.ctaContent}>
-                                    <Text style={styles.ctaTitle}>Ready to explore?</Text>
-                                    <Text style={styles.ctaSubtitle}>
-                                        Swipe through questions and discover what you both enjoy
-                                    </Text>
-                                </View>
-                                <Animated.View style={[styles.ctaIconContainer, pulseAnimatedStyle]}>
-                                    <Ionicons name="flame" size={24} color={colors.text} />
-                                </Animated.View>
-                            </LinearGradient>
+                            <View style={styles.ctaCard}>
+                                {/* Glow effect */}
+                                <Animated.View style={[styles.ctaGlow, glowAnimatedStyle]} />
+
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    style={styles.ctaGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <View style={styles.ctaContent}>
+                                        <Text style={styles.ctaLabel}>EXPLORE</Text>
+                                        <Text style={styles.ctaTitle}>Ready to explore?</Text>
+                                        <Text style={styles.ctaSubtitle}>
+                                            Discover new experiences
+                                        </Text>
+                                    </View>
+                                    <Animated.View style={[styles.ctaIconContainer, pulseAnimatedStyle]}>
+                                        <Ionicons name="flame" size={28} color={colors.text} />
+                                    </Animated.View>
+                                </LinearGradient>
+                            </View>
                         </TouchableOpacity>
                     </Animated.View>
 
@@ -235,13 +226,18 @@ export default function HomeScreen() {
                             style={styles.section}
                         >
                             <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>Recent Matches</Text>
+                                <View style={styles.sectionTitleRow}>
+                                    <View style={styles.sectionIcon}>
+                                        <Ionicons name="heart" size={14} color={ACCENT_COLOR} />
+                                    </View>
+                                    <Text style={styles.sectionTitle}>Recent Matches</Text>
+                                </View>
                                 <TouchableOpacity
                                     onPress={() => router.push("/(app)/matches")}
                                     style={styles.seeAllButton}
                                 >
                                     <Text style={styles.seeAllText}>See all</Text>
-                                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                                    <Ionicons name="chevron-forward" size={14} color={ACCENT_COLOR} />
                                 </TouchableOpacity>
                             </View>
                             {recentMatches.map((match, index) => (
@@ -253,7 +249,7 @@ export default function HomeScreen() {
                                         onPress={() => router.push(`/chat/${match.id}`)}
                                         activeOpacity={0.7}
                                     >
-                                        <GlassCard style={styles.matchCard}>
+                                        <View style={styles.matchCard}>
                                             <View style={styles.matchRow}>
                                                 <LinearGradient
                                                     colors={gradients.primary as [string, string]}
@@ -261,14 +257,14 @@ export default function HomeScreen() {
                                                     start={{ x: 0, y: 0 }}
                                                     end={{ x: 1, y: 1 }}
                                                 >
-                                                    <Ionicons name="heart" size={16} color={colors.text} />
+                                                    <Ionicons name="heart" size={14} color={colors.text} />
                                                 </LinearGradient>
                                                 <Text style={styles.matchText} numberOfLines={1}>
                                                     {(match as any).question?.text || "A new match!"}
                                                 </Text>
                                                 {match.is_new && <View style={styles.newBadge} />}
                                             </View>
-                                        </GlassCard>
+                                        </View>
                                     </TouchableOpacity>
                                 </Animated.View>
                             ))}
@@ -281,40 +277,48 @@ export default function HomeScreen() {
                             entering={FadeInDown.delay(400).duration(500)}
                             style={styles.section}
                         >
-                            <Text style={styles.tipsTitle}>Getting Started</Text>
-                            <GlassCard>
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.sectionTitleRow}>
+                                    <View style={styles.sectionIcon}>
+                                        <Ionicons name="compass" size={14} color={ACCENT_COLOR} />
+                                    </View>
+                                    <Text style={styles.sectionTitle}>Getting Started</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.tipCard}>
                                 <View style={styles.tipRow}>
                                     <View style={styles.tipIcon}>
-                                        <Ionicons name="layers-outline" size={18} color={colors.primary} />
+                                        <Ionicons name="layers-outline" size={18} color={ACCENT_COLOR} />
                                     </View>
                                     <View style={styles.tipContent}>
                                         <Text style={styles.tipText}>Enable question packs</Text>
-                                        <Text style={styles.tipSubtext}>Choose topics you want to explore</Text>
+                                        <Text style={styles.tipSubtext}>Choose topics to explore together</Text>
                                     </View>
                                 </View>
-                            </GlassCard>
-                            <GlassCard style={styles.tipCard}>
+                            </View>
+                            <View style={[styles.tipCard, styles.tipCardSpaced]}>
                                 <View style={styles.tipRow}>
                                     <View style={styles.tipIcon}>
-                                        <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
+                                        <Ionicons name="swap-horizontal-outline" size={18} color={ACCENT_COLOR} />
                                     </View>
                                     <View style={styles.tipContent}>
                                         <Text style={styles.tipText}>Swipe on questions</Text>
                                         <Text style={styles.tipSubtext}>Answer yes, no, or maybe</Text>
                                     </View>
                                 </View>
-                            </GlassCard>
-                            <GlassCard style={styles.tipCard}>
+                            </View>
+                            <View style={[styles.tipCard, styles.tipCardSpaced]}>
                                 <View style={styles.tipRow}>
                                     <View style={styles.tipIcon}>
-                                        <Ionicons name="heart-outline" size={18} color={colors.primary} />
+                                        <Ionicons name="heart-outline" size={18} color={ACCENT_COLOR} />
                                     </View>
                                     <View style={styles.tipContent}>
                                         <Text style={styles.tipText}>Discover matches</Text>
                                         <Text style={styles.tipSubtext}>See where you both agree</Text>
                                     </View>
                                 </View>
-                            </GlassCard>
+                            </View>
                         </Animated.View>
                     )}
 
@@ -346,27 +350,51 @@ const styles = StyleSheet.create({
     header: {
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.lg,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
+        paddingBottom: spacing.xl,
         alignItems: 'center',
     },
-    headerLeft: {
-        flex: 1,
+    label: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 2.5,
+        color: ACCENT_COLOR,
+        textAlign: 'center',
+        marginBottom: spacing.xs,
     },
     greeting: {
-        ...typography.title1,
+        ...typography.largeTitle,
         color: colors.text,
+        textAlign: 'center',
+    },
+    separator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: spacing.md,
+        width: 120,
+    },
+    separatorLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(233, 69, 96, 0.3)',
+    },
+    separatorDiamond: {
+        width: 5,
+        height: 5,
+        backgroundColor: ACCENT_COLOR,
+        transform: [{ rotate: '45deg' }],
+        marginHorizontal: spacing.sm,
+        opacity: 0.6,
     },
     partnerBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.primaryLight,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
         borderRadius: radius.full,
-        alignSelf: 'flex-start',
-        marginTop: spacing.sm,
+        borderWidth: 1,
+        borderColor: 'rgba(233, 69, 96, 0.2)',
         gap: spacing.xs,
     },
     partnerText: {
@@ -378,11 +406,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.glass.background,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
         borderRadius: radius.full,
-        alignSelf: 'flex-start',
-        marginTop: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
         gap: spacing.xs,
     },
     pairText: {
@@ -392,38 +420,18 @@ const styles = StyleSheet.create({
     waitingBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.primaryLight,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
         borderRadius: radius.full,
-        alignSelf: 'flex-start',
-        marginTop: spacing.sm,
+        borderWidth: 1,
+        borderColor: 'rgba(233, 69, 96, 0.2)',
         gap: spacing.xs,
     },
     waitingText: {
         ...typography.caption1,
         color: colors.text,
         fontWeight: '500',
-    },
-    avatarGradient: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...shadows.md,
-    },
-    avatarInner: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: colors.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarText: {
-        ...typography.headline,
-        color: colors.text,
     },
     statsContainer: {
         flexDirection: "row",
@@ -433,17 +441,29 @@ const styles = StyleSheet.create({
     statCardWrapper: {
         flex: 1,
     },
-    statContent: {
+    statCard: {
         alignItems: "center",
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.md,
+        backgroundColor: 'rgba(233, 69, 96, 0.05)',
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(233, 69, 96, 0.1)',
+    },
+    statCardActive: {
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
+        borderColor: 'rgba(233, 69, 96, 0.2)',
     },
     statIcon: {
         width: 36,
         height: 36,
         borderRadius: 18,
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
         justifyContent: "center",
         alignItems: "center",
         marginBottom: spacing.sm,
+    },
+    statIconActive: {
+        backgroundColor: ACCENT_COLOR,
     },
     statNumber: {
         ...typography.title2,
@@ -456,9 +476,23 @@ const styles = StyleSheet.create({
     },
     ctaSection: {
         paddingHorizontal: spacing.lg,
-        marginTop: spacing.lg,
+        marginTop: spacing.xl,
     },
     ctaCard: {
+        position: 'relative',
+        borderRadius: radius.xl,
+        overflow: 'hidden',
+    },
+    ctaGlow: {
+        position: 'absolute',
+        top: -20,
+        left: -20,
+        right: -20,
+        bottom: -20,
+        backgroundColor: ACCENT_COLOR,
+        borderRadius: radius.xl + 20,
+    },
+    ctaGradient: {
         borderRadius: radius.xl,
         padding: spacing.lg,
         flexDirection: "row",
@@ -468,21 +502,29 @@ const styles = StyleSheet.create({
     ctaContent: {
         flex: 1,
     },
+    ctaLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 2,
+        color: 'rgba(255,255,255,0.8)',
+        marginBottom: spacing.xs,
+    },
     ctaTitle: {
-        ...typography.title3,
+        ...typography.title2,
         color: colors.text,
         marginBottom: spacing.xs,
     },
     ctaSubtitle: {
         ...typography.subhead,
         color: "rgba(255,255,255,0.8)",
-        lineHeight: 20,
     },
     ctaIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
         backgroundColor: "rgba(255,255,255,0.2)",
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
         justifyContent: "center",
         alignItems: "center",
         marginLeft: spacing.md,
@@ -497,6 +539,19 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: spacing.md,
     },
+    sectionTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
+    sectionIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     sectionTitle: {
         ...typography.headline,
         color: colors.text,
@@ -508,19 +563,24 @@ const styles = StyleSheet.create({
     },
     seeAllText: {
         ...typography.subhead,
-        color: colors.primary,
+        color: ACCENT_COLOR,
     },
     matchCard: {
         marginBottom: spacing.sm,
+        backgroundColor: 'rgba(233, 69, 96, 0.05)',
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(233, 69, 96, 0.1)',
+        padding: spacing.md,
     },
     matchRow: {
         flexDirection: "row",
         alignItems: "center",
     },
     matchIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
@@ -534,17 +594,16 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: colors.primary,
-    },
-    tipsTitle: {
-        ...typography.caption1,
-        color: colors.textTertiary,
-        textTransform: 'uppercase',
-        letterSpacing: 1.5,
-        marginBottom: spacing.sm,
-        marginLeft: spacing.xs,
+        backgroundColor: ACCENT_COLOR,
     },
     tipCard: {
+        backgroundColor: 'rgba(233, 69, 96, 0.05)',
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(233, 69, 96, 0.1)',
+        padding: spacing.md,
+    },
+    tipCardSpaced: {
         marginTop: spacing.sm,
     },
     tipRow: {
@@ -555,7 +614,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: colors.primaryLight,
+        backgroundColor: 'rgba(233, 69, 96, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: spacing.md,

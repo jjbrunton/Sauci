@@ -33,11 +33,6 @@ export default function QuizScreen() {
                     entering={FadeInDown.duration(600).springify()}
                     style={styles.content}
                 >
-                    {/* Icon */}
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="heart" size={36} color={ACCENT_COLOR} />
-                    </View>
-
                     {/* Title section */}
                     <Text style={styles.label}>INTIMACY</Text>
                     <Text style={styles.title}>Quiz</Text>
@@ -81,40 +76,39 @@ export default function QuizScreen() {
                     {/* Bottom teaser */}
                     <Text style={styles.teaser}>Something special is being crafted for you</Text>
 
-                    {/* Interest button */}
-                    {isAuthenticated && !isLoading && (
-                        <Animated.View
-                            entering={FadeIn.delay(500).duration(400)}
-                            style={styles.interestButtonContainer}
-                        >
-                            <AnimatedPressable
-                                onPress={toggleInterest}
-                                onPressIn={handlePressIn}
-                                onPressOut={handlePressOut}
-                                disabled={isToggling}
-                                style={[
-                                    styles.interestButton,
-                                    isInterested && styles.interestButtonActive,
-                                    animatedButtonStyle,
-                                ]}
-                            >
-                                {isToggling ? (
-                                    <ActivityIndicator size="small" color={ACCENT_COLOR} />
-                                ) : (
-                                    <>
-                                        <Ionicons
-                                            name={isInterested ? "checkmark-circle" : "notifications-outline"}
-                                            size={16}
-                                            color={ACCENT_COLOR}
-                                        />
-                                        <Text style={styles.interestButtonText}>
-                                            {isInterested ? "You're on the list!" : "I'm interested"}
-                                        </Text>
-                                    </>
-                                )}
-                            </AnimatedPressable>
-                        </Animated.View>
-                    )}
+                    {/* Interest button - always reserve space to prevent layout shift */}
+                    <View style={styles.interestButtonContainer}>
+                        {isAuthenticated && !isLoading && (
+                            <Animated.View entering={FadeIn.delay(500).duration(400)}>
+                                <AnimatedPressable
+                                    onPress={toggleInterest}
+                                    onPressIn={handlePressIn}
+                                    onPressOut={handlePressOut}
+                                    disabled={isToggling}
+                                    style={[
+                                        styles.interestButton,
+                                        isInterested && styles.interestButtonActive,
+                                        animatedButtonStyle,
+                                    ]}
+                                >
+                                    {isToggling ? (
+                                        <ActivityIndicator size="small" color={ACCENT_COLOR} />
+                                    ) : (
+                                        <>
+                                            <Ionicons
+                                                name={isInterested ? "checkmark-circle" : "notifications-outline"}
+                                                size={16}
+                                                color={ACCENT_COLOR}
+                                            />
+                                            <Text style={styles.interestButtonText}>
+                                                {isInterested ? "You're on the list!" : "I'm interested"}
+                                            </Text>
+                                        </>
+                                    )}
+                                </AnimatedPressable>
+                            </Animated.View>
+                        )}
+                    </View>
                 </Animated.View>
             </View>
         </GradientBackground>
@@ -127,24 +121,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: spacing.lg,
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+        paddingTop: 60,
         paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
     content: {
         width: '100%',
         alignItems: 'center',
         paddingHorizontal: spacing.md,
-    },
-    iconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: 'rgba(232, 164, 174, 0.1)',
-        borderWidth: 1,
-        borderColor: 'rgba(232, 164, 174, 0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: spacing.xl,
     },
     label: {
         ...typography.caption1,
@@ -223,6 +206,7 @@ const styles = StyleSheet.create({
     },
     interestButtonContainer: {
         marginTop: spacing.xl,
+        minHeight: 44,
     },
     interestButton: {
         flexDirection: 'row',
