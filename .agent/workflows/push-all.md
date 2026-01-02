@@ -44,7 +44,7 @@ Analyze the changes and create a concise, meaningful commit message that:
 - Summarizes what changed (not how)
 - Uses imperative mood ("Add feature" not "Added feature")
 - Is 50 chars or less for the subject line
-- Includes the standard footer if applicable
+- Does NOT include any `Co-authored-by` footer
 
 Look at recent commits with `git log --oneline -5` to match the repository's commit style.
 
