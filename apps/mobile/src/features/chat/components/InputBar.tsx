@@ -66,7 +66,14 @@ export function InputBar({
     return (
         <View style={styles.container}>
             {/* Plus button to toggle media menu */}
-            <TouchableOpacity onPress={toggleMenu} disabled={uploading} style={styles.attachButton}>
+            <TouchableOpacity
+                onPress={toggleMenu}
+                disabled={uploading}
+                style={styles.attachButton}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle media menu"
+                testID="chat-input-toggle-media"
+            >
                 {uploading ? (
                     <ActivityIndicator color={ACCENT} size="small" />
                 ) : (
@@ -82,6 +89,9 @@ export function InputBar({
                     onPress={() => handleMediaAction(onTakePhoto)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Take photo"
+                    testID="chat-input-take-photo"
                 >
                     <View style={styles.mediaMenuItemInner}>
                         <Ionicons name="camera-outline" size={20} color={colors.textSecondary} />
@@ -92,6 +102,9 @@ export function InputBar({
                     onPress={() => handleMediaAction(onRecordVideo)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Record video"
+                    testID="chat-input-record-video"
                 >
                     <View style={styles.mediaMenuItemInner}>
                         <Ionicons name="videocam-outline" size={20} color={colors.textSecondary} />
@@ -102,6 +115,9 @@ export function InputBar({
                     onPress={() => handleMediaAction(onPickMedia)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Pick media"
+                    testID="chat-input-pick-media"
                 >
                     <View style={styles.mediaMenuItemInner}>
                         <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
@@ -126,6 +142,9 @@ export function InputBar({
                 onPress={onSend}
                 disabled={!inputText.trim()}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Send message"
+                testID="chat-input-send"
             >
                 <LinearGradient
                     colors={inputText.trim() ? gradients.primary as [string, string] : ['rgba(22, 33, 62, 0.6)', 'rgba(22, 33, 62, 0.6)']}

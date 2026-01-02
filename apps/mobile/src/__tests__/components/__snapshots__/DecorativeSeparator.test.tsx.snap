@@ -1,0 +1,199 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DecorativeSeparator renders gold variant 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "center",
+      },
+      {
+        "marginVertical": 24,
+        "width": 140,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(212, 175, 55, 0.3)",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "height": 6,
+          "marginHorizontal": 8,
+          "opacity": 0.7,
+          "transform": [
+            {
+              "rotate": "45deg",
+            },
+          ],
+          "width": 6,
+        },
+        {
+          "backgroundColor": "#D4AF37",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(212, 175, 55, 0.3)",
+        },
+      ]
+    }
+  />
+</View>
+`;
+
+exports[`DecorativeSeparator renders muted variant 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "center",
+      },
+      {
+        "marginVertical": 24,
+        "width": 140,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(255, 255, 255, 0.1)",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "height": 6,
+          "marginHorizontal": 8,
+          "opacity": 0.7,
+          "transform": [
+            {
+              "rotate": "45deg",
+            },
+          ],
+          "width": 6,
+        },
+        {
+          "backgroundColor": "rgba(255, 255, 255, 0.3)",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(255, 255, 255, 0.1)",
+        },
+      ]
+    }
+  />
+</View>
+`;
+
+exports[`DecorativeSeparator renders rose variant 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "justifyContent": "center",
+      },
+      {
+        "marginVertical": 24,
+        "width": 140,
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(232, 164, 174, 0.3)",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "height": 6,
+          "marginHorizontal": 8,
+          "opacity": 0.7,
+          "transform": [
+            {
+              "rotate": "45deg",
+            },
+          ],
+          "width": 6,
+        },
+        {
+          "backgroundColor": "#E8A4AE",
+        },
+      ]
+    }
+  />
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+          "height": 1,
+        },
+        {
+          "backgroundColor": "rgba(232, 164, 174, 0.3)",
+        },
+      ]
+    }
+  />
+</View>
+`;

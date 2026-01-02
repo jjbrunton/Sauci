@@ -1,6 +1,6 @@
 ---
-description: Security check, commit with sensible message, and push
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git branch:*)
+description: Security check, run checks, commit, and push
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Bash(git push:*), Bash(git branch:*), Bash(npm:*)
 ---
 
 ## Context
@@ -31,7 +31,17 @@ Run `git diff --cached` to inspect what will be committed. If you find ANY poten
 ### Step 2: Stage All Changes
 If security check passes, stage all changes with `git add -A`.
 
-### Step 3: Generate Commit Message
+### Step 3: Run Checks
+Before committing, make sure checks pass for the projects you touched:
+- Mobile typecheck: `npm --prefix apps/mobile run typecheck`
+- Mobile tests: `npm --prefix apps/mobile run test:ci`
+- Web typecheck (if you changed `apps/web`): `npm --prefix apps/web run typecheck`
+
+Note: `apps/supabase` is Supabase config/functions (no TS typecheck).
+
+If any command fails, STOP and report the output.
+
+### Step 4: Generate Commit Message
 Analyze the changes and create a concise, meaningful commit message that:
 - Summarizes what changed (not how)
 - Uses imperative mood ("Add feature" not "Added feature")
@@ -40,7 +50,7 @@ Analyze the changes and create a concise, meaningful commit message that:
 
 Look at recent commits with `git log --oneline -5` to match the repository's commit style.
 
-### Step 4: Commit and Push
+### Step 5: Commit and Push
 1. Create the commit with the generated message
 2. Push to the remote repository
 

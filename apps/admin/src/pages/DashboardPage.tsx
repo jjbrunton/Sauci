@@ -3,15 +3,40 @@ import { Link } from 'react-router-dom';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { supabase } from '@/config';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity, Target, TrendingUp, Heart, MessageCircle } from 'lucide-react';
+import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity, Target, TrendingUp, Heart, MessageCircle, Bell } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, formatDistanceToNow } from 'date-fns';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 
+type FeatureInterestChartPoint = { date: string; count: number };
+
+type RecentFeatureInterest = {
+    id: string;
+    user_id: string;
+    feature_name: string;
+    created_at: string;
+    profile?: {
+        id: string;
+        name: string | null;
+        email: string | null;
+        avatar_url: string | null;
+    };
+};
+
+function formatFeatureName(featureName: string) {
+    return featureName
+        .split('_')
+        .filter(Boolean)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(' ');
+}
+
 export function DashboardPage() {
     const { hasPermission } = useAuth();
+    const canViewUsers = hasPermission(PERMISSION_KEYS.VIEW_USERS);
     const [stats, setStats] = useState({
         categories: 0,
         packs: 0,
@@ -19,6 +44,8 @@ export function DashboardPage() {
         users: 0,
     });
     const [messageStats, setMessageStats] = useState<{ date: string; count: number }[]>([]);
+    const [featureInterestStats, setFeatureInterestStats] = useState<FeatureInterestChartPoint[]>([]);
+    const [recentFeatureInterests, setRecentFeatureInterests] = useState<RecentFeatureInterest[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchStats = useCallback(async () => {
@@ -43,45 +70,110 @@ export function DashboardPage() {
                 users: usersCount || 0,
             });
 
-            // Fetch message history for chart
             const endDate = endOfDay(new Date());
             const startDate = subDays(startOfDay(new Date()), 6); // Last 7 days including today
 
-            const { data: messages } = await supabase
-                .from('messages')
-                .select('created_at')
-                .gte('created_at', startDate.toISOString())
-                .lte('created_at', endDate.toISOString());
+            const [
+                { data: messages },
+                { data: featureInterests },
+                { data: recentInterests },
+            ] = await Promise.all([
+                supabase
+                    .from('messages')
+                    .select('created_at')
+                    .gte('created_at', startDate.toISOString())
+                    .lte('created_at', endDate.toISOString()),
+                supabase
+                    .from('feature_interests')
+                    .select('created_at, user_id')
+                    .gte('created_at', startDate.toISOString())
+                    .lte('created_at', endDate.toISOString()),
+                supabase
+                    .from('feature_interests')
+                    .select('id, user_id, feature_name, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(10),
+            ]);
 
             // Process messages for chart
-            const daysMap = new Map();
-            // Initialize last 7 days with 0
+            const messageDaysMap = new Map<string, number>();
             for (let i = 0; i < 7; i++) {
                 const date = subDays(new Date(), 6 - i);
                 const key = format(date, 'MMM d');
-                daysMap.set(key, 0);
+                messageDaysMap.set(key, 0);
             }
 
-            messages?.forEach(msg => {
+            (messages ?? []).forEach(msg => {
                 const date = new Date(msg.created_at);
                 const key = format(date, 'MMM d');
-                if (daysMap.has(key)) {
-                    daysMap.set(key, daysMap.get(key) + 1);
+                if (messageDaysMap.has(key)) {
+                    messageDaysMap.set(key, (messageDaysMap.get(key) || 0) + 1);
                 }
             });
 
-            const chartData = Array.from(daysMap.entries()).map(([date, count]) => ({
-                date,
-                count
+            setMessageStats(
+                Array.from(messageDaysMap.entries()).map(([date, count]) => ({
+                    date,
+                    count,
+                }))
+            );
+
+            // Process feature interests for chart (unique users per day)
+            const featureInterestDaysMap = new Map<string, Set<string>>();
+            for (let i = 0; i < 7; i++) {
+                const date = subDays(new Date(), 6 - i);
+                const key = format(date, 'MMM d');
+                featureInterestDaysMap.set(key, new Set());
+            }
+
+            (featureInterests ?? []).forEach(interest => {
+                const date = new Date(interest.created_at);
+                const key = format(date, 'MMM d');
+                const set = featureInterestDaysMap.get(key);
+                if (set) {
+                    set.add(interest.user_id);
+                }
+            });
+
+            setFeatureInterestStats(
+                Array.from(featureInterestDaysMap.entries()).map(([date, userIds]) => ({
+                    date,
+                    count: userIds.size,
+                }))
+            );
+
+            let recentActivity: RecentFeatureInterest[] = (recentInterests ?? []).map(item => ({
+                id: item.id,
+                user_id: item.user_id,
+                feature_name: item.feature_name,
+                created_at: item.created_at,
             }));
 
-            setMessageStats(chartData);
+            if (canViewUsers && recentActivity.length > 0) {
+                const userIds = Array.from(new Set(recentActivity.map(item => item.user_id)));
+
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, name, email, avatar_url')
+                    .in('id', userIds);
+
+                if (profiles && profiles.length > 0) {
+                    const profileById = new Map(profiles.map(profile => [profile.id, profile] as const));
+
+                    recentActivity = recentActivity.map(item => ({
+                        ...item,
+                        profile: profileById.get(item.user_id),
+                    }));
+                }
+            }
+
+            setRecentFeatureInterests(recentActivity);
         } catch (error) {
             console.error('Failed to fetch stats:', error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [canViewUsers]);
 
     // Real-time subscriptions for dashboard stats (with debouncing)
     const { status: profilesStatus } = useRealtimeSubscription({
@@ -95,6 +187,14 @@ export function DashboardPage() {
         table: 'messages',
         onInsert: fetchStats,
         debounceMs: 2000,
+    });
+
+    const { status: featureInterestsStatus } = useRealtimeSubscription({
+        table: 'feature_interests',
+        onInsert: fetchStats,
+        onDelete: fetchStats,
+        debounceMs: 2000,
+        enabled: canViewUsers,
     });
 
     useRealtimeSubscription({
@@ -164,6 +264,11 @@ export function DashboardPage() {
         { label: 'Active Users', value: stats.users, icon: Users, color: 'text-emerald-400', permission: PERMISSION_KEYS.VIEW_USERS },
     ];
 
+    const isRealtimeFullySubscribed =
+        profilesStatus === 'SUBSCRIBED' &&
+        messagesStatus === 'SUBSCRIBED' &&
+        (!canViewUsers || featureInterestsStatus === 'SUBSCRIBED');
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -175,7 +280,7 @@ export function DashboardPage() {
                             Dashboard
                         </h1>
                         <RealtimeStatusIndicator
-                            status={profilesStatus === 'SUBSCRIBED' && messagesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profilesStatus}
+                            status={isRealtimeFullySubscribed ? 'SUBSCRIBED' : profilesStatus}
                             showLabel
                         />
                     </div>
@@ -309,6 +414,147 @@ export function DashboardPage() {
                                     </ResponsiveContainer>
                                 )}
                             </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Notify Overview - 7 columns */}
+                <div className="lg:col-span-7">
+                    <Card className="glass border-white/5">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <Bell className="h-5 w-5 text-primary" />
+                                <CardTitle>Notify Overview</CardTitle>
+                            </div>
+                            <CardDescription>
+                                Unique users opting into feature updates over the last 7 days
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            {!canViewUsers ? (
+                                <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+                                    You don’t have permission to view feature opt-ins.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="h-[260px]">
+                                        {loading ? (
+                                            <Skeleton className="h-full w-full rounded-xl" />
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={featureInterestStats}>
+                                                    <XAxis
+                                                        dataKey="date"
+                                                        stroke="hsl(var(--muted-foreground))"
+                                                        fontSize={11}
+                                                        tickLine={false}
+                                                        axisLine={false}
+                                                    />
+                                                    <YAxis
+                                                        stroke="hsl(var(--muted-foreground))"
+                                                        fontSize={11}
+                                                        tickLine={false}
+                                                        axisLine={false}
+                                                        tickFormatter={(value) => `${value}`}
+                                                    />
+                                                    <Tooltip
+                                                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                                        contentStyle={{
+                                                            borderRadius: '12px',
+                                                            border: '1px solid rgba(255,255,255,0.1)',
+                                                            background: 'hsl(240 8% 10%)',
+                                                            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                                                        }}
+                                                        labelStyle={{ color: 'hsl(var(--foreground))' }}
+                                                    />
+                                                    <defs>
+                                                        <linearGradient id="notifyBarGradient" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="0%" stopColor="hsl(200 75% 55%)" />
+                                                            <stop offset="100%" stopColor="hsl(190 65% 40%)" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <Bar
+                                                        dataKey="count"
+                                                        fill="url(#notifyBarGradient)"
+                                                        radius={[6, 6, 0, 0]}
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-6 pt-6 border-t border-white/5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-medium">Recent opt-ins</h3>
+                                            <p className="text-xs text-muted-foreground">Last 10</p>
+                                        </div>
+
+                                        {loading ? (
+                                            <div className="space-y-3">
+                                                {Array.from({ length: 5 }).map((_, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <Skeleton className="h-8 w-8 rounded-full" />
+                                                            <div className="min-w-0 space-y-2">
+                                                                <Skeleton className="h-4 w-48" />
+                                                                <Skeleton className="h-3 w-36" />
+                                                            </div>
+                                                        </div>
+                                                        <Skeleton className="h-3 w-16" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : recentFeatureInterests.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">
+                                                No opt-ins yet.
+                                            </p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {recentFeatureInterests.map((item) => {
+                                                    const primaryText =
+                                                        item.profile?.name ||
+                                                        item.profile?.email ||
+                                                        `User ${item.user_id.slice(0, 8)}`;
+
+                                                    const subtitleParts: string[] = [];
+                                                    if (item.profile?.name && item.profile.email) {
+                                                        subtitleParts.push(item.profile.email);
+                                                    }
+                                                    subtitleParts.push(formatFeatureName(item.feature_name));
+
+                                                    const fallbackChar = (item.profile?.name || item.profile?.email || 'U')
+                                                        .charAt(0)
+                                                        .toUpperCase();
+
+                                                    return (
+                                                        <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
+                                                            <div className="flex items-center gap-3 min-w-0">
+                                                                <Avatar className="h-8 w-8">
+                                                                    <AvatarImage src={item.profile?.avatar_url || undefined} />
+                                                                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                                                        {fallbackChar}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-medium truncate">
+                                                                        {primaryText}
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground truncate">
+                                                                        {subtitleParts.join(' • ')}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                                                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
