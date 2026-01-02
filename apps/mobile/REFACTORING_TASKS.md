@@ -142,9 +142,10 @@ Track progress by checking off completed items.
 - [x] Extract `ProfileHeader.tsx`
 - [x] Extract `CoupleStatus.tsx`
 - [x] Extract `SettingsSection.tsx`
-- [ ] Extract `NotificationSettings.tsx`
+- [x] Extract `NotificationSettings.tsx`
 - [x] Extract `PrivacySettings.tsx`
-- [ ] Extract `AppearanceSettings.tsx`
+- [x] Extract `AppearanceSettings.tsx`
+
 - [x] Extract `DangerZone.tsx`
 - [x] Extract `SwitchItem.tsx`
 - [x] Extract `MenuItem.tsx`

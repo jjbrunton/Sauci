@@ -1,5 +1,10 @@
 // Profile feature components
 export { ProfileHeader } from './ProfileHeader';
+export type { ProfileHeaderProps } from './ProfileHeader';
+export { AppearanceSettings } from './AppearanceSettings';
+export type { AppearanceSettingsProps } from './AppearanceSettings';
+export { NotificationSettings } from './NotificationSettings';
+export type { NotificationSettingsProps } from './NotificationSettings';
 export { CoupleStatus } from './CoupleStatus';
 export { PrivacySettings } from './PrivacySettings';
 export { DangerZone } from './DangerZone';

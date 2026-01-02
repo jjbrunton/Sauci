@@ -7,6 +7,11 @@ import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../stor
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
 import {
+    registerForPushNotificationsAsync,
+    savePushToken,
+    clearPushToken,
+} from '../../../lib/notifications';
+import {
     isBiometricAvailable,
     isBiometricEnabled,
     setBiometricEnabled,
@@ -30,6 +35,10 @@ export function useProfileSettings() {
     const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
     const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
 
+    // Notifications
+    const [pushEnabled, setPushEnabled] = useState(!!user?.push_token);
+    const [isUpdatingPush, setIsUpdatingPush] = useState(false);
+
     // Biometrics
     const [biometricAvailable, setBiometricAvailable] = useState(false);
     const [biometricEnabledState, setBiometricEnabledState] = useState(false);
@@ -47,6 +56,7 @@ export function useProfileSettings() {
         if (user?.show_explicit_content !== undefined) {
             setShowExplicit(user.show_explicit_content);
         }
+        setPushEnabled(!!user?.push_token);
     }, [user]);
 
     // Check biometric availability
@@ -276,6 +286,48 @@ export function useProfileSettings() {
         }
     };
 
+    const handlePushToggle = async (value: boolean) => {
+        if (!user?.id) return;
+
+        if (Platform.OS === 'web') {
+            setPushEnabled(false);
+            Alert.alert("Not Supported", "Push notifications aren't available on web.");
+            return;
+        }
+
+        setPushEnabled(value);
+        setIsUpdatingPush(true);
+
+        try {
+            if (value) {
+                const token = await registerForPushNotificationsAsync();
+                if (!token) {
+                    setPushEnabled(false);
+                    Alert.alert(
+                        "Enable Notifications",
+                        "Allow notifications in system settings to receive alerts.",
+                        [
+                            { text: "Not Now", style: "cancel" },
+                            { text: "Open Settings", onPress: () => Linking.openSettings() },
+                        ]
+                    );
+                    return;
+                }
+
+                await savePushToken(user.id, token);
+            } else {
+                await clearPushToken(user.id);
+            }
+
+            await fetchUser();
+        } catch (error) {
+            setPushEnabled(!value);
+            Alert.alert("Error", "Failed to update notification settings. Please try again.");
+        } finally {
+            setIsUpdatingPush(false);
+        }
+    };
+
     const handleBiometricToggle = async (value: boolean) => {
         setIsUpdatingBiometric(true);
 
@@ -330,6 +382,8 @@ export function useProfileSettings() {
         isUploadingAvatar,
         showExplicit,
         isUpdatingExplicit,
+        pushEnabled,
+        isUpdatingPush,
         biometricAvailable,
         biometricEnabled: biometricEnabledState,
         biometricType,
@@ -343,6 +397,7 @@ export function useProfileSettings() {
         handleCancelEditName,
         handleAvatarPress,
         handleExplicitToggle,
+        handlePushToggle,
         handleBiometricToggle,
         handleRestorePurchases,
         handleManageSubscription,

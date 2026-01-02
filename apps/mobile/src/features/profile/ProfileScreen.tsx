@@ -17,7 +17,7 @@ import { supabase } from '../../lib/supabase'; // Needed for debug reset
 import { useProfileSettings, useCoupleManagement } from './hooks';
 
 // Components
-import { ProfileHeader, CoupleStatus, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
+import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
 
 const MAX_CONTENT_WIDTH = 500;
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
@@ -81,7 +81,7 @@ export function ProfileScreen() {
                 </Animated.View>
 
                 {/* Profile Header */}
-                <ProfileHeader
+                <AppearanceSettings
                     user={user}
                     isUploadingAvatar={settings.isUploadingAvatar}
                     isEditingName={settings.isEditingName}
@@ -174,6 +174,13 @@ export function ProfileScreen() {
                         </TouchableOpacity>
                     )}
                 </SettingsSection>
+
+                {/* Notifications */}
+                <NotificationSettings
+                    pushEnabled={settings.pushEnabled}
+                    isUpdatingPush={settings.isUpdatingPush}
+                    onPushToggle={settings.handlePushToggle}
+                />
 
                 {/* Preferences */}
                 <PrivacySettings

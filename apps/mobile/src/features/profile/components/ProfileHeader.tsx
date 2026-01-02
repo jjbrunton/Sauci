@@ -10,7 +10,7 @@ import { Profile } from '../../../types';
 
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 
-interface ProfileHeaderProps {
+export interface ProfileHeaderProps {
     user: Profile | null;
     isUploadingAvatar: boolean;
     isEditingName: boolean;
