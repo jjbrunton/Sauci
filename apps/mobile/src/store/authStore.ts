@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import { Events } from "../lib/analytics";
 import { clearKeys } from "../lib/encryption";
+import { clearDecryptedMediaCache } from "../hooks/useDecryptedMedia";
 import type { Profile, Couple } from "@/types";
 import type { RSAPublicKeyJWK, RSAPrivateKeyJWK } from "../lib/encryption/types";
 
@@ -179,6 +180,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             await clearKeys();
         } catch (error) {
             console.error("Failed to clear encryption keys:", error);
+        }
+
+        // Clear decrypted media cache to free storage
+        try {
+            await clearDecryptedMediaCache();
+        } catch (error) {
+            console.error("Failed to clear media cache:", error);
         }
 
         // Clear local state FIRST to ensure UI updates even if Supabase call fails

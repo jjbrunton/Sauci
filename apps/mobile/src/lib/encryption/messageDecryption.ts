@@ -35,18 +35,23 @@ export async function decryptTextMessage(
     throw new Error('No wrapped key available for decryption');
   }
 
-  // 2. Unwrap AES key using RSA private key
+  // 2. Validate and decode IV (must be exactly 12 bytes for AES-GCM)
+  const iv = base64ToUint8Array(encryptionIv);
+  if (iv.length !== 12) {
+    throw new Error(`Invalid IV length: expected 12 bytes, got ${iv.length}`);
+  }
+
+  // 3. Unwrap AES key using RSA private key
   const rawAesKey = await unwrapAESKey(wrappedKeyBase64, privateKeyJwk);
 
-  // 3. Import AES key
+  // 4. Import AES key
   const aesKey = await importAESKey(rawAesKey);
 
-  // 4. Decrypt content
-  const iv = base64ToUint8Array(encryptionIv);
+  // 5. Decrypt content
   const ciphertext = base64ToArrayBuffer(encryptedContent);
   
   const plaintext = await decryptAES(ciphertext, aesKey, iv);
 
-  // 5. Decode to string
+  // 6. Decode to string
   return new TextDecoder().decode(plaintext);
 }

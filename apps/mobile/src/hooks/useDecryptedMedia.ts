@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import { decryptMediaFile, cleanupDecryptedMedia, MESSAGE_VERSION_E2EE } from '../lib/encryption';
+import { decryptMediaFile, cleanupDecryptedMedia, MESSAGE_VERSION_E2EE, repairStaleKey } from '../lib/encryption';
 import type { KeysMetadata, RSAPrivateKeyJWK } from '../lib/encryption';
 import { useEncryptionKeys } from './useEncryptionKeys';
 import { getCachedSignedUrl, getStoragePath } from '../lib/imageCache';
@@ -278,7 +278,83 @@ export function useDecryptedMedia({
         });
       }
     } catch (err) {
-      console.error(`[E2EE Media] Message ${messageId}: Decryption failed:`, err);
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      console.error(`[E2EE Media] Message ${messageId}: Decryption failed:`, error);
+
+      // Check if this is a stale key failure (message encrypted with old key)
+      const isStaleKeyFailure =
+        error.name === 'OperationError' ||
+        error.message.includes('OperationError') ||
+        error.message.includes('decryption failed') ||
+        error.message.includes('decrypt error') ||
+        error.message.includes('error in DoCipher');
+
+      // Attempt stale key repair if not already attempted
+      if (isStaleKeyFailure && !repairAttemptedByMessageId.current.has(messageId)) {
+        console.log(`[E2EE Media] Message ${messageId}: Attempting stale key repair...`);
+
+        if (isMounted.current) {
+          setState({
+            uri: null,
+            isDecrypting: true,
+            error: null,
+            errorCode: undefined,
+          });
+        }
+
+        repairAttemptedByMessageId.current.add(messageId);
+
+        try {
+          const repairResult = await repairStaleKey(messageId);
+
+          if (repairResult.success) {
+            console.log(`[E2EE Media] Message ${messageId}: Stale key repaired, retrying decryption...`);
+
+            // Fetch updated message and retry
+            const { data: refreshed } = await supabase
+              .from('messages')
+              .select('keys_metadata')
+              .eq('id', messageId)
+              .maybeSingle();
+
+            const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
+
+            if (refreshedMetadata && encryptionIv && mediaPath) {
+              const storagePath = getStoragePath(mediaPath);
+              const encryptedUrl = await getCachedSignedUrl(storagePath);
+
+              if (encryptedUrl) {
+                const decryptedUri = await decryptMediaFile(
+                  encryptedUrl,
+                  encryptionIv,
+                  refreshedMetadata,
+                  privateKeyJwk as RSAPrivateKeyJWK,
+                  !isMe,
+                  mediaType,
+                );
+
+                const cacheKey = `${messageId}-${mediaPath}`;
+                decryptedMediaCache.set(cacheKey, decryptedUri);
+
+                if (isMounted.current) {
+                  setState({
+                    uri: decryptedUri,
+                    isDecrypting: false,
+                    error: null,
+                    errorCode: undefined,
+                  });
+                }
+                return;
+              }
+            }
+          } else {
+            console.error(`[E2EE Media] Message ${messageId}: Stale key repair failed:`, repairResult.error);
+          }
+        } catch (repairErr) {
+          console.error(`[E2EE Media] Message ${messageId}: Stale key repair threw:`, repairErr);
+        }
+      }
+
       if (isMounted.current) {
         setState({
           uri: null,

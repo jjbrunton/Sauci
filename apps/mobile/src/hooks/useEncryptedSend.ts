@@ -14,6 +14,8 @@ import {
   encryptTextMessage,
   getAdminPublicKey,
   getAdminKeyId,
+  isValidPublicKeyJwk,
+  sanitizePublicKeyJwk,
 } from '../lib/encryption';
 import type { RSAPublicKeyJWK, EncryptedMessagePayload } from '../lib/encryption';
 import { useEncryptionKeys } from './useEncryptionKeys';
@@ -87,10 +89,21 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
         const adminKeyId = await getAdminKeyId();
 
         // Get partner's public key from the freshly fetched profile
-        const partnerPublicKey = freshPartner?.public_key_jwk as
+        let partnerPublicKey = freshPartner?.public_key_jwk as
           | RSAPublicKeyJWK
           | null
           | undefined;
+
+        // Validate and sanitize partner's public key
+        if (partnerPublicKey) {
+          if (!isValidPublicKeyJwk(partnerPublicKey)) {
+            console.warn('[E2EE Send] Partner public key is invalid, treating as unavailable');
+            partnerPublicKey = null;
+          } else {
+            // Sanitize to remove trailing dots from base64 fields (react-native-quick-crypto bug)
+            partnerPublicKey = sanitizePublicKeyJwk(partnerPublicKey);
+          }
+        }
 
         console.log('[E2EE Send] Partner public key available:', !!partnerPublicKey);
 

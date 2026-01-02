@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sauci.app",
+      "buildNumber": "5",
       "usesAppleSignIn": true,
       "infoPlist": {
         "UIBackgroundModes": [
@@ -30,6 +31,7 @@
         "backgroundColor": "#1a1a2e"
       },
       "package": "com.sauci.app",
+      "versionCode": 10,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
@@ -45,6 +47,17 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "blockedPermissions": [
+              "android.permission.READ_MEDIA_IMAGES",
+              "android.permission.READ_MEDIA_VIDEO"
+            ]
+          }
+        }
+      ],
       "expo-router",
       "expo-apple-authentication",
       [

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -40,6 +40,10 @@ const DEFAULT_CONFIG: Required<MediaPickerConfig> = {
  */
 export const useMediaPicker = (config?: MediaPickerConfig) => {
     const settings = { ...DEFAULT_CONFIG, ...config };
+    
+    // Track if a picker is currently active to prevent double-presentation crashes
+    // This is common on iOS if the user double-taps or if an action fires twice
+    const isPresentingRef = useRef(false);
 
     /**
      * Request camera permissions with user-friendly error handling.
@@ -62,26 +66,37 @@ export const useMediaPicker = (config?: MediaPickerConfig) => {
      * @returns MediaResult if selected, null if cancelled
      */
     const pickMedia = useCallback(async (): Promise<MediaResult | null> => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.All,
-            quality: settings.imageQuality,
-            videoMaxDuration: settings.libraryVideoMaxDuration,
-        });
+        if (isPresentingRef.current) return null;
+        isPresentingRef.current = true;
 
-        if (result.canceled) {
-            return null;
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.All,
+                quality: settings.imageQuality,
+                videoMaxDuration: settings.libraryVideoMaxDuration,
+            });
+
+            if (result.canceled) {
+                return null;
+            }
+
+            const asset = result.assets[0];
+            const isVideo = asset.type === 'video';
+
+            return {
+                uri: asset.uri,
+                mediaType: isVideo ? 'video' : 'image',
+                width: asset.width,
+                height: asset.height,
+                duration: asset.duration ?? undefined,
+            };
+        } finally {
+            // Add a small delay to ensure the modal dismissal animation completes
+            // before allowing another presentation
+            setTimeout(() => {
+                isPresentingRef.current = false;
+            }, 500);
         }
-
-        const asset = result.assets[0];
-        const isVideo = asset.type === 'video';
-
-        return {
-            uri: asset.uri,
-            mediaType: isVideo ? 'video' : 'image',
-            width: asset.width,
-            height: asset.height,
-            duration: asset.duration ?? undefined,
-        };
     }, [settings.imageQuality, settings.libraryVideoMaxDuration]);
 
     /**
@@ -89,26 +104,43 @@ export const useMediaPicker = (config?: MediaPickerConfig) => {
      * @returns MediaResult if captured, null if cancelled or permission denied
      */
     const takePhoto = useCallback(async (): Promise<MediaResult | null> => {
-        const hasPermission = await requestCameraPermission();
-        if (!hasPermission) {
-            return null;
+        if (isPresentingRef.current) return null;
+        isPresentingRef.current = true;
+        
+        try {
+            const hasPermission = await requestCameraPermission();
+            if (!hasPermission) {
+                isPresentingRef.current = false;
+                return null;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                quality: settings.imageQuality,
+            });
+
+            if (result.canceled) {
+                return null;
+            }
+
+            const asset = result.assets[0];
+            return {
+                uri: asset.uri,
+                mediaType: 'image',
+                width: asset.width,
+                height: asset.height,
+            };
+        } catch (error) {
+            // Ensure we reset state on error
+            isPresentingRef.current = false;
+            throw error;
+        } finally {
+            // Only reset if we didn't reset in the permission check
+            if (isPresentingRef.current) {
+                setTimeout(() => {
+                    isPresentingRef.current = false;
+                }, 500);
+            }
         }
-
-        const result = await ImagePicker.launchCameraAsync({
-            quality: settings.imageQuality,
-        });
-
-        if (result.canceled) {
-            return null;
-        }
-
-        const asset = result.assets[0];
-        return {
-            uri: asset.uri,
-            mediaType: 'image',
-            width: asset.width,
-            height: asset.height,
-        };
     }, [settings.imageQuality, requestCameraPermission]);
 
     /**
@@ -116,29 +148,44 @@ export const useMediaPicker = (config?: MediaPickerConfig) => {
      * @returns MediaResult if recorded, null if cancelled or permission denied
      */
     const recordVideo = useCallback(async (): Promise<MediaResult | null> => {
-        const hasPermission = await requestCameraPermission();
-        if (!hasPermission) {
-            return null;
+        if (isPresentingRef.current) return null;
+        isPresentingRef.current = true;
+
+        try {
+            const hasPermission = await requestCameraPermission();
+            if (!hasPermission) {
+                isPresentingRef.current = false;
+                return null;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                quality: settings.imageQuality,
+                videoMaxDuration: settings.cameraVideoMaxDuration,
+            });
+
+            if (result.canceled) {
+                return null;
+            }
+
+            const asset = result.assets[0];
+            return {
+                uri: asset.uri,
+                mediaType: 'video',
+                width: asset.width,
+                height: asset.height,
+                duration: asset.duration ?? undefined,
+            };
+        } catch (error) {
+            isPresentingRef.current = false;
+            throw error;
+        } finally {
+            if (isPresentingRef.current) {
+                setTimeout(() => {
+                    isPresentingRef.current = false;
+                }, 500);
+            }
         }
-
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-            quality: settings.imageQuality,
-            videoMaxDuration: settings.cameraVideoMaxDuration,
-        });
-
-        if (result.canceled) {
-            return null;
-        }
-
-        const asset = result.assets[0];
-        return {
-            uri: asset.uri,
-            mediaType: 'video',
-            width: asset.width,
-            height: asset.height,
-            duration: asset.duration ?? undefined,
-        };
     }, [settings.imageQuality, settings.cameraVideoMaxDuration, requestCameraPermission]);
 
     return {

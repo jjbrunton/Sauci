@@ -49,7 +49,13 @@ export async function decryptMediaFile(
   );
   const encryptedData = base64ToArrayBuffer(encryptedBase64);
 
-  // 3. Unwrap AES key
+  // 3. Validate and decode IV (must be exactly 12 bytes for AES-GCM)
+  const iv = base64ToUint8Array(encryptionIv);
+  if (iv.length !== 12) {
+    throw new Error(`Invalid IV length: expected 12 bytes, got ${iv.length}`);
+  }
+
+  // 4. Unwrap AES key
   const wrappedKeyBase64 = isRecipient
     ? keysMetadata.recipient_wrapped_key
     : keysMetadata.sender_wrapped_key;
@@ -61,11 +67,10 @@ export async function decryptMediaFile(
   const rawAesKey = await unwrapAESKey(wrappedKeyBase64, privateKeyJwk);
   const aesKey = await importAESKey(rawAesKey);
 
-  // 4. Decrypt file
-  const iv = base64ToUint8Array(encryptionIv);
+  // 5. Decrypt file
   const decryptedData = await decryptAES(encryptedData, aesKey, iv);
 
-  // 5. Write decrypted file
+  // 6. Write decrypted file
   const ext = mediaType === 'video' ? 'mp4' : 'jpg';
   const decryptedUri = `${FileSystem.cacheDirectory}${Date.now()}_decrypted.${ext}`;
   

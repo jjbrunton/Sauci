@@ -13,6 +13,8 @@ import {
     getAdminPublicKey,
     getAdminKeyId,
     MESSAGE_VERSION_E2EE,
+    isValidPublicKeyJwk,
+    sanitizePublicKeyJwk,
 } from '../../../lib/encryption';
 import type { RSAPublicKeyJWK, EncryptedMediaPayload } from '../../../lib/encryption';
 import { useEncryptionKeys } from '../../../hooks';
@@ -80,7 +82,18 @@ export function useMediaUpload(matchId: string, userId: string | undefined) {
 
                     const adminPublicKey = await getAdminPublicKey();
                     const adminKeyId = await getAdminKeyId();
-                    const partnerPublicKey = freshPartner?.public_key_jwk as RSAPublicKeyJWK | null | undefined;
+                    let partnerPublicKey = freshPartner?.public_key_jwk as RSAPublicKeyJWK | null | undefined;
+
+                    // Validate and sanitize partner's public key
+                    if (partnerPublicKey) {
+                        if (!isValidPublicKeyJwk(partnerPublicKey)) {
+                            console.warn('[E2EE Media Upload] Partner public key is invalid, treating as unavailable');
+                            partnerPublicKey = null;
+                        } else {
+                            // Sanitize to remove trailing dots from base64 fields
+                            partnerPublicKey = sanitizePublicKeyJwk(partnerPublicKey);
+                        }
+                    }
 
                     console.log('[E2EE Media Upload] Partner public key available:', !!partnerPublicKey);
 
