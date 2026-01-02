@@ -26,6 +26,12 @@ type RecentFeatureInterest = {
     };
 };
 
+type FeatureInterestCountsRow = {
+    feature_name: string;
+    opt_in_count: number;
+    opt_in_count_last_7_days: number;
+};
+
 function formatFeatureName(featureName: string) {
     return featureName
         .split('_')
@@ -45,6 +51,7 @@ export function DashboardPage() {
     });
     const [messageStats, setMessageStats] = useState<{ date: string; count: number }[]>([]);
     const [featureInterestStats, setFeatureInterestStats] = useState<FeatureInterestChartPoint[]>([]);
+    const [featureInterestCounts, setFeatureInterestCounts] = useState<FeatureInterestCountsRow[]>([]);
     const [recentFeatureInterests, setRecentFeatureInterests] = useState<RecentFeatureInterest[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -94,6 +101,19 @@ export function DashboardPage() {
                     .order('created_at', { ascending: false })
                     .limit(10),
             ]);
+
+            if (canViewUsers) {
+                const { data: countsData, error: countsError } = await supabase.rpc('get_feature_interest_counts');
+
+                if (countsError) {
+                    console.error('Failed to fetch feature interest counts:', countsError);
+                    setFeatureInterestCounts([]);
+                } else {
+                    setFeatureInterestCounts((countsData ?? []) as FeatureInterestCountsRow[]);
+                }
+            } else {
+                setFeatureInterestCounts([]);
+            }
 
             // Process messages for chart
             const messageDaysMap = new Map<string, number>();
@@ -480,6 +500,47 @@ export function DashboardPage() {
                                                     />
                                                 </BarChart>
                                             </ResponsiveContainer>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-6 pt-6 border-t border-white/5">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-medium">Opt-ins by feature</h3>
+                                            <p className="text-xs text-muted-foreground">All time • last 7d</p>
+                                        </div>
+
+                                        {loading ? (
+                                            <div className="space-y-2">
+                                                {Array.from({ length: 6 }).map((_, idx) => (
+                                                    <div key={idx} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
+                                                        <Skeleton className="h-4 w-40" />
+                                                        <div className="flex items-center gap-2">
+                                                            <Skeleton className="h-4 w-10" />
+                                                            <Skeleton className="h-3 w-12" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : featureInterestCounts.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">No opt-ins yet.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {featureInterestCounts.slice(0, 12).map((row) => (
+                                                    <div key={row.feature_name} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
+                                                        <p className="text-sm font-medium truncate">
+                                                            {formatFeatureName(row.feature_name)}
+                                                        </p>
+                                                        <div className="flex items-baseline gap-2 whitespace-nowrap">
+                                                            <span className="text-sm font-semibold tabular-nums">
+                                                                {row.opt_in_count}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground tabular-nums">
+                                                                {row.opt_in_count_last_7_days} 7d
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
 
