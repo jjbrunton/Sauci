@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.lg,
     },
     heroInner: {
-        paddingTop: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT + spacing.md,
+        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
         paddingBottom: spacing.lg,
         minHeight: HERO_HEIGHT,
     },

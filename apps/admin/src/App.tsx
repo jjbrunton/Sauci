@@ -18,6 +18,7 @@ import { UsageInsightsPage } from '@/pages/UsageInsightsPage';
 import { UserActivityPage } from '@/pages/activity/UserActivityPage';
 import { AiSettingsPage } from '@/pages/AiSettingsPage';
 import { AppSettingsPage } from '@/pages/AppSettingsPage';
+import { FlaggedMessagesPage } from '@/pages/FlaggedMessagesPage';
 
 function App() {
     return (
@@ -144,6 +145,14 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_AI_CONFIG}>
                                     <AiSettingsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/flagged-messages"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_AI_CONFIG}>
+                                    <FlaggedMessagesPage />
                                 </ProtectedRoute>
                             }
                         />

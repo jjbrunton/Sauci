@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/config';
+import { supabase, supabaseConfig } from '@/config';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,6 +37,10 @@ interface Message {
     created_at: string;
     read_at: string | null;
     media_viewed_at: string | null;
+    version?: number | null;
+    encrypted_content?: string | null;
+    encryption_iv?: string | null;
+    keys_metadata?: Record<string, unknown> | null;
 }
 
 const matchTypeLabels = {
@@ -55,44 +60,72 @@ function formatMessageTime(date: Date): string {
 
 
 
-function ChatImage({ mediaPath }: { mediaPath: string }) {
+function ChatImage({ messageId }: { messageId: string }) {
+    const { session, isSuperAdmin } = useAuth();
     const [url, setUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!mediaPath) return;
-        const getUrl = async () => {
+        if (!messageId) return;
+
+        if (!isSuperAdmin) {
+            setError('Decryption requires super admin');
+            return;
+        }
+
+        if (!session?.access_token) {
+            setError('Not authenticated');
+            return;
+        }
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+
+        const load = async () => {
             try {
-                // Handle legacy full URLs
-                let path = mediaPath;
-                if (path.startsWith('http')) {
-                    const parts = path.split('/chat-media/');
-                    if (parts.length > 1) {
-                        path = decodeURIComponent(parts[1]);
+                setError(null);
+                setUrl(null);
+
+                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        apikey: supabaseConfig.anonKey,
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ messageId }),
+                });
+
+                if (!res.ok) {
+                    const raw = await res.text().catch(() => '');
+                    let message = raw;
+                    try {
+                        const parsed = JSON.parse(raw) as { error?: unknown };
+                        if (typeof parsed?.error === 'string') message = parsed.error;
+                    } catch {
+                        // ignore
                     }
+                    throw new Error(message || `Failed to load media (${res.status})`);
                 }
 
+                const blob = await res.blob();
+                objectUrl = URL.createObjectURL(blob);
 
-                const { data, error } = await supabase.storage
-                    .from('chat-media')
-                    .createSignedUrl(path, 3600);
-
-                if (error) {
-                    console.error('Error creating signed URL:', error);
-                    setError(error.message);
-                    return;
-                }
-
-                if (data?.signedUrl) {
-                    setUrl(data.signedUrl);
-                }
+                if (cancelled) return;
+                setUrl(objectUrl);
             } catch (err) {
-                console.error('Unexpected error loading image:', err);
-                setError('Failed to load');
+                if (cancelled) return;
+                setError(err instanceof Error ? err.message : 'Failed to load');
             }
         };
-        getUrl();
-    }, [mediaPath]);
+
+        load();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [messageId, isSuperAdmin, session?.access_token]);
 
     if (error) {
         return (
@@ -118,43 +151,72 @@ function ChatImage({ mediaPath }: { mediaPath: string }) {
 }
 
 
-function ChatVideo({ mediaPath }: { mediaPath: string }) {
+function ChatVideo({ messageId }: { messageId: string }) {
+    const { session, isSuperAdmin } = useAuth();
     const [url, setUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!mediaPath) return;
-        const getUrl = async () => {
+        if (!messageId) return;
+
+        if (!isSuperAdmin) {
+            setError('Decryption requires super admin');
+            return;
+        }
+
+        if (!session?.access_token) {
+            setError('Not authenticated');
+            return;
+        }
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+
+        const load = async () => {
             try {
-                // Handle legacy full URLs
-                let path = mediaPath;
-                if (path.startsWith('http')) {
-                    const parts = path.split('/chat-media/');
-                    if (parts.length > 1) {
-                        path = decodeURIComponent(parts[1]);
+                setError(null);
+                setUrl(null);
+
+                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        apikey: supabaseConfig.anonKey,
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({ messageId }),
+                });
+
+                if (!res.ok) {
+                    const raw = await res.text().catch(() => '');
+                    let message = raw;
+                    try {
+                        const parsed = JSON.parse(raw) as { error?: unknown };
+                        if (typeof parsed?.error === 'string') message = parsed.error;
+                    } catch {
+                        // ignore
                     }
+                    throw new Error(message || `Failed to load media (${res.status})`);
                 }
 
-                const { data, error } = await supabase.storage
-                    .from('chat-media')
-                    .createSignedUrl(path, 3600);
+                const blob = await res.blob();
+                objectUrl = URL.createObjectURL(blob);
 
-                if (error) {
-                    console.error('Error creating signed URL for video:', error);
-                    setError(error.message);
-                    return;
-                }
-
-                if (data?.signedUrl) {
-                    setUrl(data.signedUrl);
-                }
+                if (cancelled) return;
+                setUrl(objectUrl);
             } catch (err) {
-                console.error('Unexpected error loading video:', err);
-                setError('Failed to load');
+                if (cancelled) return;
+                setError(err instanceof Error ? err.message : 'Failed to load');
             }
         };
-        getUrl();
-    }, [mediaPath]);
+
+        load();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [messageId, isSuperAdmin, session?.access_token]);
 
     if (error) {
         return (
@@ -187,6 +249,77 @@ function ChatVideo({ mediaPath }: { mediaPath: string }) {
                 Your browser does not support the video tag.
             </video>
         </div>
+    );
+}
+
+
+function DecryptedMessageText({ message }: { message: Message }) {
+    const { isSuperAdmin } = useAuth();
+    const [text, setText] = useState<string | null>(null);
+    const [isDecrypting, setIsDecrypting] = useState(false);
+
+    useEffect(() => {
+        const version = message.version ?? 1;
+
+        // v1: legacy plaintext
+        if (version !== 2) {
+            setText(message.content ?? null);
+            setIsDecrypting(false);
+            return;
+        }
+
+        // v2: encrypted
+        if (!message.encrypted_content) {
+            setText(null);
+            setIsDecrypting(false);
+            return;
+        }
+
+        if (!isSuperAdmin) {
+            setText('[Encrypted]');
+            setIsDecrypting(false);
+            return;
+        }
+
+        let cancelled = false;
+
+        const decrypt = async () => {
+            setIsDecrypting(true);
+            try {
+                const { data, error } = await supabase.functions.invoke('admin-decrypt-message', {
+                    body: { messageId: message.id },
+                });
+
+                if (cancelled) return;
+
+                if (error) {
+                    setText('[Unable to decrypt]');
+                    return;
+                }
+
+                setText((data as { content?: string | null } | null)?.content ?? null);
+            } catch (err) {
+                if (cancelled) return;
+                setText('[Unable to decrypt]');
+            } finally {
+                if (!cancelled) setIsDecrypting(false);
+            }
+        };
+
+        decrypt();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isSuperAdmin, message.content, message.encrypted_content, message.id, message.version]);
+
+    const shouldRender = Boolean(message.content || message.encrypted_content);
+    if (!shouldRender) return null;
+
+    return (
+        <p className="text-sm whitespace-pre-wrap">
+            {isDecrypting ? 'Loading...' : (text ?? '')}
+        </p>
     );
 }
 
@@ -405,16 +538,14 @@ export function MatchChatPage() {
                                                         : "bg-muted rounded-tl-sm"
                                                 )}
                                             >
-                                                {message.content && (
-                                                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                                                )}
+                                                <DecryptedMessageText message={message} />
                                                 {message.media_path && (
                                                     <div className="mt-2">
                                                         <div className="relative group">
                                                             {message.media_type === 'video' ? (
-                                                                <ChatVideo mediaPath={message.media_path} />
+                                                                <ChatVideo messageId={message.id} />
                                                             ) : (
-                                                                <ChatImage mediaPath={message.media_path} />
+                                                                <ChatImage messageId={message.id} />
                                                             )}
                                                             {message.media_viewed_at && (
                                                                 <Badge

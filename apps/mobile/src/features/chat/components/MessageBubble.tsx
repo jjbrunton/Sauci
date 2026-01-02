@@ -3,7 +3,7 @@
  * Applies gradient styling for sender vs receiver messages.
  */
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { colors, gradients, spacing, radius } from '../../../theme';
@@ -14,16 +14,23 @@ export interface MessageBubbleProps {
     isMe: boolean;
     index: number;
     children: React.ReactNode;
+    /** Called when the message bubble is long pressed */
+    onLongPress?: () => void;
 }
 
-export function MessageBubble({ isMe, index, children }: MessageBubbleProps) {
+export function MessageBubble({ isMe, index, children, onLongPress }: MessageBubbleProps) {
     return (
         <Animated.View
             entering={FadeInUp.delay(index * 30).duration(200)}
             style={[styles.messageRow, isMe ? styles.myMessageRow : styles.theirMessageRow]}
         >
             {isMe ? (
-                <View style={styles.myBubbleContainer}>
+                <TouchableOpacity
+                    onLongPress={onLongPress}
+                    activeOpacity={0.9}
+                    delayLongPress={300}
+                    style={styles.myBubbleContainer}
+                >
                     <LinearGradient
                         colors={gradients.primary as [string, string]}
                         style={[styles.bubble, styles.myBubble]}
@@ -39,9 +46,14 @@ export function MessageBubble({ isMe, index, children }: MessageBubbleProps) {
                         />
                         {children}
                     </LinearGradient>
-                </View>
+                </TouchableOpacity>
             ) : (
-                <View style={styles.theirBubbleContainer}>
+                <TouchableOpacity
+                    onLongPress={onLongPress}
+                    activeOpacity={0.9}
+                    delayLongPress={300}
+                    style={styles.theirBubbleContainer}
+                >
                     <View style={[styles.bubble, styles.theirBubble]}>
                         {/* Subtle gradient background */}
                         <LinearGradient
@@ -59,7 +71,7 @@ export function MessageBubble({ isMe, index, children }: MessageBubbleProps) {
                         />
                         {children}
                     </View>
-                </View>
+                </TouchableOpacity>
             )}
         </Animated.View>
     );

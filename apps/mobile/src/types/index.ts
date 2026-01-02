@@ -14,6 +14,8 @@ export interface Profile {
     onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
+    /** RSA public key for E2EE (JWK format) */
+    public_key_jwk?: Record<string, unknown> | null;
 }
 
 // Couple pairing

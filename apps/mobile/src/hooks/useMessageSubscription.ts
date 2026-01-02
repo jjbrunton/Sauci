@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Database } from '../types/supabase';
 
@@ -14,7 +14,7 @@ export interface UseMessageSubscriptionConfig {
 }
 
 export interface UseMessageSubscriptionReturn {
-    /** Array of messages, sorted newest first */
+    /** Array of messages, sorted newest first (filtered by user's deletions) */
     messages: Message[];
     /** Set messages externally (e.g., for optimistic updates) */
     setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
@@ -36,9 +36,64 @@ export const useMessageSubscription = (
 ): UseMessageSubscriptionReturn => {
     const { matchId, userId, onNewMessage } = config;
 
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [allMessages, setAllMessages] = useState<Message[]>([]);
+    const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const isFocusedRef = useRef(false);
+
+    // Filter out messages that the user has deleted for themselves
+    const messages = useMemo(() => {
+        return allMessages.filter(m => !deletedMessageIds.has(m.id));
+    }, [allMessages, deletedMessageIds]);
+
+    // Wrapper to update allMessages (for external use like optimistic updates)
+    const setMessages: React.Dispatch<React.SetStateAction<Message[]>> = useCallback((updater) => {
+        setAllMessages(updater);
+    }, []);
+
+    // Fetch user's deleted message IDs
+    useEffect(() => {
+        if (!userId) return;
+
+        const fetchDeletions = async () => {
+            const { data } = await supabase
+                .from('message_deletions')
+                .select('message_id')
+                .eq('user_id', userId);
+
+            if (data) {
+                setDeletedMessageIds(new Set(data.map(d => d.message_id)));
+            }
+        };
+
+        fetchDeletions();
+    }, [userId]);
+
+    // Subscribe to user's deletions for real-time sync across devices
+    useEffect(() => {
+        if (!userId) return;
+
+        const channel = supabase
+            .channel(`deletions:${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'message_deletions',
+                    filter: `user_id=eq.${userId}`,
+                },
+                (payload) => {
+                    const deletion = payload.new as { message_id: string };
+                    setDeletedMessageIds(prev => new Set([...prev, deletion.message_id]));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [userId]);
 
     // Fetch messages and mark as read
     useEffect(() => {
@@ -57,7 +112,7 @@ export const useMessageSubscription = (
                 .order('created_at', { ascending: false });
 
             if (data) {
-                setMessages(data);
+                setAllMessages(data);
 
                 const now = new Date().toISOString();
 
@@ -73,7 +128,7 @@ export const useMessageSubscription = (
                         .update({ delivered_at: now, read_at: now })
                         .in('id', unreadIds);
 
-                    setMessages(prev => prev.map(m =>
+                    setAllMessages(prev => prev.map(m =>
                         unreadIds.includes(m.id) ? { ...m, delivered_at: now, read_at: now } : m
                     ));
                 } else if (undeliveredIds.length > 0) {
@@ -83,7 +138,7 @@ export const useMessageSubscription = (
                         .update({ delivered_at: now })
                         .in('id', undeliveredIds);
 
-                    setMessages(prev => prev.map(m =>
+                    setAllMessages(prev => prev.map(m =>
                         undeliveredIds.includes(m.id) ? { ...m, delivered_at: now } : m
                     ));
                 }
@@ -123,7 +178,7 @@ export const useMessageSubscription = (
                         newMessage.read_at = now;
                     }
 
-                    setMessages(prev => [newMessage, ...prev]);
+                    setAllMessages(prev => [newMessage, ...prev]);
                     onNewMessage?.();
                 }
             )
@@ -137,7 +192,7 @@ export const useMessageSubscription = (
                 },
                 (payload) => {
                     const updatedMessage = payload.new as Message;
-                    setMessages(prev =>
+                    setAllMessages(prev =>
                         prev.map(m => m.id === updatedMessage.id ? updatedMessage : m)
                     );
                 }

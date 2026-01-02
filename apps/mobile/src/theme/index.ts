@@ -38,6 +38,7 @@ export const colors = {
   warningLight: 'rgba(243, 156, 18, 0.15)',
   error: '#E74C3C',
   errorLight: 'rgba(231, 76, 60, 0.15)',
+  info: '#53bdeb', // WhatsApp-like blue for read receipts
 
   // Premium/Luxury
   premium: {

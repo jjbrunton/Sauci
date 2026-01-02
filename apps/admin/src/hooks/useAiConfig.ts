@@ -20,6 +20,9 @@ export interface AiConfig {
     council_reviewer_model: string | null;
     council_selection_mode: CouncilSelectionMode | null; // 'whole_set' or 'cherry_pick'
     cherry_pick_ensure_intensity_distribution: boolean | null; // Balance intensity levels in cherry-pick mode
+    classifier_enabled: boolean | null;
+    classifier_model: string | null;
+    classifier_prompt: string | null;
     updated_at: string | null;
     updated_by: string | null;
 }

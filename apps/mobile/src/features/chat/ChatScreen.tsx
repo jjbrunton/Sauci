@@ -11,10 +11,11 @@ import Animated, { FadeInDown, useAnimatedStyle } from "react-native-reanimated"
 
 import { InputBar, ChatHeader, ChatMessages } from "./components";
 import { useMediaUpload } from "./hooks/useMediaUpload";
+import { useMessageActions } from "./hooks/useMessageActions";
 
 import { supabase } from "../../lib/supabase";
 import { useAuthStore, useMessageStore } from "../../store";
-import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription } from "../../hooks";
+import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useEncryptedSend, useMediaSaver } from "../../hooks";
 import { Database } from "../../types/supabase";
 import { GradientBackground } from "../../components/ui";
 import { colors, gradients, spacing } from "../../theme";
@@ -37,6 +38,7 @@ export const ChatScreen: React.FC = () => {
     const [match, setMatch] = useState<any>(null);
     const [inputText, setInputText] = useState("");
     const { uploading, uploadStatus, uploadMedia } = useMediaUpload(matchId, user?.id);
+    const { saveMedia, saving: mediaSaving } = useMediaSaver();
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
     const [fullScreenImageLoading, setFullScreenImageLoading] = useState(true);
     const [fullScreenVideo, setFullScreenVideo] = useState<string | null>(null);
@@ -66,6 +68,19 @@ export const ChatScreen: React.FC = () => {
         userId: user?.id,
         onNewMessage: clearTypingIndicator,
     });
+
+    // E2EE encryption hook for sending messages
+    const { encryptMessage, isE2EEAvailable } = useEncryptedSend();
+
+    // Message actions hook for deletion
+    const { showDeleteOptions } = useMessageActions({ userId: user?.id });
+
+    // Handle long press on message to show delete options
+    const handleMessageLongPress = useCallback((message: Message, isMe: boolean) => {
+        // Don't show options for already deleted messages
+        if (message.deleted_at) return;
+        showDeleteOptions(message, isMe);
+    }, [showDeleteOptions]);
 
     // Track active chat to prevent notifications for current chat
     useFocusEffect(
@@ -121,17 +136,56 @@ export const ChatScreen: React.FC = () => {
         const content = inputText.trim();
         setInputText("");
 
-        const { error } = await supabase.from("messages").insert({
-            match_id: matchId,
-            user_id: user.id,
-            content: content,
-        });
+        try {
+            // Try to encrypt the message if E2EE is available
+            console.log(`[E2EE Send] isE2EEAvailable=${isE2EEAvailable}`);
+            const encryptedPayload = isE2EEAvailable ? await encryptMessage(content) : null;
+            console.log(`[E2EE Send] encryptedPayload=`, encryptedPayload ? {
+                version: encryptedPayload.version,
+                encrypted_content_length: encryptedPayload.encrypted_content.length,
+                encryption_iv_length: encryptedPayload.encryption_iv.length,
+                keys_metadata: encryptedPayload.keys_metadata,
+            } : null);
 
-        if (error) {
+            if (encryptedPayload) {
+                // Send encrypted message (v2)
+                const { error, data } = await supabase.from("messages").insert({
+                    match_id: matchId,
+                    user_id: user.id,
+                    content: null,
+                    version: encryptedPayload.version,
+                    encrypted_content: encryptedPayload.encrypted_content,
+                    encryption_iv: encryptedPayload.encryption_iv,
+                    keys_metadata: encryptedPayload.keys_metadata as unknown as Record<string, unknown>,
+                }).select();
+                
+                console.log(`[E2EE Send] Insert result:`, { error, data });
+
+                if (error) {
+                    Alert.alert("Error", "Failed to send message");
+                    setInputText(content);
+                } else {
+                    Events.messageSent();
+                }
+            } else {
+                // Fallback to plaintext (v1) if E2EE not available
+                const { error } = await supabase.from("messages").insert({
+                    match_id: matchId,
+                    user_id: user.id,
+                    content: content,
+                });
+
+                if (error) {
+                    Alert.alert("Error", "Failed to send message");
+                    setInputText(content);
+                } else {
+                    Events.messageSent();
+                }
+            }
+        } catch (err) {
+            console.error("Error sending message:", err);
             Alert.alert("Error", "Failed to send message");
             setInputText(content);
-        } else {
-            Events.messageSent();
         }
     };
 
@@ -223,6 +277,7 @@ export const ChatScreen: React.FC = () => {
                     onImagePress={setFullScreenImage}
                     onVideoFullScreen={setFullScreenVideo}
                     revealMessage={revealMessage}
+                    onMessageLongPress={handleMessageLongPress}
                 />
 
                 {/* Premium Input Bar */}
@@ -261,6 +316,26 @@ export const ChatScreen: React.FC = () => {
             >
                 <View style={styles.fullScreenOverlay}>
                     <TouchableOpacity
+                        style={styles.fullScreenSaveButton}
+                        onPress={() => fullScreenImage && saveMedia(fullScreenImage, 'image')}
+                        activeOpacity={0.8}
+                        disabled={mediaSaving}
+                    >
+                        <LinearGradient
+                            colors={gradients.premiumGold as [string, string]}
+                            style={styles.fullScreenCloseGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            {mediaSaving ? (
+                                <ActivityIndicator size="small" color={colors.text} />
+                            ) : (
+                                <Ionicons name="download-outline" size={24} color={colors.text} />
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                         style={styles.fullScreenCloseButton}
                         onPress={() => setFullScreenImage(null)}
                         activeOpacity={0.8}
@@ -298,6 +373,26 @@ export const ChatScreen: React.FC = () => {
                 onRequestClose={() => setFullScreenVideo(null)}
             >
                 <View style={styles.fullScreenOverlay}>
+                    <TouchableOpacity
+                        style={styles.fullScreenSaveButton}
+                        onPress={() => fullScreenVideo && saveMedia(fullScreenVideo, 'video')}
+                        activeOpacity={0.8}
+                        disabled={mediaSaving}
+                    >
+                        <LinearGradient
+                            colors={gradients.premiumGold as [string, string]}
+                            style={styles.fullScreenCloseGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            {mediaSaving ? (
+                                <ActivityIndicator size="small" color={colors.text} />
+                            ) : (
+                                <Ionicons name="download-outline" size={24} color={colors.text} />
+                            )}
+                        </LinearGradient>
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                         style={styles.fullScreenCloseButton}
                         onPress={() => setFullScreenVideo(null)}
@@ -363,6 +458,12 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 50,
         right: 20,
+        zIndex: 10,
+    },
+    fullScreenSaveButton: {
+        position: "absolute",
+        top: 50,
+        left: 20,
         zIndex: 10,
     },
     fullScreenCloseGradient: {

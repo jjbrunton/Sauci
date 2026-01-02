@@ -7,3 +7,8 @@ export { useTypingIndicator } from './useTypingIndicator';
 export type { UseTypingIndicatorConfig, UseTypingIndicatorReturn } from './useTypingIndicator';
 export { useMessageSubscription } from './useMessageSubscription';
 export type { UseMessageSubscriptionConfig, UseMessageSubscriptionReturn } from './useMessageSubscription';
+export { useEncryptionKeys } from './useEncryptionKeys';
+export { useDecryptedMessage } from './useDecryptedMessage';
+export { useEncryptedSend } from './useEncryptedSend';
+export { useDecryptedMedia, clearDecryptedMediaCache } from './useDecryptedMedia';
+export { useMediaSaver } from './useMediaSaver';

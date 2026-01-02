@@ -47,8 +47,15 @@ function PackRow({ pack, isEnabled, isPremiumLocked, isExpanded, onToggle, onPre
                 <View style={styles.packContent}>
                     <View style={styles.packTitleRow}>
                         <Text style={styles.packName} numberOfLines={1}>{pack.name}</Text>
-                        {isPremiumLocked && (
-                            <Ionicons name="lock-closed" size={14} color={colors.premium.gold} />
+                        {pack.is_premium && (
+                            <View style={[styles.premiumBadge, isPremiumLocked && styles.premiumBadgeLocked]}>
+                                <Ionicons
+                                    name={isPremiumLocked ? "lock-closed" : "sparkles"}
+                                    size={12}
+                                    color={colors.premium.gold}
+                                />
+                                <Text style={styles.premiumBadgeText}>PRO</Text>
+                            </View>
                         )}
                     </View>
                     <Text style={styles.packMeta}>
@@ -635,6 +642,28 @@ const styles = StyleSheet.create({
         ...typography.body,
         color: colors.text,
         fontWeight: "500",
+        flexShrink: 1,
+    },
+    premiumBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: radius.full,
+        backgroundColor: "rgba(212, 175, 55, 0.12)",
+        borderWidth: 1,
+        borderColor: "rgba(212, 175, 55, 0.25)",
+    },
+    premiumBadgeLocked: {
+        backgroundColor: "rgba(212, 175, 55, 0.18)",
+        borderColor: "rgba(212, 175, 55, 0.35)",
+    },
+    premiumBadgeText: {
+        ...typography.caption2,
+        color: colors.premium.gold,
+        fontWeight: "700",
+        letterSpacing: 0.6,
     },
     packMeta: {
         ...typography.caption1,

@@ -38,9 +38,26 @@ export function ChatVideoPlayer({
     // Use video cache hook
     const { cachedUri, cacheVideoFile } = useVideoCache(storagePath, signedUrl);
 
+    // For encrypted media, signedUrl is already the decrypted local file URI
+    // Skip the cache lookup for local file URIs
+    const isLocalFile = signedUrl?.startsWith('file://');
+    const videoSource = isLocalFile ? signedUrl : (cachedUri || signedUrl);
+    
+    // Debug logging
+    useEffect(() => {
+        console.log(`[ChatVideoPlayer] isLocalFile=${isLocalFile}, storagePath=${storagePath}, signedUrl=${signedUrl?.substring(0, 60)}..., videoSource=${videoSource?.substring(0, 60)}...`);
+    }, [storagePath, signedUrl, videoSource, isLocalFile]);
+
     // Handle playback status updates
     const handlePlaybackStatusUpdate = useCallback(async (status: AVPlaybackStatus) => {
-        if (!status.isLoaded) return;
+        if (!status.isLoaded) {
+            // Log error if load failed
+            if ('error' in status && status.error) {
+                console.error(`[ChatVideoPlayer] Video load error:`, status.error);
+                setIsLoading(false);
+            }
+            return;
+        }
 
         setIsLoading(false);
         setIsPlaying(status.isPlaying);
@@ -49,12 +66,12 @@ export function ChatVideoPlayer({
             setHasEnded(true);
             setIsPlaying(false);
 
-            // Cache in background if not already cached
-            if (signedUrl && !cachedUri) {
+            // Cache in background if not already cached (only for remote URLs)
+            if (signedUrl && !cachedUri && !isLocalFile) {
                 cacheVideoFile();
             }
         }
-    }, [signedUrl, storagePath, cachedUri]);
+    }, [signedUrl, storagePath, cachedUri, isLocalFile]);
 
     // Toggle play/pause with native-like behavior
     const handleTapToPlay = useCallback(async () => {
@@ -89,8 +106,6 @@ export function ChatVideoPlayer({
             onFullScreen(uri);
         }
     }, [cachedUri, signedUrl, isPlaying, onFullScreen]);
-
-    const videoSource = cachedUri || signedUrl;
 
     if (urlError || !videoSource) {
         return (

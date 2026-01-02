@@ -28,7 +28,7 @@ export interface ReadReceiptProps {
 export function ReadReceipt({
     status,
     size = 14,
-    readColor = colors.premium.gold,
+    readColor = colors.info,
     unreadColor = 'rgba(255, 255, 255, 0.4)',
     style,
 }: ReadReceiptProps) {

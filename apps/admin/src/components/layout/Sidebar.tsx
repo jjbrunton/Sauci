@@ -17,6 +17,7 @@ import {
     X,
     Home,
     Activity,
+    AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -81,6 +82,12 @@ const systemNav: NavItem[] = [
         href: '/admins',
         icon: <Shield className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.MANAGE_ADMINS,
+    },
+    {
+        label: 'Flagged Messages',
+        href: '/flagged-messages',
+        icon: <AlertTriangle className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_AI_CONFIG,
     },
     {
         label: 'AI Settings',

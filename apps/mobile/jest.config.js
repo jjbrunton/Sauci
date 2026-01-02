@@ -2,7 +2,7 @@
 module.exports = {
     preset: 'jest-expo',
     clearMocks: true,
-    setupFiles: ['<rootDir>/node_modules/react-native-gesture-handler/jestSetup.js'],
+    setupFiles: ['../../node_modules/react-native-gesture-handler/jestSetup.js'],
     setupFilesAfterEnv: [
         '@testing-library/jest-native/extend-expect',
         '<rootDir>/src/test/setup.ts',

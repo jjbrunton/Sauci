@@ -44,6 +44,57 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_config: {
+        Row: {
+          cherry_pick_ensure_intensity_distribution: boolean | null
+          council_enabled: boolean | null
+          council_generator_model: string | null
+          council_generators: Json | null
+          council_reviewer_model: string | null
+          council_selection_mode: string | null
+          default_model: string | null
+          id: string
+          model_fix: string | null
+          model_generate: string | null
+          model_polish: string | null
+          openrouter_api_key: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          cherry_pick_ensure_intensity_distribution?: boolean | null
+          council_enabled?: boolean | null
+          council_generator_model?: string | null
+          council_generators?: Json | null
+          council_reviewer_model?: string | null
+          council_selection_mode?: string | null
+          default_model?: string | null
+          id?: string
+          model_fix?: string | null
+          model_generate?: string | null
+          model_polish?: string | null
+          openrouter_api_key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          cherry_pick_ensure_intensity_distribution?: boolean | null
+          council_enabled?: boolean | null
+          council_generator_model?: string | null
+          council_generators?: Json | null
+          council_reviewer_model?: string | null
+          council_selection_mode?: string | null
+          default_model?: string | null
+          id?: string
+          model_fix?: string | null
+          model_generate?: string | null
+          model_polish?: string | null
+          openrouter_api_key?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           answer_gap_threshold: number | null
@@ -295,6 +346,33 @@ export type Database = {
           },
         ]
       }
+      master_keys: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          key_name: string
+          public_key_jwk: Json
+          rotated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name: string
+          public_key_jwk: Json
+          rotated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_name?: string
+          public_key_jwk?: Json
+          rotated_at?: string | null
+        }
+        Relationships: []
+      }
       matches: {
         Row: {
           couple_id: string
@@ -337,12 +415,52 @@ export type Database = {
           },
         ]
       }
+      message_deletions: {
+        Row: {
+          id: string
+          message_id: string
+          user_id: string
+          deleted_at: string | null
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          user_id: string
+          deleted_at?: string | null
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          user_id?: string
+          deleted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_deletions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_deletions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
           created_at: string | null
+          deleted_at: string | null
           delivered_at: string | null
+          encrypted_content: string | null
+          encryption_iv: string | null
           id: string
+          keys_metadata: Json | null
           match_id: string
           media_expired: boolean | null
           media_expires_at: string | null
@@ -351,12 +469,17 @@ export type Database = {
           media_viewed_at: string | null
           read_at: string | null
           user_id: string
+          version: number | null
         }
         Insert: {
           content?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           delivered_at?: string | null
+          encrypted_content?: string | null
+          encryption_iv?: string | null
           id?: string
+          keys_metadata?: Json | null
           match_id: string
           media_expired?: boolean | null
           media_expires_at?: string | null
@@ -365,12 +488,17 @@ export type Database = {
           media_viewed_at?: string | null
           read_at?: string | null
           user_id: string
+          version?: number | null
         }
         Update: {
           content?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           delivered_at?: string | null
+          encrypted_content?: string | null
+          encryption_iv?: string | null
           id?: string
+          keys_metadata?: Json | null
           match_id?: string
           media_expired?: boolean | null
           media_expires_at?: string | null
@@ -379,6 +507,7 @@ export type Database = {
           media_viewed_at?: string | null
           read_at?: string | null
           user_id?: string
+          version?: number | null
         }
         Relationships: [
           {
@@ -431,6 +560,7 @@ export type Database = {
           is_premium: boolean | null
           name: string | null
           onboarding_completed: boolean | null
+          public_key_jwk: Json | null
           push_token: string | null
           show_explicit_content: boolean | null
           updated_at: string | null
@@ -446,6 +576,7 @@ export type Database = {
           is_premium?: boolean | null
           name?: string | null
           onboarding_completed?: boolean | null
+          public_key_jwk?: Json | null
           push_token?: string | null
           show_explicit_content?: boolean | null
           updated_at?: string | null
@@ -461,6 +592,7 @@ export type Database = {
           is_premium?: boolean | null
           name?: string | null
           onboarding_completed?: boolean | null
+          public_key_jwk?: Json | null
           push_token?: string | null
           show_explicit_content?: boolean | null
           updated_at?: string | null
@@ -774,7 +906,7 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_videos: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deleted_count: number
           deleted_paths: string[]
@@ -785,14 +917,22 @@ export type Database = {
         Returns: Database["public"]["Enums"]["admin_role"]
       }
       get_answer_gap_status: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           is_blocked: boolean
           threshold: number
           unanswered_by_partner: number
         }[]
       }
-      get_auth_user_couple_id: { Args: Record<PropertyKey, never>; Returns: string }
+      get_auth_user_couple_id: { Args: never; Returns: string }
+      get_feature_interest_counts: {
+        Args: never
+        Returns: {
+          feature_name: string
+          opt_in_count: number
+          opt_in_count_last_7_days: number
+        }[]
+      }
       get_pack_teaser_questions: {
         Args: { target_pack_id: string }
         Returns: {
@@ -802,7 +942,7 @@ export type Database = {
         }[]
       }
       get_profiles_with_auth_info: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           couple_id: string
@@ -840,12 +980,13 @@ export type Database = {
         }[]
       }
       get_user_storage_usage: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           owner: string
           total_bytes: number
         }[]
       }
+      has_permission: { Args: { check_permission: string }; Returns: boolean }
       has_premium_access: { Args: { check_user_id: string }; Returns: boolean }
       is_admin: { Args: { check_user_id?: string }; Returns: boolean }
       is_super_admin: { Args: { check_user_id?: string }; Returns: boolean }

@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Save, Eye, EyeOff, AlertTriangle, Bot, Sparkles, RefreshCw, Plus, Trash2, Package, Cherry } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Save, Eye, EyeOff, AlertTriangle, Bot, Sparkles, RefreshCw, Plus, Trash2, Package, Cherry, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ModelCombobox } from '@/components/ModelCombobox';
@@ -47,6 +48,9 @@ export function AiSettingsPage() {
                 council_reviewer_model: config.council_reviewer_model || '',
                 council_selection_mode: config.council_selection_mode || 'whole_set',
                 cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
+                classifier_enabled: config.classifier_enabled ?? true,
+                classifier_model: config.classifier_model || 'openai/gpt-4o',
+                classifier_prompt: config.classifier_prompt || '',
             });
             setHasChanges(false);
         }
@@ -92,6 +96,9 @@ export function AiSettingsPage() {
                 council_reviewer_model: config.council_reviewer_model || '',
                 council_selection_mode: config.council_selection_mode || 'whole_set',
                 cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
+                classifier_enabled: config.classifier_enabled ?? true,
+                classifier_model: config.classifier_model || 'openai/gpt-4o',
+                classifier_prompt: config.classifier_prompt || '',
             });
             setHasChanges(false);
         }
@@ -243,6 +250,59 @@ export function AiSettingsPage() {
                             >
                                 openrouter.ai/keys
                             </a>
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Moderation Settings */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5" />
+                        Moderation Settings
+                    </CardTitle>
+                    <CardDescription>
+                        Configure automatic content moderation for messages
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label>Enable Auto-Moderation</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Automatically flag illegal/dangerous content
+                            </p>
+                        </div>
+                        <Switch
+                            checked={formData.classifier_enabled ?? true}
+                            onCheckedChange={(checked) => handleChange('classifier_enabled', checked)}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="classifier-model">Classifier Model</Label>
+                        <ModelCombobox
+                            value={formData.classifier_model || ''}
+                            onChange={(value) => handleChange('classifier_model', value)}
+                            placeholder="openai/gpt-4o"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Model used for classification (must support vision if image moderation is needed)
+                        </p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="classifier-prompt">System Prompt</Label>
+                        <Textarea
+                            id="classifier-prompt"
+                            value={formData.classifier_prompt || ''}
+                            onChange={(e) => handleChange('classifier_prompt', e.target.value)}
+                            className="h-32 font-mono text-sm"
+                            placeholder="You are a content moderator..."
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Instructions for the AI classifier.
                         </p>
                     </div>
                 </CardContent>

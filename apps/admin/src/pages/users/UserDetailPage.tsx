@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '@/config';
+import { supabase, supabaseConfig } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
@@ -37,11 +37,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, HardDrive, ExternalLink, Target, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
 type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+
+// ... (interfaces and constants are the same)
 
 interface Profile {
     id: string;
@@ -102,18 +104,6 @@ interface Match {
     message_count?: number;
 }
 
-interface MediaFile {
-    id: string;
-    name: string;
-    bucket_id: string;
-    created_at: string | null;
-    metadata: {
-        size: number;
-        mimetype: string;
-    };
-    signedUrl?: string;
-}
-
 const answerIcons = {
     yes: <ThumbsUp className="h-4 w-4 text-green-500" />,
     no: <ThumbsDown className="h-4 w-4 text-red-500" />,
@@ -126,12 +116,117 @@ const matchTypeLabels = {
     maybe_maybe: 'Both Maybe',
 };
 
-function formatBytes(bytes: number): string {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+
+function AdminDecryptedImage({ messageId, alt }: { messageId: string; alt: string }) {
+    const { session, isSuperAdmin } = useAuth();
+    const [url, setUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!messageId) return;
+        if (!isSuperAdmin) {
+            setError("Super admin required");
+            return;
+        }
+        if (!session?.access_token) {
+            setError("Not authenticated");
+            return;
+        }
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+
+        const load = async () => {
+            try {
+                setError(null);
+                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', apikey: supabaseConfig.anonKey, Authorization: `Bearer ${session.access_token}` },
+                    body: JSON.stringify({ messageId }),
+                });
+                if (!res.ok) {
+                    const message = (await res.json().catch(() => ({})))?.error || `Failed to load media (${res.status})`;
+                    throw new Error(message);
+                }
+                const blob = await res.blob();
+                objectUrl = URL.createObjectURL(blob);
+                if (!cancelled) setUrl(objectUrl);
+            } catch (err) {
+                if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [isSuperAdmin, messageId, session?.access_token]);
+
+    if (error) {
+        return <div className="w-full h-full flex items-center justify-center text-center p-2"><Image className="h-8 w-8 text-muted-foreground mx-auto" /><div className="text-[10px] text-red-500 mt-1 line-clamp-2" title={error}>{error}</div></div>;
+    }
+    if (!url) {
+        return <div className="w-full h-full flex items-center justify-center"><Skeleton className="h-16 w-16 rounded-md" /></div>;
+    }
+    return <img src={url} alt={alt} className="w-full h-full object-cover cursor-pointer" onClick={() => window.open(url, '_blank')} />;
+}
+
+function AdminDecryptedVideo({ messageId }: { messageId: string }) {
+    const { session, isSuperAdmin } = useAuth();
+    const [url, setUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!messageId) return;
+        if (!isSuperAdmin) {
+            setError("Super admin required");
+            return;
+        }
+        if (!session?.access_token) {
+            setError("Not authenticated");
+            return;
+        }
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+
+        const load = async () => {
+            try {
+                setError(null);
+                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', apikey: supabaseConfig.anonKey, Authorization: `Bearer ${session.access_token}` },
+                    body: JSON.stringify({ messageId }),
+                });
+                if (!res.ok) {
+                    const message = (await res.json().catch(() => ({})))?.error || `Failed to load media (${res.status})`;
+                    throw new Error(message);
+                }
+                const blob = await res.blob();
+                objectUrl = URL.createObjectURL(blob);
+                if (!cancelled) setUrl(objectUrl);
+            } catch (err) {
+                if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        };
+    }, [isSuperAdmin, messageId, session?.access_token]);
+
+    if (error) {
+        return <div className="w-full h-full flex items-center justify-center text-center p-2"><VideoIcon className="h-8 w-8 text-muted-foreground mx-auto" /><div className="text-[10px] text-red-500 mt-1 line-clamp-2" title={error}>{error}</div></div>;
+    }
+    if (!url) {
+        return <div className="w-full h-full flex items-center justify-center"><Skeleton className="h-16 w-16 rounded-md" /></div>;
+    }
+    return <video src={url} controls className="w-full h-full object-cover" preload="metadata" />;
 }
 
 export function UserDetailPage() {
@@ -141,8 +236,7 @@ export function UserDetailPage() {
     const [partner, setPartner] = useState<Partner | null>(null);
     const [responses, setResponses] = useState<Response[]>([]);
     const [matches, setMatches] = useState<Match[]>([]);
-    const [media, setMedia] = useState<MediaFile[]>([]);
-    const [totalStorage, setTotalStorage] = useState(0);
+    const [mediaMessages, setMediaMessages] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     const canViewResponses = hasPermission(PERMISSION_KEYS.VIEW_RESPONSES);
@@ -158,11 +252,9 @@ export function UserDetailPage() {
     const handleUpgrade = async () => {
         if (!profile || !userId) return;
         setUpgrading(true);
-
         try {
             let expiresAt = null;
             const now = new Date();
-
             if (expiryType === '1_month') {
                 const date = new Date(now);
                 date.setMonth(date.getMonth() + 1);
@@ -172,7 +264,6 @@ export function UserDetailPage() {
                 date.setFullYear(date.getFullYear() + 1);
                 expiresAt = date.toISOString();
             } else if (expiryType === 'custom' && customDate) {
-                // Ensure custom date is in the future
                 const date = new Date(customDate);
                 if (date <= now) {
                     alert('Expiry date must be in the future');
@@ -181,7 +272,6 @@ export function UserDetailPage() {
                 }
                 expiresAt = date.toISOString();
             }
-
             const { error } = await auditedSupabase.insert('subscriptions', {
                 user_id: userId,
                 revenuecat_app_user_id: 'admin_grant',
@@ -191,24 +281,10 @@ export function UserDetailPage() {
                 purchased_at: new Date().toISOString(),
                 expires_at: expiresAt,
             });
-
             if (error) throw error;
-
-            // Refresh profile to get updated is_premium status
-            // The trigger sync_premium_on_subscription_change will update the profile
-            // We might need a small delay or just wait for the select
-            const { data: updatedProfile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
-            if (updatedProfile) {
-                setProfile(updatedProfile);
-            }
-
+            const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            if (updatedProfile) setProfile(updatedProfile);
             setUpgradeOpen(false);
-            // Optionally add toast here if available in context
             alert('User upgraded to premium successfully!');
         } catch (err) {
             console.error('Failed to upgrade:', err);
@@ -220,101 +296,43 @@ export function UserDetailPage() {
 
     const fetchData = useCallback(async () => {
         if (!userId) return;
-
         setLoading(true);
         try {
-            // Fetch profile
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-
+            const { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
             setProfile(profileData);
 
-            // Fetch partner if coupled
             if (profileData?.couple_id) {
-                const { data: partnerData } = await supabase
-                    .from('profiles')
-                    .select('id, name')
-                    .eq('couple_id', profileData.couple_id)
-                    .neq('id', userId)
-                    .single();
-
+                const { data: partnerData } = await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).single();
                 setPartner(partnerData);
+            } else {
+                setPartner(null);
             }
 
-            // Fetch responses with question and pack info
-            const { data: responseData } = await supabase
-                .from('responses')
-                .select(`
-            id, answer, created_at,
-            question:questions (
-              id, text,
-              pack:question_packs (name)
-            )
-          `)
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false })
-                .limit(50);
-
+            const { data: responseData } = await supabase.from('responses').select('id, answer, created_at, question:questions(id, text, pack:question_packs(name))').eq('user_id', userId).order('created_at', { ascending: false }).limit(50);
             setResponses((responseData || []) as unknown as Response[]);
 
-            // Fetch matches if coupled
             if (profileData?.couple_id) {
-                const { data: matchData } = await supabase
-                    .from('matches')
-                    .select(`
-              id, match_type, is_new, created_at,
-              question:questions (id, text)
-            `)
-                        .eq('couple_id', profileData.couple_id)
-                        .order('created_at', { ascending: false })
-                        .limit(50);
-
-                // Get message counts for each match
+                const { data: matchData } = await supabase.from('matches').select('id, match_type, is_new, created_at, question:questions(id, text)').eq('couple_id', profileData.couple_id).order('created_at', { ascending: false }).limit(50);
                 const matchIds = (matchData || []).map(m => m.id);
-                const { data: messages } = await supabase
-                    .from('messages')
-                    .select('match_id')
-                    .in('match_id', matchIds);
-
-                const messageCounts: Record<string, number> = {};
-                messages?.forEach(m => {
-                    messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1;
-                });
-
-                setMatches(
-                    (matchData || []).map(m => ({
-                        ...m,
-                        message_count: messageCounts[m.id] || 0,
-                    })) as unknown as Match[]
-                );
-            }
-
-            // Fetch media files uploaded by this user
-            const { data: mediaData } = await supabase
-                .rpc('get_user_media_files', { user_id: userId });
-
-            if (mediaData && mediaData.length > 0) {
-                // Calculate total storage
-                const total = mediaData.reduce((sum: number, file: MediaFile) =>
-                    sum + (file.metadata?.size || 0), 0);
-                setTotalStorage(total);
-
-                // Get signed URLs for each file
-                const mediaWithUrls = await Promise.all(
-                    mediaData.map(async (file: MediaFile) => {
-                        const { data: signedData } = await supabase.storage
-                            .from('chat-media')
-                            .createSignedUrl(file.name, 3600); // 1 hour expiry
-                        return {
-                            ...file,
-                            signedUrl: signedData?.signedUrl,
-                        };
-                    })
-                );
-                setMedia(mediaWithUrls);
+                if (matchIds.length > 0) {
+                    const { data: messages } = await supabase.from('messages').select('match_id').in('match_id', matchIds);
+                    const messageCounts: Record<string, number> = {};
+                    messages?.forEach(m => { messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1; });
+                    setMatches((matchData || []).map(m => ({ ...m, message_count: messageCounts[m.id] || 0 })) as unknown as Match[]);
+                    const { data: mediaMessagesData, error: mediaError } = await supabase.from('messages').select('id, user_id, media_path, media_type, version, created_at, keys_metadata, match_id').in('match_id', matchIds).not('media_path', 'is', null).order('created_at', { ascending: false });
+                    if (mediaError) {
+                        console.error("Error fetching media messages:", mediaError);
+                        setMediaMessages([]);
+                    } else {
+                        setMediaMessages(mediaMessagesData || []);
+                    }
+                } else {
+                    setMatches([]);
+                    setMediaMessages([]);
+                }
+            } else {
+                setMatches([]);
+                setMediaMessages([]);
             }
         } catch (error) {
             console.error('Failed to load user data:', error);
@@ -323,431 +341,56 @@ export function UserDetailPage() {
         }
     }, [userId]);
 
-    // Real-time subscription for this user's profile
-    const { status: profileStatus } = useRealtimeSubscription<Profile>({
-        table: 'profiles',
-        filter: userId ? `id=eq.${userId}` : undefined,
-        enabled: !!userId,
-        onUpdate: useCallback(({ new: updated }: { old: Profile; new: Profile }) => {
-            setProfile(updated);
-        }, []),
-    });
+    const { status: profileStatus } = useRealtimeSubscription<Profile>({ table: 'profiles', filter: userId ? `id=eq.${userId}` : undefined, enabled: !!userId, onUpdate: useCallback(({ new: updated }: { old: Profile; new: Profile }) => { setProfile(updated); }, []) });
+    const { status: responsesStatus } = useRealtimeSubscription<Response>({ table: 'responses', filter: userId ? `user_id=eq.${userId}` : undefined, enabled: !!userId, onInsert: fetchData, onDelete: fetchData });
 
-    // Real-time subscription for this user's responses
-    const { status: responsesStatus } = useRealtimeSubscription<Response>({
-        table: 'responses',
-        filter: userId ? `user_id=eq.${userId}` : undefined,
-        enabled: !!userId,
-        onInsert: fetchData, // Refetch to get question/pack relations
-        onDelete: fetchData,
-    });
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    if (loading) {
-        return (
-            <div className="space-y-6">
-                <Skeleton className="h-32" />
-                <Skeleton className="h-96" />
-            </div>
-        );
-    }
-
-    if (!profile) {
-        return (
-            <div className="flex flex-col items-center justify-center py-12">
-                <p className="text-lg font-medium">User not found</p>
-                <Link to="/users">
-                    <Button variant="link">Back to users</Button>
-                </Link>
-            </div>
-        );
-    }
+    if (loading) return <div className="space-y-6"><Skeleton className="h-32" /><Skeleton className="h-96" /></div>;
+    if (!profile) return <div className="flex flex-col items-center justify-center py-12"><p className="text-lg font-medium">User not found</p><Link to="/users"><Button variant="link">Back to users</Button></Link></div>;
 
     return (
         <div className="space-y-6">
             {/* Profile Header */}
-            <Card>
-                <CardContent className="pt-6">
-                    <div className="flex items-start gap-6">
-                        <Avatar className="h-20 w-20">
-                            <AvatarImage src={profile.avatar_url || undefined} />
-                            <AvatarFallback className="text-2xl">
-                                {profile.name?.charAt(0).toUpperCase() || 'U'}
-                            </AvatarFallback>
-                        </Avatar>
-
-                        <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                                <h1 className="text-2xl font-bold">
-                                    {profile.name || 'Unnamed User'}
-                                </h1>
-                                <RealtimeStatusIndicator
-                                    status={profileStatus === 'SUBSCRIBED' && responsesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profileStatus}
-                                    showLabel
-                                />
-                                {profile.is_premium && (
-                                    <Badge className="bg-amber-500">
-                                        <Crown className="h-3 w-3 mr-1" />
-                                        Premium
-                                    </Badge>
-
-                                )}
-                                {!profile.is_premium && (
-                                    <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
-                                        <DialogTrigger asChild>
-                                            <Button size="sm" variant="outline" className="ml-2 gap-1 h-7">
-                                                <Gift className="h-3.5 w-3.5" />
-                                                Gift Premium
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogHeader>
-                                                <DialogTitle>Gift Premium Access</DialogTitle>
-                                                <DialogDescription>
-                                                    Manually upgrade this user to premium status.
-                                                </DialogDescription>
-                                            </DialogHeader>
-
-                                            <div className="grid gap-4 py-4">
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor="expiry-type">Duration</Label>
-                                                    <Select value={expiryType} onValueChange={setExpiryType}>
-                                                        <SelectTrigger id="expiry-type">
-                                                            <SelectValue placeholder="Select duration" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="forever">Lifetime (No Expiry)</SelectItem>
-                                                            <SelectItem value="1_month">1 Month</SelectItem>
-                                                            <SelectItem value="1_year">1 Year</SelectItem>
-                                                            <SelectItem value="custom">Custom Date</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-
-                                                {expiryType === 'custom' && (
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor="custom-date">Expiry Date</Label>
-                                                        <Input
-                                                            id="custom-date"
-                                                            type="datetime-local"
-                                                            value={customDate}
-                                                            onChange={(e) => setCustomDate(e.target.value)}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <DialogFooter>
-                                                <Button variant="outline" onClick={() => setUpgradeOpen(false)}>
-                                                    Cancel
-                                                </Button>
-                                                <Button onClick={handleUpgrade} disabled={upgrading}>
-                                                    {upgrading ? 'Upgrading...' : 'Confirm Upgrade'}
-                                                </Button>
-                                            </DialogFooter>
-                                        </DialogContent>
-                                    </Dialog>
-                                )}
-                            </div>
-
-                            <p className="text-muted-foreground mb-4">
-                                {profile.email || 'No email'}
-                            </p>
-
-                            <div className="flex gap-6 text-sm">
-                                <div>
-                                    <span className="text-muted-foreground">Joined: </span>
-                                    <span>
-                                        {profile.created_at
-                                            ? format(new Date(profile.created_at), 'MMMM d, yyyy')
-                                            : '—'}
-                                    </span>
-                                </div>
-
-                                {partner ? (
-                                    <div className="flex items-center gap-1">
-                                        <Users className="h-4 w-4 text-muted-foreground" />
-                                        <span className="text-muted-foreground">Paired with: </span>
-                                        <Link to={`/users/${partner.id}`} className="text-primary hover:underline">
-                                            {partner.name || 'Unnamed Partner'}
-                                        </Link>
-                                    </div>
-                                ) : (
-                                    <div className="text-muted-foreground">Not paired</div>
-                                )}
-                            </div>
-                        </div>
+            <Card><CardContent className="pt-6"><div className="flex items-start gap-6">
+                <Avatar className="h-20 w-20"><AvatarImage src={profile.avatar_url || undefined} /><AvatarFallback className="text-2xl">{profile.name?.charAt(0).toUpperCase() || 'U'}</AvatarFallback></Avatar>
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                        <h1 className="text-2xl font-bold">{profile.name || 'Unnamed User'}</h1>
+                        <RealtimeStatusIndicator status={profileStatus === 'SUBSCRIBED' && responsesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profileStatus} showLabel />
+                        {profile.is_premium && <Badge className="bg-amber-500"><Crown className="h-3 w-3 mr-1" />Premium</Badge>}
+                        {!profile.is_premium && <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}><DialogTrigger asChild><Button size="sm" variant="outline" className="ml-2 gap-1 h-7"><Gift className="h-3.5 w-3.5" />Gift Premium</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Gift Premium Access</DialogTitle><DialogDescription>Manually upgrade this user to premium status.</DialogDescription></DialogHeader><div className="grid gap-4 py-4"><div className="grid gap-2"><Label htmlFor="expiry-type">Duration</Label><Select value={expiryType} onValueChange={setExpiryType}><SelectTrigger id="expiry-type"><SelectValue placeholder="Select duration" /></SelectTrigger><SelectContent><SelectItem value="forever">Lifetime (No Expiry)</SelectItem><SelectItem value="1_month">1 Month</SelectItem><SelectItem value="1_year">1 Year</SelectItem><SelectItem value="custom">Custom Date</SelectItem></SelectContent></Select></div>{expiryType === 'custom' && (<div className="grid gap-2"><Label htmlFor="custom-date">Expiry Date</Label><Input id="custom-date" type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} /></div>)}</div><DialogFooter><Button variant="outline" onClick={() => setUpgradeOpen(false)}>Cancel</Button><Button onClick={handleUpgrade} disabled={upgrading}>{upgrading ? 'Upgrading...' : 'Confirm Upgrade'}</Button></DialogFooter></DialogContent></Dialog>}
                     </div>
-                </CardContent>
-            </Card>
-
+                    <p className="text-muted-foreground mb-4">{profile.email || 'No email'}</p>
+                    <div className="flex gap-6 text-sm">
+                        <div><span className="text-muted-foreground">Joined: </span><span>{profile.created_at ? format(new Date(profile.created_at), 'MMMM d, yyyy') : '—'}</span></div>
+                        {partner ? <div className="flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-muted-foreground">Paired with: </span><Link to={`/users/${partner.id}`} className="text-primary hover:underline">{partner.name || 'Unnamed Partner'}</Link></div> : <div className="text-muted-foreground">Not paired</div>}
+                    </div>
+                </div>
+            </div></CardContent></Card>
             {/* Onboarding Details */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                        <CheckCircle className="h-5 w-5 text-primary" />
-                        Onboarding Details
-                    </CardTitle>
-                    <CardDescription>
-                        Information collected during user onboarding
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        {/* Gender */}
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Gender</p>
-                                <p className="font-medium">
-                                    {profile.gender ? genderLabels[profile.gender] : 'Not set'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Usage Reason */}
-                        <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
-                                <Target className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Why using Sauci</p>
-                                <p className="font-medium">
-                                    {profile.usage_reason
-                                        ? usageReasonLabels[profile.usage_reason]?.label
-                                        : 'Not set'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Explicit Content */}
-                        <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${profile.show_explicit_content ? 'bg-amber-100 dark:bg-amber-900' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                                {profile.show_explicit_content ? (
-                                    <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                                ) : (
-                                    <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                                )}
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Explicit Content</p>
-                                <p className="font-medium">
-                                    {profile.show_explicit_content === null
-                                        ? 'Not set'
-                                        : profile.show_explicit_content
-                                            ? 'Enabled'
-                                            : 'Disabled'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Onboarding Status */}
-                        <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}>
-                                <CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} />
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Onboarding</p>
-                                <p className="font-medium">
-                                    {profile.onboarding_completed ? 'Completed' : 'Not completed'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
+            <Card><CardHeader className="pb-3"><CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" />Onboarding Details</CardTitle><CardDescription>Information collected during user onboarding</CardDescription></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900"><User className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Gender</p><p className="font-medium">{profile.gender ? genderLabels[profile.gender] : 'Not set'}</p></div></div>
+                <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900"><Target className="h-4 w-4 text-purple-600 dark:text-purple-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Why using Sauci</p><p className="font-medium">{profile.usage_reason ? usageReasonLabels[profile.usage_reason]?.label : 'Not set'}</p></div></div>
+                <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.show_explicit_content ? 'bg-amber-100 dark:bg-amber-900' : 'bg-gray-100 dark:bg-gray-800'}`}>{profile.show_explicit_content ? <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" /> : <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />}</div><div><p className="text-sm font-medium text-muted-foreground">Explicit Content</p><p className="font-medium">{profile.show_explicit_content === null ? 'Not set' : profile.show_explicit_content ? 'Enabled' : 'Disabled'}</p></div></div>
+                <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}><CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} /></div><div><p className="text-sm font-medium text-muted-foreground">Onboarding</p><p className="font-medium">{profile.onboarding_completed ? 'Completed' : 'Not completed'}</p></div></div>
+            </div></CardContent></Card>
             {/* Tabs */}
             <Tabs defaultValue={canViewResponses ? "responses" : canViewMatches ? "matches" : canViewMedia ? "media" : "responses"}>
                 <TabsList>
-                    {canViewResponses && (
-                        <TabsTrigger value="responses">
-                            Responses ({responses.length})
-                        </TabsTrigger>
-                    )}
-                    {canViewMatches && (
-                        <TabsTrigger value="matches" disabled={!profile.couple_id}>
-                            Matches ({matches.length})
-                        </TabsTrigger>
-                    )}
-                    {canViewMedia && (
-                        <TabsTrigger value="media">
-                            Media ({media.length})
-                        </TabsTrigger>
-                    )}
+                    {canViewResponses && <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>}
+                    {canViewMatches && <TabsTrigger value="matches" disabled={!profile.couple_id}>Matches ({matches.length})</TabsTrigger>}
+                    {canViewMedia && <TabsTrigger value="media">Media ({mediaMessages.length})</TabsTrigger>}
                 </TabsList>
-
-                {canViewResponses && (
-                    <TabsContent value="responses" className="mt-4">
-                        {responses.length === 0 ? (
-                            <Card className="flex flex-col items-center justify-center py-12">
-                                <p className="text-muted-foreground">No responses yet</p>
-                            </Card>
-                        ) : (
-                            <div className="rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Question</TableHead>
-                                            <TableHead>Pack</TableHead>
-                                            <TableHead className="w-24">Answer</TableHead>
-                                            <TableHead className="w-32">Date</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {responses.map((r) => (
-                                            <TableRow key={r.id}>
-                                                <TableCell className="max-w-md">
-                                                    <span className="line-clamp-2">{r.question.text}</span>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground">
-                                                    {r.question.pack?.name || '—'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        {answerIcons[r.answer]}
-                                                        <span className="capitalize">{r.answer}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {r.created_at
-                                                        ? format(new Date(r.created_at), 'MMM d, yyyy')
-                                                        : '—'}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </TabsContent>
-                )}
-
-                {canViewMatches && (
-                    <TabsContent value="matches" className="mt-4">
-                        {matches.length === 0 ? (
-                            <Card className="flex flex-col items-center justify-center py-12">
-                                <p className="text-muted-foreground">No matches yet</p>
-                            </Card>
-                        ) : (
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {matches.map((match) => (
-                                    <Card key={match.id} className="hover:shadow-md transition-shadow">
-                                        <CardHeader className="pb-2">
-                                            <div className="flex items-start justify-between">
-                                                <Badge variant="secondary">
-                                                    {matchTypeLabels[match.match_type]}
-                                                </Badge>
-                                                {match.is_new && (
-                                                    <Badge variant="default" className="text-xs">New</Badge>
-                                                )}
-                                            </div>
-                                            <CardDescription className="line-clamp-2 mt-2">
-                                                {match.question?.text || 'Unknown question'}
-                                            </CardDescription>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                    <MessageCircle className="h-4 w-4" />
-                                                    {match.message_count} message{match.message_count !== 1 ? 's' : ''}
-                                                </div>
-                                                {canViewChats && (
-                                                    <Link to={`/users/${userId}/matches/${match.id}`}>
-                                                        <Button variant="ghost" size="sm">
-                                                            View Chat
-                                                            <ChevronRight className="ml-1 h-4 w-4" />
-                                                        </Button>
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-                )}
-
-                {canViewMedia && (
-                    <TabsContent value="media" className="mt-4">
-                        {media.length === 0 ? (
-                            <Card className="flex flex-col items-center justify-center py-12">
-                                <Image className="h-12 w-12 text-muted-foreground mb-4" />
-                                <p className="text-muted-foreground">No media uploaded</p>
-                            </Card>
-                        ) : (
-                            <div className="space-y-4">
-                                {/* Storage Summary */}
-                                <Card>
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-center gap-3">
-                                            <HardDrive className="h-5 w-5 text-muted-foreground" />
-                                            <div>
-                                                <p className="font-medium">Total Storage Used</p>
-                                                <p className="text-2xl font-bold">{formatBytes(totalStorage)}</p>
-                                            </div>
-                                            <div className="ml-auto text-sm text-muted-foreground">
-                                                {media.length} file{media.length !== 1 ? 's' : ''}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Media Grid */}
-                                <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                                    {media.map((file) => (
-                                        <Card key={file.id} className="overflow-hidden">
-                                            <div className="aspect-square bg-muted relative">
-                                                {file.signedUrl ? (
-                                                    <img
-                                                        src={file.signedUrl}
-                                                        alt={file.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLImageElement).style.display = 'none';
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center">
-                                                        <Image className="h-8 w-8 text-muted-foreground" />
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <CardContent className="p-3">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <div className="truncate text-muted-foreground">
-                                                        {formatBytes(file.metadata?.size || 0)}
-                                                    </div>
-                                                    {file.signedUrl && (
-                                                        <a
-                                                            href={file.signedUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="text-primary hover:underline flex items-center gap-1"
-                                                        >
-                                                            <ExternalLink className="h-3 w-3" />
-                                                        </a>
-                                                    )}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">
-                                                    {file.created_at
-                                                        ? format(new Date(file.created_at), 'MMM d, yyyy')
-                                                        : '—'}
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </TabsContent>
-                )}
+                {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-24">Answer</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md"><span className="line-clamp-2">{r.question.text}</span></TableCell><TableCell className="text-muted-foreground">{r.question.pack?.name || '—'}</TableCell><TableCell><div className="flex items-center gap-2">{answerIcons[r.answer]}<span className="capitalize">{r.answer}</span></div></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div>}</TabsContent>}
+                {canViewMatches && <TabsContent value="matches" className="mt-4">{matches.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No matches yet</p></Card> : <div className="grid gap-4 md:grid-cols-2">{matches.map((match) => (<Card key={match.id} className="hover:shadow-md transition-shadow"><CardHeader className="pb-2"><div className="flex items-start justify-between"><Badge variant="secondary">{matchTypeLabels[match.match_type]}</Badge>{match.is_new && <Badge variant="default" className="text-xs">New</Badge>}</div><CardDescription className="line-clamp-2 mt-2">{match.question?.text || 'Unknown question'}</CardDescription></CardHeader><CardContent><div className="flex items-center justify-between"><div className="flex items-center gap-1 text-sm text-muted-foreground"><MessageCircle className="h-4 w-4" />{match.message_count} message{match.message_count !== 1 ? 's' : ''}</div>{canViewChats && <Link to={`/users/${userId}/matches/${match.id}`}><Button variant="ghost" size="sm">View Chat<ChevronRight className="ml-1 h-4 w-4" /></Button></Link>}</div></CardContent></Card>))}</div>}</TabsContent>}
+                {canViewMedia && <TabsContent value="media" className="mt-4">{mediaMessages.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><Image className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No media uploaded</p></Card> : <div className="space-y-4"><div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">{mediaMessages.map((message) => (<Card key={message.id} className="overflow-hidden"><div className="aspect-square bg-muted relative">
+                    {message.media_type === 'video' ? (
+                        <AdminDecryptedVideo messageId={message.id} />
+                    ) : (
+                        <AdminDecryptedImage messageId={message.id} alt={`Media from ${message.created_at}`} />
+                    )}
+                </div><CardContent className="p-3"><div className="flex items-center justify-between text-sm"><div className="truncate text-muted-foreground">{message.media_type === 'video' ? 'Video' : 'Image'}</div>{canViewChats && message.match_id && <Link to={`/users/${userId}/matches/${message.match_id}`} className="text-primary hover:underline text-xs">View Chat</Link>}</div><div className="text-xs text-muted-foreground mt-1">{message.created_at ? format(new Date(message.created_at), 'MMM d, yyyy') : '—'}</div></CardContent></Card>))}</div></div>}</TabsContent>}
             </Tabs>
         </div>
     );

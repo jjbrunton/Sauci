@@ -12,6 +12,7 @@ import { useAuthStore, useSubscriptionStore } from '../../store';
 import { resetSwipeTutorial } from '../../lib/swipeTutorialSeen';
 import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
 import { supabase } from '../../lib/supabase'; // Needed for debug reset
+import { clearKeys } from '../../lib/encryption';
 
 // Hooks
 import { useProfileSettings, useCoupleManagement } from './hooks';
@@ -295,6 +296,30 @@ export function ProfileScreen() {
                                     Alert.alert("Error", "Failed to reset onboarding.");
                                 }
                             }}
+                        />
+                        <View style={styles.preferencesDivider} />
+                        <MenuItem
+                            icon="key-outline"
+                            label="Clear Private Key"
+                            description="Remove E2EE keys from device"
+                            onPress={() => {
+                                Alert.alert(
+                                    "Clear Keys",
+                                    "Are you sure? You will lose access to encrypted messages until keys are regenerated.",
+                                    [
+                                        { text: "Cancel", style: "cancel" },
+                                        {
+                                            text: "Clear",
+                                            style: "destructive",
+                                            onPress: async () => {
+                                                await clearKeys();
+                                                Alert.alert("Success", "Keys cleared. They will be regenerated on next launch/login.");
+                                            }
+                                        }
+                                    ]
+                                );
+                            }}
+                            variant="danger"
                         />
                     </SettingsSection>
                 )}

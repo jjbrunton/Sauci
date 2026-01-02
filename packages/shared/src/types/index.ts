@@ -8,6 +8,8 @@ export interface Profile {
     couple_id: string | null;
     created_at: string;
     updated_at: string;
+    /** RSA public key in JWK format for E2EE */
+    public_key_jwk?: Record<string, unknown> | null;
 }
 
 // Couple pairing
@@ -78,4 +80,62 @@ export interface PackProgress {
     total_questions: number;
     answered_questions: number;
     matches_count: number;
+}
+
+// E2EE Keys Metadata for encrypted messages
+export interface KeysMetadata {
+    /** AES key encrypted with sender's RSA public key (base64) */
+    sender_wrapped_key: string;
+    /** AES key encrypted with recipient's RSA public key (base64) */
+    recipient_wrapped_key?: string;
+    /** AES key encrypted with admin's RSA public key (base64) */
+    admin_wrapped_key: string;
+    /** UUID of the master_keys record used */
+    admin_key_id: string;
+    /** Symmetric encryption algorithm */
+    algorithm: 'AES-256-GCM';
+    /** Key wrapping algorithm */
+    key_wrap_algorithm: 'RSA-OAEP-SHA256';
+    /** True if recipient key needs to be added */
+    pending_recipient?: boolean;
+}
+
+// Chat message
+export interface Message {
+    id: string;
+    match_id: string;
+    user_id: string;
+    content: string | null;
+    created_at: string;
+    read_at: string | null;
+    delivered_at: string | null;
+    media_path: string | null;
+    media_type: 'image' | 'video' | null;
+    media_expires_at: string | null;
+    media_expired: boolean;
+    media_viewed_at: string | null;
+    /** Encryption version: 1 = plaintext (legacy), 2 = E2EE */
+    version: number | null;
+    /** Encrypted message content (base64, for v2 messages) */
+    encrypted_content: string | null;
+    /** Initialization vector for AES-GCM (base64, for v2 messages) */
+    encryption_iv: string | null;
+    /** Triple-wrapped encryption keys metadata (for v2 messages) */
+    keys_metadata: KeysMetadata | null;
+    /** Content moderation status: safe, flagged, unmoderated */
+    moderation_status?: 'safe' | 'flagged' | 'unmoderated' | null;
+    /** Reason for flagging */
+    flag_reason?: string | null;
+    /** Content category: Neutral, Romantic, Playful, Explicit, etc. */
+    category?: 'Neutral' | 'Romantic' | 'Playful' | 'Explicit' | string | null;
+}
+
+// Master key for admin E2EE access
+export interface MasterKey {
+    id: string;
+    key_name: string;
+    public_key_jwk: Record<string, unknown>;
+    is_active: boolean;
+    created_at: string;
+    rotated_at: string | null;
 }

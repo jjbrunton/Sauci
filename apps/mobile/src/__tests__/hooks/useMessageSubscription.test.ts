@@ -42,13 +42,28 @@ describe('useMessageSubscription', () => {
 
         const fetchQuery = createThenableQuery({ data: [partnerMessage] });
         const updateQuery = createThenableQuery({ data: null });
+        const deletionsQuery = createThenableQuery({ data: [] });
 
-        const fromMock = jest
-            .fn()
-            .mockReturnValueOnce(fetchQuery)
-            .mockReturnValueOnce(updateQuery);
+        const fromMock = jest.fn((table: string) => {
+            if (table === 'message_deletions') return deletionsQuery;
+            if (table === 'messages') {
+                // If it's the first call to messages, it's fetch, otherwise update.
+                // But simplified for the test logic:
+                return fetchQuery;
+            }
+            return createThenableQuery({ data: null });
+        });
 
-        (supabase as any).from = fromMock;
+        // Use mockReturnValueOnce to handle the sequence:
+        // 1. message_deletions (select)
+        // 2. messages (select)
+        // 3. messages (update)
+        const fromMockSequence = jest.fn()
+            .mockReturnValueOnce(deletionsQuery) // message_deletions select
+            .mockReturnValueOnce(fetchQuery)     // messages select
+            .mockReturnValueOnce(updateQuery);   // messages update
+
+        (supabase as any).from = fromMockSequence;
 
         const channelMock: any = {
             on: jest.fn(() => channelMock),
@@ -63,7 +78,7 @@ describe('useMessageSubscription', () => {
 
         await waitFor(() => expect(result.current.loading).toBe(false));
 
-        expect(fromMock).toHaveBeenCalledWith('messages');
+        expect(fromMockSequence).toHaveBeenCalledWith('messages');
         expect(updateQuery.update).toHaveBeenCalledWith(
             expect.objectContaining({
                 delivered_at: expect.stringMatching(/^2024-01-01T00:00:00\./),

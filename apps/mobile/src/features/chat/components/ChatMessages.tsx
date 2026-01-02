@@ -22,6 +22,8 @@ interface ChatMessagesProps {
     onImagePress: (uri: string) => void;
     onVideoFullScreen: (uri: string) => void;
     revealMessage: (messageId: string) => void;
+    /** Called when a message bubble is long pressed */
+    onMessageLongPress: (message: Message, isMe: boolean) => void;
 }
 
 const ACCENT = colors.premium.gold;
@@ -35,16 +37,22 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
     onImagePress,
     onVideoFullScreen,
     revealMessage,
+    onMessageLongPress,
 }) => {
     const flatListRef = useRef<FlatList>(null);
 
     const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isMe = item.user_id === userId;
         return (
-            <MessageBubble isMe={isMe} index={index}>
+            <MessageBubble
+                isMe={isMe}
+                index={index}
+                onLongPress={() => onMessageLongPress(item, isMe)}
+            >
                 <MessageContent
                     item={item}
                     isMe={isMe}
+                    currentUserId={userId || ''}
                     revealMessage={revealMessage}
                     onImagePress={onImagePress}
                     onVideoFullScreen={onVideoFullScreen}
