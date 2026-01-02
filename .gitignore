@@ -54,3 +54,6 @@ coverage/
 .tmp/
 *.tmp
 nul
+
+# Opencode
+.opencode/

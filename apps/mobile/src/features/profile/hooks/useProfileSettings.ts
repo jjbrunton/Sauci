@@ -277,11 +277,27 @@ export function useProfileSettings() {
     };
 
     const handleBiometricToggle = async (value: boolean) => {
-        setBiometricEnabledState(value);
         setIsUpdatingBiometric(true);
 
         try {
-            await setBiometricEnabled(value);
+            if (value) {
+                const { authenticateWithBiometric } = await import('../../../lib/biometricAuth');
+                const success = await authenticateWithBiometric();
+
+                if (!success) {
+                    Alert.alert(
+                        "Authentication Failed",
+                        `Could not verify your ${biometricType}. Please try again.`
+                    );
+                    return;
+                }
+
+                await setBiometricEnabled(true);
+                setBiometricEnabledState(true);
+            } else {
+                await setBiometricEnabled(false);
+                setBiometricEnabledState(false);
+            }
         } catch (error) {
             setBiometricEnabledState(!value);
             Alert.alert("Error", `Failed to ${value ? "enable" : "disable"} ${biometricType}. Please try again.`);
