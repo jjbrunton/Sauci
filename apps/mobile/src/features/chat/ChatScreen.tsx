@@ -184,7 +184,11 @@ export const ChatScreen: React.FC = () => {
             }
         } catch (err) {
             console.error("Error sending message:", err);
-            Alert.alert("Error", "Failed to send message");
+            // Show the actual error message if it's user-friendly (from encryption)
+            const errorMessage = err instanceof Error && err.message
+                ? err.message
+                : "Failed to send message";
+            Alert.alert("Error", errorMessage);
             setInputText(content);
         }
     };

@@ -51,11 +51,7 @@
         "expo-build-properties",
         {
           "android": {
-            "targetSdkVersion": 35,
-            "blockedPermissions": [
-              "android.permission.READ_MEDIA_IMAGES",
-              "android.permission.READ_MEDIA_VIDEO"
-            ]
+            "targetSdkVersion": 35
           }
         }
       ],

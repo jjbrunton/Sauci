@@ -8,7 +8,7 @@
  * consistency with all other encryption operations.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import {
   encryptTextMessage,
@@ -16,6 +16,7 @@ import {
   getAdminKeyId,
   isValidPublicKeyJwk,
   sanitizePublicKeyJwk,
+  verifyKeyPair,
 } from '../lib/encryption';
 import type { RSAPublicKeyJWK, EncryptedMessagePayload } from '../lib/encryption';
 import { useEncryptionKeys } from './useEncryptionKeys';
@@ -42,6 +43,9 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Track whether we've verified the key pair this session
+  const keyPairVerifiedRef = useRef(false);
+
   const { publicKeyJwk, hasKeys, isLoading } = useEncryptionKeys();
   const refreshPartner = useAuthStore((s) => s.refreshPartner);
 
@@ -63,12 +67,35 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
       // This ensures we always use the most current keys, not potentially stale hook state
       const currentKeys = useAuthStore.getState().encryptionKeys;
 
-      if (!currentKeys.hasKeys || !currentKeys.publicKeyJwk) {
-        console.warn('[E2EE Send] No keys available in global store at encryption time');
-        return null;
+      if (!currentKeys.hasKeys || !currentKeys.publicKeyJwk || !currentKeys.privateKeyJwk) {
+        const keysError = new Error('Encryption keys not ready. Please wait a moment and try again.');
+        console.warn('[E2EE Send] Keys not fully available in global store');
+        setError(keysError);
+        throw keysError;
       }
 
       const senderPublicKey = currentKeys.publicKeyJwk;
+      const senderPrivateKey = currentKeys.privateKeyJwk;
+
+      // SAFETY CHECK: Verify the key pair works together before encrypting
+      // This prevents creating unrecoverable messages if keys are mismatched
+      if (!keyPairVerifiedRef.current) {
+        console.log('[E2EE Send] Verifying sender key pair...');
+        const isValidKeyPair = await verifyKeyPair(
+          senderPublicKey as RSAPublicKeyJWK,
+          senderPrivateKey
+        );
+
+        if (!isValidKeyPair) {
+          const keyError = new Error('Encryption key verification failed. Please restart the app and try again.');
+          console.error('[E2EE Send] CRITICAL: Sender key pair verification failed!');
+          setError(keyError);
+          throw keyError;
+        }
+
+        keyPairVerifiedRef.current = true;
+        console.log('[E2EE Send] Sender key pair verified successfully');
+      }
 
       console.log(
         '[E2EE Send] Using sender public key from global store, version:',
@@ -85,8 +112,33 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
         const freshPartner = await refreshPartner();
 
         // Get admin key for moderation access
-        const adminPublicKey = await getAdminPublicKey();
-        const adminKeyId = await getAdminKeyId();
+        // SAFETY: Validate the admin key before using it
+        let adminPublicKey: RSAPublicKeyJWK;
+        let adminKeyId: string;
+
+        try {
+          adminPublicKey = await getAdminPublicKey();
+          adminKeyId = await getAdminKeyId();
+
+          // Validate admin key structure
+          if (!isValidPublicKeyJwk(adminPublicKey)) {
+            const adminError = new Error('Unable to secure message. Please check your connection and try again.');
+            console.error('[E2EE Send] Admin public key is invalid');
+            setIsEncrypting(false);
+            setError(adminError);
+            throw adminError;
+          }
+        } catch (adminKeyError) {
+          // Re-throw if already a user-facing error
+          if (adminKeyError instanceof Error && adminKeyError.message.includes('Unable to secure')) {
+            throw adminKeyError;
+          }
+          const fetchError = new Error('Unable to secure message. Please check your connection and try again.');
+          console.error('[E2EE Send] Failed to fetch admin key:', adminKeyError);
+          setIsEncrypting(false);
+          setError(fetchError);
+          throw fetchError;
+        }
 
         // Get partner's public key from the freshly fetched profile
         let partnerPublicKey = freshPartner?.public_key_jwk as
@@ -124,7 +176,8 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
         console.error('[E2EE Send] Failed to encrypt message:', err);
         setError(err as Error);
         setIsEncrypting(false);
-        return null;
+        // Re-throw to block sending - never fall back to plaintext
+        throw err;
       }
     },
     [isE2EEAvailable, refreshPartner]

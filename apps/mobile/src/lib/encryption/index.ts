@@ -65,3 +65,6 @@ export { triggerKeyRotation } from './triggerKeyRotation';
 
 // Stale Key Repair
 export { repairStaleKey } from './repairStaleKey';
+
+// Crypto Operations
+export { verifyKeyPair } from './crypto';

@@ -150,7 +150,7 @@ export async function wrapAESKey(
 
 /**
  * Unwrap (decrypt) an AES key with an RSA private key
- * 
+ *
  * @param wrappedKeyBase64 - The wrapped key as base64 string
  * @param privateKeyJwk - The user's RSA private key
  * @returns The unwrapped AES key as ArrayBuffer
@@ -162,10 +162,65 @@ export async function unwrapAESKey(
   const subtle = getSubtle();
   const rsaKey = await importPrivateKey(privateKeyJwk);
   const wrappedKey = base64ToArrayBuffer(wrappedKeyBase64);
-  
+
   return await subtle.decrypt(
     { name: KEY_WRAP_ALGORITHM },
     rsaKey,
     wrappedKey
   );
+}
+
+/**
+ * Verify that a public/private key pair actually work together.
+ * This catches key mismatches that could cause unrecoverable encrypted messages.
+ *
+ * @param publicKeyJwk - The RSA public key
+ * @param privateKeyJwk - The RSA private key
+ * @returns true if the keys work together, false otherwise
+ */
+export async function verifyKeyPair(
+  publicKeyJwk: RSAPublicKeyJWK,
+  privateKeyJwk: RSAPrivateKeyJWK
+): Promise<boolean> {
+  try {
+    const subtle = getSubtle();
+
+    // Create test data (32 bytes - same as AES-256 key)
+    const testData = getRandomValues(new Uint8Array(32));
+
+    // Import keys
+    const publicKey = await importPublicKey(publicKeyJwk);
+    const privateKey = await importPrivateKey(privateKeyJwk);
+
+    // Encrypt with public key
+    const encrypted = await subtle.encrypt(
+      { name: KEY_WRAP_ALGORITHM },
+      publicKey,
+      testData as BufferSource
+    );
+
+    // Decrypt with private key
+    const decrypted = await subtle.decrypt(
+      { name: KEY_WRAP_ALGORITHM },
+      privateKey,
+      encrypted
+    );
+
+    // Verify the data matches
+    const decryptedArray = new Uint8Array(decrypted);
+    if (decryptedArray.length !== testData.length) {
+      return false;
+    }
+
+    for (let i = 0; i < testData.length; i++) {
+      if (testData[i] !== decryptedArray[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('[E2EE] Key pair verification failed:', error);
+    return false;
+  }
 }
