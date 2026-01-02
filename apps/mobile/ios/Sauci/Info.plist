@@ -39,6 +39,12 @@
           <string>exp+sauci</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.861972684340-0u2as8i5equfhmhmvjihottkf0ig7237</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>

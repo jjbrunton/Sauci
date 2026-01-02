@@ -33,8 +33,22 @@ export function MessageContent({
     const [signedUrl, setSignedUrl] = useState<string | null>(null);
     const [urlError, setUrlError] = useState(false);
 
+    const isVideo = (item as any).media_type === 'video';
+    const isViewed = !!item.media_viewed_at;
+    const isRecipientHidden = !isMe && !isViewed;
+
     useEffect(() => {
-        if (!item.media_path) return;
+        if (!item.media_path) {
+            setSignedUrl(null);
+            setUrlError(false);
+            return;
+        }
+
+        if (isRecipientHidden) {
+            setSignedUrl(null);
+            setUrlError(false);
+            return;
+        }
 
         let isMounted = true;
 
@@ -56,11 +70,10 @@ export function MessageContent({
         return () => {
             isMounted = false;
         };
-    }, [item.media_path]);
+    }, [item.media_path, isRecipientHidden]);
 
     // Handle expired videos
     const isExpired = !!(item as any).media_expired;
-    const isVideo = (item as any).media_type === 'video';
 
     if (isExpired && isVideo) {
         return (
@@ -85,14 +98,13 @@ export function MessageContent({
 
     // Handle media (images and videos)
     if (item.media_path || isExpired) {
-        const isViewed = !!item.media_viewed_at;
         const canOpenFullScreen = (isMe || isViewed) && !isVideo; // Only images can go fullscreen
 
         // Video content
         if (isVideo) {
             return (
                 <View>
-                    {(!isMe && !isViewed) ? (
+                    {isRecipientHidden ? (
                         // Blurred placeholder with reveal overlay for unrevealed videos
                         <View>
                             <View style={[styles.messageVideo, styles.videoBlurred]}>
@@ -154,11 +166,24 @@ export function MessageContent({
                     onPress={() => canOpenFullScreen && signedUrl && onImagePress(signedUrl)}
                     disabled={!canOpenFullScreen || !signedUrl}
                 >
-                    {signedUrl ? (
+                    {isRecipientHidden ? (
+                        <View style={[styles.messageImage, styles.unrevealedPlaceholder]}>
+                            <LinearGradient
+                                colors={['rgba(22, 33, 62, 0.95)', 'rgba(13, 13, 26, 0.98)']}
+                                style={StyleSheet.absoluteFill}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            />
+                            <View style={styles.unrevealedIconContainer}>
+                                <Ionicons name="image-outline" size={28} color={colors.text} />
+                            </View>
+                            <Text style={styles.unrevealedText}>Photo hidden</Text>
+                        </View>
+                    ) : signedUrl ? (
                         <Image
                             source={{ uri: signedUrl }}
                             style={styles.messageImage}
-                            blurRadius={(!isMe && !isViewed) ? 20 : 0}
+                            blurRadius={0}
                             cachePolicy="disk"
                             transition={200}
                         />
@@ -174,7 +199,7 @@ export function MessageContent({
                     )}
                 </TouchableOpacity>
                 {/* Reveal overlay for recipient */}
-                {(!isMe && !isViewed) && (
+                {isRecipientHidden && (
                     <TouchableOpacity
                         style={styles.revealOverlay}
                         activeOpacity={0.8}
@@ -238,6 +263,28 @@ const styles = StyleSheet.create({
     messageImageErrorText: {
         color: colors.textSecondary,
         fontSize: 12,
+    },
+    unrevealedPlaceholder: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: spacing.sm,
+        overflow: 'hidden',
+    },
+    unrevealedIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    unrevealedText: {
+        color: colors.textSecondary,
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.3,
     },
     messageVideo: {
         width: 200,

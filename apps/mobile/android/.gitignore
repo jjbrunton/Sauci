@@ -14,6 +14,3 @@ local.properties
 
 # Bundle artifacts
 *.jsbundle
-
-# Release signing (upload keystore - can be reset via Play Console)
-upload-keystore.jks
