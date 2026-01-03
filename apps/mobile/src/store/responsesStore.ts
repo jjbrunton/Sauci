@@ -33,11 +33,17 @@ export interface UpdateResponseResult {
 
 export type GroupByOption = "pack" | "date" | "answer";
 
+const BATCH_SIZE = 20;
+
 interface ResponsesState {
     responses: ResponseWithQuestion[];
     isLoading: boolean;
+    isLoadingMore: boolean;
     groupBy: GroupByOption;
-    fetchResponses: () => Promise<void>;
+    hasMore: boolean;
+    page: number;
+    totalCount: number | null;
+    fetchResponses: (refresh?: boolean) => Promise<void>;
     updateResponse: (
         questionId: string,
         newAnswer: AnswerType,
@@ -50,17 +56,46 @@ interface ResponsesState {
 export const useResponsesStore = create<ResponsesState>((set, get) => ({
     responses: [],
     isLoading: false,
+    isLoadingMore: false,
     groupBy: "pack",
+    hasMore: true,
+    page: 0,
+    totalCount: null,
 
-    fetchResponses: async () => {
+    fetchResponses: async (refresh = false) => {
         const userId = useAuthStore.getState().user?.id;
         const coupleId = useAuthStore.getState().user?.couple_id;
 
         if (!userId || !coupleId) return;
 
-        set({ isLoading: true });
+        const state = get();
+        if (state.isLoading || (state.isLoadingMore && !refresh)) return;
+
+        if (refresh) {
+            set({ isLoading: true, page: 0, hasMore: true });
+        } else {
+            if (!state.hasMore) return;
+            set({ isLoadingMore: true });
+        }
 
         try {
+            const currentPage = refresh ? 0 : state.page;
+            const from = currentPage * BATCH_SIZE;
+            const to = from + BATCH_SIZE - 1;
+
+            // Fetch total count on refresh
+            let totalCount = state.totalCount;
+            if (refresh) {
+                const { count, error: countError } = await supabase
+                    .from("responses")
+                    .select("*", { count: "exact", head: true })
+                    .eq("user_id", userId);
+
+                if (!countError) {
+                    totalCount = count ?? 0;
+                }
+            }
+
             // Fetch all user's responses with questions and packs
             const { data: responses, error: responsesError } = await supabase
                 .from("responses")
@@ -79,16 +114,21 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                     )
                 `)
                 .eq("user_id", userId)
-                .order("created_at", { ascending: false });
+                .order("created_at", { ascending: false })
+                .range(from, to);
 
             if (responsesError) {
                 console.error("Error fetching responses:", responsesError);
-                set({ isLoading: false });
+                set({ isLoading: false, isLoadingMore: false });
                 return;
             }
 
-            if (!responses) {
-                set({ responses: [], isLoading: false });
+            if (!responses || responses.length === 0) {
+                if (refresh) {
+                    set({ responses: [], totalCount: totalCount ?? 0, isLoading: false, hasMore: false });
+                } else {
+                    set({ isLoadingMore: false, hasMore: false });
+                }
                 return;
             }
 
@@ -154,11 +194,20 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                         partner_answered: partnerAnsweredSet.has(r.question_id),
                     };
                 });
-
-            set({ responses: transformedResponses, isLoading: false });
+            
+            set((state) => ({
+                responses: refresh
+                    ? transformedResponses
+                    : [...state.responses, ...transformedResponses],
+                totalCount: refresh ? totalCount : state.totalCount,
+                isLoading: false,
+                isLoadingMore: false,
+                page: currentPage + 1,
+                hasMore: responses.length === BATCH_SIZE
+            }));
         } catch (error) {
             console.error("Error in fetchResponses:", error);
-            set({ isLoading: false });
+            set({ isLoading: false, isLoadingMore: false });
         }
     },
 
@@ -221,8 +270,8 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
         set({ groupBy });
     },
 
-    clearResponses: () => {
-        set({ responses: [], isLoading: false, groupBy: "pack" });
+clearResponses: () => {
+        set({ responses: [], isLoading: false, groupBy: "pack", page: 0, hasMore: true, isLoadingMore: false, totalCount: null });
     },
 }));
 

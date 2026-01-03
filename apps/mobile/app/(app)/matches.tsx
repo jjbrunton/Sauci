@@ -10,7 +10,13 @@ import Animated, {
     FadeInDown,
     FadeInRight,
     FadeInUp,
+    useSharedValue,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    interpolate,
+    Extrapolation,
 } from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
 import { useAmbientOrbAnimation } from "../../src/hooks";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
@@ -24,14 +30,64 @@ const ROSE = colors.premium.rose;
 const ROSE_RGBA = 'rgba(232, 164, 174, ';
 
 const MAX_CONTENT_WIDTH = 500;
+const NAV_BAR_HEIGHT = 44;
+const STATUS_BAR_HEIGHT = 60;
+const HEADER_SCROLL_DISTANCE = 100;
+
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 export default function MatchesScreen() {
-    const { matches, fetchMatches, markAllAsSeen, isLoading } = useMatchStore();
+    const { matches, fetchMatches, markAllAsSeen, isLoading, hasMore, isLoadingMore, totalCount } = useMatchStore();
     const { user } = useAuthStore();
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
     const [showTutorial, setShowTutorial] = useState(false);
+
+    const scrollY = useSharedValue(0);
+
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+    });
+
+    // Animated styles for collapsing header
+    const heroStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.7],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        const scale = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE],
+            [1, 0.95],
+            Extrapolation.CLAMP
+        );
+        return { opacity, transform: [{ scale }] };
+    });
+
+    const compactHeaderStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
+
+    const navBarBackgroundStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.8],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
 
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
@@ -58,9 +114,16 @@ export default function MatchesScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            fetchMatches();
+            fetchMatches(true);
         }, [])
     );
+
+    const handleLoadMore = useCallback(() => {
+        console.log('[Matches] onEndReached called', { isLoading, isLoadingMore, hasMore, matchesCount: matches.length });
+        if (!isLoading && !isLoadingMore && hasMore) {
+            fetchMatches(false);
+        }
+    }, [isLoading, isLoadingMore, hasMore, matches.length]);
 
     useEffect(() => {
         if (matches.length > 0) {
@@ -169,6 +232,15 @@ export default function MatchesScreen() {
         );
     };
 
+    const renderFooter = () => {
+        if (!isLoadingMore) return null;
+        return (
+            <View style={styles.footerLoader}>
+                <ActivityIndicator color={colors.primary} size="small" />
+            </View>
+        );
+    };
+
     if (!user) {
         return (
             <GradientBackground>
@@ -200,48 +272,69 @@ export default function MatchesScreen() {
             </Animated.View>
 
             <View style={styles.container}>
-                {/* Premium Header */}
-                <Animated.View
-                    entering={FadeIn.duration(400)}
-                    style={[styles.header, isWideScreen && styles.headerWide]}
-                >
-                    {/* My Answers button */}
+                {/* Fixed Nav Bar */}
+                <View style={styles.navBar}>
+                    <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
+                        {Platform.OS === "ios" ? (
+                            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                        ) : (
+                            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
+                        )}
+                    </Animated.View>
+                    
+                    <Animated.Text style={[styles.navBarTitle, compactHeaderStyle]} numberOfLines={1}>
+                        Matches
+                    </Animated.Text>
+                    
+                    {/* My Answers button moved to Nav Bar */}
                     <TouchableOpacity
-                        style={styles.myAnswersButton}
-                        onPress={() => router.push("/(app)/my-answers")}
+                        style={styles.navBarButton}
+                        onPress={() => router.push({ pathname: "/(app)/my-answers", params: { returnTo: "/(app)/matches" } })}
                     >
-                        <Ionicons name="list-outline" size={20} color={ACCENT} />
+                         <Ionicons name="list-outline" size={20} color={ACCENT} />
                     </TouchableOpacity>
+                </View>
 
-                    <View style={styles.headerContent}>
-                        {/* Premium label */}
-                        <Text style={styles.headerLabel}>DISCOVER</Text>
-                        <Text style={styles.headerTitle}>Matches</Text>
-
-                        {/* Decorative separator */}
-                        <DecorativeSeparator variant="gold" />
-
-                        {/* Count badge */}
-                        <View style={styles.countBadgePremium}>
-                            <Ionicons name="heart" size={12} color={ACCENT} />
-                            <Text style={styles.countTextPremium}>{matches.length} {matches.length === 1 ? 'MATCH' : 'MATCHES'}</Text>
-                        </View>
-                    </View>
-                </Animated.View>
-
-                <FlatList
+                <AnimatedFlatList
                     data={matches}
                     renderItem={renderItem}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item: any) => item.id}
                     contentContainerStyle={[styles.list, isWideScreen && styles.listWide]}
                     showsVerticalScrollIndicator={false}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isLoading}
-                            onRefresh={fetchMatches}
-                            tintColor={colors.primary}
-                            colors={[colors.primary]}
-                        />
+                    onScroll={scrollHandler}
+                    scrollEventThrottle={16}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isLoading}
+                                onRefresh={() => fetchMatches(true)}
+                                tintColor={colors.primary}
+                                colors={[colors.primary]}
+                                progressViewOffset={STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT}
+                            />
+                        }
+                        onEndReached={handleLoadMore}
+                        onEndReachedThreshold={2}
+                        ListFooterComponent={renderFooter}
+                        ListHeaderComponent={
+                            <Animated.View
+                                entering={FadeIn.duration(400)}
+                                style={[styles.header, isWideScreen && styles.headerWide, heroStyle]}
+                            >
+                            <View style={styles.headerContent}>
+                                {/* Premium label */}
+                                <Text style={styles.headerLabel}>DISCOVER</Text>
+                                <Text style={styles.headerTitle}>Matches</Text>
+
+                                {/* Decorative separator */}
+                                <DecorativeSeparator variant="gold" />
+
+                                {/* Count badge */}
+                                <View style={styles.countBadgePremium}>
+                                    <Ionicons name="heart" size={12} color={ACCENT} />
+                                    <Text style={styles.countTextPremium}>{totalCount ?? matches.length} {(totalCount ?? matches.length) === 1 ? 'MATCH' : 'MATCHES'}</Text>
+                                </View>
+                            </View>
+                        </Animated.View>
                     }
                     ListEmptyComponent={
                         <Animated.View
@@ -320,30 +413,55 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 150,
     },
-    // Premium Header
+    // Fixed Nav Bar
+    navBar: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: STATUS_BAR_HEIGHT - 10,
+        paddingHorizontal: spacing.md,
+        zIndex: 100,
+    },
+    navBarBackground: {
+        ...StyleSheet.absoluteFillObject,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(212, 175, 55, 0.15)', // Gold tint for matches
+        overflow: "hidden",
+    },
+    navBarTitle: {
+        ...typography.headline,
+        color: colors.text,
+        textAlign: "center",
+    },
+    navBarButton: {
+        position: 'absolute',
+        right: spacing.md,
+        top: STATUS_BAR_HEIGHT - 5,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    // Header (Hero)
     header: {
-        paddingTop: 60,
+        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
         paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.md,
+        paddingBottom: spacing.lg,
+        alignItems: 'center',
     },
     headerWide: {
         alignSelf: 'center',
         width: '100%',
         maxWidth: MAX_CONTENT_WIDTH,
-    },
-    myAnswersButton: {
-        position: 'absolute',
-        top: 60,
-        right: spacing.md,
-        zIndex: 10,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
-        borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.2)`,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     headerContent: {
         alignItems: 'center',
@@ -380,7 +498,8 @@ const styles = StyleSheet.create({
     // List
     list: {
         padding: spacing.lg,
-        paddingTop: spacing.sm,
+        // Remove top padding as header handles it
+        paddingTop: 0,
         paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
     listWide: {
@@ -535,5 +654,10 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: colors.textTertiary,
         textAlign: 'center',
+    },
+    footerLoader: {
+        paddingVertical: spacing.md,
+        alignItems: "center",
+        justifyContent: "center",
     },
 });

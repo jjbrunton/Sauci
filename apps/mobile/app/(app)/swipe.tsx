@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
+import { View, StyleSheet, Text, ActivityIndicator, Platform, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -186,15 +186,6 @@ export default function SwipeScreen() {
         }
     }, [enabledPackIds]);
 
-    // Fisher-Yates shuffle for stable randomization
-    const shuffleArray = <T,>(array: T[]): T[] => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
-    };
 
     const fetchQuestions = async () => {
         // Race protection: increment request ID and track current request
@@ -231,26 +222,10 @@ export default function SwipeScreen() {
                 setGapInfo(null);
             }
 
-            // First shuffle to randomize, then stable sort by priority scores
-            const shuffled = shuffleArray(filtered);
-            const sorted = shuffled.sort((a: any, b: any) => {
-                let scoreA = 0;
-                let scoreB = 0;
-
-                if (a.partner_answered && a.is_two_part) scoreA += 1.5;
-                else if (a.partner_answered) scoreA += 0.7;
-                else if (a.is_two_part) scoreA += 0.4;
-
-                if (b.partner_answered && b.is_two_part) scoreB += 1.5;
-                else if (b.partner_answered) scoreB += 0.7;
-                else if (b.is_two_part) scoreB += 0.4;
-
-                return scoreB - scoreA;
-            });
-
+            // Server provides ordering (daily seeded random with priority)
             // Only update state if still the current request
             if (currentRequestId === fetchRequestId.current) {
-                setQuestions(sorted);
+                setQuestions(filtered);
             }
         } catch (error) {
             if (currentRequestId === fetchRequestId.current) {
@@ -655,6 +630,14 @@ export default function SwipeScreen() {
                     style={styles.hintContainer}
                 >
                     <Text style={styles.hintTextPremium}>Swipe or tap to answer</Text>
+                    
+                    <TouchableOpacity
+                        onPress={() => router.push({ pathname: "/my-answers", params: { returnTo: "/(app)/swipe" } })}
+                        style={styles.editLinkButton}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                        <Text style={styles.editLinkText}>Edit previous answers</Text>
+                    </TouchableOpacity>
                 </Animated.View>
 
                 {/* Bottom spacing for tab bar */}
@@ -797,6 +780,18 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         fontStyle: 'italic',
         color: colors.textTertiary,
+        letterSpacing: 0.5,
+    },
+    editLinkButton: {
+        marginTop: spacing.md,
+        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.sm,
+    },
+    editLinkText: {
+        ...typography.caption2,
+        color: colors.premium.gold,
+        textDecorationLine: 'underline',
+        opacity: 0.8,
         letterSpacing: 0.5,
     },
     bottomSpacer: {

@@ -11,11 +11,20 @@ import {
 } from "react-native";
 import { useResponsesStore, groupResponses, useAuthStore } from "../../src/store";
 import type { ResponseWithQuestion } from "../../src/store";
-import { useCallback, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState, useEffect } from "react";
+import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
+import Animated, {
+    FadeIn,
+    FadeInUp,
+    useSharedValue,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    interpolate,
+    Extrapolation,
+} from "react-native-reanimated";
+import { BlurView } from "expo-blur";
 import { GradientBackground, GlassButton, DecorativeSeparator } from "../../src/components/ui";
 import { useAmbientOrbAnimation } from "../../src/hooks";
 import { colors, spacing, typography, radius } from "../../src/theme";
@@ -29,19 +38,74 @@ const ROSE = colors.premium.rose;
 const ROSE_RGBA = "rgba(232, 164, 174, ";
 
 const MAX_CONTENT_WIDTH = 500;
+const NAV_BAR_HEIGHT = 44;
+const STATUS_BAR_HEIGHT = 60;
+const HEADER_SCROLL_DISTANCE = 100;
+
+const AnimatedSectionList = Animated.createAnimatedComponent(SectionList);
 
 type GroupByOption = "pack" | "date" | "answer";
 
 export default function MyAnswersScreen() {
-    const { responses, isLoading, groupBy, fetchResponses, setGroupBy } = useResponsesStore();
+    const { responses, isLoading, isLoadingMore, hasMore, groupBy, fetchResponses, setGroupBy, totalCount } = useResponsesStore();
     const { user } = useAuthStore();
     const router = useRouter();
+    const params = useLocalSearchParams();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
+
+    const handleBack = () => {
+        const returnTo = (params.returnTo as string) || "/(app)/swipe";
+        router.push(returnTo as any);
+    };
 
     // State for edit sheet
     const [selectedResponse, setSelectedResponse] = useState<ResponseWithQuestion | null>(null);
     const [isEditSheetVisible, setIsEditSheetVisible] = useState(false);
+
+    // Scroll animation
+    const scrollY = useSharedValue(0);
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+    });
+
+    const heroStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.7],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        const scale = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE],
+            [1, 0.95],
+            Extrapolation.CLAMP
+        );
+        return { opacity, transform: [{ scale }] };
+    });
+
+    const compactHeaderStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
+
+    const navBarBackgroundStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.8],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
 
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
@@ -49,9 +113,15 @@ export default function MyAnswersScreen() {
     // Fetch responses on focus
     useFocusEffect(
         useCallback(() => {
-            fetchResponses();
+            fetchResponses(true);
         }, [])
     );
+
+    const handleLoadMore = useCallback(() => {
+        if (!isLoading && !isLoadingMore && hasMore) {
+            fetchResponses(false);
+        }
+    }, [isLoading, isLoadingMore, hasMore]);
 
     const sections = groupResponses(responses, groupBy);
 
@@ -67,16 +137,16 @@ export default function MyAnswersScreen() {
 
     const handleEditSuccess = () => {
         // Refetch responses to get updated data
-        fetchResponses();
+        fetchResponses(true);
     };
 
-    const renderSectionHeader = ({ section }: { section: { title: string } }) => (
+    const renderSectionHeader = ({ section }: { section: any }) => (
         <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
         </View>
     );
 
-    const renderItem = ({ item, index }: { item: ResponseWithQuestion; index: number }) => (
+    const renderItem = ({ item, index }: { item: any; index: number }) => (
         <ResponseCard
             response={item}
             index={index}
@@ -84,6 +154,15 @@ export default function MyAnswersScreen() {
             onChatPress={item.match_id ? () => router.push(`/chat/${item.match_id}`) : undefined}
         />
     );
+
+    const renderFooter = () => {
+        if (!isLoadingMore) return null;
+        return (
+            <View style={styles.footerLoader}>
+                <ActivityIndicator color={colors.primary} size="small" />
+            </View>
+        );
+    };
 
     const GroupByButton = ({ option, label }: { option: GroupByOption; label: string }) => (
         <TouchableOpacity
@@ -133,58 +212,78 @@ export default function MyAnswersScreen() {
             </Animated.View>
 
             <View style={styles.container}>
-                {/* Header */}
-                <Animated.View
-                    entering={FadeIn.duration(400)}
-                    style={[styles.header, isWideScreen && styles.headerWide]}
-                >
-                    {/* Back button */}
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                {/* Fixed Nav Bar */}
+                <View style={styles.navBar}>
+                    <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
+                        {Platform.OS === "ios" ? (
+                            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                        ) : (
+                            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
+                        )}
+                    </Animated.View>
+                    
+                    <TouchableOpacity style={styles.navBarBackButton} onPress={handleBack}>
                         <Ionicons name="chevron-back" size={24} color={colors.text} />
                     </TouchableOpacity>
 
-                    <View style={styles.headerContent}>
-                        <Text style={styles.headerLabel}>REVIEW</Text>
-                        <Text style={styles.headerTitle}>My Answers</Text>
-                        <DecorativeSeparator variant="gold" />
-
-                        {/* Count badge */}
-                        <View style={styles.countBadgePremium}>
-                            <Ionicons name="checkmark-circle" size={12} color={ACCENT} />
-                            <Text style={styles.countTextPremium}>
-                                {responses.length} {responses.length === 1 ? "ANSWER" : "ANSWERS"}
-                            </Text>
-                        </View>
-                    </View>
-
-                    {/* Group by buttons */}
-                    <View style={styles.groupByContainer}>
-                        <GroupByButton option="pack" label="Pack" />
-                        <GroupByButton option="date" label="Date" />
-                        <GroupByButton option="answer" label="Answer" />
-                    </View>
-                </Animated.View>
+                    <Animated.Text style={[styles.navBarTitle, compactHeaderStyle]} numberOfLines={1}>
+                        My Answers
+                    </Animated.Text>
+                </View>
 
                 {isLoading && responses.length === 0 ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator color={colors.primary} size="large" />
                     </View>
                 ) : (
-                    <SectionList
+                    <AnimatedSectionList
                         sections={sections}
                         renderItem={renderItem}
                         renderSectionHeader={renderSectionHeader}
-                        keyExtractor={(item) => item.id}
+                        keyExtractor={(item: any) => item.id}
                         contentContainerStyle={[styles.list, isWideScreen && styles.listWide]}
                         showsVerticalScrollIndicator={false}
                         stickySectionHeadersEnabled={false}
+                        onScroll={scrollHandler}
+                        scrollEventThrottle={16}
                         refreshControl={
                             <RefreshControl
                                 refreshing={isLoading}
-                                onRefresh={fetchResponses}
+                                onRefresh={() => fetchResponses(true)}
                                 tintColor={colors.primary}
                                 colors={[colors.primary]}
+                                progressViewOffset={STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT}
                             />
+                        }
+                        onEndReached={handleLoadMore}
+                        onEndReachedThreshold={2}
+                        ListFooterComponent={renderFooter}
+                        ListHeaderComponent={
+                            <Animated.View
+                                entering={FadeIn.duration(400)}
+                                style={[styles.header, isWideScreen && styles.headerWide, heroStyle]}
+                            >
+                                <View style={styles.headerContent}>
+                                    <Text style={styles.headerLabel}>REVIEW</Text>
+                                    <Text style={styles.headerTitle}>My Answers</Text>
+                                    <DecorativeSeparator variant="gold" />
+
+                                    {/* Count badge */}
+                                    <View style={styles.countBadgePremium}>
+                                        <Ionicons name="checkmark-circle" size={12} color={ACCENT} />
+                                        <Text style={styles.countTextPremium}>
+                                            {totalCount ?? responses.length} {(totalCount ?? responses.length) === 1 ? "ANSWER" : "ANSWERS"}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {/* Group by buttons */}
+                                <View style={styles.groupByContainer}>
+                                    <GroupByButton option="pack" label="Pack" />
+                                    <GroupByButton option="date" label="Date" />
+                                    <GroupByButton option="answer" label="Answer" />
+                                </View>
+                            </Animated.View>
                         }
                         ListEmptyComponent={
                             <Animated.View
@@ -251,28 +350,56 @@ const styles = StyleSheet.create({
         height: "100%",
         borderRadius: 150,
     },
-    // Header
+    // Fixed Nav Bar
+    navBar: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: STATUS_BAR_HEIGHT - 10,
+        paddingHorizontal: spacing.md,
+        zIndex: 100,
+    },
+    navBarBackground: {
+        ...StyleSheet.absoluteFillObject,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(212, 175, 55, 0.15)', // Gold tint
+        overflow: "hidden",
+    },
+    navBarBackButton: {
+        position: "absolute",
+        top: STATUS_BAR_HEIGHT - 5,
+        left: spacing.md,
+        zIndex: 10,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.1)",
+    },
+    navBarTitle: {
+        ...typography.headline,
+        color: colors.text,
+        textAlign: "center",
+    },
+    // Header (Hero)
     header: {
-        paddingTop: 60,
+        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.md,
+        alignItems: 'center',
     },
     headerWide: {
         alignSelf: "center",
         width: "100%",
         maxWidth: MAX_CONTENT_WIDTH,
-    },
-    backButton: {
-        position: "absolute",
-        top: 60,
-        left: spacing.md,
-        zIndex: 10,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
-        justifyContent: "center",
-        alignItems: "center",
     },
     headerContent: {
         alignItems: "center",
@@ -348,7 +475,7 @@ const styles = StyleSheet.create({
     // List
     list: {
         padding: spacing.lg,
-        paddingTop: spacing.sm,
+        paddingTop: 0, // Header handles top spacing
         paddingBottom: Platform.OS === "ios" ? 120 : 100,
     },
     listWide: {
@@ -382,5 +509,10 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         textAlign: "center",
         paddingHorizontal: spacing.md,
+    },
+    footerLoader: {
+        paddingVertical: spacing.md,
+        alignItems: "center",
+        justifyContent: "center",
     },
 });

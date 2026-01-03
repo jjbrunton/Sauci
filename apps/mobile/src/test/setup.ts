@@ -39,6 +39,7 @@ jest.mock('@supabase/supabase-js', () => {
                 is: jest.fn(),
                 in: jest.fn(),
                 order: jest.fn(),
+                range: jest.fn(),
                 update: jest.fn(),
                 upsert: jest.fn(),
                 insert: jest.fn(),

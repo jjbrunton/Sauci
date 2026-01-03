@@ -10,6 +10,7 @@ function createThenableQuery(result: any) {
         is: jest.fn(() => query),
         in: jest.fn(() => query),
         order: jest.fn(() => query),
+        range: jest.fn(() => query),
         then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
     };
     return query;

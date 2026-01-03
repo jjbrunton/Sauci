@@ -1,8 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+    FadeInDown,
+    useSharedValue,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    interpolate,
+    Extrapolation
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 import { GradientBackground, GlassCard } from '../../components/ui';
 import { FeedbackModal } from '../../components/feedback';
@@ -22,6 +30,11 @@ import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings
 
 const MAX_CONTENT_WIDTH = 500;
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
+const NAV_BAR_HEIGHT = 44;
+const STATUS_BAR_HEIGHT = 60;
+const HEADER_SCROLL_DISTANCE = 100;
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export function ProfileScreen() {
     const { width } = useWindowDimensions();
@@ -56,20 +69,81 @@ export function ProfileScreen() {
         });
     };
 
+    // Scroll animation
+    const scrollY = useSharedValue(0);
+    const scrollHandler = useAnimatedScrollHandler({
+        onScroll: (event) => {
+            scrollY.value = event.contentOffset.y;
+        },
+    });
+
+    const heroStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.7],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
+        const scale = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE],
+            [1, 0.95],
+            Extrapolation.CLAMP
+        );
+        return { opacity, transform: [{ scale }] };
+    });
+
+    const compactHeaderStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
+
+    const navBarBackgroundStyle = useAnimatedStyle(() => {
+        const opacity = interpolate(
+            scrollY.value,
+            [0, HEADER_SCROLL_DISTANCE * 0.8],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
+        return { opacity };
+    });
+
     return (
         <GradientBackground>
-            <ScrollView
+            {/* Fixed Nav Bar */}
+            <View style={styles.navBar}>
+                <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
+                    {Platform.OS === "ios" ? (
+                        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                    ) : (
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
+                    )}
+                </Animated.View>
+                
+                <Animated.Text style={[styles.navBarTitle, compactHeaderStyle]} numberOfLines={1}>
+                    Settings
+                </Animated.Text>
+            </View>
+
+            <AnimatedScrollView
                 style={styles.container}
                 contentContainerStyle={[
                     styles.contentContainer,
                     isWideScreen && styles.contentContainerWide,
                 ]}
                 showsVerticalScrollIndicator={false}
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
             >
                 {/* Header title */}
                 <Animated.View
                     entering={FadeInDown.delay(100).duration(500)}
-                    style={styles.header}
+                    style={[styles.header, heroStyle]}
                 >
                     <Text style={styles.headerLabel}>YOUR SAUCI</Text>
                     <Text style={styles.title}>Settings</Text>
@@ -305,7 +379,7 @@ export function ProfileScreen() {
                 </Animated.View>
 
                 <View style={styles.bottomSpacer} />
-            </ScrollView>
+            </AnimatedScrollView>
 
             {/* Modals */}
             <FeedbackModal
@@ -324,7 +398,33 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
+    // Fixed Nav Bar
+    navBar: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingTop: STATUS_BAR_HEIGHT - 10,
+        paddingHorizontal: spacing.md,
+        zIndex: 100,
+    },
+    navBarBackground: {
+        ...StyleSheet.absoluteFillObject,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(155, 89, 182, 0.15)', // Purple tint for profile
+        overflow: "hidden",
+    },
+    navBarTitle: {
+        ...typography.headline,
+        color: colors.text,
+        textAlign: "center",
+    },
     contentContainer: {
+        // Remove top padding here as the header adds it
         paddingBottom: Platform.OS === 'ios' ? 100 : 80,
     },
     contentContainerWide: {
@@ -333,7 +433,7 @@ const styles = StyleSheet.create({
         maxWidth: MAX_CONTENT_WIDTH,
     },
     header: {
-        paddingTop: 60,
+        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.md,
         alignItems: 'center',
