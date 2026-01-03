@@ -52,6 +52,13 @@ const STEPS: TutorialStep[] = [
         icon: "images",
         gradient: gradients.premiumRose as [string, string],
     },
+    {
+        key: "edit",
+        title: "Change Your Mind?",
+        description: "Go to My Answers to review and edit any of your responses. Changed your mind? No problem — update your answer anytime.",
+        icon: "create-outline",
+        gradient: gradients.premiumGold as [string, string],
+    },
 ];
 
 export default function MatchesTutorial({ onComplete }: Props) {
@@ -213,6 +220,40 @@ export default function MatchesTutorial({ onComplete }: Props) {
                                     <View style={styles.privacyBadge}>
                                         <Ionicons name="lock-closed" size={14} color={colors.success} />
                                         <Text style={styles.privacyBadgeText}>Private & Secure</Text>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* Edit answers demo - show on fourth step */}
+                            {currentStep === 3 && (
+                                <View style={styles.editDemo}>
+                                    <View style={styles.answerCard}>
+                                        <View style={styles.answerCardContent}>
+                                            <Text style={styles.answerCardQuestion} numberOfLines={1}>
+                                                "Try something new together"
+                                            </Text>
+                                            <View style={styles.answerCardBadge}>
+                                                <Ionicons name="checkmark" size={12} color={colors.text} />
+                                                <Text style={styles.answerCardBadgeText}>YES</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.answerCardEdit}>
+                                            <Ionicons name="create-outline" size={18} color={colors.premium.gold} />
+                                        </View>
+                                    </View>
+                                    <View style={styles.answerArrow}>
+                                        <Ionicons name="arrow-down" size={20} color={colors.textTertiary} />
+                                    </View>
+                                    <View style={[styles.answerCard, styles.answerCardUpdated]}>
+                                        <View style={styles.answerCardContent}>
+                                            <Text style={styles.answerCardQuestion} numberOfLines={1}>
+                                                "Try something new together"
+                                            </Text>
+                                            <View style={[styles.answerCardBadge, styles.answerCardBadgeMaybe]}>
+                                                <Ionicons name="help" size={12} color={colors.warning} />
+                                                <Text style={[styles.answerCardBadgeText, styles.answerCardBadgeTextMaybe]}>MAYBE</Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
                             )}
@@ -424,6 +465,68 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         color: colors.success,
         fontWeight: "600",
+    },
+    editDemo: {
+        marginTop: spacing.lg,
+        alignItems: "center",
+        gap: spacing.xs,
+    },
+    answerCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.glass.background,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        borderRadius: radius.md,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        width: 260,
+    },
+    answerCardUpdated: {
+        borderColor: colors.premium.gold,
+        backgroundColor: "rgba(212, 175, 55, 0.08)",
+    },
+    answerCardContent: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: spacing.sm,
+    },
+    answerCardQuestion: {
+        ...typography.footnote,
+        color: colors.text,
+        fontStyle: "italic",
+        flex: 1,
+    },
+    answerCardBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.success,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: radius.full,
+        gap: 2,
+    },
+    answerCardBadgeMaybe: {
+        backgroundColor: "rgba(243, 156, 18, 0.2)",
+        borderWidth: 1,
+        borderColor: colors.warning,
+    },
+    answerCardBadgeText: {
+        ...typography.caption2,
+        fontWeight: "700",
+        color: colors.text,
+    },
+    answerCardBadgeTextMaybe: {
+        color: colors.warning,
+    },
+    answerCardEdit: {
+        marginLeft: spacing.sm,
+        padding: spacing.xs,
+    },
+    answerArrow: {
+        padding: spacing.xs,
     },
     textContainer: {
         alignItems: "center",

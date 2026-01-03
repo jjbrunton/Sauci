@@ -26,7 +26,7 @@ const ROSE_RGBA = 'rgba(232, 164, 174, ';
 const MAX_CONTENT_WIDTH = 500;
 
 export default function MatchesScreen() {
-    const { matches, fetchMatches, markAllAsSeen } = useMatchStore();
+    const { matches, fetchMatches, markAllAsSeen, isLoading } = useMatchStore();
     const { user } = useAuthStore();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -205,6 +205,14 @@ export default function MatchesScreen() {
                     entering={FadeIn.duration(400)}
                     style={[styles.header, isWideScreen && styles.headerWide]}
                 >
+                    {/* My Answers button */}
+                    <TouchableOpacity
+                        style={styles.myAnswersButton}
+                        onPress={() => router.push("/(app)/my-answers")}
+                    >
+                        <Ionicons name="list-outline" size={20} color={ACCENT} />
+                    </TouchableOpacity>
+
                     <View style={styles.headerContent}>
                         {/* Premium label */}
                         <Text style={styles.headerLabel}>DISCOVER</Text>
@@ -229,7 +237,7 @@ export default function MatchesScreen() {
                     showsVerticalScrollIndicator={false}
                     refreshControl={
                         <RefreshControl
-                            refreshing={false}
+                            refreshing={isLoading}
                             onRefresh={fetchMatches}
                             tintColor={colors.primary}
                             colors={[colors.primary]}
@@ -322,6 +330,20 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         width: '100%',
         maxWidth: MAX_CONTENT_WIDTH,
+    },
+    myAnswersButton: {
+        position: 'absolute',
+        top: 60,
+        right: spacing.md,
+        zIndex: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        borderWidth: 1,
+        borderColor: `${ACCENT_RGBA}0.2)`,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerContent: {
         alignItems: 'center',

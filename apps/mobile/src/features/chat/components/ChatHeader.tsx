@@ -137,51 +137,64 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                         marginVertical={spacing.md}
                     />
 
-                    {/* Question Text */}
-                    <Text style={styles.matchQuestionText}>
-                        "{match.question.text}"
-                    </Text>
-                    {match.question.partner_text && (
-                        <Text style={styles.matchQuestionPartnerText}>
-                            "{match.question.partner_text}"
-                        </Text>
-                    )}
-
-                    {/* Response Pills */}
-                    {match.responses && match.responses.length > 0 && (
-                        <View style={styles.responsePillsRow}>
-                            {match.responses.map((response: any) => {
-                                const isUser = response.user_id === user?.id;
-                                const isYes = response.answer === 'yes';
-                                return (
-                                    <View key={response.user_id} style={styles.responsePillWrapper}>
-                                        {isYes ? (
-                                            <LinearGradient
-                                                colors={isYesYes
-                                                    ? gradients.premiumGold as [string, string]
-                                                    : [colors.success, '#27ae60']
-                                                }
-                                                style={styles.responsePill}
-                                                start={{ x: 0, y: 0 }}
-                                                end={{ x: 1, y: 1 }}
-                                            >
-                                                <Ionicons name="checkmark" size={12} color={colors.text} />
-                                                <Text style={styles.responsePillText}>
-                                                    {isUser ? 'You' : (response.profiles?.name?.split(' ')[0] || 'Partner')}
-                                                </Text>
-                                            </LinearGradient>
-                                        ) : (
-                                            <View style={styles.responsePillMaybe}>
-                                                <Ionicons name="help" size={12} color={colors.warning} />
-                                                <Text style={styles.responsePillTextMaybe}>
-                                                    {isUser ? 'You' : (response.profiles?.name?.split(' ')[0] || 'Partner')}
-                                                </Text>
-                                            </View>
-                                        )}
-                                    </View>
+                    {/* Question and Responses - Show who answered what */}
+                    {match.responses && match.responses.length > 0 ? (
+                        <View style={styles.responsesContainer}>
+                            {(() => {
+                                // Sort responses by created_at to determine who answered first
+                                const sortedResponses = [...match.responses].sort(
+                                    (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                                 );
-                            })}
+                                const isTwoPart = !!match.question.partner_text;
+
+                                return sortedResponses.map((response: any, index: number) => {
+                                    const isUser = response.user_id === user?.id;
+                                    const isYes = response.answer === 'yes';
+                                    const name = isUser ? 'You' : (response.profiles?.name?.split(' ')[0] || 'Partner');
+
+                                    // First responder sees main text, second sees partner_text
+                                    const questionText = isTwoPart && index === 1
+                                        ? match.question.partner_text
+                                        : match.question.text;
+
+                                    return (
+                                        <View key={response.user_id} style={styles.responseCard}>
+                                            {/* Name and Answer Badge */}
+                                            <View style={styles.responseHeader}>
+                                                <Text style={styles.responseName}>{name}</Text>
+                                                {isYes ? (
+                                                    <LinearGradient
+                                                        colors={isYesYes
+                                                            ? gradients.premiumGold as [string, string]
+                                                            : [colors.success, '#27ae60']
+                                                        }
+                                                        style={styles.answerBadge}
+                                                        start={{ x: 0, y: 0 }}
+                                                        end={{ x: 1, y: 1 }}
+                                                    >
+                                                        <Ionicons name="checkmark" size={10} color={colors.text} />
+                                                        <Text style={styles.answerBadgeText}>YES</Text>
+                                                    </LinearGradient>
+                                                ) : (
+                                                    <View style={styles.answerBadgeMaybe}>
+                                                        <Ionicons name="help" size={10} color={colors.warning} />
+                                                        <Text style={styles.answerBadgeTextMaybe}>MAYBE</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                            {/* Question they saw */}
+                                            <Text style={styles.responseQuestionText}>
+                                                "{questionText}"
+                                            </Text>
+                                        </View>
+                                    );
+                                });
+                            })()}
                         </View>
+                    ) : (
+                        <Text style={styles.matchQuestionText}>
+                            "{match.question.text}"
+                        </Text>
                     )}
 
                     {/* Premium border */}
@@ -322,50 +335,66 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         lineHeight: 20,
     },
-    matchQuestionPartnerText: {
-        ...typography.caption1,
-        color: colors.textSecondary,
-        textAlign: 'center',
-        fontStyle: 'italic',
-        marginTop: 2,
-    },
-    responsePillsRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
+    responsesContainer: {
+        width: '100%',
         gap: spacing.sm,
-        marginTop: spacing.sm,
     },
-    responsePillWrapper: {
-        overflow: 'hidden',
-        borderRadius: radius.full,
-    },
-    responsePill: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
-        gap: 4,
-    },
-    responsePillText: {
-        ...typography.caption2,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    responsePillMaybe: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
-        gap: 4,
-        backgroundColor: `rgba(243, 156, 18, 0.15)`,
+    responseCard: {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: radius.md,
+        padding: spacing.sm,
         borderWidth: 1,
-        borderColor: `rgba(243, 156, 18, 0.3)`,
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+    },
+    responseHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: spacing.xs,
+    },
+    responseName: {
+        ...typography.caption1,
+        fontWeight: '600',
+        color: colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    answerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        gap: 3,
         borderRadius: radius.full,
     },
-    responsePillTextMaybe: {
+    answerBadgeText: {
         ...typography.caption2,
-        fontWeight: '600',
+        fontWeight: '700',
+        color: colors.text,
+        letterSpacing: 0.5,
+    },
+    answerBadgeMaybe: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        gap: 3,
+        backgroundColor: 'rgba(243, 156, 18, 0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        borderRadius: radius.full,
+    },
+    answerBadgeTextMaybe: {
+        ...typography.caption2,
+        fontWeight: '700',
         color: colors.warning,
+        letterSpacing: 0.5,
+    },
+    responseQuestionText: {
+        ...typography.footnote,
+        color: colors.text,
+        fontStyle: 'italic',
+        lineHeight: 18,
     },
     matchCardBorder: {
         position: 'absolute',

@@ -87,6 +87,7 @@ export interface Match {
     match_type: MatchType;
     is_new: boolean;
     created_at: string;
+    unreadCount?: number;
 }
 
 // Extended match with question details

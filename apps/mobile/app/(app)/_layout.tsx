@@ -175,7 +175,7 @@ export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut } = useAuthStore();
-    const { matches, newMatchesCount, addMatch } = useMatchStore();
+    const { matches, newMatchesCount, addMatch, updateMatchUnreadCount } = useMatchStore();
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
@@ -477,6 +477,9 @@ export default function AppLayout() {
                             delivered_at: newMessage.delivered_at || new Date().toISOString(),
                             match: { id: match.id, question: { text: questionText || "" } },
                         });
+
+                        // Sync per-match unread count for realtime updates
+                        updateMatchUnreadCount(match.id, 1);
                     }
                 }
             )
@@ -693,6 +696,12 @@ export default function AppLayout() {
                 />
                 <Tabs.Screen
                     name="quiz"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="my-answers"
                     options={{
                         href: null, // Hide from tab bar
                     }}

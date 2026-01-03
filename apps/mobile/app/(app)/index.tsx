@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, useWindowDimensions } from "react-native";
 import Animated, {
     FadeInDown,
@@ -13,7 +13,7 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore, useMatchStore, usePacksStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
@@ -23,17 +23,20 @@ const ACCENT_COLOR = colors.primary;
 export default function HomeScreen() {
     const { user, partner, couple } = useAuthStore();
     const { matches, newMatchesCount, fetchMatches } = useMatchStore();
-    const { packs, fetchPacks } = usePacksStore();
+    const { enabledPackIds, fetchPacks } = usePacksStore();
     const { width } = useWindowDimensions();
 
-    useEffect(() => {
-        fetchMatches();
-        fetchPacks();
-    }, []);
+    // Refresh data when screen gains focus for freshness
+    useFocusEffect(
+        useCallback(() => {
+            fetchMatches();
+            fetchPacks();
+        }, [])
+    );
 
-    const recentMatches = matches.slice(0, 3);
+    const topMatches = matches.slice(0, 3);
     const isWideScreen = width > MAX_CONTENT_WIDTH;
-    const enabledPacksCount = packs.length;
+    const enabledPacksCount = enabledPackIds.length;
 
     // Subtle pulsating animation for the CTA icon
     const pulseScale = useSharedValue(1);
@@ -219,8 +222,8 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </Animated.View>
 
-                    {/* Recent Matches */}
-                    {recentMatches.length > 0 && (
+                    {/* Top Matches (sorted by unread first, then recent) */}
+                    {topMatches.length > 0 && (
                         <Animated.View
                             entering={FadeInDown.delay(400).duration(500)}
                             style={styles.section}
@@ -230,7 +233,7 @@ export default function HomeScreen() {
                                     <View style={styles.sectionIcon}>
                                         <Ionicons name="heart" size={14} color={ACCENT_COLOR} />
                                     </View>
-                                    <Text style={styles.sectionTitle}>Recent Matches</Text>
+                                    <Text style={styles.sectionTitle}>Top Matches</Text>
                                 </View>
                                 <TouchableOpacity
                                     onPress={() => router.push("/(app)/matches")}
@@ -240,7 +243,7 @@ export default function HomeScreen() {
                                     <Ionicons name="chevron-forward" size={14} color={ACCENT_COLOR} />
                                 </TouchableOpacity>
                             </View>
-                            {recentMatches.map((match, index) => (
+                            {topMatches.map((match, index) => (
                                 <Animated.View
                                     key={match.id}
                                     entering={FadeInRight.delay(450 + index * 100).duration(400)}
@@ -272,7 +275,7 @@ export default function HomeScreen() {
                     )}
 
                     {/* Tips when no matches */}
-                    {recentMatches.length === 0 && (
+                    {topMatches.length === 0 && (
                         <Animated.View
                             entering={FadeInDown.delay(400).duration(500)}
                             style={styles.section}

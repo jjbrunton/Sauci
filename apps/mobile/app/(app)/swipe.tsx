@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
     FadeIn,
@@ -28,7 +28,9 @@ import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 
 export default function SwipeScreen() {
-    const { packId } = useLocalSearchParams();
+    const params = useLocalSearchParams();
+    // Normalize packId - useLocalSearchParams can return string | string[]
+    const packId = Array.isArray(params.packId) ? params.packId[0] : params.packId;
     const [questions, setQuestions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -36,9 +38,10 @@ export default function SwipeScreen() {
     const [feedbackQuestion, setFeedbackQuestion] = useState<{id: string, text: string} | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
     const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
-    const { enabledPackIds, fetchPacks } = usePacksStore();
+    const { enabledPackIds, ensureEnabledPacksLoaded } = usePacksStore();
     const { partner, couple } = useAuthStore();
     const hasTrackedExhausted = useRef(false);
+    const fetchRequestId = useRef(0);
 
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
@@ -61,11 +64,33 @@ export default function SwipeScreen() {
         ],
     }));
 
+    const isFirstMount = useRef(true);
+
     useEffect(() => {
-        fetchPacks().then(() => fetchQuestions());
+        // Reset state when pack changes
+        setCurrentIndex(0);
+        setIsLoading(true);
+        setIsBlocked(false);
+        setGapInfo(null);
+        hasTrackedExhausted.current = false;
+
+        // Use lightweight ensureEnabledPacksLoaded instead of full fetchPacks
+        ensureEnabledPacksLoaded().then(() => fetchQuestions());
         checkTutorial();
-        hasTrackedExhausted.current = false; // Reset when pack changes
     }, [packId]);
+
+    // Refresh questions when screen gains focus (handles partner answering while away)
+    useFocusEffect(
+        useCallback(() => {
+            // Skip on first mount since useEffect already fetches
+            if (isFirstMount.current) {
+                isFirstMount.current = false;
+                return;
+            }
+            // Silently refetch to get updated partner_answered status
+            fetchQuestions();
+        }, [packId])
+    );
 
     // Check if user is too far ahead of partner (called when questions empty or after swipe)
     const checkAnswerGap = async (): Promise<boolean> => {
@@ -80,6 +105,9 @@ export default function SwipeScreen() {
 
             if (error) {
                 console.error('Error checking answer gap:', error);
+                // Clear blocked state on error so user isn't stuck
+                setIsBlocked(false);
+                setGapInfo(null);
                 return false;
             }
 
@@ -97,10 +125,18 @@ export default function SwipeScreen() {
                 }
                 return result.is_blocked;
             }
+
+            // No data returned - clear blocked state
+            setIsBlocked(false);
+            setGapInfo(null);
+            return false;
         } catch (error) {
             console.error('Failed to check answer gap:', error);
+            // Clear blocked state on error so user isn't stuck
+            setIsBlocked(false);
+            setGapInfo(null);
+            return false;
         }
-        return false;
     };
 
     // Calculate effective total questions (accounting for gap limit)
@@ -150,7 +186,20 @@ export default function SwipeScreen() {
         }
     }, [enabledPackIds]);
 
+    // Fisher-Yates shuffle for stable randomization
+    const shuffleArray = <T,>(array: T[]): T[] => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
     const fetchQuestions = async () => {
+        // Race protection: increment request ID and track current request
+        const currentRequestId = ++fetchRequestId.current;
+
         try {
             const [{ data, error }, skippedIds] = await Promise.all([
                 supabase.rpc("get_recommended_questions", {
@@ -158,6 +207,11 @@ export default function SwipeScreen() {
                 }),
                 getSkippedQuestionIds()
             ]);
+
+            // Race guard: if a newer request started, discard this result
+            if (currentRequestId !== fetchRequestId.current) {
+                return;
+            }
 
             if (error) {
                 console.error("Error fetching recommended questions:", error);
@@ -177,9 +231,11 @@ export default function SwipeScreen() {
                 setGapInfo(null);
             }
 
-            const sorted = filtered.sort((a: any, b: any) => {
-                let scoreA = Math.random();
-                let scoreB = Math.random();
+            // First shuffle to randomize, then stable sort by priority scores
+            const shuffled = shuffleArray(filtered);
+            const sorted = shuffled.sort((a: any, b: any) => {
+                let scoreA = 0;
+                let scoreB = 0;
 
                 if (a.partner_answered && a.is_two_part) scoreA += 1.5;
                 else if (a.partner_answered) scoreA += 0.7;
@@ -192,11 +248,18 @@ export default function SwipeScreen() {
                 return scoreB - scoreA;
             });
 
-            setQuestions(sorted);
+            // Only update state if still the current request
+            if (currentRequestId === fetchRequestId.current) {
+                setQuestions(sorted);
+            }
         } catch (error) {
-            console.error(error);
+            if (currentRequestId === fetchRequestId.current) {
+                console.error(error);
+            }
         } finally {
-            setIsLoading(false);
+            if (currentRequestId === fetchRequestId.current) {
+                setIsLoading(false);
+            }
         }
     };
 

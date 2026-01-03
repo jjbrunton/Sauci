@@ -11,6 +11,7 @@ interface PacksState {
     isLoading: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
+    ensureEnabledPacksLoaded: () => Promise<void>;
     togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
     clearPacks: () => void;
 }
@@ -72,6 +73,16 @@ export const usePacksStore = create<PacksState>((set, get) => ({
 
         const ids = couplePacks?.map(cp => cp.pack_id) || [];
         set({ enabledPackIds: ids });
+    },
+
+    ensureEnabledPacksLoaded: async () => {
+        // Only fetch if not already loaded - lightweight check for swipe screen
+        const coupleId = useAuthStore.getState().user?.couple_id;
+        if (!coupleId) return;
+
+        if (get().enabledPackIds.length === 0) {
+            await get().fetchEnabledPacks();
+        }
     },
 
     togglePack: async (packId: string): Promise<{ success: boolean; reason?: string }> => {

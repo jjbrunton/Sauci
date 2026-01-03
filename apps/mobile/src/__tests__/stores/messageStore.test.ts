@@ -42,12 +42,14 @@ describe('messageStore', () => {
     });
 
     it('markMatchMessagesAsRead updates Supabase and refetches unread count', async () => {
+        const unreadCountQuery = createThenableQuery({ count: 2 }); // count before marking
         const updateQuery = createThenableQuery({});
-        const countQuery = createThenableQuery({ count: 0 });
+        const finalCountQuery = createThenableQuery({ count: 0 }); // count after marking
 
         (supabase.from as jest.Mock)
-            .mockReturnValueOnce(updateQuery)
-            .mockReturnValueOnce(countQuery);
+            .mockReturnValueOnce(unreadCountQuery) // count unread messages first
+            .mockReturnValueOnce(updateQuery) // update messages
+            .mockReturnValueOnce(finalCountQuery); // fetchUnreadCount
 
         await useMessageStore.getState().markMatchMessagesAsRead('m1');
 

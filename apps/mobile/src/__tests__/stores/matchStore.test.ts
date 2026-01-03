@@ -18,8 +18,8 @@ function createThenableQuery(result: any) {
 describe('matchStore', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        useMatchStore.setState({ matches: [], newMatchesCount: 0 } as any);
-        useAuthStore.setState({ user: { id: 'me' } } as any);
+        useMatchStore.setState({ matches: [], newMatchesCount: 0, isLoading: false, error: null } as any);
+        useAuthStore.setState({ user: { id: 'me', couple_id: 'couple1' } } as any);
     });
 
     it('sorts matches with unread messages first', async () => {

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import type { Database } from "@/types/supabase";
 import { useAuthStore } from "./authStore";
+import { useMatchStore } from "./matchStore";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
@@ -72,6 +73,14 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const userId = useAuthStore.getState().user?.id;
         if (!userId) return;
 
+        // Get count of unread messages before marking them read
+        const { count: unreadInMatch } = await supabase
+            .from("messages")
+            .select("*", { count: "exact", head: true })
+            .eq("match_id", matchId)
+            .neq("user_id", userId)
+            .is("read_at", null);
+
         await supabase
             .from("messages")
             .update({ read_at: new Date().toISOString() })
@@ -79,8 +88,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             .neq("user_id", userId)
             .is("read_at", null);
 
-        // Refetch unread count
+        // Refetch global unread count
         await get().fetchUnreadCount();
+
+        // Sync per-match unread count in matchStore
+        if (unreadInMatch && unreadInMatch > 0) {
+            useMatchStore.getState().updateMatchUnreadCount(matchId, -unreadInMatch);
+        }
     },
 
     clearMessages: () => {
