@@ -24,6 +24,7 @@ export interface MessageContentProps {
     revealMessage: (id: string) => void;
     onImagePress: (uri: string) => void;
     onVideoFullScreen: (uri: string) => void;
+    onLongPress?: () => void;
 }
 
 export function MessageContent({
@@ -33,6 +34,7 @@ export function MessageContent({
     revealMessage,
     onImagePress,
     onVideoFullScreen,
+    onLongPress,
 }: MessageContentProps) {
     // Check if message was deleted for everyone
     if (item.deleted_at) {
@@ -304,7 +306,12 @@ export function MessageContent({
     const renderText = () => {
         if (decryptErrorCode === 'E2EE_PENDING_RECIPIENT_KEY') {
             return (
-                <TouchableOpacity activeOpacity={0.85} onPress={showSecureMessageInfo}>
+                <TouchableOpacity 
+                    activeOpacity={0.85} 
+                    onPress={showSecureMessageInfo}
+                    onLongPress={onLongPress}
+                    delayLongPress={300}
+                >
                     <View style={styles.securePlaceholder}>
                         <View style={styles.securePlaceholderRow}>
                             <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
@@ -327,7 +334,12 @@ export function MessageContent({
 
         if (decryptError) {
             return (
-                <TouchableOpacity activeOpacity={0.85} onPress={retryDecrypt}>
+                <TouchableOpacity 
+                    activeOpacity={0.85} 
+                    onPress={retryDecrypt}
+                    onLongPress={onLongPress}
+                    delayLongPress={300}
+                >
                     <Text style={[styles.messageText, styles.errorText]}>Couldn’t open secure message • Tap to retry</Text>
                 </TouchableOpacity>
             );

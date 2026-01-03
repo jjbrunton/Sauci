@@ -56,6 +56,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     revealMessage={revealMessage}
                     onImagePress={onImagePress}
                     onVideoFullScreen={onVideoFullScreen}
+                    onLongPress={() => onMessageLongPress(item, isMe)}
                 />
             </MessageBubble>
         );
