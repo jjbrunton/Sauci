@@ -5,29 +5,130 @@ This guide covers local release builds for Android and iOS.
 ## Prerequisites
 
 - **Java JDK 17** - Required for Android Gradle builds
-- **Android Studio** - For SDK and build tools
-- **Xcode** - For iOS builds
+- **Android Studio** - For SDK and build tools (including Android SDK/NDK)
+- **Xcode** - For iOS builds (macOS only)
 - **EAS CLI** - `npm install -g eas-cli`
+- **Expo account** - Run `eas login` to authenticate
 
 ---
 
-## Recommended: EAS Build Local
+## EAS Build Local (Recommended)
 
-The easiest way to build locally with correct signing credentials:
+The `--local` flag runs the EAS build process on your machine instead of Expo's cloud servers. This automatically handles signing credentials and produces the same output as cloud builds.
+
+### Quick Start
 
 ```bash
 cd apps/mobile
 
-# Android - produces .aab file
+# Android - produces .aab file (for Play Store)
 eas build --platform android --profile production --local
 
-# iOS - produces .ipa file
+# iOS - produces .ipa file (for App Store)
 eas build --platform ios --profile production --local
 ```
 
-This runs the build on your machine but automatically uses the correct keystore/certificates from EAS credentials.
+Output files are placed in the current directory by default.
 
-Output files will be in the current directory.
+### Building an APK (for Testing)
+
+The production profile creates an AAB (Android App Bundle), which can't be directly installed on devices. To build an APK for testing:
+
+```bash
+# Use the preview profile (configured for APK output)
+eas build --platform android --profile preview --local
+```
+
+Or add a custom profile to `eas.json`:
+
+```json
+{
+  "build": {
+    "local-apk": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+```
+
+Then run:
+```bash
+eas build --platform android --profile local-apk --local
+```
+
+### Installing the APK
+
+```bash
+# Via ADB (device connected via USB)
+adb install ./build-*.apk
+
+# Or drag-and-drop onto Android Emulator
+```
+
+### Build Profiles
+
+| Profile | Output | Use Case |
+|---------|--------|----------|
+| `production` | .aab | Play Store / App Store submission |
+| `preview` | .apk | Internal testing, device installation |
+| `development` | .apk | Dev client with hot reload |
+
+### Environment Variables
+
+Useful for debugging build issues:
+
+| Variable | Purpose |
+|----------|---------|
+| `EAS_LOCAL_BUILD_SKIP_CLEANUP=1` | Keep build directory after completion |
+| `EAS_LOCAL_BUILD_WORKINGDIR=/path` | Custom build directory (default: /tmp) |
+| `EAS_LOCAL_BUILD_ARTIFACTS_DIR=/path` | Output directory for build artifacts |
+
+Example with debugging enabled:
+```bash
+EAS_LOCAL_BUILD_SKIP_CLEANUP=1 \
+EAS_LOCAL_BUILD_WORKINGDIR=~/eas-builds \
+eas build --platform android --profile production --local
+```
+
+### Limitations of Local Builds
+
+- **Single platform only** - Can't use `--platform all`
+- **Software versions ignored** - `node`, `yarn`, `ndk`, `image` fields in eas.json are ignored
+- **No caching** - Each build starts fresh
+- **Secret env vars not available** - Set them in your local environment instead
+- **macOS/Linux only** - Windows requires WSL (unsupported)
+
+### Troubleshooting Local Builds
+
+**Java version mismatch:**
+```bash
+# Check Java version (should be 17)
+java -version
+
+# On macOS, switch Java version
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+```
+
+**Gradle daemon issues:**
+```bash
+cd android && ./gradlew --stop && cd ..
+```
+
+**Clean build after dependency changes:**
+```bash
+# Remove native folders and rebuild
+rm -rf android ios
+npx expo prebuild --clean
+eas build --platform android --profile production --local
+```
+
+**Out of memory:**
+```bash
+# Increase Gradle memory
+echo "org.gradle.jvmargs=-Xmx4g" >> android/gradle.properties
+```
 
 ---
 

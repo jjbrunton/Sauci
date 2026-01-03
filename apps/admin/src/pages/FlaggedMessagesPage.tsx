@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/config';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
     Table,
     TableBody,
@@ -13,15 +13,16 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, CheckCircle, AlertTriangle, Eye, RefreshCw } from 'lucide-react';
+import { CheckCircle, Eye, RefreshCw, MessageSquare, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { describeImage } from '@/lib/ai/analyzers/media';
 
 interface FlaggedMessage {
     id: string;
     created_at: string;
     user_id: string;
+    match_id: string | null;
     moderation_status: 'flagged' | 'safe' | 'unmoderated';
     flag_reason: string | null;
     content?: string; // Encrypted usually
@@ -30,19 +31,24 @@ interface FlaggedMessage {
 }
 
 export function FlaggedMessagesPage() {
+    const navigate = useNavigate();
     const [messages, setMessages] = useState<FlaggedMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedMessage, setSelectedMessage] = useState<FlaggedMessage | null>(null);
     const [decryptedContent, setDecryptedContent] = useState<{ text: string | null; mediaUrl: string | null }>({ text: null, mediaUrl: null });
     const [decrypting, setDecrypting] = useState(false);
     const [processing, setProcessing] = useState<string | null>(null); // messageId being processed
+    const [imageDescription, setImageDescription] = useState<string | null>(null);
+    const [describing, setDescribing] = useState(false);
+    const [inlineDescriptions, setInlineDescriptions] = useState<Record<string, string>>({});
+    const [describingInline, setDescribingInline] = useState<string | null>(null);
 
     const fetchMessages = async () => {
         setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('messages')
-                .select('id, created_at, user_id, moderation_status, flag_reason, content, media_path, media_type')
+                .select('id, created_at, user_id, match_id, moderation_status, flag_reason, content, media_path, media_type')
                 .eq('moderation_status', 'flagged')
                 .order('created_at', { ascending: false });
 
@@ -55,65 +61,10 @@ export function FlaggedMessagesPage() {
             setLoading(false);
         }
     };
-
+    
     useEffect(() => {
         fetchMessages();
     }, []);
-
-    const handleView = async (message: FlaggedMessage) => {
-        setSelectedMessage(message);
-        setDecrypting(true);
-        setDecryptedContent({ text: null, mediaUrl: null });
-
-        try {
-            // Call edge function to decrypt
-            // We use admin-decrypt-message for text
-            let text = null;
-            let mediaUrl = null;
-
-            // 1. Decrypt Text/Metadata
-            const { data: decryptData, error: decryptError } = await supabase.functions.invoke('admin-decrypt-message', {
-                body: { messageId: message.id }
-            });
-
-            if (decryptError) throw decryptError;
-
-            if (decryptData) {
-                text = decryptData.content;
-                
-                // 2. Handle Media
-                // If it has media, admin-decrypt-message returns media_path but not the file content directly decrypted usually
-                // But admin-decrypt-media function returns the raw bytes
-                if (decryptData.media_path) {
-                    const { data: mediaBlob, error: mediaError } = await supabase.functions.invoke('admin-decrypt-media', {
-                        body: { messageId: message.id },
-                        // Response is a blob/file usually? 
-                        // supabase.functions.invoke by default parses JSON.
-                        // We might need to handle blob response.
-                    });
-
-                    // Invoke returns data as parsed JSON if header is json, or blob?
-                    // The admin-decrypt-media returns binary body. 
-                    // Supabase js client might try to parse it. 
-                    // We might need a direct fetch or handle responseType.
-                }
-            }
-            
-            // NOTE: For now, displaying text content. Media decryption in frontend via edge function binary response 
-            // is tricky with supabase-js invoke(). 
-            // We will just show the text for now or implement media later if critical.
-            // Actually, we can just use a direct fetch with the user's session token.
-            
-            setDecryptedContent({ text, mediaUrl });
-            
-        } catch (error) {
-            console.error('Decryption failed:', error);
-            toast.error('Failed to decrypt content');
-            setDecryptedContent({ text: 'Error decrypting content', mediaUrl: null });
-        } finally {
-            setDecrypting(false);
-        }
-    };
     
     // Custom media fetcher because supabase.functions.invoke is JSON-centric
     const fetchDecryptedMedia = async (messageId: string) => {
@@ -140,11 +91,11 @@ export function FlaggedMessagesPage() {
         }
     };
     
-    // Improved handleView with media support
-    const handleViewComplete = async (message: FlaggedMessage) => {
+    const handleView = async (message: FlaggedMessage) => {
         setSelectedMessage(message);
         setDecrypting(true);
         setDecryptedContent({ text: null, mediaUrl: null });
+        setImageDescription(null);
         
         try {
             // Text
@@ -169,6 +120,72 @@ export function FlaggedMessagesPage() {
         }
     };
 
+    const handleDescribeImage = async () => {
+        if (!decryptedContent.mediaUrl) return;
+
+        setDescribing(true);
+        try {
+            const description = await describeImage(decryptedContent.mediaUrl);
+            setImageDescription(description);
+        } catch (error) {
+            console.error('Failed to describe image:', error);
+            toast.error('Failed to describe image');
+        } finally {
+            setDescribing(false);
+        }
+    };
+
+    const handleDescribeInline = async (message: FlaggedMessage) => {
+        if (!message.media_path || message.media_type === 'video') return;
+
+        setDescribingInline(message.id);
+        try {
+            // First fetch the decrypted media as blob
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                toast.error('Not authenticated');
+                return;
+            }
+
+            const response = await fetch(`https://ckjcrkjpmhqhiucifukx.supabase.co/functions/v1/admin-decrypt-media`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ messageId: message.id })
+            });
+
+            if (!response.ok) {
+                toast.error('Failed to decrypt media');
+                return;
+            }
+
+            // Convert blob to base64
+            const blob = await response.blob();
+            const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const result = reader.result as string;
+                    // Extract base64 part from data URL
+                    const base64Data = result.split(',')[1];
+                    resolve(base64Data);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+
+            // Then describe it
+            const description = await describeImage(base64);
+            setInlineDescriptions(prev => ({ ...prev, [message.id]: description }));
+        } catch (error) {
+            console.error('Failed to describe image:', error);
+            toast.error('Failed to describe image');
+        } finally {
+            setDescribingInline(null);
+        }
+    };
+
     const handleMarkSafe = async (messageId: string) => {
         setProcessing(messageId);
         try {
@@ -187,6 +204,14 @@ export function FlaggedMessagesPage() {
         } finally {
             setProcessing(null);
         }
+    };
+
+    const handleJumpToChat = () => {
+        if (!selectedMessage || !selectedMessage.match_id) {
+             toast.error("No match context available");
+             return;
+        }
+        navigate(`/users/${selectedMessage.user_id}/matches/${selectedMessage.match_id}`);
     };
 
     return (
@@ -226,7 +251,8 @@ export function FlaggedMessagesPage() {
                             </TableRow>
                         ) : (
                             messages.map((message) => (
-                                <TableRow key={message.id}>
+                                <React.Fragment key={message.id}>
+                                <TableRow>
                                     <TableCell className="font-mono text-sm">
                                         {format(new Date(message.created_at), 'MMM d, HH:mm')}
                                     </TableCell>
@@ -243,16 +269,31 @@ export function FlaggedMessagesPage() {
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right space-x-2">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            onClick={() => handleViewComplete(message)}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleView(message)}
                                         >
                                             <Eye className="h-4 w-4 mr-2" />
                                             Review
                                         </Button>
-                                        <Button 
-                                            variant="outline" 
+                                        {message.media_path && message.media_type !== 'video' && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDescribeInline(message)}
+                                                disabled={describingInline === message.id}
+                                            >
+                                                {describingInline === message.id ? (
+                                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Sparkles className="h-4 w-4 mr-2" />
+                                                )}
+                                                Describe
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="outline"
                                             size="sm"
                                             className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                             onClick={() => handleMarkSafe(message.id)}
@@ -263,6 +304,19 @@ export function FlaggedMessagesPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
+                                {inlineDescriptions[message.id] && (
+                                    <TableRow className="bg-blue-50/50 dark:bg-blue-900/10">
+                                        <TableCell colSpan={4} className="py-2">
+                                            <div className="flex items-start gap-2 text-sm">
+                                                <Sparkles className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                                <p className="text-blue-800 dark:text-blue-200">
+                                                    {inlineDescriptions[message.id]}
+                                                </p>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </React.Fragment>
                             ))
                         )}
                     </TableBody>
@@ -270,7 +324,7 @@ export function FlaggedMessagesPage() {
             </Card>
 
             <Dialog open={!!selectedMessage} onOpenChange={(open) => !open && setSelectedMessage(null)}>
-                <DialogContent className="max-w-lg">
+                <DialogContent className="max-w-3xl">
                     <DialogHeader>
                         <DialogTitle>Review Content</DialogTitle>
                         <DialogDescription>
@@ -278,46 +332,91 @@ export function FlaggedMessagesPage() {
                         </DialogDescription>
                     </DialogHeader>
                     
-                    <div className="min-h-[200px] bg-muted/30 rounded-md p-4 flex items-center justify-center">
+                    <div className="min-h-[200px] bg-muted/30 rounded-md p-4 flex flex-col gap-4">
                         {decrypting ? (
-                            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2 text-muted-foreground py-8">
                                 <RefreshCw className="h-6 w-6 animate-spin" />
                                 <p className="text-sm">Decrypting secure content...</p>
                             </div>
                         ) : (
                             <div className="w-full space-y-4">
                                 {decryptedContent.text && (
-                                    <div className="bg-background border rounded p-3 text-sm">
-                                        {decryptedContent.text}
+                                    <div className="space-y-2">
+                                        <h4 className="text-sm font-medium text-muted-foreground">Message Text</h4>
+                                        <div className="bg-background border rounded p-3 text-sm whitespace-pre-wrap">
+                                            {decryptedContent.text}
+                                        </div>
                                     </div>
                                 )}
+                                
                                 {decryptedContent.mediaUrl && (
-                                    <div className="flex justify-center">
-                                        {selectedMessage?.media_type === 'video' ? (
-                                            <video src={decryptedContent.mediaUrl} controls className="max-h-[400px] rounded" />
-                                        ) : (
-                                            <img src={decryptedContent.mediaUrl} alt="Flagged content" className="max-h-[400px] rounded object-contain" />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-sm font-medium text-muted-foreground">Media Content</h4>
+                                            {selectedMessage?.media_type !== 'video' && (
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm" 
+                                                    onClick={handleDescribeImage}
+                                                    disabled={describing}
+                                                >
+                                                    {describing ? (
+                                                        <RefreshCw className="h-3 w-3 mr-2 animate-spin" />
+                                                    ) : (
+                                                        <Sparkles className="h-3 w-3 mr-2" />
+                                                    )}
+                                                    Describe Image
+                                                </Button>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="flex justify-center bg-black/5 rounded-lg overflow-hidden border">
+                                            {selectedMessage?.media_type === 'video' ? (
+                                                <video src={decryptedContent.mediaUrl} controls className="max-h-[400px] w-full object-contain" />
+                                            ) : (
+                                                <img src={decryptedContent.mediaUrl} alt="Flagged content" className="max-h-[400px] w-full object-contain" />
+                                            )}
+                                        </div>
+
+                                        {imageDescription && (
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                                                <h5 className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1 flex items-center">
+                                                    <Sparkles className="h-3 w-3 mr-1" />
+                                                    AI Description
+                                                </h5>
+                                                <p className="text-sm text-blue-800 dark:text-blue-200">{imageDescription}</p>
+                                            </div>
                                         )}
                                     </div>
                                 )}
+
                                 {!decryptedContent.text && !decryptedContent.mediaUrl && (
-                                    <p className="text-center text-muted-foreground">No content displayed</p>
+                                    <p className="text-center text-muted-foreground py-8">No content displayed</p>
                                 )}
                             </div>
                         )}
                     </div>
 
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setSelectedMessage(null)}>Cancel</Button>
-                        <Button 
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => selectedMessage && handleMarkSafe(selectedMessage.id)}
-                        >
-                            Mark Safe
-                        </Button>
+                    <DialogFooter className="gap-2 sm:justify-between">
+                        <div className="flex gap-2">
+                             <Button variant="outline" onClick={handleJumpToChat}>
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Jump to Chat
+                            </Button>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="ghost" onClick={() => setSelectedMessage(null)}>Cancel</Button>
+                            <Button 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => selectedMessage && handleMarkSafe(selectedMessage.id)}
+                            >
+                                Mark Safe
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
     );
 }
+

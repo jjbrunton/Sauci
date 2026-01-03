@@ -66,37 +66,22 @@ export function useCoupleManagement() {
     };
 
     const handleResetProgress = async () => {
-        Alert.alert(
-            "Reset Progress",
-            "This will delete all your swipes, matches, and chat messages. You'll stay connected with your partner and can start fresh. This cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                {
-                    text: "Reset",
-                    style: "destructive",
-                    onPress: async () => {
-                        setIsResettingProgress(true);
-                        try {
-                            const { error } = await supabase.functions.invoke("reset-couple-progress", {
-                                method: "DELETE",
-                            });
+        try {
+            const { error } = await supabase.functions.invoke("reset-couple-progress", {
+                method: "DELETE",
+            });
 
-                            if (error) throw error;
+            if (error) throw error;
 
-                            // Clear local stores
-                            clearMatches();
-                            clearMessages();
+            // Clear local stores
+            clearMatches();
+            clearMessages();
 
-                            Alert.alert("Success", "Your progress has been reset. You can now start swiping again!");
-                        } catch (error) {
-                            Alert.alert("Error", "Failed to reset progress. Please try again.");
-                        } finally {
-                            setIsResettingProgress(false);
-                        }
-                    },
-                },
-            ]
-        );
+            Alert.alert("Success", "Your progress has been reset. You can now start swiping again!");
+        } catch (error) {
+            Alert.alert("Error", "Failed to reset progress. Please try again.");
+            throw error;
+        }
     };
 
     const handleSignOut = () => {

@@ -8,6 +8,7 @@ export type { NotificationSettingsProps } from './NotificationSettings';
 export { CoupleStatus } from './CoupleStatus';
 export { PrivacySettings } from './PrivacySettings';
 export { DangerZone } from './DangerZone';
+export { ResetProgress } from './ResetProgress';
 
 export { SettingsSection } from './SettingsSection';
 export type { SettingsSectionProps } from './SettingsSection';

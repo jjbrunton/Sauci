@@ -71,6 +71,8 @@ export function getModel(purpose?: ModelPurpose): string {
             return remoteConfig?.model_fix || import.meta.env.VITE_AI_MODEL_FIX || fallback;
         case 'polish':
             return remoteConfig?.model_polish || import.meta.env.VITE_AI_MODEL_POLISH || fallback;
+        case 'describe_image':
+            return remoteConfig?.classifier_model || 'gpt-4o';
         default:
             return fallback;
     }

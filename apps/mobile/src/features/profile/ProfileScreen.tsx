@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,7 +18,7 @@ import { clearKeys } from '../../lib/encryption';
 import { useProfileSettings, useCoupleManagement } from './hooks';
 
 // Components
-import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
+import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, ResetProgress, SettingsSection, MenuItem } from './components';
 
 const MAX_CONTENT_WIDTH = 500;
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
@@ -36,7 +36,6 @@ export function ProfileScreen() {
         handleUnpair,
         handleDeleteRelationship,
         handleResetProgress,
-        isResettingProgress,
         handleSignOut,
         navigateToPairing
     } = useCoupleManagement();
@@ -216,38 +215,9 @@ export function ProfileScreen() {
                     />
                 </SettingsSection>
 
-                {/* Reset Progress Layout */}
+                {/* Reset Progress */}
                 {couple && (
-                    <SettingsSection title="Reset Progress" delay={500}>
-                        <View style={styles.resetContent}>
-                            <View style={styles.resetInfo}>
-                                <View style={styles.resetIconContainer}>
-                                    <Ionicons name="refresh" size={20} color={colors.warning} />
-                                </View>
-                                <View style={styles.resetTextContainer}>
-                                    <Text style={styles.resetTitle}>Start Fresh</Text>
-                                    <Text style={styles.resetDescription}>
-                                        Delete all swipes, matches, and chats while keeping your partner connection.
-                                    </Text>
-                                </View>
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.resetButton, isResettingProgress && styles.resetButtonDisabled]}
-                                onPress={handleResetProgress}
-                                disabled={isResettingProgress}
-                                activeOpacity={0.7}
-                            >
-                                {isResettingProgress ? (
-                                    <ActivityIndicator size="small" color={colors.warning} />
-                                ) : (
-                                    <>
-                                        <Ionicons name="refresh-outline" size={16} color={colors.warning} />
-                                        <Text style={styles.resetButtonText}>Reset</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    </SettingsSection>
+                    <ResetProgress onResetProgress={handleResetProgress} />
                 )}
 
                 {/* Debug Section */}
@@ -483,57 +453,6 @@ const styles = StyleSheet.create({
     restoreLinkText: {
         ...typography.caption1,
         color: colors.textTertiary,
-    },
-    // Reset Progress Styles
-    resetContent: {
-        gap: spacing.md,
-    },
-    resetInfo: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-    },
-    resetIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.warningLight,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    resetTextContainer: {
-        flex: 1,
-        marginLeft: spacing.md,
-    },
-    resetTitle: {
-        ...typography.headline,
-        color: colors.text,
-        marginBottom: spacing.xs,
-    },
-    resetDescription: {
-        ...typography.subhead,
-        color: colors.textSecondary,
-        lineHeight: 20,
-    },
-    resetButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: colors.warningLight,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: 'rgba(243, 156, 18, 0.3)',
-        gap: spacing.xs,
-        alignSelf: "flex-end",
-    },
-    resetButtonDisabled: {
-        opacity: 0.5,
-    },
-    resetButtonText: {
-        ...typography.subhead,
-        color: colors.warning,
-        fontWeight: "600",
     },
     // Version Badge
     versionContainer: {

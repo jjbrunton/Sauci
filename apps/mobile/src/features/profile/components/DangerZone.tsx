@@ -225,6 +225,9 @@ const styles = StyleSheet.create({
         maxWidth: 400,
         padding: spacing.xl,
         backgroundColor: colors.backgroundLight,
+        borderRadius: radius.xl,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
     },
     modalHeader: {
         alignItems: "center",
@@ -278,11 +281,16 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: colors.error,
     },
-    inputContainer: {
-        marginBottom: spacing.xl,
-    },
     confirmInput: {
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.error,
+        padding: spacing.md,
+        ...typography.body,
+        color: colors.text,
         textAlign: 'center',
+        marginBottom: spacing.xl,
     },
     modalButtons: {
         flexDirection: "row",

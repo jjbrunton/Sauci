@@ -4,7 +4,7 @@
 // =============================================================================
 
 // Model purpose for selecting appropriate model
-export type ModelPurpose = 'generate' | 'fix' | 'polish';
+export type ModelPurpose = 'generate' | 'fix' | 'polish' | 'describe_image';
 
 // =============================================================================
 // COUNCIL CONFIGURATION TYPES
