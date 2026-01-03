@@ -7,7 +7,7 @@ const MAX_CARD_WIDTH = 400;
 const SWIPE_THRESHOLD = 100;
 
 interface Props {
-    question: { id: string; text: string; intensity: number; partner_text?: string | null };
+    question: { id: string; text: string; intensity: number; partner_text?: string | null; partner_answered?: boolean };
     onSwipe: (direction: "left" | "right" | "up" | "down") => void;
 }
 
@@ -208,6 +208,21 @@ export default function SwipeCard({ question, onSwipe }: Props) {
                         ))}
                     </View>
                     <Text style={[styles.text, question.partner_text ? styles.twoPartText : null]}>{question.text}</Text>
+
+                    {/* Partner's version of the question - only show when user is answering first */}
+                    {question.partner_text && !question.partner_answered && (
+                        <View style={styles.partnerTextContainer}>
+                            <View style={styles.partnerDivider}>
+                                <View style={styles.partnerDividerLine} />
+                                <View style={styles.partnerLabelContainer}>
+                                    <Ionicons name="swap-horizontal" size={12} color="#9b59b6" />
+                                    <Text style={styles.partnerLabel}>Partner sees</Text>
+                                </View>
+                                <View style={styles.partnerDividerLine} />
+                            </View>
+                            <Text style={styles.partnerText}>{question.partner_text}</Text>
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.footer}>
@@ -369,26 +384,41 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 12,
     },
-    partnerContainer: {
+    partnerTextContainer: {
+        marginTop: 24,
         width: "100%",
-        alignItems: "center",
+        paddingHorizontal: 8,
     },
-    divider: {
+    partnerDivider: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    partnerDividerLine: {
+        flex: 1,
         height: 1,
-        width: "80%",
-        backgroundColor: "rgba(255,255,255,0.1)",
-        marginVertical: 24,
-        position: "relative",
-        justifyContent: "center",
-        alignItems: "center",
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
     },
-    dividerText: {
-        color: "#666",
-        backgroundColor: "#16213e",
-        paddingHorizontal: 10,
+    partnerLabelContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 16,
+        paddingVertical: 4,
+        backgroundColor: "rgba(155, 89, 182, 0.15)",
+        borderRadius: 9999,
+        gap: 4,
+    },
+    partnerLabel: {
         fontSize: 12,
-        fontWeight: "bold",
-        position: "absolute",
+        color: "#9b59b6",
+        fontWeight: "500",
+        letterSpacing: 0.3,
+    },
+    partnerText: {
+        fontSize: 14,
+        color: "rgba(255, 255, 255, 0.7)",
+        textAlign: "center",
+        fontStyle: "italic",
     },
     buttonContainer: {
         flexDirection: "row",

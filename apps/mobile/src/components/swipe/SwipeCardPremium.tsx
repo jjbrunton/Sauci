@@ -53,11 +53,12 @@ const MAX_CARD_WIDTH = 400;
 const SWIPE_THRESHOLD = 100;
 
 interface Props {
-    question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean };
+    question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean; partner_answered?: boolean };
     onSwipe: (direction: "left" | "right" | "up" | "down") => void;
+    onReport?: () => void;
 }
 
-export default function SwipeCardPremium({ question, onSwipe }: Props) {
+export default function SwipeCardPremium({ question, onSwipe, onReport }: Props) {
     const { width: screenWidth } = useWindowDimensions();
     const cardWidth = Math.min(screenWidth - 48, MAX_CARD_WIDTH);
 
@@ -173,6 +174,17 @@ export default function SwipeCardPremium({ question, onSwipe }: Props) {
 
     return (
         <View style={[styles.cardWrapper, { width: cardWidth }]}>
+            {/* Report Button - outside GestureDetector to receive touches */}
+            {onReport && (
+                <Pressable
+                    style={styles.reportButton}
+                    onPress={onReport}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                    <Ionicons name="flag-outline" size={16} color={colors.textTertiary} />
+                </Pressable>
+            )}
+
             <GestureDetector gesture={gesture}>
                 <Animated.View style={[styles.cardOuter, animatedStyle, cardShadowStyle, { shadowColor: ACCENT }]}>
                     {/* Premium dark background */}
@@ -243,6 +255,21 @@ export default function SwipeCardPremium({ question, onSwipe }: Props) {
                             <Text style={styles.questionText}>
                                 {question.text}
                             </Text>
+
+                            {/* Partner's version of the question - only show when user is answering first */}
+                            {question.partner_text && !question.partner_answered && (
+                                <View style={styles.partnerTextContainer}>
+                                    <View style={styles.partnerDivider}>
+                                        <View style={styles.partnerDividerLine} />
+                                        <View style={styles.partnerLabelBadge}>
+                                            <Ionicons name="swap-horizontal" size={10} color={ROSE} />
+                                            <Text style={styles.partnerLabelText}>PARTNER SEES</Text>
+                                        </View>
+                                        <View style={styles.partnerDividerLine} />
+                                    </View>
+                                    <Text style={styles.partnerQuestionText}>{question.partner_text}</Text>
+                                </View>
+                            )}
 
                             {/* Bottom separator */}
                             <View style={styles.separator}>
@@ -366,6 +393,14 @@ const styles = StyleSheet.create({
         right: 0,
         height: 120,
     },
+    reportButton: {
+        position: 'absolute',
+        top: spacing.md,
+        right: spacing.md,
+        zIndex: 100,
+        padding: spacing.sm,
+        opacity: 0.6,
+    },
     premiumBorder: {
         position: 'absolute',
         top: 0,
@@ -429,6 +464,45 @@ const styles = StyleSheet.create({
         textAlign: "center",
         lineHeight: 32,
         paddingHorizontal: spacing.sm,
+    },
+    partnerTextContainer: {
+        marginTop: spacing.lg,
+        width: '100%',
+        paddingHorizontal: spacing.sm,
+    },
+    partnerDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    partnerDividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: rgba.rose(0.2),
+    },
+    partnerLabelBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        backgroundColor: rgba.rose(0.1),
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: rgba.rose(0.2),
+        gap: spacing.xs,
+    },
+    partnerLabelText: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 1.5,
+        color: rgba.rose(0.8),
+    },
+    partnerQuestionText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        fontStyle: 'italic',
+        opacity: 0.85,
     },
     footer: {
         paddingBottom: spacing.xl,

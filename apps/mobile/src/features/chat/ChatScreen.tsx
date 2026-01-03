@@ -282,7 +282,7 @@ export const ChatScreen: React.FC = () => {
                     user={user}
                     match={match}
                     insets={insets}
-                    onBack={() => router.back()}
+                    onBack={() => router.push('/(app)/matches')}
                 />
 
                 <ChatMessages

@@ -22,6 +22,7 @@ import { invokeWithAuthRetry } from "../../src/lib/authErrorHandler";
 // import SwipeCard from "../../src/components/SwipeCard";
 import { SwipeCardPremium as SwipeCard } from "../../src/components/swipe"; // PoC: Premium styling
 import { SwipeTutorial } from "../../src/components/tutorials";
+import { QuestionFeedbackModal } from "../../src/components/feedback";
 import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
 import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
@@ -32,6 +33,7 @@ export default function SwipeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showTutorial, setShowTutorial] = useState(false);
+    const [feedbackQuestion, setFeedbackQuestion] = useState<{id: string, text: string} | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
     const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
     const { enabledPackIds, fetchPacks } = usePacksStore();
@@ -577,6 +579,10 @@ export default function SwipeScreen() {
                         key={questions[currentIndex].id}
                         question={questions[currentIndex]}
                         onSwipe={handleSwipe}
+                        onReport={() => setFeedbackQuestion({
+                            id: questions[currentIndex].id,
+                            text: questions[currentIndex].text
+                        })}
                     />
                 </View>
 
@@ -596,6 +602,14 @@ export default function SwipeScreen() {
             {showTutorial && (
                 <SwipeTutorial onComplete={handleTutorialComplete} />
             )}
+
+            {/* Question Feedback Modal */}
+            <QuestionFeedbackModal
+                visible={!!feedbackQuestion}
+                onClose={() => setFeedbackQuestion(null)}
+                questionId={feedbackQuestion?.id || ''}
+                questionText={feedbackQuestion?.text || ''}
+            />
         </GradientBackground>
     );
 }

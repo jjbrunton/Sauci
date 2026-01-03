@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, Platform, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, Platform, useWindowDimensions, TouchableOpacity as RNTouchableOpacity } from "react-native";
 import { Gesture, GestureDetector, TouchableOpacity } from "react-native-gesture-handler";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -36,7 +36,7 @@ const MAX_CARD_WIDTH = 400;
 const SWIPE_THRESHOLD = 100;
 
 interface Props {
-    question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean };
+    question: { id: string; text: string; intensity: number; partner_text?: string | null; is_two_part?: boolean; partner_answered?: boolean };
     onSwipe: (direction: "left" | "right" | "up" | "down") => void;
 }
 
@@ -305,14 +305,18 @@ function CardContent({
             />
 
             {/* Feedback Button */}
-            <View style={styles.feedbackButton}>
+            <RNTouchableOpacity 
+                style={styles.feedbackButton}
+                onPress={onFeedbackPress}
+                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                activeOpacity={0.7}
+            >
                 <Ionicons
                     name="flag-outline"
-                    size={18}
+                    size={22}
                     color={colors.textTertiary}
-                    onPress={onFeedbackPress}
                 />
-            </View>
+            </RNTouchableOpacity>
 
             {/* Overlays with gradient badges */}
             <Animated.View style={[styles.overlay, overlayStyle("right")]} pointerEvents="none">
@@ -368,6 +372,21 @@ function CardContent({
                 <Text style={[styles.text, question.is_two_part && styles.twoPartText]}>
                     {question.text}
                 </Text>
+
+                {/* Partner's version of the question - only show when user is answering first */}
+                {question.partner_text && !question.partner_answered && (
+                    <View style={styles.partnerTextContainer}>
+                        <View style={styles.partnerDivider}>
+                            <View style={styles.partnerDividerLine} />
+                            <View style={styles.partnerLabelContainer}>
+                                <Ionicons name="swap-horizontal" size={12} color={colors.secondary} />
+                                <Text style={styles.partnerLabel}>Partner sees</Text>
+                            </View>
+                            <View style={styles.partnerDividerLine} />
+                        </View>
+                        <Text style={styles.partnerText}>{question.partner_text}</Text>
+                    </View>
+                )}
             </View>
 
             {/* Action Buttons */}
@@ -524,14 +543,14 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: spacing.md,
         right: spacing.md,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: colors.glass.background,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 100,
-        elevation: 10,
+        zIndex: 999,
+        elevation: 999,
         borderWidth: 1,
         borderColor: colors.glass.border,
     },
@@ -564,6 +583,42 @@ const styles = StyleSheet.create({
     twoPartText: {
         ...typography.title3,
         lineHeight: 28,
+    },
+    partnerTextContainer: {
+        marginTop: spacing.lg,
+        width: '100%',
+        paddingHorizontal: spacing.sm,
+    },
+    partnerDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: spacing.sm,
+    },
+    partnerDividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.glass.border,
+    },
+    partnerLabelContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        backgroundColor: colors.secondaryLight,
+        borderRadius: radius.full,
+        gap: spacing.xs,
+    },
+    partnerLabel: {
+        ...typography.caption1,
+        color: colors.secondary,
+        fontWeight: '500',
+        letterSpacing: 0.3,
+    },
+    partnerText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        fontStyle: 'italic',
     },
     footer: {
         paddingBottom: spacing.lg,

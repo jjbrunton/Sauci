@@ -5,6 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { MessageBubble } from './MessageBubble';
 import { MessageContent } from './MessageContent';
+import { DateSeparator } from './DateSeparator';
 import { UploadProgress } from './UploadProgress';
 import { TypingIndicator } from './TypingIndicator';
 import { DecorativeSeparator } from '../../../components/ui';
@@ -29,6 +30,17 @@ interface ChatMessagesProps {
 const ACCENT = colors.premium.gold;
 const ACCENT_RGBA = 'rgba(212, 175, 55, ';
 
+/**
+ * Check if two dates are on the same calendar day
+ */
+function isSameDay(date1: Date, date2: Date): boolean {
+    return (
+        date1.getFullYear() === date2.getFullYear() &&
+        date1.getMonth() === date2.getMonth() &&
+        date1.getDate() === date2.getDate()
+    );
+}
+
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
     messages,
     userId,
@@ -43,22 +55,35 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 
     const renderMessage = ({ item, index }: { item: Message; index: number }) => {
         const isMe = item.user_id === userId;
+        const messageDate = new Date(item.created_at!);
+
+        // Determine if we should show a date separator above this message
+        // In an inverted list, index 0 is newest (bottom), higher indices are older (top)
+        // Show separator when this message's date differs from the next (older) message
+        const nextMessage = messages[index + 1];
+        const showDateSeparator = !nextMessage || (
+            nextMessage.created_at &&
+            !isSameDay(messageDate, new Date(nextMessage.created_at))
+        );
+
         return (
-            <MessageBubble
-                isMe={isMe}
-                index={index}
-                onLongPress={() => onMessageLongPress(item, isMe)}
-            >
-                <MessageContent
-                    item={item}
+            <>
+                <MessageBubble
                     isMe={isMe}
-                    currentUserId={userId || ''}
-                    revealMessage={revealMessage}
-                    onImagePress={onImagePress}
-                    onVideoFullScreen={onVideoFullScreen}
+                    index={index}
                     onLongPress={() => onMessageLongPress(item, isMe)}
-                />
-            </MessageBubble>
+                >
+                    <MessageContent
+                        item={item}
+                        isMe={isMe}
+                        currentUserId={userId || ''}
+                        revealMessage={revealMessage}
+                        onImagePress={onImagePress}
+                        onVideoFullScreen={onVideoFullScreen}
+                    />
+                </MessageBubble>
+                {showDateSeparator && <DateSeparator date={messageDate} />}
+            </>
         );
     };
 

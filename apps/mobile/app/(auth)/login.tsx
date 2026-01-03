@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
         color: colors.primary,
     },
     forgotPassword: {
-        alignSelf: "flex-end",
+        alignSelf: "center",
         marginTop: -spacing.xs,
         marginBottom: spacing.xs,
     },
