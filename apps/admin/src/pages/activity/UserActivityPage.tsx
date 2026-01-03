@@ -30,8 +30,6 @@ import {
     Heart,
     MessageCircle,
     UserPlus,
-    Image as ImageIcon,
-    Video as VideoIcon,
     ExternalLink,
 } from 'lucide-react';
 
@@ -546,7 +544,6 @@ export function UserActivityPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>User</TableHead>
-                                    <TableHead>Message</TableHead>
                                     <TableHead>Context</TableHead>
                                     <TableHead>Time</TableHead>
                                     <TableHead>Actions</TableHead>
@@ -555,13 +552,13 @@ export function UserActivityPage() {
                             <TableBody>
                                 {loading.messages ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8">
+                                        <TableCell colSpan={4} className="text-center py-8">
                                             <div className="flex justify-center"><Skeleton className="h-6 w-32" /></div>
                                         </TableCell>
                                     </TableRow>
                                 ) : messages.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                             No messages yet.
                                         </TableCell>
                                     </TableRow>
@@ -569,21 +566,6 @@ export function UserActivityPage() {
                                     messages.map((item) => (
                                         <TableRow key={item.id}>
                                             <TableCell>{renderUserLink(item.profile)}</TableCell>
-                                            <TableCell className="max-w-[300px]">
-                                                {item.media_path ? (
-                                                    <span className="inline-flex items-center gap-1 text-muted-foreground">
-                                                        {item.media_type === 'video' ? (
-                                                            <><VideoIcon className="h-4 w-4" /> [Video]</>
-                                                        ) : (
-                                                            <><ImageIcon className="h-4 w-4" /> [Image]</>
-                                                        )}
-                                                    </span>
-                                                ) : (
-                                                    <span className="truncate block">
-                                                        {item.content || <span className="text-muted-foreground italic">Empty message</span>}
-                                                    </span>
-                                                )}
-                                            </TableCell>
                                             <TableCell className="max-w-[200px]">
                                                 <span className="truncate block text-muted-foreground text-sm">
                                                     {item.match?.question?.text || 'Unknown match'}

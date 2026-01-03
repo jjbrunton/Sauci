@@ -240,26 +240,6 @@ export default function MatchesScreen() {
                             entering={FadeInUp.duration(600).springify()}
                             style={styles.emptyContent}
                         >
-                            {/* Premium icon */}
-                            <View style={styles.emptyIconContainerPremium}>
-                                <Ionicons name="heart-outline" size={36} color={ROSE} />
-                            </View>
-
-                            {/* Title section */}
-                            <Text style={styles.emptyLabel}>BEGIN</Text>
-                            <Text style={styles.emptyTitlePremium}>No Matches Yet</Text>
-
-                            {/* Decorative separator */}
-                            <DecorativeSeparator variant="rose" />
-
-                            {/* Status badge */}
-                            <Animated.View
-                                entering={FadeIn.delay(300).duration(400)}
-                                style={styles.emptyBadge}
-                            >
-                                <Text style={styles.emptyBadgeText}>START EXPLORING</Text>
-                            </Animated.View>
-
                             {/* Description */}
                             <Text style={styles.emptyDescription}>
                                 Answer questions together to discover what you both enjoy. Matches appear when you agree!
@@ -268,15 +248,15 @@ export default function MatchesScreen() {
                             {/* Feature hints */}
                             <View style={styles.emptyFeatures}>
                                 <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="heart" size={16} color={ROSE} />
+                                    <Ionicons name="heart" size={16} color={ACCENT} />
                                     <Text style={styles.emptyFeatureText}>Swipe right for yes</Text>
                                 </View>
                                 <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="sparkles" size={16} color={ROSE} />
+                                    <Ionicons name="sparkles" size={16} color={ACCENT} />
                                     <Text style={styles.emptyFeatureText}>Match when you both agree</Text>
                                 </View>
                                 <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="chatbubbles-outline" size={16} color={ROSE} />
+                                    <Ionicons name="chatbubbles-outline" size={16} color={ACCENT} />
                                     <Text style={styles.emptyFeatureText}>Chat about your matches</Text>
                                 </View>
                             </View>
@@ -506,45 +486,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xl,
-    },
-    emptyIconContainerPremium: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: `${ROSE_RGBA}0.1)`,
-        borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.2)`,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: spacing.xl,
-    },
-    emptyLabel: {
-        ...typography.caption1,
-        fontWeight: '600',
-        letterSpacing: 3,
-        color: ROSE,
-        textAlign: 'center',
-        marginBottom: spacing.xs,
-    },
-    emptyTitlePremium: {
-        ...typography.largeTitle,
-        color: colors.text,
-        textAlign: 'center',
-    },
-    emptyBadge: {
-        backgroundColor: `${ROSE_RGBA}0.1)`,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.2)`,
-        marginBottom: spacing.xl,
-    },
-    emptyBadgeText: {
-        ...typography.caption2,
-        fontWeight: '600',
-        letterSpacing: 2,
-        color: ROSE,
     },
     emptyDescription: {
         ...typography.body,

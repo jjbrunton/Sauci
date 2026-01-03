@@ -10,6 +10,34 @@ interface JoinCoupleBody {
     invite_code: string;
 }
 
+interface ExpoPushMessage {
+    to: string;
+    title: string;
+    body: string;
+    sound?: string;
+    data?: Record<string, unknown>;
+}
+
+async function sendExpoPushNotifications(messages: ExpoPushMessage[]) {
+    if (messages.length === 0) return;
+
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify(messages),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        console.error("Expo push error:", error);
+    }
+
+    return response.json();
+}
+
 Deno.serve(async (req) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -183,18 +211,13 @@ Deno.serve(async (req) => {
 
             const coupleId = profile.couple_id;
 
-            // Count members in this couple
-            const { count, error: countError } = await supabase
+            // Get partner's push token BEFORE clearing couple_id
+            const { data: partnerProfile } = await supabase
                 .from("profiles")
-                .select("*", { count: "exact", head: true })
-                .eq("couple_id", coupleId);
-
-            if (countError) {
-                return new Response(
-                    JSON.stringify({ error: "Failed to check couple members" }),
-                    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-                );
-            }
+                .select("push_token")
+                .eq("couple_id", coupleId)
+                .neq("id", user.id)
+                .maybeSingle();
 
             // Remove ALL members from couple (both partners get unlinked)
             // This ensures the remaining partner isn't left in a "waiting" state
@@ -219,6 +242,17 @@ Deno.serve(async (req) => {
             if (deleteError) {
                 console.error("Failed to delete couple:", deleteError);
                 // Don't fail the request, users already unlinked
+            }
+
+            // Notify partner about the unpair
+            if (partnerProfile?.push_token) {
+                await sendExpoPushNotifications([{
+                    to: partnerProfile.push_token,
+                    title: "Partner Disconnected",
+                    body: "Your partner has ended the connection. You can invite a new partner anytime.",
+                    sound: "default",
+                    data: { type: "unpair" },
+                }]);
             }
 
             return new Response(

@@ -6,6 +6,34 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface ExpoPushMessage {
+    to: string;
+    title: string;
+    body: string;
+    sound?: string;
+    data?: Record<string, unknown>;
+}
+
+async function sendExpoPushNotifications(messages: ExpoPushMessage[]) {
+    if (messages.length === 0) return;
+
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        },
+        body: JSON.stringify(messages),
+    });
+
+    if (!response.ok) {
+        const error = await response.text();
+        console.error("Expo push error:", error);
+    }
+
+    return response.json();
+}
+
 Deno.serve(async (req) => {
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -62,6 +90,14 @@ Deno.serve(async (req) => {
 
         const coupleId = profile.couple_id;
 
+        // Get partner's push token BEFORE clearing data
+        const { data: partnerProfile } = await supabase
+            .from("profiles")
+            .select("push_token")
+            .eq("couple_id", coupleId)
+            .neq("id", user.id)
+            .maybeSingle();
+
         // Get all match IDs for this couple (needed for storage cleanup)
         const { data: matches } = await supabase
             .from("matches")
@@ -110,6 +146,17 @@ Deno.serve(async (req) => {
                 JSON.stringify({ error: "Failed to delete relationship data" }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
+        }
+
+        // Notify partner about the deletion
+        if (partnerProfile?.push_token) {
+            await sendExpoPushNotifications([{
+                to: partnerProfile.push_token,
+                title: "Relationship Deleted",
+                body: "Your partner has deleted all shared data. You can start fresh with a new partner anytime.",
+                sound: "default",
+                data: { type: "relationship_deleted" },
+            }]);
         }
 
         return new Response(
