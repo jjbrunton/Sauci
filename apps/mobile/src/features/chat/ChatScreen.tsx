@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Act
 import { Image } from "expo-image";
 import { Video, ResizeMode } from "expo-av";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -56,10 +56,13 @@ export const ChatScreen: React.FC = () => {
         cameraVideoMaxDuration: 60,   // 1 min for camera recording
     });
 
+    const isFocused = useIsFocused();
+
     // Typing indicator hook
     const { partnerTyping, sendTypingEvent, clearTypingIndicator } = useTypingIndicator({
         channelName: `chat:${matchId}`,
         userId: user?.id,
+        isFocused,
     });
 
     // Message subscription hook
@@ -188,7 +191,16 @@ export const ChatScreen: React.FC = () => {
             const errorMessage = err instanceof Error && err.message
                 ? err.message
                 : "Failed to send message";
-            Alert.alert("Error", errorMessage);
+            
+            // Map technical/unknown errors to friendly ones
+            let friendlyMessage = errorMessage;
+            if (errorMessage.includes('Failed to send') && !errorMessage.includes('connection')) {
+                friendlyMessage = "Couldn't send secure message. Please check your connection.";
+            } else if (errorMessage.includes('verification failed')) {
+                friendlyMessage = "Security check failed. Please restart the app.";
+            }
+
+            Alert.alert("Delivery Failed", friendlyMessage);
             setInputText(content);
         }
     };

@@ -53,7 +53,7 @@ function MessageToastPreview({
     if (isDecrypting) {
         return (
             <Text style={styles.messageToastBody} numberOfLines={1}>
-                Loading...
+                Waiting for message...
             </Text>
         );
     }
@@ -61,7 +61,7 @@ function MessageToastPreview({
     if (error) {
         return (
             <Text style={styles.messageToastBody} numberOfLines={1}>
-                Failed to load message
+                Encrypted message
             </Text>
         );
     }

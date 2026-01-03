@@ -156,9 +156,9 @@ const variants = {
   secondary: {
     gradient: undefined,
     textColor: colors.text,
-    background: colors.glass.background,
+    background: colors.glass.backgroundLight,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: colors.glass.borderLight,
   },
   ghost: {
     gradient: undefined,

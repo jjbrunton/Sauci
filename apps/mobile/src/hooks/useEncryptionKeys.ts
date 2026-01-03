@@ -41,6 +41,9 @@ interface UseEncryptionKeysReturn {
   refresh: () => Promise<void>;
 }
 
+// Global promise to track in-flight key loading across all hook instances
+let globalLoadKeysPromise: Promise<RSAPublicKeyJWK | null> | null = null;
+
 /**
  * Hook for accessing and managing encryption keys.
  *
@@ -73,59 +76,79 @@ export function useEncryptionKeys(): UseEncryptionKeysReturn {
       return null;
     }
 
-    // Prevent concurrent loads
+    // If keys are already loaded in global store, return them
+    if (encryptionKeys.hasKeys && encryptionKeys.publicKeyJwk) {
+      return encryptionKeys.publicKeyJwk;
+    }
+
+    // If there's an in-flight global load, return that promise
+    if (globalLoadKeysPromise) {
+      console.log('[E2EE Global] Joining existing key load operation');
+      return globalLoadKeysPromise;
+    }
+
+    // Prevent concurrent loads (local check)
     if (isLoadingRef.current) {
       return encryptionKeys.publicKeyJwk;
     }
 
-    try {
-      isLoadingRef.current = true;
-      setEncryptionKeys({ isLoadingKeys: true, keysError: null });
+    const task = async () => {
+      try {
+        isLoadingRef.current = true;
+        setEncryptionKeys({ isLoadingKeys: true, keysError: null });
 
-      const keysExist = await hasKeyPair();
-      if (keysExist) {
-        const [privateKey, publicKey] = await Promise.all([
-          getPrivateKey(),
-          getLocalPublicKey(),
-        ]);
+        const keysExist = await hasKeyPair();
+        if (keysExist) {
+          const [privateKey, publicKey] = await Promise.all([
+            getPrivateKey(),
+            getLocalPublicKey(),
+          ]);
 
-        console.log('[E2EE Global] Keys loaded from storage');
+          console.log('[E2EE Global] Keys loaded from storage');
 
-        setEncryptionKeys({
-          privateKeyJwk: privateKey,
-          publicKeyJwk: publicKey,
-          isLoadingKeys: false,
-          hasKeys: true,
-          keysError: null,
-        });
+          setEncryptionKeys({
+            privateKeyJwk: privateKey,
+            publicKeyJwk: publicKey,
+            isLoadingKeys: false,
+            hasKeys: true,
+            keysError: null,
+          });
 
-        hasLoadedRef.current = true;
-        return publicKey;
-      } else {
-        console.log('[E2EE Global] No keys in storage');
+          hasLoadedRef.current = true;
+          return publicKey;
+        } else {
+          console.log('[E2EE Global] No keys in storage');
+          setEncryptionKeys({
+            privateKeyJwk: null,
+            publicKeyJwk: null,
+            isLoadingKeys: false,
+            hasKeys: false,
+            keysError: null,
+          });
+          return null;
+        }
+      } catch (error) {
+        console.error('[E2EE Global] Failed to load encryption keys:', error);
         setEncryptionKeys({
           privateKeyJwk: null,
           publicKeyJwk: null,
           isLoadingKeys: false,
           hasKeys: false,
-          keysError: null,
+          keysError: error as Error,
         });
         return null;
+      } finally {
+        isLoadingRef.current = false;
       }
-    } catch (error) {
-      console.error('[E2EE Global] Failed to load encryption keys:', error);
-      setEncryptionKeys({
-        privateKeyJwk: null,
-        publicKeyJwk: null,
-        isLoadingKeys: false,
-        hasKeys: false,
-        keysError: error as Error,
-      });
-      return null;
-    } finally {
-      isLoadingRef.current = false;
-    }
-  }, [encryptionKeys.publicKeyJwk, setEncryptionKeys]);
+    };
+
+    // Assign to global promise
+    globalLoadKeysPromise = task().finally(() => {
+      globalLoadKeysPromise = null;
+    });
+
+    return globalLoadKeysPromise;
+  }, [encryptionKeys.publicKeyJwk, encryptionKeys.hasKeys, setEncryptionKeys]);
 
   /**
    * Initialize encryption keys and upload to Supabase in one operation.

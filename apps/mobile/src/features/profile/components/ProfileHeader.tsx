@@ -139,6 +139,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 const styles = StyleSheet.create({
     profileSection: {
         marginBottom: spacing.xl,
+        paddingHorizontal: spacing.lg,
     },
     profileContent: {
         flexDirection: 'row',

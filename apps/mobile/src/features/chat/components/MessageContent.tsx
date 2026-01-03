@@ -189,7 +189,6 @@ export function MessageContent({
                     ) : (
                         <View style={[styles.messageVideo, styles.messageImageLoading]}>
                             <ActivityIndicator color={ACCENT} />
-                            <Text style={styles.decryptingText}>Loading...</Text>
                         </View>
                     )}
                     {/* Viewed indicator for sender */}
@@ -272,7 +271,6 @@ export function MessageContent({
                     ) : (
                         <View style={[styles.messageImage, styles.messageImageLoading]}>
                             <ActivityIndicator color={ACCENT} />
-                            <Text style={styles.decryptingText}>Loading...</Text>
                         </View>
                     )}
                 </TouchableOpacity>
@@ -323,7 +321,6 @@ export function MessageContent({
             return (
                 <View style={styles.decryptingContainer}>
                     <ActivityIndicator size="small" color={ACCENT} />
-                    <Text style={styles.decryptingText}>Loading...</Text>
                 </View>
             );
         }

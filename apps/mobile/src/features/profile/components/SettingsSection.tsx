@@ -33,6 +33,7 @@ export function SettingsSection({ title, delay = 200, children }: SettingsSectio
 const styles = StyleSheet.create({
     container: {
         marginBottom: spacing.lg,
+        paddingHorizontal: spacing.lg,
     },
     title: {
         ...typography.caption1,

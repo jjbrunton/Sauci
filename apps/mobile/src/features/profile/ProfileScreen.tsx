@@ -254,22 +254,17 @@ export function ProfileScreen() {
                 {__DEV__ && (
                     <SettingsSection title="Debug" delay={550}>
                         <MenuItem
-                            icon="refresh"
+                            icon="refresh-outline"
                             label="Reset Swipe Tutorial"
                             description="Show the tutorial again"
                             onPress={async () => {
                                 await resetSwipeTutorial();
                                 Alert.alert("Success", "Swipe tutorial has been reset.");
                             }}
-                            variant="danger"
-                        // Using danger just for yellow/warning color simulation via props? No, MenuItem uses error color for danger.
-                        // I'll stick to default and standard styling or custom if needed. 
-                        // The original used warning color (yellow). 
-                        // I will use default for now.
                         />
                         <View style={styles.preferencesDivider} />
                         <MenuItem
-                            icon="heart"
+                            icon="heart-outline"
                             label="Reset Matches Tutorial"
                             description="Show the tutorial again"
                             onPress={async () => {
@@ -319,7 +314,6 @@ export function ProfileScreen() {
                                     ]
                                 );
                             }}
-                            variant="danger"
                         />
                     </SettingsSection>
                 )}

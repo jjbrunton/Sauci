@@ -43,8 +43,8 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Track whether we've verified the key pair this session
-  const keyPairVerifiedRef = useRef(false);
+  // Track the version of keys we have verified to handle key rotation/regeneration
+  const verifiedKeysVersionRef = useRef<number | null>(null);
 
   const { publicKeyJwk, hasKeys, isLoading } = useEncryptionKeys();
   const refreshPartner = useAuthStore((s) => s.refreshPartner);
@@ -68,7 +68,8 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
       const currentKeys = useAuthStore.getState().encryptionKeys;
 
       if (!currentKeys.hasKeys || !currentKeys.publicKeyJwk || !currentKeys.privateKeyJwk) {
-        const keysError = new Error('Encryption keys not ready. Please wait a moment and try again.');
+        // User-friendly error
+        const keysError = new Error('Message security not ready. Please check your connection.');
         console.warn('[E2EE Send] Keys not fully available in global store');
         setError(keysError);
         throw keysError;
@@ -78,22 +79,26 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
       const senderPrivateKey = currentKeys.privateKeyJwk;
 
       // SAFETY CHECK: Verify the key pair works together before encrypting
-      // This prevents creating unrecoverable messages if keys are mismatched
-      if (!keyPairVerifiedRef.current) {
-        console.log('[E2EE Send] Verifying sender key pair...');
+      // This prevents creating unrecoverable messages if keys are mismatched.
+      // We check if the current keys version matches what we last verified.
+      if (verifiedKeysVersionRef.current !== currentKeys.keysVersion) {
+        console.log(
+          `[E2EE Send] Verifying sender key pair (version ${currentKeys.keysVersion})...`
+        );
         const isValidKeyPair = await verifyKeyPair(
           senderPublicKey as RSAPublicKeyJWK,
           senderPrivateKey
         );
 
         if (!isValidKeyPair) {
-          const keyError = new Error('Encryption key verification failed. Please restart the app and try again.');
+          // User-friendly error
+          const keyError = new Error('Security check failed. Please restart the app.');
           console.error('[E2EE Send] CRITICAL: Sender key pair verification failed!');
           setError(keyError);
           throw keyError;
         }
 
-        keyPairVerifiedRef.current = true;
+        verifiedKeysVersionRef.current = currentKeys.keysVersion;
         console.log('[E2EE Send] Sender key pair verified successfully');
       }
 
@@ -122,7 +127,7 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
 
           // Validate admin key structure
           if (!isValidPublicKeyJwk(adminPublicKey)) {
-            const adminError = new Error('Unable to secure message. Please check your connection and try again.');
+            const adminError = new Error('Connection issue. Please try again.');
             console.error('[E2EE Send] Admin public key is invalid');
             setIsEncrypting(false);
             setError(adminError);
@@ -130,10 +135,13 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
           }
         } catch (adminKeyError) {
           // Re-throw if already a user-facing error
-          if (adminKeyError instanceof Error && adminKeyError.message.includes('Unable to secure')) {
+          if (adminKeyError instanceof Error && (
+            adminKeyError.message.includes('Connection issue') ||
+            adminKeyError.message.includes('Unable to secure')
+          )) {
             throw adminKeyError;
           }
-          const fetchError = new Error('Unable to secure message. Please check your connection and try again.');
+          const fetchError = new Error('Connection issue. Please try again.');
           console.error('[E2EE Send] Failed to fetch admin key:', adminKeyError);
           setIsEncrypting(false);
           setError(fetchError);

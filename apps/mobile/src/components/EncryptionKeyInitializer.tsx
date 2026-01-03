@@ -48,7 +48,7 @@ export function EncryptionKeyInitializer(): JSX.Element | null {
   // Show loading overlay when we are initializing keys (generating new ones takes time)
   // or when rotation is in progress
   const [showLoading, setShowLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('Securing your app...');
+  const [loadingStatus, setLoadingStatus] = useState('Connecting...');
 
   // Effect 1: Initialize encryption keys when user is authenticated
   useEffect(() => {
@@ -87,9 +87,9 @@ export function EncryptionKeyInitializer(): JSX.Element | null {
       try {
         // Mark as initializing to prevent re-entry
         isInitializing.current = true;
-        setShowLoading(true);
-        setLoadingStatus('Securing your app...');
-
+        // Only show loading if we are generating keys (which might take a second)
+        // Standard loading is fast enough to not need a full screen blocker
+        
         console.log('[E2EE Init] Starting key initialization...');
 
         // Initialize keys and upload in one operation
@@ -147,7 +147,9 @@ export function EncryptionKeyInitializer(): JSX.Element | null {
     const runRotation = async () => {
       try {
         hasTriggeredRotation.current = true;
-        setLoadingStatus('Updating message security...');
+        // Only show loading for rotation which is a heavier operation
+        setShowLoading(true);
+        setLoadingStatus('Updating security...');
 
         // Trigger key rotation - re-wraps message keys for the new public key
         console.log('[E2EE Init] Keys were regenerated, triggering key rotation...');

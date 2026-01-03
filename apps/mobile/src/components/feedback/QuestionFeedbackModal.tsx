@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.glass.backgroundLight,
         paddingVertical: spacing.md,
         borderRadius: radius.md,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.glass.borderLight,
     },
     cancelButtonText: {
         ...typography.body,

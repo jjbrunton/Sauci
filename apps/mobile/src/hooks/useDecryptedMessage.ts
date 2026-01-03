@@ -105,7 +105,7 @@ export function useDecryptedMessage({
           content: null,
           mediaUri: null,
           isDecrypting: false,
-          error: new Error('Failed to load message'),
+          error: new Error('Encrypted message'),
           errorCode: 'E2EE_NOT_SUPPORTED',
         });
         return;
@@ -126,7 +126,7 @@ export function useDecryptedMessage({
           content: null,
           mediaUri: null,
           isDecrypting: false,
-          error: new Error('Failed to load message'),
+          error: new Error('Waiting for keys...'),
           errorCode: 'E2EE_KEYS_UNAVAILABLE',
         });
         return;
@@ -141,7 +141,7 @@ export function useDecryptedMessage({
           content: null,
           mediaUri: null,
           isDecrypting: false,
-          error: new Error('Failed to load message'),
+          error: new Error('Message unavailable'),
           errorCode: 'E2EE_MISSING_FIELDS',
         });
         return;
@@ -326,7 +326,7 @@ export function useDecryptedMessage({
             content: null,
             mediaUri: null,
             isDecrypting: false,
-            error: new Error('Failed to load message'),
+            error: new Error('Waiting for message...'),
             errorCode: 'E2EE_DECRYPT_FAILED',
           });
           return;
@@ -336,7 +336,7 @@ export function useDecryptedMessage({
           content: null,
           mediaUri: null,
           isDecrypting: false,
-          error: new Error('Failed to load message'),
+          error: new Error('Waiting for message...'),
           errorCode: 'E2EE_DECRYPT_FAILED',
         });
       }

@@ -8,6 +8,8 @@ export interface UseTypingIndicatorConfig {
     userId: string | undefined;
     /** Timeout in ms before partner typing indicator disappears. Default: 3000 */
     typingTimeout?: number;
+    /** Whether the screen is currently focused */
+    isFocused?: boolean;
 }
 
 export interface UseTypingIndicatorReturn {
@@ -31,10 +33,23 @@ const DEFAULT_TYPING_TIMEOUT = 3000;
 export const useTypingIndicator = (
     config: UseTypingIndicatorConfig
 ): UseTypingIndicatorReturn => {
-    const { channelName, userId, typingTimeout = DEFAULT_TYPING_TIMEOUT } = config;
+    const { channelName, userId, typingTimeout = DEFAULT_TYPING_TIMEOUT, isFocused = true } = config;
 
     const [partnerTyping, setPartnerTyping] = useState(false);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isFocusedRef = useRef(isFocused);
+
+    // Update ref when focus changes and clear state if blurred
+    useEffect(() => {
+        isFocusedRef.current = isFocused;
+        if (!isFocused) {
+            setPartnerTyping(false);
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = null;
+            }
+        }
+    }, [isFocused]);
 
     // Clear timeout on cleanup
     useEffect(() => {
@@ -52,6 +67,9 @@ export const useTypingIndicator = (
         const channel = supabase.channel(channelName);
 
         channel.on('broadcast', { event: 'typing' }, (payload) => {
+            // Only process events if the screen is focused
+            if (!isFocusedRef.current) return;
+
             if (payload.payload.userId !== userId) {
                 setPartnerTyping(true);
 
