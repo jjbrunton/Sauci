@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { supabase } from "./supabase";
-import { useAuthStore } from "../store";
+// Import directly from authStore to avoid circular dependency with store/index.ts
+import { useAuthStore } from "../store/authStore";
 
 /**
  * Handles authentication errors from edge function calls.

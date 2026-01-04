@@ -47,10 +47,26 @@ const ExpoStorageAdapter = {
     },
 };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Validate environment variables at startup (skip in test environment where mocks handle this)
+const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+if (!isTestEnv && (!supabaseUrl || !supabaseAnonKey)) {
+    const missing = [];
+    if (!supabaseUrl) missing.push('EXPO_PUBLIC_SUPABASE_URL');
+    if (!supabaseAnonKey) missing.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
+    const errorMsg = `Missing required environment variables: ${missing.join(', ')}. App cannot start.`;
+    console.error('[Supabase]', errorMsg);
+    // In production, this will be caught by Sentry before crashing
+    throw new Error(errorMsg);
+}
+
+// Use dummy values in test environment (supabase-js is mocked anyway)
+const finalUrl = supabaseUrl || (isTestEnv ? 'https://test.supabase.co' : '');
+const finalKey = supabaseAnonKey || (isTestEnv ? 'test-key' : '');
+
+export const supabase = createClient(finalUrl, finalKey, {
     auth: {
         storage: ExpoStorageAdapter,
         autoRefreshToken: true,

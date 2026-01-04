@@ -14,6 +14,8 @@ import { useEncryptionKeys } from './useEncryptionKeys';
 import { getCachedSignedUrl, getStoragePath } from '../lib/imageCache';
 import { supabase } from '../lib/supabase';
 import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMessages';
+// Import shared cache from mediaCache to avoid circular dependency
+import { decryptedMediaCache, clearDecryptedMediaCache } from '../lib/mediaCache';
 
 export type DecryptedMediaErrorCode =
   | 'E2EE_NOT_SUPPORTED'
@@ -22,8 +24,8 @@ export type DecryptedMediaErrorCode =
   | 'E2EE_PENDING_RECIPIENT_KEY'
   | 'E2EE_DECRYPT_FAILED';
 
-// In-memory cache to avoid re-decrypting the same media
-const decryptedMediaCache = new Map<string, string>();
+// Re-export clearDecryptedMediaCache for backwards compatibility
+export { clearDecryptedMediaCache };
 
 interface DecryptedMediaState {
   /** Local file URI to the decrypted media (or null if not ready) */
@@ -396,13 +398,3 @@ export function useDecryptedMedia({
   };
 }
 
-/**
- * Clear the decrypted media cache
- * Call this when logging out or when memory is low
- */
-export async function clearDecryptedMediaCache(): Promise<void> {
-  for (const uri of decryptedMediaCache.values()) {
-    await cleanupDecryptedMedia(uri);
-  }
-  decryptedMediaCache.clear();
-}

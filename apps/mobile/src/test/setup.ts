@@ -1,19 +1,9 @@
 /// <reference types="jest" />
 
+// Environment variables are set in setupEnv.js (runs before modules load)
+
 // Some modules rely on this global existing in RN.
 (global as any).__DEV__ = true;
-
-if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
-    process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
-}
-
-if (!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
-}
-
-if (!process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID) {
-    process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID = 'pro';
-}
 
 jest.mock('@supabase/supabase-js', () => {
     const makeChannel = () => {

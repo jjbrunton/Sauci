@@ -22,7 +22,8 @@ import {
 } from '../lib/encryption';
 import type { RSAPublicKeyJWK } from '../lib/encryption';
 import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../store';
+// Import directly from authStore to avoid circular dependency with store/index.ts
+import { useAuthStore } from '../store/authStore';
 
 interface UseEncryptionKeysReturn {
   /** RSA private key in JWK format */

@@ -12,7 +12,17 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ckjcrkjpmhqhiucifukx.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNramNya2pwbWhxaGl1Y2lmdWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxMDc1ODEsImV4cCI6MjA4MjY4MzU4MX0.7FA_RmFXUjlmZF96O9xlAUfxHrQrSIZcJclNReLL4lI",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://03a91f8a1b1ecdce2d5f38a4c23ca9d5@o4510613894070272.ingest.de.sentry.io/4510613896560720",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "appl_lfPyYonFQtVytftPAfXIrGsMNFu",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_zoHtaRswsgvxtvYWIhZyvrPBGgh",
+        "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Sauci Pro",
+        "EXPO_PUBLIC_POSTHOG_API_KEY": "phc_dXEEZrPwH6lKDaKNpkFcA3qafg1qwqakHoU5UfdX5Ug",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
+      }
     }
   },
   "submit": {

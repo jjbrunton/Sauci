@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import { Events } from "../lib/analytics";
 import { clearKeys } from "../lib/encryption";
-import { clearDecryptedMediaCache } from "../hooks/useDecryptedMedia";
+import { clearDecryptedMediaCache } from "../lib/mediaCache";
 import type { Profile, Couple } from "@/types";
 import type { RSAPublicKeyJWK, RSAPrivateKeyJWK } from "../lib/encryption/types";
 
