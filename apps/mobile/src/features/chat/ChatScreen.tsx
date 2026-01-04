@@ -288,6 +288,7 @@ export const ChatScreen: React.FC = () => {
                 <ChatMessages
                     messages={messages}
                     userId={user?.id}
+                    match={match}
                     uploadStatus={uploadStatus}
                     partnerTyping={partnerTyping}
                     onImagePress={setFullScreenImage}

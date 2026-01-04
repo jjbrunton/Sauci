@@ -8,6 +8,7 @@ import { MessageContent } from './MessageContent';
 import { DateSeparator } from './DateSeparator';
 import { UploadProgress } from './UploadProgress';
 import { TypingIndicator } from './TypingIndicator';
+import { MatchCard } from './MatchCard';
 import { DecorativeSeparator } from '../../../components/ui';
 import { colors, spacing, typography } from '../../../theme';
 import { Database } from '../../../types/supabase';
@@ -18,6 +19,7 @@ type Message = Database['public']['Tables']['messages']['Row'];
 interface ChatMessagesProps {
     messages: Message[];
     userId: string | undefined;
+    match: any;
     uploadStatus: UploadStatus | null;
     partnerTyping: boolean;
     onImagePress: (uri: string) => void;
@@ -44,6 +46,7 @@ function isSameDay(date1: Date, date2: Date): boolean {
 export const ChatMessages: React.FC<ChatMessagesProps> = ({
     messages,
     userId,
+    match,
     uploadStatus,
     partnerTyping,
     onImagePress,
@@ -106,6 +109,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     {/* Show typing indicator when partner is typing */}
                     {partnerTyping && <TypingIndicator />}
                 </>
+            }
+            ListFooterComponent={
+                <View style={{ paddingBottom: spacing.md }}>
+                    <MatchCard match={match} user={{ id: userId || '' }} />
+                </View>
             }
             ListEmptyComponent={
                 <Animated.View
