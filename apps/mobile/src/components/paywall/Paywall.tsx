@@ -9,6 +9,7 @@ import {
     ScrollView,
     Platform,
     Pressable,
+    Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -368,6 +369,19 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                 Subscription automatically renews unless cancelled at least 24 hours
                                 before the end of the current period.
                             </Text>
+                            <View style={styles.legalLinks}>
+                                <TouchableOpacity
+                                    onPress={() => Linking.openURL("https://sauci.app/terms")}
+                                >
+                                    <Text style={styles.legalLinkText}>Terms of Use</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.legalSeparator}>•</Text>
+                                <TouchableOpacity
+                                    onPress={() => Linking.openURL("https://sauci.app/privacy")}
+                                >
+                                    <Text style={styles.legalLinkText}>Privacy Policy</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </ScrollView>
                 </View>
@@ -715,6 +729,22 @@ const styles = StyleSheet.create({
         color: colors.textTertiary,
         textAlign: "center",
         lineHeight: 18,
+    },
+    legalLinks: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: spacing.sm,
+        gap: spacing.xs,
+    },
+    legalLinkText: {
+        ...typography.caption1,
+        color: colors.premium.gold,
+        textDecorationLine: "underline",
+    },
+    legalSeparator: {
+        ...typography.caption1,
+        color: colors.textTertiary,
     },
 });
 
