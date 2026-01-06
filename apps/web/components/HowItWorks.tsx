@@ -1,27 +1,42 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { UserPlus, Layers, Hand, Heart, type LucideIcon } from 'lucide-react'
 
-const steps = [
+const steps: Array<{
+  number: string
+  title: string
+  description: string
+  icon: LucideIcon
+  color: string
+}> = [
   {
     number: '01',
     title: 'Connect with Your Partner',
     description: 'Create your account and invite your partner using a unique code. Your journey begins together.',
+    icon: UserPlus,
+    color: 'text-primary',
   },
   {
     number: '02',
     title: 'Browse Question Packs',
     description: 'Choose from curated packs ranging from romantic to adventurous. Each pack contains thoughtful questions.',
+    icon: Layers,
+    color: 'text-secondary',
   },
   {
     number: '03',
     title: 'Swipe on Questions',
     description: 'Answer each question honestly. Swipe right for yes, left for no, or up for maybe. Your answers stay private.',
+    icon: Hand,
+    color: 'text-orange-400',
   },
   {
     number: '04',
     title: 'Discover Your Matches',
     description: 'When both partners answer positively, it\'s a match! Explore your shared desires through private chats.',
+    icon: Heart,
+    color: 'text-pink-400',
   },
 ]
 
@@ -64,12 +79,17 @@ export default function HowItWorks() {
                 <div className="hidden lg:block absolute top-12 left-[60%] w-full h-0.5 bg-gradient-to-r from-primary/50 to-transparent" />
               )}
 
-              <div className="glass p-6 h-full">
-                <div className="text-5xl font-bold gradient-text mb-4 opacity-50">
-                  {step.number}
+              <div className="glass p-6 h-full group hover:border-white/20 transition-colors">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-4xl font-bold gradient-text opacity-50">
+                    {step.number}
+                  </div>
+                  <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <step.icon className={`w-5 h-5 ${step.color}`} />
+                  </div>
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                <p className="text-white/60">{step.description}</p>
+                <p className="text-white/70">{step.description}</p>
               </div>
             </motion.div>
           ))}

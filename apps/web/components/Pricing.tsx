@@ -66,9 +66,16 @@ export default function Pricing() {
             </div>
 
             <h3 className="text-2xl font-bold text-center mb-2">One Subscription, Both Partners</h3>
-            <p className="text-white/60 text-center mb-6">
+
+            {/* Pricing Display */}
+            <div className="text-center mb-4">
+              <span className="text-4xl font-bold gradient-text">From £4.99</span>
+              <span className="text-white/60 text-lg">/month</span>
+            </div>
+
+            <p className="text-white/70 text-center mb-6">
               When you upgrade to Pro, your partner automatically gets full access too.
-              No separate purchases needed - you're in this together.
+              No separate purchases needed - you&apos;re in this together.
             </p>
 
             {/* Feature List */}
