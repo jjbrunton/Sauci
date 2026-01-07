@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, Platform, KeyboardAvoidingView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Modal, Platform, KeyboardAvoidingView, TouchableOpacity, ActivityIndicator, TextInput, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
@@ -7,25 +7,59 @@ import { GlassCard, GlassButton } from '../../../components/ui';
 import { colors, spacing, radius, typography } from '../../../theme';
 
 interface DangerZoneProps {
-    onDeleteRelationship: () => Promise<void>;
+    onDeleteRelationship?: () => Promise<void>;
+    onDeleteAccount: () => Promise<void>;
+    hasRelationship?: boolean;
 }
 
-export const DangerZone: React.FC<DangerZoneProps> = ({ onDeleteRelationship }) => {
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+export const DangerZone: React.FC<DangerZoneProps> = ({
+    onDeleteRelationship,
+    onDeleteAccount,
+    hasRelationship = false
+}) => {
+    const [showDeleteRelationshipModal, setShowDeleteRelationshipModal] = useState(false);
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
     const [deleteConfirmText, setDeleteConfirmText] = useState("");
-    const [isDeleting, setIsDeleting] = useState(false);
+    const [isDeletingRelationship, setIsDeletingRelationship] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
-    const handleDelete = async () => {
-        if (deleteConfirmText !== "DELETE") return;
-        setIsDeleting(true);
+    const handleDeleteRelationship = async () => {
+        if (deleteConfirmText !== "DELETE" || !onDeleteRelationship) return;
+        setIsDeletingRelationship(true);
         try {
             await onDeleteRelationship();
-            setShowDeleteModal(false);
+            setShowDeleteRelationshipModal(false);
             setDeleteConfirmText("");
         } catch (error) {
             // Error handling relies on parent throwing or managing its own alerts
         } finally {
-            setIsDeleting(false);
+            setIsDeletingRelationship(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== "DELETE") return;
+        setIsDeletingAccount(true);
+        try {
+            await onDeleteAccount();
+            // No need to close modal - user will be signed out
+        } catch (error) {
+            // Error handling relies on parent throwing or managing its own alerts
+            setIsDeletingAccount(false);
+        }
+    };
+
+    const closeRelationshipModal = () => {
+        if (!isDeletingRelationship) {
+            setShowDeleteRelationshipModal(false);
+            setDeleteConfirmText("");
+        }
+    };
+
+    const closeAccountModal = () => {
+        if (!isDeletingAccount) {
+            setShowDeleteAccountModal(false);
+            setDeleteConfirmText("");
         }
     };
 
@@ -36,23 +70,53 @@ export const DangerZone: React.FC<DangerZoneProps> = ({ onDeleteRelationship }) 
                 style={styles.section}
             >
                 <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
-                <GlassCard style={styles.dangerCard}>
+
+                {/* Delete Relationship - only show if in a relationship */}
+                {hasRelationship && onDeleteRelationship && (
+                    <GlassCard style={styles.dangerCard}>
+                        <View style={styles.dangerContent}>
+                            <View style={styles.dangerInfo}>
+                                <View style={styles.dangerIconContainer}>
+                                    <Ionicons name="heart-dislike" size={20} color={colors.error} />
+                                </View>
+                                <View style={styles.dangerTextContainer}>
+                                    <Text style={styles.dangerTitle}>Delete Relationship Data</Text>
+                                    <Text style={styles.dangerDescription}>
+                                        Delete your relationship including all matches, chats, and shared photos. Your account will remain.
+                                    </Text>
+                                </View>
+                            </View>
+                            <GlassButton
+                                variant="danger"
+                                size="sm"
+                                onPress={() => setShowDeleteRelationshipModal(true)}
+                                icon={<Ionicons name="trash-outline" size={16} color={colors.text} />}
+                                style={styles.dangerButton}
+                            >
+                                Delete
+                            </GlassButton>
+                        </View>
+                    </GlassCard>
+                )}
+
+                {/* Delete Account - always show */}
+                <GlassCard style={hasRelationship ? StyleSheet.flatten([styles.dangerCard, styles.dangerCardSpacing]) as ViewStyle : styles.dangerCard}>
                     <View style={styles.dangerContent}>
                         <View style={styles.dangerInfo}>
                             <View style={styles.dangerIconContainer}>
-                                <Ionicons name="warning" size={20} color={colors.error} />
+                                <Ionicons name="person-remove" size={20} color={colors.error} />
                             </View>
                             <View style={styles.dangerTextContainer}>
-                                <Text style={styles.dangerTitle}>Delete All Data</Text>
+                                <Text style={styles.dangerTitle}>Delete Account</Text>
                                 <Text style={styles.dangerDescription}>
-                                    Permanently delete your relationship including all matches, chats, and shared photos.
+                                    Permanently delete your account and all associated data. This cannot be undone.
                                 </Text>
                             </View>
                         </View>
                         <GlassButton
                             variant="danger"
                             size="sm"
-                            onPress={() => setShowDeleteModal(true)}
+                            onPress={() => setShowDeleteAccountModal(true)}
                             icon={<Ionicons name="trash-outline" size={16} color={colors.text} />}
                             style={styles.dangerButton}
                         >
@@ -62,27 +126,28 @@ export const DangerZone: React.FC<DangerZoneProps> = ({ onDeleteRelationship }) 
                 </GlassCard>
             </Animated.View>
 
+            {/* Delete Relationship Modal */}
             <Modal
-                visible={showDeleteModal}
+                visible={showDeleteRelationshipModal}
                 transparent
                 animationType="fade"
-                onRequestClose={() => !isDeleting && setShowDeleteModal(false)}
+                onRequestClose={closeRelationshipModal}
             >
-                <BlurView 
-                    intensity={Platform.OS === 'ios' ? 20 : 0} 
-                    tint="dark" 
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 20 : 0}
+                    tint="dark"
                     style={StyleSheet.absoluteFill}
                 >
-                    <KeyboardAvoidingView 
+                    <KeyboardAvoidingView
                         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                         style={styles.modalOverlay}
                     >
                         <View style={styles.modalContent}>
                             <View style={styles.modalHeader}>
                                 <View style={styles.modalIconContainer}>
-                                    <Ionicons name="warning" size={32} color={colors.error} />
+                                    <Ionicons name="heart-dislike" size={32} color={colors.error} />
                                 </View>
-                                <Text style={styles.modalTitle}>Delete All Data?</Text>
+                                <Text style={styles.modalTitle}>Delete Relationship Data?</Text>
                             </View>
 
                             <Text style={styles.modalDescription}>
@@ -120,17 +185,14 @@ export const DangerZone: React.FC<DangerZoneProps> = ({ onDeleteRelationship }) 
                                 placeholderTextColor={colors.textTertiary}
                                 autoCapitalize="characters"
                                 autoCorrect={false}
-                                editable={!isDeleting}
+                                editable={!isDeletingRelationship}
                             />
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity
                                     style={styles.cancelButton}
-                                    onPress={() => {
-                                        setShowDeleteModal(false);
-                                        setDeleteConfirmText("");
-                                    }}
-                                    disabled={isDeleting}
+                                    onPress={closeRelationshipModal}
+                                    disabled={isDeletingRelationship}
                                     activeOpacity={0.7}
                                 >
                                     <Text style={styles.cancelButtonText}>Cancel</Text>
@@ -139,18 +201,122 @@ export const DangerZone: React.FC<DangerZoneProps> = ({ onDeleteRelationship }) 
                                 <TouchableOpacity
                                     style={[
                                         styles.deleteButton,
-                                        (deleteConfirmText !== "DELETE" || isDeleting) && styles.deleteButtonDisabled,
+                                        (deleteConfirmText !== "DELETE" || isDeletingRelationship) && styles.deleteButtonDisabled,
                                     ]}
-                                    onPress={handleDelete}
-                                    disabled={deleteConfirmText !== "DELETE" || isDeleting}
+                                    onPress={handleDeleteRelationship}
+                                    disabled={deleteConfirmText !== "DELETE" || isDeletingRelationship}
                                     activeOpacity={0.7}
                                 >
-                                    {isDeleting ? (
+                                    {isDeletingRelationship ? (
                                         <ActivityIndicator size="small" color={colors.text} />
                                     ) : (
                                         <>
                                             <Ionicons name="trash" size={16} color={colors.text} />
                                             <Text style={styles.deleteButtonText}>Delete</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                </BlurView>
+            </Modal>
+
+            {/* Delete Account Modal */}
+            <Modal
+                visible={showDeleteAccountModal}
+                transparent
+                animationType="fade"
+                onRequestClose={closeAccountModal}
+            >
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 20 : 0}
+                    tint="dark"
+                    style={StyleSheet.absoluteFill}
+                >
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.modalOverlay}
+                    >
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <View style={styles.modalIconContainer}>
+                                    <Ionicons name="person-remove" size={32} color={colors.error} />
+                                </View>
+                                <Text style={styles.modalTitle}>Delete Account?</Text>
+                            </View>
+
+                            <Text style={styles.modalDescription}>
+                                This action cannot be undone. This will permanently delete:
+                            </Text>
+
+                            <View style={styles.deleteList}>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="person" size={16} color={colors.error} />
+                                    <Text style={styles.deleteListText}>Your account and profile</Text>
+                                </View>
+                                {hasRelationship && (
+                                    <>
+                                        <View style={styles.deleteListItem}>
+                                            <Ionicons name="heart-dislike" size={16} color={colors.error} />
+                                            <Text style={styles.deleteListText}>Your relationship data</Text>
+                                        </View>
+                                        <View style={styles.deleteListItem}>
+                                            <Ionicons name="chatbubbles" size={16} color={colors.error} />
+                                            <Text style={styles.deleteListText}>All chat messages and photos</Text>
+                                        </View>
+                                    </>
+                                )}
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="key" size={16} color={colors.error} />
+                                    <Text style={styles.deleteListText}>Your encryption keys</Text>
+                                </View>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="cloud-offline" size={16} color={colors.error} />
+                                    <Text style={styles.deleteListText}>All cloud-stored data</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.confirmLabel}>
+                                Type <Text style={styles.confirmKeyword}>DELETE</Text> to confirm:
+                            </Text>
+
+                            <TextInput
+                                style={styles.confirmInput}
+                                value={deleteConfirmText}
+                                onChangeText={setDeleteConfirmText}
+                                placeholder="Type DELETE"
+                                placeholderTextColor={colors.textTertiary}
+                                autoCapitalize="characters"
+                                autoCorrect={false}
+                                editable={!isDeletingAccount}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={closeAccountModal}
+                                    disabled={isDeletingAccount}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.deleteButton,
+                                        (deleteConfirmText !== "DELETE" || isDeletingAccount) && styles.deleteButtonDisabled,
+                                    ]}
+                                    onPress={handleDeleteAccount}
+                                    disabled={deleteConfirmText !== "DELETE" || isDeletingAccount}
+                                    activeOpacity={0.7}
+                                >
+                                    {isDeletingAccount ? (
+                                        <ActivityIndicator size="small" color={colors.text} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="trash" size={16} color={colors.text} />
+                                            <Text style={styles.deleteButtonText}>Delete Account</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -179,6 +345,9 @@ const styles = StyleSheet.create({
     dangerCard: {
         borderColor: 'rgba(231, 76, 60, 0.3)',
         borderWidth: 1,
+    },
+    dangerCardSpacing: {
+        marginTop: spacing.md,
     },
     dangerContent: {
         gap: spacing.md,

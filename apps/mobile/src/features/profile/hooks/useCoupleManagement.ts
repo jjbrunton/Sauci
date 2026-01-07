@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
+import { clearKeys } from '../../../lib/encryption';
 
 export function useCoupleManagement() {
     const router = useRouter();
@@ -13,6 +14,7 @@ export function useCoupleManagement() {
     const { clearPacks } = usePacksStore();
 
     const [isResettingProgress, setIsResettingProgress] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
     const handleUnpair = async () => {
         Alert.alert(
@@ -99,16 +101,46 @@ export function useCoupleManagement() {
         );
     };
 
+    const handleDeleteAccount = async () => {
+        setIsDeletingAccount(true);
+        try {
+            const { error } = await supabase.functions.invoke("delete-account", {
+                method: "DELETE",
+            });
+
+            if (error) throw error;
+
+            // Clear all local data
+            clearMatches();
+            clearMessages();
+            clearPacks();
+            await clearKeys();
+
+            Events.accountDeleted();
+
+            // Sign out the user (this will redirect to login)
+            await signOut();
+        } catch (error) {
+            console.error("Delete account error:", error);
+            Alert.alert("Error", "Failed to delete account. Please try again.");
+            throw error;
+        } finally {
+            setIsDeletingAccount(false);
+        }
+    };
+
     const navigateToPairing = () => {
         router.push("/(app)/pairing");
     };
 
     return {
         isResettingProgress,
+        isDeletingAccount,
         handleUnpair,
         handleDeleteRelationship,
         handleResetProgress,
         handleSignOut,
+        handleDeleteAccount,
         navigateToPairing,
     };
 }

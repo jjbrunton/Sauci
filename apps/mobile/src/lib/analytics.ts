@@ -157,6 +157,7 @@ export const Events = {
 
   // Relationship events
   relationshipEnded: () => logEvent("relationship_ended"),
+  accountDeleted: () => logEvent("account_deleted"),
 
   // Milestone events
   firstMatch: () => logEvent("first_match"),

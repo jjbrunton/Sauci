@@ -100,6 +100,8 @@ When using Claude Code with MCP tools:
 Edge functions in `apps/supabase/functions/` handle complex operations:
 - `submit-response` - Saves response, checks for matches, triggers notifications
 - `manage-couple` - Join/leave couple operations
+- `delete-relationship` - Deletes couple data (matches, messages, media) while keeping accounts
+- `delete-account` - Permanently deletes user account and all associated data (Apple App Store requirement)
 - `send-notification` - Push notifications for matches
 - `revenuecat-webhook` - Subscription webhook handler
 - `sync-subscription` - Syncs RevenueCat subscription status
@@ -127,6 +129,7 @@ This approach:
 | `submit-response` | false | Manual via getUser() |
 | `sync-subscription` | false | Manual via getUser() |
 | `delete-relationship` | false | Manual via getUser() |
+| `delete-account` | false | Manual via getUser() |
 | `redeem-code` | false | Manual via getUser() |
 | `revenuecat-webhook` | false | Webhook signature validation |
 | `send-notification` | false | Internal trigger (no auth) |

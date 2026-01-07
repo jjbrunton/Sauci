@@ -9,9 +9,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown, useAnimatedStyle } from "react-native-reanimated";
 
-import { InputBar, ChatHeader, ChatMessages } from "./components";
+import { InputBar, ChatHeader, ChatMessages, ReportMessageSheet } from "./components";
 import { useMediaUpload } from "./hooks/useMediaUpload";
 import { useMessageActions } from "./hooks/useMessageActions";
+import type { ReportReason } from "./types";
 
 import { supabase } from "../../lib/supabase";
 import { useAuthStore, useMessageStore } from "../../store";
@@ -42,6 +43,7 @@ export const ChatScreen: React.FC = () => {
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
     const [fullScreenImageLoading, setFullScreenImageLoading] = useState(true);
     const [fullScreenVideo, setFullScreenVideo] = useState<string | null>(null);
+    const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
 
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation({
@@ -75,15 +77,59 @@ export const ChatScreen: React.FC = () => {
     // E2EE encryption hook for sending messages
     const { encryptMessage, isE2EEAvailable } = useEncryptedSend();
 
-    // Message actions hook for deletion
-    const { showDeleteOptions } = useMessageActions({ userId: user?.id });
+    // Message actions hook for deletion and reporting
+    const { showDeleteOptions, deleteForSelf } = useMessageActions({
+        userId: user?.id,
+        onReport: (message) => setReportingMessage(message),
+    });
 
-    // Handle long press on message to show delete options
+    // Handle long press on message to show options
     const handleMessageLongPress = useCallback((message: Message, isMe: boolean) => {
         // Don't show options for already deleted messages
         if (message.deleted_at) return;
         showDeleteOptions(message, isMe);
     }, [showDeleteOptions]);
+
+    // Handle report submission
+    const handleSubmitReport = async (reason: ReportReason) => {
+        if (!reportingMessage || !user?.id) return;
+
+        try {
+            // Insert the report
+            const { error: reportError } = await supabase
+                .from('message_reports')
+                .insert({
+                    message_id: reportingMessage.id,
+                    reporter_id: user.id,
+                    reason: reason,
+                });
+
+            if (reportError) {
+                if (reportError.code === '23505') {
+                    // Unique violation - already reported
+                    Alert.alert('Already Reported', 'You have already reported this message.');
+                } else {
+                    console.error('Report error:', reportError);
+                    Alert.alert('Error', 'Failed to submit report');
+                }
+                setReportingMessage(null);
+                return;
+            }
+
+            // Also delete the message for the reporter (so they don't see it anymore)
+            await deleteForSelf(reportingMessage.id);
+
+            // Remove from local state
+            setMessages(prev => prev.filter(m => m.id !== reportingMessage.id));
+
+            Alert.alert('Report Submitted', 'Thank you for your report. We will review it shortly.');
+            setReportingMessage(null);
+        } catch (err) {
+            console.error('Report error:', err);
+            Alert.alert('Error', 'Failed to submit report');
+            setReportingMessage(null);
+        }
+    };
 
     // Track active chat to prevent notifications for current chat
     useFocusEffect(
@@ -436,6 +482,13 @@ export const ChatScreen: React.FC = () => {
                     )}
                 </View>
             </Modal>
+
+            {/* Report Message Sheet */}
+            <ReportMessageSheet
+                visible={reportingMessage !== null}
+                onClose={() => setReportingMessage(null)}
+                onSubmit={handleSubmitReport}
+            />
         </GradientBackground>
     );
 };

@@ -15,3 +15,4 @@ export type { MessageBubbleProps } from './MessageBubble';
 export { ChatHeader } from './ChatHeader';
 export { ChatMessages } from './ChatMessages';
 export { MatchCard } from './MatchCard';
+export { ReportMessageSheet } from './ReportMessageSheet';

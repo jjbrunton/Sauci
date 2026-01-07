@@ -39,3 +39,13 @@ export const CHAT_COLORS = {
     ROSE: 'rgb(232, 164, 174)',
     ROSE_RGBA: 'rgba(232, 164, 174, ',
 } as const;
+
+/** Report reasons for message reporting */
+export type ReportReason = 'harassment' | 'spam' | 'inappropriate_content' | 'other';
+
+export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+    { value: 'harassment', label: 'Harassment' },
+    { value: 'spam', label: 'Spam' },
+    { value: 'inappropriate_content', label: 'Inappropriate Content' },
+    { value: 'other', label: 'Other' },
+];

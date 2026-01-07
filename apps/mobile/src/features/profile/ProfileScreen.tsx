@@ -51,6 +51,7 @@ export function ProfileScreen() {
         handleDeleteRelationship,
         handleResetProgress,
         handleSignOut,
+        handleDeleteAccount,
         navigateToPairing
     } = useCoupleManagement();
 
@@ -373,9 +374,11 @@ export function ProfileScreen() {
                 )}
 
                 {/* Danger Zone */}
-                {couple && (
-                    <DangerZone onDeleteRelationship={handleDeleteRelationship} />
-                )}
+                <DangerZone
+                    onDeleteRelationship={couple ? handleDeleteRelationship : undefined}
+                    onDeleteAccount={handleDeleteAccount}
+                    hasRelationship={!!couple}
+                />
 
                 {/* Version */}
                 <Animated.View
