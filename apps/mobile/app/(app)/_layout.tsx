@@ -337,9 +337,9 @@ export default function AppLayout() {
         }
     }, [user?.id, fetchUnreadCount]);
 
-    // Initialize RevenueCat for subscription management
+    // Initialize RevenueCat for subscription management (iOS and Android only)
     useEffect(() => {
-        if (user?.id && Platform.OS === "ios") {
+        if (user?.id && Platform.OS !== "web") {
             initializeRevenueCat(user.id);
         }
     }, [user?.id, initializeRevenueCat]);

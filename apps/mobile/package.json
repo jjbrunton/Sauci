@@ -13,8 +13,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --runInBand --ci",
-    "release:ios": "dotenv -e .env -- eas build --platform ios --profile production --local",
-    "release:android": "dotenv -e .env -- eas build --platform android --profile production --local"
+    "release:ios": "dotenv -e .env -- npx expo prebuild --platform ios && dotenv -e .env -- eas build --platform ios --profile production --local",
+    "release:android": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile production --local"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.0",
