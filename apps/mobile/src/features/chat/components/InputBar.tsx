@@ -14,6 +14,7 @@ import { colors, gradients, spacing, radius, typography } from '../../../theme';
 export interface InputBarProps {
     inputText: string;
     uploading: boolean;
+    secureReady: boolean;
     onChangeText: (text: string) => void;
     onSend: () => void;
     onPickMedia: () => void;
@@ -30,6 +31,7 @@ const ACCENT = colors.premium.gold;
 export function InputBar({
     inputText,
     uploading,
+    secureReady,
     onChangeText,
     onSend,
     onPickMedia,
@@ -63,12 +65,17 @@ export function InputBar({
         transform: [{ rotate: `${buttonRotation.value}deg` }],
     }));
 
+    const sendDisabled = !inputText.trim() || !secureReady;
+    const mediaDisabled = uploading || !secureReady;
+    // Determine if send is disabled specifically because of security (not empty input)
+    const waitingForSecurity = !secureReady && inputText.trim().length > 0;
+
     return (
         <View style={styles.container}>
             {/* Plus button to toggle media menu */}
             <TouchableOpacity
                 onPress={toggleMenu}
-                disabled={uploading}
+                disabled={mediaDisabled}
                 style={styles.attachButton}
                 accessibilityRole="button"
                 accessibilityLabel="Toggle media menu"
@@ -89,6 +96,7 @@ export function InputBar({
                     onPress={() => handleMediaAction(onTakePhoto)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    disabled={mediaDisabled}
                     accessibilityRole="button"
                     accessibilityLabel="Take photo"
                     testID="chat-input-take-photo"
@@ -102,6 +110,7 @@ export function InputBar({
                     onPress={() => handleMediaAction(onRecordVideo)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    disabled={mediaDisabled}
                     accessibilityRole="button"
                     accessibilityLabel="Record video"
                     testID="chat-input-record-video"
@@ -115,6 +124,7 @@ export function InputBar({
                     onPress={() => handleMediaAction(onPickMedia)}
                     style={styles.mediaMenuItem}
                     activeOpacity={0.7}
+                    disabled={mediaDisabled}
                     accessibilityRole="button"
                     accessibilityLabel="Pick media"
                     testID="chat-input-pick-media"
@@ -140,20 +150,21 @@ export function InputBar({
 
             <TouchableOpacity
                 onPress={onSend}
-                disabled={!inputText.trim()}
+                disabled={sendDisabled}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel="Send message"
+                accessibilityLabel={waitingForSecurity ? "Send message - securing connection" : "Send message"}
+                accessibilityHint={waitingForSecurity ? "Please wait while we secure your connection" : undefined}
                 testID="chat-input-send"
             >
                 <LinearGradient
-                    colors={inputText.trim() ? gradients.primary as [string, string] : ['rgba(22, 33, 62, 0.6)', 'rgba(22, 33, 62, 0.6)']}
+                    colors={sendDisabled ? ['rgba(22, 33, 62, 0.6)', 'rgba(22, 33, 62, 0.6)'] : gradients.primary as [string, string]}
                     style={styles.sendButton}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                 >
                     {/* Silk highlight */}
-                    {inputText.trim() && (
+                    {!sendDisabled && (
                         <LinearGradient
                             colors={['rgba(255, 255, 255, 0.2)', 'transparent']}
                             style={styles.sendButtonHighlight}
@@ -162,9 +173,9 @@ export function InputBar({
                         />
                     )}
                     <Ionicons
-                        name="send"
-                        size={18}
-                        color={inputText.trim() ? colors.text : colors.textTertiary}
+                        name={waitingForSecurity ? "lock-closed" : "send"}
+                        size={waitingForSecurity ? 16 : 18}
+                        color={sendDisabled ? colors.textTertiary : colors.text}
                     />
                 </LinearGradient>
             </TouchableOpacity>

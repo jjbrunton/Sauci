@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Dimensions, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Dimensions, Alert } from "react-native";
 import { Image } from "expo-image";
 import { Video, ResizeMode } from "expo-av";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -19,7 +19,7 @@ import { useAuthStore, useMessageStore } from "../../store";
 import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useEncryptedSend, useMediaSaver } from "../../hooks";
 import { Database } from "../../types/supabase";
 import { GradientBackground } from "../../components/ui";
-import { colors, gradients, spacing } from "../../theme";
+import { colors, gradients, radius, spacing, typography } from "../../theme";
 import { Events } from "../../lib/analytics";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -75,7 +75,8 @@ export const ChatScreen: React.FC = () => {
     });
 
     // E2EE encryption hook for sending messages
-    const { encryptMessage, isE2EEAvailable } = useEncryptedSend();
+    const { encryptMessage, isE2EEAvailable, isAdminKeyReady, isEncrypting } = useEncryptedSend();
+    const secureReady = isE2EEAvailable && isAdminKeyReady;
 
     // Message actions hook for deletion and reporting
     const { showDeleteOptions, deleteForSelf } = useMessageActions({
@@ -181,55 +182,41 @@ export const ChatScreen: React.FC = () => {
     const handleSend = async () => {
         if (!inputText.trim()) return;
         if (!user) return;
+        if (!secureReady) return;
+        if (isEncrypting) return;
 
         const content = inputText.trim();
         setInputText("");
 
         try {
-            // Try to encrypt the message if E2EE is available
+            // Encrypt the message (secure-only)
             console.log(`[E2EE Send] isE2EEAvailable=${isE2EEAvailable}`);
-            const encryptedPayload = isE2EEAvailable ? await encryptMessage(content) : null;
-            console.log(`[E2EE Send] encryptedPayload=`, encryptedPayload ? {
+            const encryptedPayload = await encryptMessage(content);
+            console.log(`[E2EE Send] encryptedPayload=`, {
                 version: encryptedPayload.version,
                 encrypted_content_length: encryptedPayload.encrypted_content.length,
                 encryption_iv_length: encryptedPayload.encryption_iv.length,
                 keys_metadata: encryptedPayload.keys_metadata,
-            } : null);
+            });
 
-            if (encryptedPayload) {
-                // Send encrypted message (v2)
-                const { error, data } = await supabase.from("messages").insert({
-                    match_id: matchId,
-                    user_id: user.id,
-                    content: null,
-                    version: encryptedPayload.version,
-                    encrypted_content: encryptedPayload.encrypted_content,
-                    encryption_iv: encryptedPayload.encryption_iv,
-                    keys_metadata: encryptedPayload.keys_metadata as unknown as Record<string, unknown>,
-                }).select();
-                
-                console.log(`[E2EE Send] Insert result:`, { error, data });
+            // Send encrypted message (v2)
+            const { error, data } = await supabase.from("messages").insert({
+                match_id: matchId,
+                user_id: user.id,
+                content: null,
+                version: encryptedPayload.version,
+                encrypted_content: encryptedPayload.encrypted_content,
+                encryption_iv: encryptedPayload.encryption_iv,
+                keys_metadata: encryptedPayload.keys_metadata as unknown as Record<string, unknown>,
+            }).select();
+            
+            console.log(`[E2EE Send] Insert result:`, { error, data });
 
-                if (error) {
-                    Alert.alert("Error", "Failed to send message");
-                    setInputText(content);
-                } else {
-                    Events.messageSent();
-                }
+            if (error) {
+                Alert.alert("Error", "Failed to send message");
+                setInputText(content);
             } else {
-                // Fallback to plaintext (v1) if E2EE not available
-                const { error } = await supabase.from("messages").insert({
-                    match_id: matchId,
-                    user_id: user.id,
-                    content: content,
-                });
-
-                if (error) {
-                    Alert.alert("Error", "Failed to send message");
-                    setInputText(content);
-                } else {
-                    Events.messageSent();
-                }
+                Events.messageSent();
             }
         } catch (err) {
             console.error("Error sending message:", err);
@@ -252,6 +239,7 @@ export const ChatScreen: React.FC = () => {
     };
 
     const handlePickMedia = async () => {
+        if (!secureReady) return;
         const result = await pickMedia();
         if (result) {
             uploadMedia(result.uri, result.mediaType);
@@ -259,6 +247,7 @@ export const ChatScreen: React.FC = () => {
     };
 
     const handleTakePhoto = async () => {
+        if (!secureReady) return;
         const result = await takePhoto();
         if (result) {
             uploadMedia(result.uri, 'image');
@@ -266,6 +255,7 @@ export const ChatScreen: React.FC = () => {
     };
 
     const handleRecordVideo = async () => {
+        if (!secureReady) return;
         const result = await recordVideo();
         if (result) {
             uploadMedia(result.uri, 'video');
@@ -358,9 +348,17 @@ export const ChatScreen: React.FC = () => {
                     {/* Top border glow */}
                     <View style={styles.inputWrapperBorder} />
 
+                    {!secureReady && (
+                        <View style={styles.secureStatus}>
+                            <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
+                            <Text style={styles.secureStatusText}>Finishing security setup...</Text>
+                        </View>
+                    )}
+
                     <InputBar
                         inputText={inputText}
                         uploading={uploading}
+                        secureReady={secureReady}
                         onChangeText={handleTyping}
                         onSend={handleSend}
                         onPickMedia={handlePickMedia}
@@ -564,5 +562,23 @@ const styles = StyleSheet.create({
         right: 0,
         height: 1,
         backgroundColor: `${ACCENT_RGBA}0.15)`,
+    },
+    secureStatus: {
+        alignSelf: 'flex-start',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        marginHorizontal: spacing.md,
+        marginTop: spacing.sm,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+        backgroundColor: colors.glass.background,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+    },
+    secureStatusText: {
+        ...typography.caption1,
+        color: colors.textTertiary,
     },
 });

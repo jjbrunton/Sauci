@@ -10,6 +10,7 @@ describe('InputBar', () => {
             <InputBar
                 inputText=""
                 uploading={false}
+                secureReady={true}
                 onChangeText={onChangeText}
                 onSend={jest.fn()}
                 onPickMedia={jest.fn()}
@@ -29,6 +30,7 @@ describe('InputBar', () => {
             <InputBar
                 inputText=""
                 uploading={false}
+                secureReady={true}
                 onChangeText={jest.fn()}
                 onSend={onSend}
                 onPickMedia={jest.fn()}
@@ -48,6 +50,7 @@ describe('InputBar', () => {
             <InputBar
                 inputText=""
                 uploading={false}
+                secureReady={true}
                 onChangeText={jest.fn()}
                 onSend={onSend}
                 onPickMedia={jest.fn()}
@@ -60,6 +63,7 @@ describe('InputBar', () => {
             <InputBar
                 inputText="hi"
                 uploading={false}
+                secureReady={true}
                 onChangeText={jest.fn()}
                 onSend={onSend}
                 onPickMedia={jest.fn()}
@@ -72,6 +76,26 @@ describe('InputBar', () => {
         expect(onSend).toHaveBeenCalledTimes(1);
     });
 
+    it('disables send when secure messaging is not ready', () => {
+        const onSend = jest.fn();
+
+        const { getByTestId } = render(
+            <InputBar
+                inputText="hello"
+                uploading={false}
+                secureReady={false}
+                onChangeText={jest.fn()}
+                onSend={onSend}
+                onPickMedia={jest.fn()}
+                onTakePhoto={jest.fn()}
+                onRecordVideo={jest.fn()}
+            />
+        );
+
+        fireEvent.press(getByTestId('chat-input-send'));
+        expect(onSend).not.toHaveBeenCalled();
+    });
+
     it('calls media actions from menu buttons', () => {
         const onPickMedia = jest.fn();
         const onTakePhoto = jest.fn();
@@ -81,6 +105,7 @@ describe('InputBar', () => {
             <InputBar
                 inputText="hello"
                 uploading={false}
+                secureReady={true}
                 onChangeText={jest.fn()}
                 onSend={jest.fn()}
                 onPickMedia={onPickMedia}

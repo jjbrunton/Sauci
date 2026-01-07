@@ -5,7 +5,7 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 export default function Index() {
     const { isAuthenticated, isLoading, user } = useAuthStore();
 
-    // Show loading state
+    // Show loading state while auth is being determined
     if (isLoading) {
         return (
             <View style={styles.container}>
@@ -24,12 +24,8 @@ export default function Index() {
         return <Redirect href="/(app)/onboarding" />;
     }
 
-    // If user has no couple, go to pairing
-    if (!user?.couple_id) {
-        return <Redirect href="/(app)/pairing" />;
-    }
-
-    // Otherwise go to home
+    // Go to home/dashboard - users can pair from within the app
+    // No forced redirect to pairing for users without a couple
     return <Redirect href="/(app)" />;
 }
 

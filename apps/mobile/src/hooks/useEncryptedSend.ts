@@ -8,7 +8,7 @@
  * consistency with all other encryption operations.
  */
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import {
   encryptTextMessage,
@@ -26,9 +26,11 @@ import { captureError } from '../lib/sentry';
 
 interface UseEncryptedSendReturn {
   /** Encrypt a text message for sending */
-  encryptMessage: (plaintext: string) => Promise<EncryptedMessagePayload | null>;
+  encryptMessage: (plaintext: string) => Promise<EncryptedMessagePayload>;
   /** Whether E2EE is available (keys loaded, not on web) */
   isE2EEAvailable: boolean;
+  /** Whether the admin key is available and valid */
+  isAdminKeyReady: boolean;
   /** Whether encryption is currently in progress */
   isEncrypting: boolean;
   /** Last encryption error, if any */
@@ -38,17 +40,21 @@ interface UseEncryptedSendReturn {
 /**
  * Hook for encrypting messages before sending
  *
- * Returns null if E2EE is not available (web platform, no keys).
- * In that case, the caller should send plaintext (v1) messages.
+ * Throws if E2EE is not available or keys are not ready.
  */
 export function useEncryptedSend(): UseEncryptedSendReturn {
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [isAdminKeyReady, setIsAdminKeyReady] = useState(false);
 
   // Track the version of keys we have verified to handle key rotation/regeneration
   const verifiedKeysVersionRef = useRef<number | null>(null);
+  const partnerRefreshRef = useRef(0);
+  const adminKeyRetryRef = useRef(0);
+  const PARTNER_REFRESH_TTL_MS = 2 * 60 * 1000;
+  const ADMIN_KEY_RETRY_DELAYS = [500, 1000, 2000, 4000]; // Exponential backoff delays in ms
 
-  const { publicKeyJwk, hasKeys, isLoading } = useEncryptionKeys();
+  const { publicKeyJwk, privateKeyJwk, hasKeys, isLoading } = useEncryptionKeys();
   const refreshPartner = useAuthStore((s) => s.refreshPartner);
   const user = useAuthStore((s) => s.user);
 
@@ -56,14 +62,71 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
   // - Not on web platform
   // - Keys are loaded and available
   const isE2EEAvailable =
-    Platform.OS !== 'web' && hasKeys && !isLoading && !!publicKeyJwk;
+    Platform.OS !== 'web' && hasKeys && !isLoading && !!publicKeyJwk && !!privateKeyJwk;
+
+  useEffect(() => {
+    let isMounted = true;
+    let retryTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const checkAdminKey = async (retryCount = 0) => {
+      if (!isE2EEAvailable) {
+        if (isMounted) {
+          setIsAdminKeyReady(false);
+        }
+        return;
+      }
+
+      try {
+        const adminPublicKey = await getAdminPublicKey();
+        const adminKeyId = await getAdminKeyId();
+
+        if (!adminKeyId || !isValidPublicKeyJwk(adminPublicKey)) {
+          throw new Error('Admin public key is invalid');
+        }
+
+        if (isMounted) {
+          setIsAdminKeyReady(true);
+          adminKeyRetryRef.current = 0; // Reset retry count on success
+        }
+      } catch (adminKeyError) {
+        console.warn(`[E2EE Send] Admin key not ready (attempt ${retryCount + 1}):`, adminKeyError);
+        if (isMounted) {
+          setIsAdminKeyReady(false);
+          
+          // Retry with exponential backoff if we haven't exhausted retries
+          if (retryCount < ADMIN_KEY_RETRY_DELAYS.length) {
+            const delay = ADMIN_KEY_RETRY_DELAYS[retryCount];
+            console.log(`[E2EE Send] Retrying admin key fetch in ${delay}ms...`);
+            retryTimeoutId = setTimeout(() => {
+              if (isMounted) {
+                checkAdminKey(retryCount + 1);
+              }
+            }, delay);
+          } else {
+            console.warn('[E2EE Send] Admin key fetch failed after all retries');
+          }
+        }
+      }
+    };
+
+    checkAdminKey();
+
+    return () => {
+      isMounted = false;
+      if (retryTimeoutId) {
+        clearTimeout(retryTimeoutId);
+      }
+    };
+  }, [isE2EEAvailable]);
 
   const encryptMessage = useCallback(
-    async (plaintext: string): Promise<EncryptedMessagePayload | null> => {
-      // Return null if E2EE not available - caller will send plaintext
+    async (plaintext: string): Promise<EncryptedMessagePayload> => {
+      // Block sending until E2EE is ready
       if (!isE2EEAvailable) {
-        console.log('[E2EE Send] E2EE not available, will send plaintext');
-        return null;
+        const readyError = new Error('Message security not ready. Please check your connection.');
+        console.warn('[E2EE Send] E2EE not available');
+        setError(readyError);
+        throw readyError;
       }
 
       // CRITICAL: Read keys directly from the global store at encryption time
@@ -114,10 +177,31 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
       setError(null);
 
       try {
-        // Always refresh partner's profile to get their latest public key
-        // This ensures we don't miss their key if they just generated it
-        console.log('[E2EE Send] Refreshing partner profile to get latest public key...');
-        const freshPartner = await refreshPartner();
+        // Refresh partner's profile only when key is missing/invalid or TTL expires
+        const resolvePartnerProfile = async () => {
+          const cachedPartner = useAuthStore.getState().partner;
+          const cachedKey = cachedPartner?.public_key_jwk as RSAPublicKeyJWK | null | undefined;
+          const hasValidKey = cachedKey ? isValidPublicKeyJwk(cachedKey) : false;
+          const now = Date.now();
+          const shouldRefresh = !hasValidKey || (now - partnerRefreshRef.current) > PARTNER_REFRESH_TTL_MS;
+
+          if (!shouldRefresh) {
+            return cachedPartner;
+          }
+
+          console.log('[E2EE Send] Refreshing partner profile to get latest public key...');
+          try {
+            const freshPartner = await refreshPartner();
+            partnerRefreshRef.current = Date.now();
+            return freshPartner ?? useAuthStore.getState().partner;
+          } catch (refreshError) {
+            console.warn('[E2EE Send] Partner refresh failed, using cached key:', refreshError);
+            partnerRefreshRef.current = Date.now();
+            return cachedPartner;
+          }
+        };
+
+        const freshPartner = await resolvePartnerProfile();
 
         // Get admin key for moderation access
         // SAFETY: Validate the admin key before using it
@@ -258,6 +342,7 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
   return {
     encryptMessage,
     isE2EEAvailable,
+    isAdminKeyReady,
     isEncrypting,
     error,
   };

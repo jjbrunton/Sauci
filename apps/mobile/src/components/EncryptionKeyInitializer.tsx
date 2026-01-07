@@ -13,7 +13,7 @@ import { Platform } from 'react-native';
 import { useEncryptionKeys } from '../hooks';
 import { useAuthStore } from '../store';
 import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMessages';
-import { triggerKeyRotation } from '../lib/encryption';
+import { triggerKeyRotation, getAdminPublicKey } from '../lib/encryption';
 import { LoadingOverlay } from './ui/LoadingOverlay';
 import { colors } from '../theme';
 
@@ -96,6 +96,16 @@ export function EncryptionKeyInitializer(): JSX.Element | null {
         const result = await initializeAndUploadKeys();
 
         console.log('[E2EE Init] Encryption keys initialized and uploaded');
+
+        // Pre-fetch admin key to warm the cache before user reaches chat
+        // This reduces the delay before secureReady becomes true
+        try {
+          await getAdminPublicKey();
+          console.log('[E2EE Init] Admin key pre-fetched successfully');
+        } catch (adminKeyError) {
+          // Non-fatal: admin key will be fetched again when needed
+          console.warn('[E2EE Init] Failed to pre-fetch admin key:', adminKeyError);
+        }
 
         // Track if keys were regenerated (for rotation decision)
         if (result.wasRegenerated) {
