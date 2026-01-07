@@ -16,3 +16,5 @@ export { SwitchItem } from './SwitchItem';
 export type { SwitchItemProps } from './SwitchItem';
 export { MenuItem } from './MenuItem';
 export type { MenuItemProps } from './MenuItem';
+export { SubscriptionCard } from './SubscriptionCard';
+export type { SubscriptionCardProps } from './SubscriptionCard';

@@ -10,13 +10,12 @@ import Animated, {
     interpolate,
     Extrapolation
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
-import { GradientBackground, GlassCard } from '../../components/ui';
+import { GradientBackground } from '../../components/ui';
 import { FeedbackModal } from '../../components/feedback';
 import { Paywall } from '../../components/paywall';
-import { colors, featureColors, spacing, typography, radius, shadows } from '../../theme';
+import { colors, featureColors, spacing, typography, radius } from '../../theme';
 import { useAuthStore, useSubscriptionStore } from '../../store';
 import { resetSwipeTutorial } from '../../lib/swipeTutorialSeen';
 import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
@@ -27,10 +26,9 @@ import { clearKeys } from '../../lib/encryption';
 import { useProfileSettings, useCoupleManagement } from './hooks';
 
 // Components
-import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
+import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem, SubscriptionCard } from './components';
 
 const MAX_CONTENT_WIDTH = 500;
-const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 const NAV_BAR_HEIGHT = 44;
 const STATUS_BAR_HEIGHT = 60;
 const HEADER_SCROLL_DISTANCE = 100;
@@ -188,77 +186,16 @@ export function ProfileScreen() {
                 />
 
                 {/* Subscription Section */}
-                <SettingsSection title="Subscription" delay={350}>
-                    {hasPremiumAccess ? (
-                        <View style={styles.rowContainer}>
-                            <View style={styles.rowLeft}>
-                                <LinearGradient
-                                    colors={ACCENT_GRADIENT}
-                                    style={styles.partnerIconGradient}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                >
-                                    <Ionicons name="star" size={20} color={colors.text} />
-                                </LinearGradient>
-                                <View style={styles.rowTextContainer}>
-                                    <Text style={styles.rowValue}>Pro Member</Text>
-                                    <Text style={styles.rowLabel}>
-                                        {isOwnSubscription
-                                            ? `Renews ${formatExpirationDate(subscription.expirationDate)}`
-                                            : "Via partner's subscription"
-                                        }
-                                    </Text>
-                                </View>
-                            </View>
-                            {isOwnSubscription && (
-                                <TouchableOpacity
-                                    style={styles.manageButton}
-                                    onPress={settings.handleManageSubscription}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.manageButtonText}>Manage</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    ) : (
-                        <TouchableOpacity
-                            style={styles.rowContainer}
-                            onPress={() => settings.setShowPaywall(true)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={styles.rowLeft}>
-                                <View style={styles.emptyPartnerIcon}>
-                                    <Ionicons name="star-outline" size={20} color={colors.textTertiary} />
-                                </View>
-                                <View style={styles.rowTextContainer}>
-                                    <Text style={styles.rowValueMuted}>Free Plan</Text>
-                                    <Text style={styles.rowLabel}>Upgrade to unlock all packs</Text>
-                                </View>
-                            </View>
-                            <LinearGradient
-                                colors={ACCENT_GRADIENT}
-                                style={styles.upgradeButton}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                            >
-                                <Text style={styles.upgradeButtonText}>Upgrade</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* Restore Purchases Link */}
-                    {!hasPremiumAccess && (
-                        <TouchableOpacity
-                            style={styles.restoreLink}
-                            onPress={settings.handleRestorePurchases}
-                            disabled={settings.isPurchasing}
-                        >
-                            <Text style={styles.restoreLinkText}>
-                                {settings.isPurchasing ? "Restoring..." : "Restore Purchases"}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-                </SettingsSection>
+                <SubscriptionCard
+                    hasPremiumAccess={hasPremiumAccess}
+                    isOwnSubscription={!!isOwnSubscription}
+                    expirationDate={formatExpirationDate(subscription.expirationDate)}
+                    onUpgradePress={() => settings.setShowPaywall(true)}
+                    onManagePress={settings.handleManageSubscription}
+                    onRestorePress={settings.handleRestorePurchases}
+                    isRestoring={settings.isPurchasing}
+                    delay={350}
+                />
 
                 {/* Notifications */}
                 <NotificationSettings
@@ -494,89 +431,10 @@ const styles = StyleSheet.create({
         marginHorizontal: spacing.sm,
         opacity: 0.6,
     },
-    // Shared row styles
-    rowContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: spacing.sm,
-    },
-    rowLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    partnerIconGradient: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyPartnerIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.glass.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    rowTextContainer: {
-        marginLeft: spacing.md,
-        flex: 1,
-    },
-    rowValue: {
-        ...typography.body,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    rowValueMuted: {
-        ...typography.body,
-        fontWeight: '600',
-        color: colors.textSecondary,
-    },
-    rowLabel: {
-        ...typography.caption1,
-        color: colors.textTertiary,
-        marginTop: 2,
-    },
     preferencesDivider: {
         height: 1,
         backgroundColor: colors.glass.border,
         marginVertical: spacing.md,
-    },
-    // Subscription styles
-    manageButton: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.md,
-        backgroundColor: colors.glass.background,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-    },
-    manageButtonText: {
-        ...typography.subhead,
-        color: colors.secondary,
-        fontWeight: "600",
-    },
-    upgradeButton: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.md,
-    },
-    upgradeButtonText: {
-        ...typography.subhead,
-        color: colors.text,
-        fontWeight: "600",
-    },
-    restoreLink: {
-        alignItems: "center",
-        marginTop: spacing.sm,
-        padding: spacing.sm,
-    },
-    restoreLinkText: {
-        ...typography.caption1,
-        color: colors.textTertiary,
     },
     // Version Badge
     versionContainer: {
