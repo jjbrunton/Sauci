@@ -228,6 +228,9 @@ export default function LoginScreen() {
             const { data, error: signUpError } = await supabase.auth.signUp({
                 email: email.trim(),
                 password,
+                options: {
+                    emailRedirectTo: Linking.createURL("/(auth)/login"),
+                },
             });
 
             setIsLoading(false);

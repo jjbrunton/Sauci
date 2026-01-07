@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import Animated, {
     FadeInDown,
     useSharedValue,
@@ -68,6 +69,15 @@ export function ProfileScreen() {
             day: "numeric",
         });
     };
+
+    // Version info
+    const version = Constants.expoConfig?.version ?? '1.0.0';
+    const buildNumber = Platform.select({
+        ios: Constants.expoConfig?.ios?.buildNumber,
+        android: Constants.expoConfig?.android?.versionCode?.toString(),
+        default: undefined,
+    });
+    const versionString = buildNumber ? `v${version} (${buildNumber})` : `v${version}`;
 
     // Scroll animation
     const scrollY = useSharedValue(0);
@@ -374,7 +384,7 @@ export function ProfileScreen() {
                 >
                     <View style={styles.versionBadge}>
                         <Ionicons name="heart" size={12} color={featureColors.profile.accent} />
-                        <Text style={styles.version}>Sauci v1.0.0</Text>
+                        <Text style={styles.version}>Sauci {versionString}</Text>
                     </View>
                 </Animated.View>
 
