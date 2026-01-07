@@ -17,6 +17,10 @@ import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMess
 // Import shared cache from mediaCache to avoid circular dependency
 import { decryptedMediaCache, clearDecryptedMediaCache } from '../lib/mediaCache';
 
+const AUTO_RETRY_BASE_DELAY_MS = 3000;
+const MAX_AUTO_RETRIES = 2;
+const autoRetryCountsByMediaKey = new Map<string, number>();
+
 export type DecryptedMediaErrorCode =
   | 'E2EE_NOT_SUPPORTED'
   | 'E2EE_KEYS_UNAVAILABLE'
@@ -86,6 +90,7 @@ export function useDecryptedMedia({
 
   const repairAttemptedByMessageId = useRef(new Set<string>());
   const [retryNonce, setRetryNonce] = useState(0);
+  const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const retry = useCallback(() => {
     repairAttemptedByMessageId.current.delete(messageId);
@@ -390,6 +395,57 @@ export function useDecryptedMedia({
       isMounted.current = false;
     };
   }, [decryptMedia, retryNonce]);
+
+  useEffect(() => {
+    return () => {
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+    };
+  }, [messageId, mediaPath]);
+
+  useEffect(() => {
+    const autoRetryKey = `${messageId}:${mediaPath ?? 'none'}`;
+
+    if (!state.errorCode) {
+      autoRetryCountsByMediaKey.delete(autoRetryKey);
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+      return;
+    }
+
+    const shouldRetry =
+      state.errorCode === 'E2EE_PENDING_RECIPIENT_KEY' ||
+      state.errorCode === 'E2EE_KEYS_UNAVAILABLE';
+
+    if (!shouldRetry) {
+      return;
+    }
+
+    const attempts = autoRetryCountsByMediaKey.get(autoRetryKey) ?? 0;
+    if (attempts >= MAX_AUTO_RETRIES) {
+      return;
+    }
+
+    const nextAttempt = attempts + 1;
+    const delayMs = AUTO_RETRY_BASE_DELAY_MS * nextAttempt;
+
+    autoRetryCountsByMediaKey.set(autoRetryKey, nextAttempt);
+
+    autoRetryTimerRef.current = setTimeout(() => {
+      retry();
+    }, delayMs);
+
+    return () => {
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+    };
+  }, [messageId, mediaPath, state.errorCode, retry]);
 
   return {
     ...state,

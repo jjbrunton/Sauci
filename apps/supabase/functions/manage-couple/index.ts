@@ -183,6 +183,28 @@ Deno.serve(async (req) => {
                     .update({ couple_id: couple.id })
                     .eq("id", user.id);
 
+                const { data: safePacks, error: safePacksError } = await supabase
+                    .from("question_packs")
+                    .select("id")
+                    .lte("avg_intensity", 2)
+                    .eq("is_public", true);
+
+                if (safePacksError) {
+                    console.error("Failed to fetch safe packs:", safePacksError);
+                } else if (safePacks?.length) {
+                    const { error: insertError } = await supabase
+                        .from("couple_packs")
+                        .insert(safePacks.map((pack: { id: string }) => ({
+                            couple_id: couple.id,
+                            pack_id: pack.id,
+                            enabled: true,
+                        })));
+
+                    if (insertError) {
+                        console.error("Failed to enable safe packs:", insertError);
+                    }
+                }
+
                 return new Response(
                     JSON.stringify({
                         success: true,

@@ -24,6 +24,35 @@ const HEADER_MAX_HEIGHT = 180;
 const HEADER_MIN_HEIGHT = 100;
 const HEADER_SCROLL_DISTANCE = HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT;
 
+const INTENSITY_LABELS: Record<number, string> = {
+    1: "Light",
+    2: "Mild",
+    3: "Moderate",
+    4: "Spicy",
+    5: "Intense",
+};
+
+const clampIntensity = (value: number) => Math.min(5, Math.max(1, Math.round(value)));
+
+const isValidIntensity = (value?: number | null): value is number =>
+    typeof value === "number" && value >= 1 && value <= 5;
+
+const getIntensityDisplay = (pack: QuestionPack) => {
+    const min = isValidIntensity(pack.min_intensity) ? pack.min_intensity : null;
+    const max = isValidIntensity(pack.max_intensity) ? pack.max_intensity : null;
+    const avg = typeof pack.avg_intensity === "number" ? clampIntensity(pack.avg_intensity) : null;
+
+    const flameCount = max ?? avg ?? (pack.is_explicit ? 5 : 2);
+    const label = min && max
+        ? min === max
+            ? INTENSITY_LABELS[min]
+            : `${INTENSITY_LABELS[min]} - ${INTENSITY_LABELS[max]}`
+        : INTENSITY_LABELS[flameCount];
+
+    return { flameCount, label };
+};
+
+
 interface PackRowProps {
     pack: QuestionPack;
     isEnabled: boolean;
@@ -36,6 +65,8 @@ interface PackRowProps {
 
 function PackRow({ pack, isEnabled, isPremiumLocked, isExpanded, onToggle, onPress, onInfoPress }: PackRowProps) {
     const questionCount = pack.questions?.[0]?.count || 0;
+    const intensityDisplay = getIntensityDisplay(pack);
+
 
     return (
         <Pressable onPress={onPress} style={styles.packRow}>
@@ -62,7 +93,21 @@ function PackRow({ pack, isEnabled, isPremiumLocked, isExpanded, onToggle, onPre
                         {questionCount} {questionCount === 1 ? "question" : "questions"}
                         {isEnabled && <Text style={styles.packMetaEnabled}> · Enabled</Text>}
                     </Text>
+                    <View style={styles.packIntensityRow}>
+                        <View style={styles.packIntensityFlames}>
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <Ionicons
+                                    key={`intensity-${pack.id}-${index}`}
+                                    name={index < intensityDisplay.flameCount ? "flame" : "flame-outline"}
+                                    size={12}
+                                    color={index < intensityDisplay.flameCount ? colors.primary : colors.textTertiary}
+                                />
+                            ))}
+                        </View>
+                        <Text style={styles.packIntensityText}>{intensityDisplay.label}</Text>
+                    </View>
                 </View>
+
 
                 <Ionicons
                     name={isExpanded ? "chevron-up" : "chevron-down"}
@@ -672,6 +717,21 @@ const styles = StyleSheet.create({
     },
     packMetaEnabled: {
         color: colors.primary,
+    },
+    packIntensityRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: spacing.xs,
+    },
+    packIntensityFlames: {
+        flexDirection: "row",
+        gap: 2,
+    },
+    packIntensityText: {
+        ...typography.caption2,
+        color: colors.textSecondary,
+        fontWeight: "600",
     },
 
     // Expanded Pack

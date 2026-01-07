@@ -22,6 +22,10 @@ import { supabase } from '../lib/supabase';
 import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMessages';
 import { useEncryptionKeys } from './useEncryptionKeys';
 
+const AUTO_RETRY_BASE_DELAY_MS = 3000;
+const MAX_AUTO_RETRIES = 2;
+const autoRetryCountsByMessageId = new Map<string, number>();
+
 interface Message {
   id: string;
   content: string | null;
@@ -68,6 +72,7 @@ export function useDecryptedMessage({
   // Track per-message repair attempts to avoid tight retry loops.
   const repairAttemptedByMessageId = useRef(new Set<string>());
   const [retryNonce, setRetryNonce] = useState(0);
+  const autoRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const retry = useCallback(() => {
     repairAttemptedByMessageId.current.delete(message.id);
@@ -359,6 +364,55 @@ export function useDecryptedMessage({
   useEffect(() => {
     decrypt();
   }, [decrypt, retryNonce]);
+
+  useEffect(() => {
+    return () => {
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+    };
+  }, [message.id]);
+
+  useEffect(() => {
+    if (!state.errorCode) {
+      autoRetryCountsByMessageId.delete(message.id);
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+      return;
+    }
+
+    const shouldRetry =
+      state.errorCode === 'E2EE_PENDING_RECIPIENT_KEY' ||
+      state.errorCode === 'E2EE_KEYS_UNAVAILABLE';
+
+    if (!shouldRetry) {
+      return;
+    }
+
+    const attempts = autoRetryCountsByMessageId.get(message.id) ?? 0;
+    if (attempts >= MAX_AUTO_RETRIES) {
+      return;
+    }
+
+    const nextAttempt = attempts + 1;
+    const delayMs = AUTO_RETRY_BASE_DELAY_MS * nextAttempt;
+
+    autoRetryCountsByMessageId.set(message.id, nextAttempt);
+
+    autoRetryTimerRef.current = setTimeout(() => {
+      retry();
+    }, delayMs);
+
+    return () => {
+      if (autoRetryTimerRef.current) {
+        clearTimeout(autoRetryTimerRef.current);
+        autoRetryTimerRef.current = null;
+      }
+    };
+  }, [message.id, state.errorCode, retry]);
 
   return { ...state, retry };
 }

@@ -2,6 +2,7 @@ export { GradientBackground } from './GradientBackground';
 export { GlassCard } from './GlassCard';
 export { GlassButton } from './GlassButton';
 export { GlassInput } from './GlassInput';
+export { IntensitySlider } from './IntensitySlider';
 export { ShimmerEffect } from './ShimmerEffect';
 export { DecorativeSeparator } from './DecorativeSeparator';
 export type { DecorativeSeparatorProps, SeparatorVariant } from './DecorativeSeparator';

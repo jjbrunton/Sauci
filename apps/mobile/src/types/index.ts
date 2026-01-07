@@ -1,5 +1,6 @@
 // User profile (extends Supabase auth.users)
 export type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
+export type IntensityLevel = 1 | 2 | 3 | 4 | 5;
 
 export interface Profile {
     id: string;
@@ -11,6 +12,7 @@ export interface Profile {
     couple_id: string | null;
     gender: Gender | null;
     show_explicit_content: boolean;
+    max_intensity: IntensityLevel;
     onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
@@ -44,6 +46,9 @@ export interface QuestionPack {
     is_premium: boolean;
     is_public: boolean;
     is_explicit: boolean;
+    min_intensity?: number;
+    max_intensity?: number;
+    avg_intensity?: number;
     sort_order: number;
     category_id: string | null;
     category?: Category;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Animated, {
@@ -27,7 +27,7 @@ import { clearKeys } from '../../lib/encryption';
 import { useProfileSettings, useCoupleManagement } from './hooks';
 
 // Components
-import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, ResetProgress, SettingsSection, MenuItem } from './components';
+import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem } from './components';
 
 const MAX_CONTENT_WIDTH = 500;
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
@@ -269,14 +269,17 @@ export function ProfileScreen() {
 
                 {/* Preferences */}
                 <PrivacySettings
-                    showExplicit={settings.showExplicit}
-                    isUpdatingExplicit={settings.isUpdatingExplicit}
-                    onExplicitToggle={settings.handleExplicitToggle}
+                    maxIntensity={settings.maxIntensity}
+                    isUpdatingIntensity={settings.isUpdatingIntensity}
+                    onIntensityChange={settings.handleIntensityChange}
                     biometricAvailable={settings.biometricAvailable}
                     biometricEnabled={settings.biometricEnabled}
                     biometricType={settings.biometricType}
                     isUpdatingBiometric={settings.isUpdatingBiometric}
                     onBiometricToggle={settings.handleBiometricToggle}
+                    partnerIntensity={settings.partnerIntensity}
+                    partnerName={settings.partnerName}
+                    partnerAvatar={settings.partnerAvatar}
                 />
 
                 {/* Account */}
@@ -298,12 +301,19 @@ export function ProfileScreen() {
                         description="Report bugs or request features"
                         onPress={() => setShowFeedbackModal(true)}
                     />
+                    <View style={styles.preferencesDivider} />
+                    <MenuItem
+                        icon="shield-checkmark-outline"
+                        label="Privacy Policy"
+                        onPress={() => Linking.openURL('https://sauci.app/privacy')}
+                    />
+                    <View style={styles.preferencesDivider} />
+                    <MenuItem
+                        icon="document-text-outline"
+                        label="Terms of Service"
+                        onPress={() => Linking.openURL('https://sauci.app/terms')}
+                    />
                 </SettingsSection>
-
-                {/* Reset Progress */}
-                {couple && (
-                    <ResetProgress onResetProgress={handleResetProgress} />
-                )}
 
                 {/* Debug Section */}
                 {__DEV__ && (
@@ -375,6 +385,7 @@ export function ProfileScreen() {
 
                 {/* Danger Zone */}
                 <DangerZone
+                    onResetProgress={couple ? handleResetProgress : undefined}
                     onDeleteRelationship={couple ? handleDeleteRelationship : undefined}
                     onDeleteAccount={handleDeleteAccount}
                     hasRelationship={!!couple}

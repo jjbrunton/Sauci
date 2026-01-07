@@ -7,29 +7,54 @@ import { GlassCard, GlassButton } from '../../../components/ui';
 import { colors, spacing, radius, typography } from '../../../theme';
 
 interface DangerZoneProps {
+    onResetProgress?: () => Promise<void>;
     onDeleteRelationship?: () => Promise<void>;
     onDeleteAccount: () => Promise<void>;
     hasRelationship?: boolean;
 }
 
 export const DangerZone: React.FC<DangerZoneProps> = ({
+    onResetProgress,
     onDeleteRelationship,
     onDeleteAccount,
     hasRelationship = false
 }) => {
+    const [showResetModal, setShowResetModal] = useState(false);
     const [showDeleteRelationshipModal, setShowDeleteRelationshipModal] = useState(false);
     const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
-    const [deleteConfirmText, setDeleteConfirmText] = useState("");
+    const [confirmText, setConfirmText] = useState("");
+    const [isResetting, setIsResetting] = useState(false);
     const [isDeletingRelationship, setIsDeletingRelationship] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+    const handleResetProgress = async () => {
+        if (confirmText !== "RESET" || !onResetProgress) return;
+        setIsResetting(true);
+        try {
+            await onResetProgress();
+            setShowResetModal(false);
+            setConfirmText("");
+        } catch (error) {
+            // Error handling relies on parent
+        } finally {
+            setIsResetting(false);
+        }
+    };
+
+    const closeResetModal = () => {
+        if (!isResetting) {
+            setShowResetModal(false);
+            setConfirmText("");
+        }
+    };
+
     const handleDeleteRelationship = async () => {
-        if (deleteConfirmText !== "DELETE" || !onDeleteRelationship) return;
+        if (confirmText !== "DELETE" || !onDeleteRelationship) return;
         setIsDeletingRelationship(true);
         try {
             await onDeleteRelationship();
             setShowDeleteRelationshipModal(false);
-            setDeleteConfirmText("");
+            setConfirmText("");
         } catch (error) {
             // Error handling relies on parent throwing or managing its own alerts
         } finally {
@@ -38,7 +63,7 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
     };
 
     const handleDeleteAccount = async () => {
-        if (deleteConfirmText !== "DELETE") return;
+        if (confirmText !== "DELETE") return;
         setIsDeletingAccount(true);
         try {
             await onDeleteAccount();
@@ -52,14 +77,14 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
     const closeRelationshipModal = () => {
         if (!isDeletingRelationship) {
             setShowDeleteRelationshipModal(false);
-            setDeleteConfirmText("");
+            setConfirmText("");
         }
     };
 
     const closeAccountModal = () => {
         if (!isDeletingAccount) {
             setShowDeleteAccountModal(false);
-            setDeleteConfirmText("");
+            setConfirmText("");
         }
     };
 
@@ -71,18 +96,45 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
             >
                 <Text style={styles.dangerSectionTitle}>Danger Zone</Text>
 
+                {/* Reset Progress - only show if in a relationship */}
+                {hasRelationship && onResetProgress && (
+                    <GlassCard style={styles.warningCard}>
+                        <View style={styles.dangerContent}>
+                            <View style={styles.dangerInfo}>
+                                <View style={styles.warningIconContainer}>
+                                    <Ionicons name="refresh" size={20} color={colors.warning} />
+                                </View>
+                                <View style={styles.dangerTextContainer}>
+                                    <Text style={styles.dangerTitle}>Reset Progress</Text>
+                                    <Text style={styles.dangerDescription}>
+                                        Start fresh by clearing all swipes, matches, and chats. Your partner connection stays.
+                                    </Text>
+                                </View>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.warningButton}
+                                onPress={() => setShowResetModal(true)}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name="refresh-outline" size={16} color={colors.warning} />
+                                <Text style={styles.warningButtonText}>Reset</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </GlassCard>
+                )}
+
                 {/* Delete Relationship - only show if in a relationship */}
                 {hasRelationship && onDeleteRelationship && (
-                    <GlassCard style={styles.dangerCard}>
+                    <GlassCard style={StyleSheet.flatten([styles.dangerCard, styles.dangerCardSpacing]) as ViewStyle}>
                         <View style={styles.dangerContent}>
                             <View style={styles.dangerInfo}>
                                 <View style={styles.dangerIconContainer}>
                                     <Ionicons name="heart-dislike" size={20} color={colors.error} />
                                 </View>
                                 <View style={styles.dangerTextContainer}>
-                                    <Text style={styles.dangerTitle}>Delete Relationship Data</Text>
+                                    <Text style={styles.dangerTitle}>Delete Relationship</Text>
                                     <Text style={styles.dangerDescription}>
-                                        Delete your relationship including all matches, chats, and shared photos. Your account will remain.
+                                        End your connection and delete all shared data. Your account will remain.
                                     </Text>
                                 </View>
                             </View>
@@ -100,7 +152,7 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
                 )}
 
                 {/* Delete Account - always show */}
-                <GlassCard style={hasRelationship ? StyleSheet.flatten([styles.dangerCard, styles.dangerCardSpacing]) as ViewStyle : styles.dangerCard}>
+                <GlassCard style={StyleSheet.flatten([styles.dangerCard, (hasRelationship ? styles.dangerCardSpacing : {})]) as ViewStyle}>
                     <View style={styles.dangerContent}>
                         <View style={styles.dangerInfo}>
                             <View style={styles.dangerIconContainer}>
@@ -109,7 +161,7 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
                             <View style={styles.dangerTextContainer}>
                                 <Text style={styles.dangerTitle}>Delete Account</Text>
                                 <Text style={styles.dangerDescription}>
-                                    Permanently delete your account and all associated data. This cannot be undone.
+                                    Permanently delete your account and all data. This cannot be undone.
                                 </Text>
                             </View>
                         </View>
@@ -125,6 +177,105 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
                     </View>
                 </GlassCard>
             </Animated.View>
+
+            {/* Reset Progress Modal */}
+            <Modal
+                visible={showResetModal}
+                transparent
+                animationType="fade"
+                onRequestClose={closeResetModal}
+            >
+                <BlurView
+                    intensity={Platform.OS === 'ios' ? 20 : 0}
+                    tint="dark"
+                    style={StyleSheet.absoluteFill}
+                >
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        style={styles.modalOverlay}
+                    >
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <View style={styles.warningModalIconContainer}>
+                                    <Ionicons name="refresh" size={32} color={colors.warning} />
+                                </View>
+                                <Text style={styles.modalTitle}>Reset Progress?</Text>
+                            </View>
+
+                            <Text style={styles.modalDescription}>
+                                This will permanently delete:
+                            </Text>
+
+                            <View style={styles.warningList}>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="swap-horizontal" size={16} color={colors.warning} />
+                                    <Text style={styles.deleteListText}>All your swipes</Text>
+                                </View>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="heart" size={16} color={colors.warning} />
+                                    <Text style={styles.deleteListText}>All matches</Text>
+                                </View>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="chatbubbles" size={16} color={colors.warning} />
+                                    <Text style={styles.deleteListText}>All chat messages</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.keepList}>
+                                <View style={styles.deleteListItem}>
+                                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                    <Text style={styles.deleteListText}>Your partner connection stays</Text>
+                                </View>
+                            </View>
+
+                            <Text style={styles.confirmLabel}>
+                                Type <Text style={styles.warningKeyword}>RESET</Text> to confirm:
+                            </Text>
+
+                            <TextInput
+                                style={styles.warningInput}
+                                value={confirmText}
+                                onChangeText={setConfirmText}
+                                placeholder="Type RESET"
+                                placeholderTextColor={colors.textTertiary}
+                                autoCapitalize="characters"
+                                autoCorrect={false}
+                                editable={!isResetting}
+                            />
+
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity
+                                    style={styles.cancelButton}
+                                    onPress={closeResetModal}
+                                    disabled={isResetting}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.warningActionButton,
+                                        (confirmText !== "RESET" || isResetting) && styles.deleteButtonDisabled,
+                                    ]}
+                                    onPress={handleResetProgress}
+                                    disabled={confirmText !== "RESET" || isResetting}
+                                    activeOpacity={0.7}
+                                >
+                                    {isResetting ? (
+                                        <ActivityIndicator size="small" color={colors.text} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="refresh" size={16} color={colors.text} />
+                                            <Text style={styles.deleteButtonText}>Reset</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </KeyboardAvoidingView>
+                </BlurView>
+            </Modal>
 
             {/* Delete Relationship Modal */}
             <Modal
@@ -179,8 +330,8 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
 
                             <TextInput
                                 style={styles.confirmInput}
-                                value={deleteConfirmText}
-                                onChangeText={setDeleteConfirmText}
+                                value={confirmText}
+                                onChangeText={setConfirmText}
                                 placeholder="Type DELETE"
                                 placeholderTextColor={colors.textTertiary}
                                 autoCapitalize="characters"
@@ -201,10 +352,10 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
                                 <TouchableOpacity
                                     style={[
                                         styles.deleteButton,
-                                        (deleteConfirmText !== "DELETE" || isDeletingRelationship) && styles.deleteButtonDisabled,
+                                        (confirmText !== "DELETE" || isDeletingRelationship) && styles.deleteButtonDisabled,
                                     ]}
                                     onPress={handleDeleteRelationship}
-                                    disabled={deleteConfirmText !== "DELETE" || isDeletingRelationship}
+                                    disabled={confirmText !== "DELETE" || isDeletingRelationship}
                                     activeOpacity={0.7}
                                 >
                                     {isDeletingRelationship ? (
@@ -283,8 +434,8 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
 
                             <TextInput
                                 style={styles.confirmInput}
-                                value={deleteConfirmText}
-                                onChangeText={setDeleteConfirmText}
+                                value={confirmText}
+                                onChangeText={setConfirmText}
                                 placeholder="Type DELETE"
                                 placeholderTextColor={colors.textTertiary}
                                 autoCapitalize="characters"
@@ -305,10 +456,10 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
                                 <TouchableOpacity
                                     style={[
                                         styles.deleteButton,
-                                        (deleteConfirmText !== "DELETE" || isDeletingAccount) && styles.deleteButtonDisabled,
+                                        (confirmText !== "DELETE" || isDeletingAccount) && styles.deleteButtonDisabled,
                                     ]}
                                     onPress={handleDeleteAccount}
-                                    disabled={deleteConfirmText !== "DELETE" || isDeletingAccount}
+                                    disabled={confirmText !== "DELETE" || isDeletingAccount}
                                     activeOpacity={0.7}
                                 >
                                     {isDeletingAccount ? (
@@ -341,6 +492,36 @@ const styles = StyleSheet.create({
         letterSpacing: 1.5,
         marginBottom: spacing.sm,
         marginLeft: spacing.xs,
+    },
+    warningCard: {
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        borderWidth: 1,
+    },
+    warningIconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(243, 156, 18, 0.15)',
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    warningButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: 'rgba(243, 156, 18, 0.15)',
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: 'rgba(243, 156, 18, 0.3)',
+        gap: spacing.xs,
+        alignSelf: "flex-end",
+    },
+    warningButtonText: {
+        ...typography.subhead,
+        color: colors.warning,
+        fontWeight: "600",
     },
     dangerCard: {
         borderColor: 'rgba(231, 76, 60, 0.3)',
@@ -430,6 +611,58 @@ const styles = StyleSheet.create({
         marginBottom: spacing.xl,
         borderWidth: 1,
         borderColor: 'rgba(231, 76, 60, 0.2)',
+    },
+    warningList: {
+        backgroundColor: "rgba(243, 156, 18, 0.1)",
+        borderRadius: radius.lg,
+        padding: spacing.md,
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: 'rgba(243, 156, 18, 0.2)',
+    },
+    keepList: {
+        backgroundColor: "rgba(46, 204, 113, 0.1)",
+        borderRadius: radius.lg,
+        padding: spacing.md,
+        gap: spacing.sm,
+        marginBottom: spacing.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(46, 204, 113, 0.2)',
+    },
+    warningModalIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(243, 156, 18, 0.15)',
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.md,
+    },
+    warningKeyword: {
+        fontWeight: "bold",
+        color: colors.warning,
+    },
+    warningInput: {
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.warning,
+        padding: spacing.md,
+        ...typography.body,
+        color: colors.text,
+        textAlign: 'center',
+        marginBottom: spacing.xl,
+    },
+    warningActionButton: {
+        flex: 1,
+        backgroundColor: colors.warning,
+        paddingVertical: spacing.md,
+        borderRadius: radius.md,
+        alignItems: "center",
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: spacing.xs,
     },
     deleteListItem: {
         flexDirection: "row",

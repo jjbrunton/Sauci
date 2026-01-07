@@ -4,6 +4,22 @@ import { Events } from "../lib/analytics";
 import type { QuestionPack, Category } from "@/types";
 import { useAuthStore } from "./authStore";
 
+const DEFAULT_MAX_INTENSITY = 2;
+
+const normalizeIntensity = (value?: number | null) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return null;
+    const rounded = Math.round(value);
+    if (rounded < 1 || rounded > 5) return null;
+    return rounded;
+};
+
+const getUserMaxIntensity = () => {
+    const user = useAuthStore.getState().user;
+    const normalized = normalizeIntensity(user?.max_intensity ?? null);
+    if (normalized) return normalized;
+    return user?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
+};
+
 interface PacksState {
     packs: QuestionPack[];
     categories: Category[];
@@ -25,8 +41,9 @@ export const usePacksStore = create<PacksState>((set, get) => ({
     fetchPacks: async () => {
         set({ isLoading: true });
 
-        // Get user's explicit content preference
-        const showExplicit = useAuthStore.getState().user?.show_explicit_content ?? true;
+        // Get user's max intensity preference
+        const maxIntensity = getUserMaxIntensity();
+
 
         // Fetch categories
         const { data: categories } = await supabase
@@ -41,10 +58,11 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             .eq("is_public", true)
             .order("sort_order");
 
-        // Filter out explicit packs if user doesn't want to see them
-        if (!showExplicit) {
-            query = query.eq("is_explicit", false);
+        // Filter out packs above user's intensity preference
+        if (maxIntensity < 5) {
+            query = query.or(`max_intensity.is.null,max_intensity.lte.${maxIntensity}`);
         }
+
 
         const { data: packs } = await query;
 

@@ -67,14 +67,14 @@ Deno.serve(async (req) => {
         return json({ error: "Missing encryption metadata" }, 400);
       }
 
-      const adminPrivateKeyJwkStr = Deno.env.get("ADMIN_PRIVATE_KEY_JWK");
-      if (!adminPrivateKeyJwkStr) {
+      const adminPrivateKeyJwk = getAdminPrivateKey(keysMetadata.admin_key_id);
+      if (!adminPrivateKeyJwk) {
         return json({ error: "Admin decryption key not configured" }, 500);
       }
 
       const rawAesKey = await unwrapWithAdminKey(
         keysMetadata.admin_wrapped_key,
-        JSON.parse(adminPrivateKeyJwkStr)
+        adminPrivateKeyJwk
       );
 
       const aesKey = await crypto.subtle.importKey(
@@ -165,4 +165,29 @@ async function assertSuperAdmin(
   if (data.role !== "super_admin") {
     throw new Error("Access denied");
   }
+}
+
+function getAdminPrivateKey(keyId?: string | null): JsonWebKey | null {
+  const keysJson = Deno.env.get("ADMIN_KEYS_JSON");
+  if (keysJson && keyId) {
+    try {
+      const keys = JSON.parse(keysJson);
+      if (keys[keyId]) {
+        return keys[keyId];
+      }
+    } catch {
+      console.error("Failed to parse ADMIN_KEYS_JSON");
+    }
+  }
+
+  const singleKeyJson = Deno.env.get("ADMIN_PRIVATE_KEY_JWK");
+  if (singleKeyJson) {
+    try {
+      return JSON.parse(singleKeyJson);
+    } catch {
+      console.error("Failed to parse ADMIN_PRIVATE_KEY_JWK");
+    }
+  }
+
+  return null;
 }

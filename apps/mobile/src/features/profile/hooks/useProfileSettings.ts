@@ -6,6 +6,7 @@ import { decode } from 'base64-arraybuffer';
 import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
+import type { IntensityLevel } from '../../../types';
 import {
     registerForPushNotificationsAsync,
     savePushToken,
@@ -18,10 +19,26 @@ import {
     getBiometricType,
 } from '../../../lib/biometricAuth';
 
+const DEFAULT_MAX_INTENSITY: IntensityLevel = 2;
+
+const normalizeIntensity = (value: number | null | undefined): IntensityLevel | null => {
+    if (value === 1 || value === 2 || value === 3 || value === 4 || value === 5) return value;
+    return null;
+};
+
+const getProfileMaxIntensity = (profile?: { max_intensity?: number | null; show_explicit_content?: boolean | null } | null): IntensityLevel => {
+    const normalized = normalizeIntensity(profile?.max_intensity);
+    if (normalized) return normalized;
+    return profile?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
+};
+
 export function useProfileSettings() {
-    const { user, fetchUser } = useAuthStore();
+    const { user, partner, fetchUser } = useAuthStore();
     const { fetchPacks } = usePacksStore();
     const { restorePurchases, isPurchasing } = useSubscriptionStore();
+
+    // Partner's intensity level (for showing on slider)
+    const partnerIntensity = partner ? getProfileMaxIntensity(partner) : null;
 
     // Name Editing
     const [isEditingName, setIsEditingName] = useState(false);
@@ -32,8 +49,8 @@ export function useProfileSettings() {
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
     // Preferences
-    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
-    const [isUpdatingExplicit, setIsUpdatingExplicit] = useState(false);
+    const [maxIntensity, setMaxIntensity] = useState<IntensityLevel>(() => getProfileMaxIntensity(user));
+    const [isUpdatingIntensity, setIsUpdatingIntensity] = useState(false);
 
     // Notifications
     const [pushEnabled, setPushEnabled] = useState(!!user?.push_token);
@@ -53,9 +70,7 @@ export function useProfileSettings() {
         if (user?.name) {
             setNewName(user.name);
         }
-        if (user?.show_explicit_content !== undefined) {
-            setShowExplicit(user.show_explicit_content);
-        }
+        setMaxIntensity(getProfileMaxIntensity(user));
         setPushEnabled(!!user?.push_token);
     }, [user]);
 
@@ -256,17 +271,21 @@ export function useProfileSettings() {
     };
 
     // Preference Actions
-    const handleExplicitToggle = async (value: boolean) => {
+    const handleIntensityChange = async (value: IntensityLevel) => {
         if (!user?.id) return;
 
-        setShowExplicit(value);
-        setIsUpdatingExplicit(true);
+        const previous = maxIntensity;
+        setMaxIntensity(value);
+        setIsUpdatingIntensity(true);
+
+        const showExplicitContent = value >= 3;
 
         try {
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    show_explicit_content: value,
+                    max_intensity: value,
+                    show_explicit_content: showExplicitContent,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id);
@@ -276,13 +295,13 @@ export function useProfileSettings() {
             // Refresh user data and packs to reflect the change
             await fetchUser();
             await fetchPacks();
-            Events.profileUpdated(["show_explicit_content"]);
+            Events.profileUpdated(["max_intensity", "show_explicit_content"]);
         } catch (error) {
             // Revert on error
-            setShowExplicit(!value);
+            setMaxIntensity(previous);
             Alert.alert("Error", "Failed to update preference. Please try again.");
         } finally {
-            setIsUpdatingExplicit(false);
+            setIsUpdatingIntensity(false);
         }
     };
 
@@ -380,8 +399,8 @@ export function useProfileSettings() {
         setNewName,
         isUpdatingName,
         isUploadingAvatar,
-        showExplicit,
-        isUpdatingExplicit,
+        maxIntensity,
+        isUpdatingIntensity,
         pushEnabled,
         isUpdatingPush,
         biometricAvailable,
@@ -392,11 +411,16 @@ export function useProfileSettings() {
         setShowPaywall,
         isPurchasing,
 
+        // Partner info for comfort zone comparison
+        partnerIntensity,
+        partnerName: partner?.name ?? undefined,
+        partnerAvatar: partner?.avatar_url ?? undefined,
+
         // Actions
         handleUpdateName,
         handleCancelEditName,
         handleAvatarPress,
-        handleExplicitToggle,
+        handleIntensityChange,
         handlePushToggle,
         handleBiometricToggle,
         handleRestorePurchases,

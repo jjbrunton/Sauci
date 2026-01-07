@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SettingsSection } from './SettingsSection';
-import { colors, featureColors, spacing, typography } from '../../../theme';
+import { colors, featureColors, spacing, typography, radius } from '../../../theme';
 import { Profile, Couple } from '../../../types';
 
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
@@ -15,30 +16,79 @@ interface CoupleStatusProps {
     onPairingPress: () => void;
 }
 
+const formatPairedDate = (date: string | null | undefined): string | null => {
+    if (!date) return null;
+    const paired = new Date(date);
+    const now = new Date();
+    const diffMs = now.getTime() - paired.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Paired today';
+    if (diffDays === 1) return 'Paired yesterday';
+    if (diffDays < 7) return `Paired ${diffDays} days ago`;
+    if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `Paired ${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    }
+    if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return `Paired ${months} ${months === 1 ? 'month' : 'months'} ago`;
+    }
+    const years = Math.floor(diffDays / 365);
+    return `Paired ${years} ${years === 1 ? 'year' : 'years'} ago`;
+};
+
 export const CoupleStatus: React.FC<CoupleStatusProps> = ({
     partner,
     couple,
     onUnpair,
     onPairingPress,
 }) => {
+    const pairedLabel = formatPairedDate(couple?.created_at);
+
     return (
         <SettingsSection title="Partner" delay={300}>
             {partner ? (
                 <View style={styles.rowContainer}>
                     <View style={styles.rowLeft}>
-                        <LinearGradient
-                            colors={ACCENT_GRADIENT}
-                            style={styles.partnerIconGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
-                            <Ionicons name="heart" size={20} color={colors.text} />
-                        </LinearGradient>
+                        {partner.avatar_url ? (
+                            <View style={styles.partnerAvatarContainer}>
+                                <LinearGradient
+                                    colors={ACCENT_GRADIENT}
+                                    style={styles.partnerAvatarGradient}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                >
+                                    <Image
+                                        source={{ uri: partner.avatar_url }}
+                                        style={styles.partnerAvatar}
+                                        cachePolicy="disk"
+                                        transition={200}
+                                    />
+                                </LinearGradient>
+                                <View style={styles.connectedBadge}>
+                                    <Ionicons name="heart" size={10} color={colors.text} />
+                                </View>
+                            </View>
+                        ) : (
+                            <LinearGradient
+                                colors={ACCENT_GRADIENT}
+                                style={styles.partnerIconGradient}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            >
+                                <Text style={styles.partnerInitial}>
+                                    {(partner.name?.[0] || partner.email?.[0] || 'P').toUpperCase()}
+                                </Text>
+                            </LinearGradient>
+                        )}
                         <View style={styles.rowTextContainer}>
                             <Text style={styles.rowValue}>
                                 {partner.name || partner.email || 'Your partner'}
                             </Text>
-                            <Text style={styles.rowLabel}>Connected</Text>
+                            <Text style={styles.rowLabel}>
+                                {pairedLabel || 'Connected'}
+                            </Text>
                         </View>
                     </View>
                     <TouchableOpacity
@@ -108,20 +158,58 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flex: 1,
     },
-    partnerIconGradient: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+    partnerAvatarContainer: {
+        position: 'relative',
+    },
+    partnerAvatarGradient: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        padding: 2,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    emptyPartnerIcon: {
+    partnerAvatar: {
         width: 44,
         height: 44,
         borderRadius: 22,
+        backgroundColor: colors.background,
+    },
+    connectedBadge: {
+        position: 'absolute',
+        bottom: -2,
+        right: -2,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: colors.success,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.backgroundLight,
+    },
+    partnerIconGradient: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    partnerInitial: {
+        ...typography.title3,
+        color: colors.text,
+        fontWeight: '600',
+    },
+    emptyPartnerIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         backgroundColor: colors.glass.background,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.glass.border,
+        borderStyle: 'dashed',
     },
     rowTextContainer: {
         marginLeft: spacing.md,

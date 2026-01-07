@@ -12,6 +12,7 @@ import { useCallback, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import {
   encryptTextMessage,
+  decryptTextMessage,
   getAdminPublicKey,
   getAdminKeyId,
   isValidPublicKeyJwk,
@@ -21,6 +22,7 @@ import {
 import type { RSAPublicKeyJWK, EncryptedMessagePayload } from '../lib/encryption';
 import { useEncryptionKeys } from './useEncryptionKeys';
 import { useAuthStore } from '../store';
+import { captureError } from '../lib/sentry';
 
 interface UseEncryptedSendReturn {
   /** Encrypt a text message for sending */
@@ -48,6 +50,7 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
 
   const { publicKeyJwk, hasKeys, isLoading } = useEncryptionKeys();
   const refreshPartner = useAuthStore((s) => s.refreshPartner);
+  const user = useAuthStore((s) => s.user);
 
   // E2EE is available if:
   // - Not on web platform
@@ -167,14 +170,75 @@ export function useEncryptedSend(): UseEncryptedSendReturn {
 
         console.log('[E2EE Send] Partner public key available:', !!partnerPublicKey);
 
-        // Encrypt the message using the key from global store
-        const encryptedPayload = await encryptTextMessage(
-          plaintext,
-          senderPublicKey as RSAPublicKeyJWK,
-          partnerPublicKey ?? null,
-          adminPublicKey,
-          adminKeyId
-        );
+        let lastPayload: EncryptedMessagePayload | null = null;
+
+        const encryptAndVerify = async (): Promise<EncryptedMessagePayload> => {
+          const payload = await encryptTextMessage(
+            plaintext,
+            senderPublicKey as RSAPublicKeyJWK,
+            partnerPublicKey ?? null,
+            adminPublicKey,
+            adminKeyId
+          );
+
+          lastPayload = payload;
+
+          const decrypted = await decryptTextMessage(
+            payload.encrypted_content,
+            payload.encryption_iv,
+            payload.keys_metadata,
+            senderPrivateKey,
+            false
+          );
+
+          if (decrypted !== plaintext) {
+            throw new Error('E2EE payload verification mismatch');
+          }
+
+          return payload;
+        };
+
+        const maxAttempts = 2;
+        let encryptedPayload: EncryptedMessagePayload | null = null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            encryptedPayload = await encryptAndVerify();
+            break;
+          } catch (verifyError) {
+            console.warn(`[E2EE Send] Payload verification failed (attempt ${attempt})`, verifyError);
+
+            if (attempt === maxAttempts) {
+              const errorInstance =
+                verifyError instanceof Error
+                  ? verifyError
+                  : new Error('E2EE payload verification failed');
+
+              const lastPayloadData = lastPayload as EncryptedMessagePayload | null;
+
+              captureError(errorInstance, {
+                stage: 'encrypt_verify',
+                attempt,
+                max_attempts: maxAttempts,
+                plaintext_length: plaintext.length,
+                encrypted_content_length: lastPayloadData?.encrypted_content.length ?? null,
+                encryption_iv_length: lastPayloadData?.encryption_iv.length ?? null,
+                admin_key_id: lastPayloadData?.keys_metadata?.admin_key_id ?? null,
+                pending_recipient: lastPayloadData?.keys_metadata?.pending_recipient ?? null,
+                has_partner_key: !!partnerPublicKey,
+                keys_version: currentKeys.keysVersion,
+                platform: Platform.OS,
+                user_id: user?.id ?? null,
+              });
+
+              throw new Error('Security check failed. Please try again.');
+            }
+          }
+        }
+
+        if (!encryptedPayload) {
+          throw new Error('Security check failed. Please try again.');
+        }
 
         console.log('[E2EE Send] Message encrypted successfully');
 

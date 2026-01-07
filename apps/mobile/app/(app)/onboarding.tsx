@@ -25,13 +25,14 @@ import Animated, {
 import { GradientBackground } from '../../src/components/ui/GradientBackground';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
+import { IntensitySlider } from '../../src/components/ui/IntensitySlider';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { supabase } from '../../src/lib/supabase';
 import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
-import type { Gender } from '../../src/types';
+import type { Gender, IntensityLevel } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'male', label: 'Male', icon: 'male' },
@@ -50,6 +51,19 @@ const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
     { value: 'strengthen_relationship', label: 'Strengthen our relationship', icon: 'shield-checkmark' },
 ];
 
+const DEFAULT_MAX_INTENSITY: IntensityLevel = 2;
+
+const normalizeIntensity = (value: number | null | undefined): IntensityLevel | null => {
+    if (value === 1 || value === 2 || value === 3 || value === 4 || value === 5) return value;
+    return null;
+};
+
+const getInitialIntensity = (profile?: { max_intensity?: number | null; show_explicit_content?: boolean | null } | null): IntensityLevel => {
+    const normalized = normalizeIntensity(profile?.max_intensity);
+    if (normalized) return normalized;
+    return profile?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
+};
+
 type Stage = 'name' | 'gender' | 'purpose' | 'explicit' | 'notifications';
 
 export default function OnboardingScreen() {
@@ -59,7 +73,7 @@ export default function OnboardingScreen() {
     const [name, setName] = useState(user?.name || '');
     const [gender, setGender] = useState<Gender | null>(user?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
-    const [showExplicit, setShowExplicit] = useState(user?.show_explicit_content ?? true);
+    const [maxIntensity, setMaxIntensity] = useState<IntensityLevel>(() => getInitialIntensity(user));
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);
@@ -107,7 +121,7 @@ export default function OnboardingScreen() {
         Events.onboardingStageComplete('purpose');
     };
 
-    const handleExplicitContinue = () => {
+    const handleIntensityContinue = () => {
         setStage('notifications');
         Events.onboardingStageComplete('explicit');
     };
@@ -139,13 +153,16 @@ export default function OnboardingScreen() {
         setError(null);
 
         try {
+            const showExplicitContent = maxIntensity >= 3;
+
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({
                     name: name.trim(),
                     gender,
                     usage_reason: usageReason,
-                    show_explicit_content: showExplicit,
+                    max_intensity: maxIntensity,
+                    show_explicit_content: showExplicitContent,
                     onboarding_completed: true,
                     updated_at: new Date().toISOString(),
                 })
@@ -159,7 +176,7 @@ export default function OnboardingScreen() {
             console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
             console.log('[Onboarding] User fetched, navigating to home...');
-            Events.profileUpdated(["name", "gender", "usage_reason", "show_explicit_content"]);
+            Events.profileUpdated(["name", "gender", "usage_reason", "max_intensity", "show_explicit_content"]);
             Events.onboardingComplete();
             router.replace('/');
         } catch (err: any) {
@@ -379,81 +396,22 @@ export default function OnboardingScreen() {
                                 colors={gradients.primary as [string, string]}
                                 style={styles.iconContainer}
                             >
-                                <Ionicons name="flame" size={40} color={colors.text} />
+                                <Ionicons name="heart-circle" size={44} color={colors.text} />
                             </LinearGradient>
-                            <Text style={styles.title}>Almost there!</Text>
+                            <Text style={styles.title}>Set Your Comfort Zone</Text>
                             <Text style={styles.subtitle}>
-                                Shall we keep it clean or show you everything?
+                                Choose the intimacy level you're comfortable with
                             </Text>
                         </View>
 
                         <GlassCard style={styles.card}>
-                            <Pressable
-                                style={styles.explicitOption}
-                                onPress={() => setShowExplicit(true)}
-                            >
-                                <View style={[
-                                    styles.explicitIcon,
-                                    showExplicit && styles.explicitIconSelected
-                                ]}>
-                                    <Ionicons
-                                        name="flame"
-                                        size={32}
-                                        color={showExplicit ? colors.primary : colors.textSecondary}
-                                    />
-                                </View>
-                                <View style={styles.explicitText}>
-                                    <Text style={[
-                                        styles.explicitTitle,
-                                        showExplicit && styles.explicitTitleSelected
-                                    ]}>
-                                        Show me everything
-                                    </Text>
-                                    <Text style={styles.explicitDescription}>
-                                        Include spicy question packs
-                                    </Text>
-                                </View>
-                                <View style={[
-                                    styles.radioOuter,
-                                    showExplicit && styles.radioOuterSelected
-                                ]}>
-                                    {showExplicit && <View style={styles.radioInner} />}
-                                </View>
-                            </Pressable>
-
-                            <Pressable
-                                style={styles.explicitOption}
-                                onPress={() => setShowExplicit(false)}
-                            >
-                                <View style={[
-                                    styles.explicitIcon,
-                                    !showExplicit && styles.explicitIconSelected
-                                ]}>
-                                    <Ionicons
-                                        name="heart"
-                                        size={32}
-                                        color={!showExplicit ? colors.primary : colors.textSecondary}
-                                    />
-                                </View>
-                                <View style={styles.explicitText}>
-                                    <Text style={[
-                                        styles.explicitTitle,
-                                        !showExplicit && styles.explicitTitleSelected
-                                    ]}>
-                                        Keep it clean
-                                    </Text>
-                                    <Text style={styles.explicitDescription}>
-                                        Only show SFW content
-                                    </Text>
-                                </View>
-                                <View style={[
-                                    styles.radioOuter,
-                                    !showExplicit && styles.radioOuterSelected
-                                ]}>
-                                    {!showExplicit && <View style={styles.radioInner} />}
-                                </View>
-                            </Pressable>
-
+                            <IntensitySlider
+                                value={maxIntensity}
+                                onValueChange={setMaxIntensity}
+                            />
+                            <Text style={styles.intensityNote}>
+                                Start where you're comfortable — you can always adjust later
+                            </Text>
                             {error && (
                                 <View style={styles.errorContainer}>
                                     <Ionicons name="alert-circle" size={16} color={colors.error} />
@@ -464,7 +422,7 @@ export default function OnboardingScreen() {
 
                         <View style={styles.footer}>
                             <GlassButton
-                                onPress={handleExplicitContinue}
+                                onPress={handleIntensityContinue}
                                 fullWidth
                                 size="lg"
                             >
@@ -762,42 +720,11 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontWeight: '600',
     },
-    explicitOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.lg,
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        padding: spacing.md,
-        marginBottom: spacing.sm,
-    },
-    explicitIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: colors.glass.background,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: spacing.md,
-    },
-    explicitIconSelected: {
-        backgroundColor: colors.primaryLight,
-    },
-    explicitText: {
-        flex: 1,
-    },
-    explicitTitle: {
-        ...typography.headline,
-        color: colors.textSecondary,
-        marginBottom: spacing.xs,
-    },
-    explicitTitleSelected: {
-        color: colors.text,
-    },
-    explicitDescription: {
+    intensityNote: {
         ...typography.caption1,
-        color: colors.textTertiary,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginTop: spacing.md,
     },
     radioOuter: {
         width: 24,
