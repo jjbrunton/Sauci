@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/config';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { PaginationControls } from '@/components/ui/pagination';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     Table,
@@ -65,10 +66,16 @@ export function FlaggedMessagesPage() {
     // AI Flagged state
     const [aiMessages, setAiMessages] = useState<FlaggedMessage[]>([]);
     const [aiLoading, setAiLoading] = useState(true);
+    const [aiPage, setAiPage] = useState(1);
+    const [aiPageSize, setAiPageSize] = useState(25);
+    const [aiTotal, setAiTotal] = useState(0);
 
     // User Reports state
     const [userReports, setUserReports] = useState<UserReport[]>([]);
     const [reportsLoading, setReportsLoading] = useState(true);
+    const [reportsPage, setReportsPage] = useState(1);
+    const [reportsPageSize, setReportsPageSize] = useState(25);
+    const [reportsTotal, setReportsTotal] = useState(0);
 
     // Shared state
     const [selectedMessage, setSelectedMessage] = useState<FlaggedMessage | null>(null);
@@ -82,30 +89,38 @@ export function FlaggedMessagesPage() {
     const [describingInline, setDescribingInline] = useState<string | null>(null);
 
     // Fetch AI flagged messages
-    const fetchAiMessages = async () => {
+    const fetchAiMessages = useCallback(async () => {
         setAiLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (aiPage - 1) * aiPageSize;
+            const to = from + aiPageSize - 1;
+
+            const { data, error, count } = await supabase
                 .from('messages')
-                .select('id, created_at, user_id, match_id, moderation_status, flag_reason, content, media_path, media_type')
+                .select('id, created_at, user_id, match_id, moderation_status, flag_reason, content, media_path, media_type', { count: 'exact' })
                 .eq('moderation_status', 'flagged')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error) throw error;
             setAiMessages(data || []);
+            setAiTotal(count || 0);
         } catch (error) {
             console.error('Failed to load flagged messages:', error);
             toast.error('Failed to load messages');
         } finally {
             setAiLoading(false);
         }
-    };
+    }, [aiPage, aiPageSize]);
 
     // Fetch user reports
-    const fetchUserReports = async () => {
+    const fetchUserReports = useCallback(async () => {
         setReportsLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (reportsPage - 1) * reportsPageSize;
+            const to = from + reportsPageSize - 1;
+
+            const { data, error, count } = await supabase
                 .from('message_reports')
                 .select(`
                     id,
@@ -116,24 +131,40 @@ export function FlaggedMessagesPage() {
                     created_at,
                     message:messages(id, user_id, match_id, content, media_path, media_type),
                     reporter_profile:profiles!reporter_id(name, email)
-                `)
+                `, { count: 'exact' })
                 .eq('status', 'pending')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error) throw error;
             setUserReports((data || []) as unknown as UserReport[]);
+            setReportsTotal(count || 0);
         } catch (error) {
             console.error('Failed to load user reports:', error);
             toast.error('Failed to load reports');
         } finally {
             setReportsLoading(false);
         }
-    };
+    }, [reportsPage, reportsPageSize]);
 
     useEffect(() => {
         fetchAiMessages();
         fetchUserReports();
-    }, []);
+    }, [fetchAiMessages, fetchUserReports]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(aiTotal / aiPageSize));
+        if (aiPage > totalPages) {
+            setAiPage(totalPages);
+        }
+    }, [aiPage, aiPageSize, aiTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(reportsTotal / reportsPageSize));
+        if (reportsPage > totalPages) {
+            setReportsPage(totalPages);
+        }
+    }, [reportsPage, reportsPageSize, reportsTotal]);
 
     // Custom media fetcher because supabase.functions.invoke is JSON-centric
     const fetchDecryptedMedia = async (messageId: string) => {
@@ -296,8 +327,8 @@ export function FlaggedMessagesPage() {
             if (error) throw error;
 
             toast.success('Message marked as safe');
-            setAiMessages(prev => prev.filter(m => m.id !== messageId));
             if (selectedMessage?.id === messageId) setSelectedMessage(null);
+            fetchAiMessages();
         } catch (error) {
             toast.error('Failed to update status');
         } finally {
@@ -316,8 +347,8 @@ export function FlaggedMessagesPage() {
             if (error) throw error;
 
             toast.success('Report dismissed');
-            setUserReports(prev => prev.filter(r => r.id !== reportId));
             if (selectedReport?.id === reportId) setSelectedReport(null);
+            fetchUserReports();
         } catch (error) {
             toast.error('Failed to dismiss report');
         } finally {
@@ -336,8 +367,8 @@ export function FlaggedMessagesPage() {
             if (error) throw error;
 
             toast.success('Report marked as reviewed');
-            setUserReports(prev => prev.filter(r => r.id !== reportId));
             if (selectedReport?.id === reportId) setSelectedReport(null);
+            fetchUserReports();
         } catch (error) {
             toast.error('Failed to update report');
         } finally {
@@ -491,6 +522,19 @@ export function FlaggedMessagesPage() {
                             </TableBody>
                         </Table>
                     </Card>
+
+                    {aiTotal > 0 && (
+                        <PaginationControls
+                            page={aiPage}
+                            pageSize={aiPageSize}
+                            totalCount={aiTotal}
+                            onPageChange={setAiPage}
+                            onPageSizeChange={(size) => {
+                                setAiPage(1);
+                                setAiPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
 
                 <TabsContent value="user-reports" className="space-y-4">
@@ -579,6 +623,19 @@ export function FlaggedMessagesPage() {
                             </TableBody>
                         </Table>
                     </Card>
+
+                    {reportsTotal > 0 && (
+                        <PaginationControls
+                            page={reportsPage}
+                            pageSize={reportsPageSize}
+                            totalCount={reportsTotal}
+                            onPageChange={setReportsPage}
+                            onPageSizeChange={(size) => {
+                                setReportsPage(1);
+                                setReportsPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
             </Tabs>
 

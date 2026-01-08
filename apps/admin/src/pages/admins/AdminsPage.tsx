@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -58,6 +59,8 @@ export function AdminsPage() {
     const [admins, setAdmins] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
 
     // Add Admin State
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -279,6 +282,23 @@ export function AdminsPage() {
             admin.role.includes(query)
         );
     });
+
+    const totalCount = filteredAdmins.length;
+    const paginatedAdmins = filteredAdmins.slice(
+        (page - 1) * pageSize,
+        page * pageSize
+    );
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
 
     return (
         <div className="space-y-6">
@@ -509,7 +529,7 @@ export function AdminsPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredAdmins.map((admin) => (
+                            paginatedAdmins.map((admin) => (
                                 <TableRow key={admin.user_id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
@@ -589,6 +609,19 @@ export function AdminsPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {filteredAdmins.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
 
             {/* Edit Permissions Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

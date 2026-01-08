@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/config';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import {
     Table,
     TableBody,
@@ -34,28 +35,42 @@ const actionColors: Record<string, string> = {
 export function AuditLogsPage() {
     const [logs, setLogs] = useState<AuditLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalCount, setTotalCount] = useState(0);
+
+    const fetchLogs = useCallback(async () => {
+        setLoading(true);
+        try {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, error, count } = await supabase
+                .from('audit_logs')
+                .select('*', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (error) throw error;
+            setLogs(data || []);
+            setTotalCount(count || 0);
+        } catch (error) {
+            console.error('Failed to load audit logs:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [page, pageSize]);
 
     useEffect(() => {
-        const fetchLogs = async () => {
-            setLoading(true);
-            try {
-                const { data, error } = await supabase
-                    .from('audit_logs')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(100);
-
-                if (error) throw error;
-                setLogs(data || []);
-            } catch (error) {
-                console.error('Failed to load audit logs:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchLogs();
-    }, []);
+    }, [fetchLogs]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
 
     if (loading) {
         return (
@@ -141,6 +156,19 @@ export function AuditLogsPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {logs.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
         </div>
     );
 }

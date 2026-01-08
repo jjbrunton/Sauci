@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
+
 import { Switch } from '@/components/ui/switch';
 import {
     Table,
@@ -64,6 +67,10 @@ export function RedemptionCodesPage() {
     const [codes, setCodes] = useState<RedemptionCode[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
+    const [totalCount, setTotalCount] = useState(0);
+
 
     // Add Code State
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -79,40 +86,59 @@ export function RedemptionCodesPage() {
     const [viewingCode, setViewingCode] = useState<RedemptionCode | null>(null);
     const [redemptions, setRedemptions] = useState<CodeRedemption[]>([]);
     const [loadingRedemptions, setLoadingRedemptions] = useState(false);
+    const [redemptionsPage, setRedemptionsPage] = useState(1);
+    const [redemptionsPageSize, setRedemptionsPageSize] = useState(10);
+    const [redemptionsTotal, setRedemptionsTotal] = useState(0);
 
-    // Initial load
-    useEffect(() => {
-        fetchCodes();
-    }, []);
 
-    const fetchCodes = async () => {
+
+
+    const fetchCodes = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            const trimmedSearch = search.trim();
+
+            let query = supabase
                 .from('redemption_codes')
-                .select('*')
+                .select('*', { count: 'exact' })
                 .order('created_at', { ascending: false });
+
+            if (trimmedSearch) {
+                query = query.or(`code.ilike.%${trimmedSearch}%,description.ilike.%${trimmedSearch}%`);
+            }
+
+            const { data, error, count } = await query.range(from, to);
 
             if (error) throw error;
             setCodes(data || []);
+            setTotalCount(count || 0);
         } catch (error: any) {
             console.error('Failed to load codes:', error);
             toast.error("Failed to load redemption codes");
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, pageSize, search]);
 
-    const fetchRedemptions = async (codeId: string) => {
+
+    const fetchRedemptions = useCallback(async (codeId: string) => {
         setLoadingRedemptions(true);
         try {
-            const { data: redemptionData, error: redemptionError } = await supabase
+            const from = (redemptionsPage - 1) * redemptionsPageSize;
+            const to = from + redemptionsPageSize - 1;
+
+            const { data: redemptionData, error: redemptionError, count } = await supabase
                 .from('code_redemptions')
-                .select('id, user_id, redeemed_at')
+                .select('id, user_id, redeemed_at', { count: 'exact' })
                 .eq('code_id', codeId)
-                .order('redeemed_at', { ascending: false });
+                .order('redeemed_at', { ascending: false })
+                .range(from, to);
 
             if (redemptionError) throw redemptionError;
+
+            setRedemptionsTotal(count || 0);
 
             if (redemptionData && redemptionData.length > 0) {
                 const userIds = redemptionData.map(r => r.user_id);
@@ -135,7 +161,36 @@ export function RedemptionCodesPage() {
         } finally {
             setLoadingRedemptions(false);
         }
-    };
+    }, [redemptionsPage, redemptionsPageSize]);
+
+    useEffect(() => {
+        fetchCodes();
+    }, [fetchCodes]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
+
+    useEffect(() => {
+        if (viewingCode) {
+            fetchRedemptions(viewingCode.id);
+        }
+    }, [viewingCode, fetchRedemptions]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(redemptionsTotal / redemptionsPageSize));
+        if (redemptionsPage > totalPages) {
+            setRedemptionsPage(totalPages);
+        }
+    }, [redemptionsPage, redemptionsPageSize, redemptionsTotal]);
+
 
     const handleAddCode = async () => {
         if (!formData.code.trim()) {
@@ -226,17 +281,12 @@ export function RedemptionCodesPage() {
 
     const handleViewRedemptions = (code: RedemptionCode) => {
         setViewingCode(code);
-        fetchRedemptions(code.id);
+        setRedemptionsPage(1);
     };
 
-    const filteredCodes = codes.filter(code => {
-        if (!search) return true;
-        const query = search.toLowerCase();
-        return (
-            code.code.toLowerCase().includes(query) ||
-            code.description?.toLowerCase().includes(query)
-        );
-    });
+
+    const filteredCodes = codes;
+
 
     const getStatusBadge = (code: RedemptionCode) => {
         if (!code.is_active) {
@@ -440,6 +490,20 @@ export function RedemptionCodesPage() {
                 </Table>
             </div>
 
+            {filteredCodes.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
+
+
             {/* View Redemptions Dialog */}
             <Dialog open={!!viewingCode} onOpenChange={(open) => !open && setViewingCode(null)}>
                 <DialogContent className="sm:max-w-[500px]">
@@ -486,7 +550,21 @@ export function RedemptionCodesPage() {
                             </Table>
                         )}
                     </div>
+
+                    {redemptionsTotal > 0 && (
+                        <PaginationControls
+                            page={redemptionsPage}
+                            pageSize={redemptionsPageSize}
+                            totalCount={redemptionsTotal}
+                            onPageChange={setRedemptionsPage}
+                            onPageSizeChange={(size) => {
+                                setRedemptionsPage(1);
+                                setRedemptionsPageSize(size);
+                            }}
+                        />
+                    )}
                     <DialogFooter>
+
                         <Button variant="outline" onClick={() => setViewingCode(null)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>

@@ -12,6 +12,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
+import { PaginationControls } from '@/components/ui/pagination';
 
 interface Profile {
     id: string;
@@ -331,79 +332,103 @@ export function MatchChatPage() {
     const [match, setMatch] = useState<Match | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalCount, setTotalCount] = useState(0);
+
+    const fetchData = useCallback(async () => {
+        if (!userId || !matchId) return;
+
+        setLoading(true);
+        try {
+            // Fetch user profile
+            const { data: userData } = await supabase
+                .from('profiles')
+                .select('id, name, avatar_url, couple_id')
+                .eq('id', userId)
+                .single();
+
+            setUser(userData);
+
+            // Fetch partner
+            if (userData?.couple_id) {
+                const { data: partnerData } = await supabase
+                    .from('profiles')
+                    .select('id, name, avatar_url')
+                    .eq('couple_id', userData.couple_id)
+                    .neq('id', userId)
+                    .single();
+
+                setPartner(partnerData);
+            } else {
+                setPartner(null);
+            }
+
+            // Fetch match with question
+            const { data: matchData } = await supabase
+                .from('matches')
+                .select(`
+            id, match_type,
+            question:questions (id, text)
+          `)
+                .eq('id', matchId)
+                .single();
+
+            setMatch(matchData as unknown as Match);
+
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            // Fetch messages
+            const { data: messageData, error: messagesError, count } = await supabase
+                .from('messages')
+                .select('*', { count: 'exact' })
+                .eq('match_id', matchId)
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (messagesError) throw messagesError;
+
+            setTotalCount(count || 0);
+            const orderedMessages = (messageData || []).slice().reverse();
+            setMessages(orderedMessages);
+        } catch (error) {
+            console.error('Failed to load chat data:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [userId, matchId, page, pageSize]);
 
     // Real-time subscription for messages in this chat
     const { status: realtimeStatus } = useRealtimeSubscription<Message>({
         table: 'messages',
         filter: matchId ? `match_id=eq.${matchId}` : undefined,
         enabled: !!matchId,
-        onInsert: useCallback((newMessage: Message) => {
-            setMessages(prev => [...prev, newMessage]);
-        }, []),
-        onUpdate: useCallback(({ new: updated }: { old: Message; new: Message }) => {
-            setMessages(prev => prev.map(m => m.id === updated.id ? updated : m));
-        }, []),
-        onDelete: useCallback((deleted: Message) => {
-            setMessages(prev => prev.filter(m => m.id !== deleted.id));
-        }, []),
+        onInsert: useCallback(() => {
+            fetchData();
+        }, [fetchData]),
+        onUpdate: useCallback(() => {
+            fetchData();
+        }, [fetchData]),
+        onDelete: useCallback(() => {
+            fetchData();
+        }, [fetchData]),
     });
 
     useEffect(() => {
-        const fetchData = async () => {
-            if (!userId || !matchId) return;
-
-            setLoading(true);
-            try {
-                // Fetch user profile
-                const { data: userData } = await supabase
-                    .from('profiles')
-                    .select('id, name, avatar_url, couple_id')
-                    .eq('id', userId)
-                    .single();
-
-                setUser(userData);
-
-                // Fetch partner
-                if (userData?.couple_id) {
-                    const { data: partnerData } = await supabase
-                        .from('profiles')
-                        .select('id, name, avatar_url')
-                        .eq('couple_id', userData.couple_id)
-                        .neq('id', userId)
-                        .single();
-
-                    setPartner(partnerData);
-                }
-
-                // Fetch match with question
-                const { data: matchData } = await supabase
-                    .from('matches')
-                    .select(`
-            id, match_type,
-            question:questions (id, text)
-          `)
-                    .eq('id', matchId)
-                    .single();
-
-                setMatch(matchData as unknown as Match);
-
-                // Fetch messages
-                const { data: messageData } = await supabase
-                    .from('messages')
-                    .select('*')
-                    .eq('match_id', matchId)
-                    .order('created_at', { ascending: true });
-
-                setMessages(messageData || []);
-            } catch (error) {
-                console.error('Failed to load chat data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
-    }, [userId, matchId]);
+    }, [fetchData]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [matchId]);
 
     const getProfile = (senderId: string): Profile | null => {
         if (senderId === user?.id) return user;
@@ -497,7 +522,7 @@ export function MatchChatPage() {
             <Card className="min-h-[400px]">
                 <CardHeader className="py-4 border-b">
                     <CardTitle className="text-sm font-medium">
-                        Messages ({messages.length})
+                        Messages ({totalCount})
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
@@ -578,6 +603,21 @@ export function MatchChatPage() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    )}
+
+                    {totalCount > 0 && (
+                        <div className="mt-4">
+                            <PaginationControls
+                                page={page}
+                                pageSize={pageSize}
+                                totalCount={totalCount}
+                                onPageChange={setPage}
+                                onPageSizeChange={(size) => {
+                                    setPage(1);
+                                    setPageSize(size);
+                                }}
+                            />
                         </div>
                     )}
                 </CardContent>

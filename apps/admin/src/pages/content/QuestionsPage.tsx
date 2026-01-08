@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import {
     Table,
     TableBody,
@@ -70,6 +71,9 @@ export function QuestionsPage() {
     const [saving, setSaving] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Form state
     const [formData, setFormData] = useState<{
@@ -100,14 +104,19 @@ export function QuestionsPage() {
 
             setPack(packData);
 
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
             // Fetch questions
-            const { data: questionData, error } = await supabase
+            const { data: questionData, error, count } = await supabase
                 .from('questions')
-                .select('*')
+                .select('*', { count: 'exact' })
                 .eq('pack_id', packId)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: true })
+                .range(from, to);
 
             if (error) throw error;
+            setTotalCount(count || 0);
             setQuestions(questionData || []);
         } catch (error) {
             toast.error('Failed to load questions');
@@ -115,32 +124,48 @@ export function QuestionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [packId]);
+    }, [packId, page, pageSize]);
 
     // Real-time subscription for questions in this pack
     const { status: realtimeStatus } = useRealtimeSubscription<Question>({
         table: 'questions',
         filter: packId ? `pack_id=eq.${packId}` : undefined,
         enabled: !!packId,
-        onInsert: useCallback((newQuestion: Question) => {
-            setQuestions(prev => [...prev, newQuestion]);
-        }, []),
-        onUpdate: useCallback(({ new: updated }: { old: Question; new: Question }) => {
-            setQuestions(prev => prev.map(q => q.id === updated.id ? updated : q));
-        }, []),
+        onInsert: useCallback(() => {
+            fetchData();
+        }, [fetchData]),
+        onUpdate: useCallback(() => {
+            fetchData();
+        }, [fetchData]),
         onDelete: useCallback((deleted: Question) => {
-            setQuestions(prev => prev.filter(q => q.id !== deleted.id));
             setSelectedIds(prev => {
                 const next = new Set(prev);
                 next.delete(deleted.id);
                 return next;
             });
-        }, []),
+            fetchData();
+        }, [fetchData]),
     });
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
+
+    useEffect(() => {
+        setPage(1);
+        setSelectedIds(new Set());
+    }, [packId]);
+
+    useEffect(() => {
+        setSelectedIds(new Set());
+    }, [page, pageSize]);
 
     const openCreateDialog = () => {
         setEditingQuestion(null);
@@ -319,7 +344,7 @@ export function QuestionsPage() {
                         <RealtimeStatusIndicator status={realtimeStatus} showLabel />
                     </div>
                     <p className="text-muted-foreground">
-                        {questions.length} question{questions.length !== 1 ? 's' : ''} in this pack
+                        {totalCount} question{totalCount !== 1 ? 's' : ''} in this pack
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -615,7 +640,7 @@ export function QuestionsPage() {
                                             />
                                         </TableCell>
                                         <TableCell className="font-medium text-muted-foreground">
-                                            {index + 1}
+                                            {(page - 1) * pageSize + index + 1}
                                         </TableCell>
                                         <TableCell>
                                             <span className="line-clamp-2">{question.text}</span>
@@ -689,6 +714,19 @@ export function QuestionsPage() {
                     </div>
                 )
             }
+
+            {questions.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
         </div >
     );
 }

@@ -6,9 +6,11 @@ WORKDIR /app
 # Build args for Next.js public env vars (inlined at build time)
 ARG NEXT_PUBLIC_POSTHOG_KEY
 ARG NEXT_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com
+ARG NEXT_PUBLIC_SUPABASE_URL=https://ckjcrkjpmhqhiucifukx.supabase.co
 
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 
 # Install dependencies
 COPY package*.json ./

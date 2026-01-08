@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
+
 import { Textarea } from '@/components/ui/textarea';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
@@ -87,6 +89,9 @@ export function FeedbackPage() {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
+
 
     // Detail Dialog State
     const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
@@ -140,6 +145,11 @@ export function FeedbackPage() {
         fetchFeedback();
     }, [fetchFeedback]);
 
+    useEffect(() => {
+        setPage(1);
+    }, [search, typeFilter, statusFilter]);
+
+
     const handleOpenDetail = (item: Feedback) => {
         setSelectedFeedback(item);
         setEditStatus(item.status);
@@ -186,6 +196,20 @@ export function FeedbackPage() {
             item.profile?.email?.toLowerCase().includes(query)
         );
     });
+
+    const totalCount = filteredFeedback.length;
+    const paginatedFeedback = filteredFeedback.slice(
+        (page - 1) * pageSize,
+        page * pageSize
+    );
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
+
 
     const getTypeBadge = (type: FeedbackType) => {
         const config = feedbackTypeConfig[type];
@@ -295,7 +319,7 @@ export function FeedbackPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredFeedback.map((item) => (
+                            paginatedFeedback.map((item) => (
                                 <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleOpenDetail(item)}>
                                     <TableCell>{getTypeBadge(item.type)}</TableCell>
                                     <TableCell>
@@ -328,6 +352,19 @@ export function FeedbackPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {filteredFeedback.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
 
             {/* Detail Dialog */}
             <Dialog open={!!selectedFeedback} onOpenChange={(open) => !open && setSelectedFeedback(null)}>

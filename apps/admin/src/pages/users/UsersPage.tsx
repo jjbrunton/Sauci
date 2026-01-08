@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
@@ -46,15 +47,19 @@ export function UsersPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filteredProfiles, setFilteredProfiles] = useState<Profile[]>([]);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
 
     const fetchProfiles = useCallback(async () => {
         setLoading(true);
         try {
             // Fetch profiles with auth info (includes last_sign_in_at)
-            const { data: profilesData, error } = await supabase
+            const { data: profilesDataRaw, error } = await supabase
                 .rpc('get_profiles_with_auth_info');
 
             if (error) throw error;
+
+            const profilesData = (profilesDataRaw || []) as Profile[];
 
             // Fetch storage usage per user from storage.objects
             const { data: storageData } = await supabase
@@ -70,7 +75,7 @@ export function UsersPage() {
 
             // Build a map of couple_id -> users with premium in that couple
             const couplePartners: Record<string, { id: string; is_premium: boolean }[]> = {};
-            (profilesData || []).forEach(profile => {
+            profilesData.forEach(profile => {
                 if (profile.couple_id) {
                     if (!couplePartners[profile.couple_id]) {
                         couplePartners[profile.couple_id] = [];
@@ -83,7 +88,7 @@ export function UsersPage() {
             });
 
             // Merge storage data and partner premium status with profiles
-            const profilesWithExtras = (profilesData || []).map(profile => {
+            const profilesWithExtras = profilesData.map(profile => {
                 // Check if partner has premium
                 let partnerIsPremium = false;
                 if (profile.couple_id && couplePartners[profile.couple_id]) {
@@ -134,6 +139,7 @@ export function UsersPage() {
     }, [fetchProfiles]);
 
     useEffect(() => {
+        setPage(1);
         if (!search.trim()) {
             setFilteredProfiles(profiles);
             return;
@@ -149,6 +155,19 @@ export function UsersPage() {
             )
         );
     }, [search, profiles]);
+
+    const totalCount = filteredProfiles.length;
+    const paginatedProfiles = filteredProfiles.slice(
+        (page - 1) * pageSize,
+        page * pageSize
+    );
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
 
     if (loading) {
         return (
@@ -209,7 +228,7 @@ export function UsersPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredProfiles.map((profile) => (
+                            paginatedProfiles.map((profile) => (
                                 <TableRow key={profile.id}>
                                     <TableCell>
                                         <Link to={`/users/${profile.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
@@ -294,6 +313,19 @@ export function UsersPage() {
                     </TableBody>
                 </Table>
             </div>
+
+            {filteredProfiles.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Flame, Heart, Tags, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
@@ -60,6 +61,9 @@ export function PacksPage() {
     const [extractTopicsPack, setExtractTopicsPack] = useState<QuestionPack | null>(null);
     const [allTopics, setAllTopics] = useState<Topic[]>([]);
     const [selectedTopicIds, setSelectedTopicIds] = useState<Set<string>>(new Set());
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Form state using the hook
     const form = useEntityForm<PackFormData, QuestionPack>(
@@ -98,30 +102,39 @@ export function PacksPage() {
                 setCategory(cat);
             }
 
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
             // Fetch packs
             let query = supabase
                 .from('question_packs')
-                .select('*')
-                .order('sort_order', { ascending: true });
+                .select('*', { count: 'exact' })
+                .order('sort_order', { ascending: true })
+                .range(from, to);
 
             if (categoryId) {
                 query = query.eq('category_id', categoryId);
             }
 
-            const { data: packData, error } = await query;
+            const { data: packData, error, count } = await query;
             if (error) throw error;
+
+            setTotalCount(count || 0);
 
             // Fetch question counts
             const packIds = (packData || []).map(p => p.id);
-            const { data: questions } = await supabase
-                .from('questions')
-                .select('pack_id')
-                .in('pack_id', packIds);
-
             const questionCounts: Record<string, number> = {};
-            questions?.forEach(q => {
-                questionCounts[q.pack_id] = (questionCounts[q.pack_id] || 0) + 1;
-            });
+
+            if (packIds.length > 0) {
+                const { data: questions } = await supabase
+                    .from('questions')
+                    .select('pack_id')
+                    .in('pack_id', packIds);
+
+                questions?.forEach(q => {
+                    questionCounts[q.pack_id] = (questionCounts[q.pack_id] || 0) + 1;
+                });
+            }
 
             // Fetch all topics
             const { data: topicsData } = await supabase
@@ -131,13 +144,17 @@ export function PacksPage() {
             setAllTopics(topicsData || []);
 
             // Fetch pack_topics relationships
-            const { data: packTopicsData } = await supabase
-                .from('pack_topics')
-                .select('pack_id, topic_id, topics(id, name)')
-                .in('pack_id', packIds);
+            let packTopicsData: any[] = [];
+            if (packIds.length > 0) {
+                const { data } = await supabase
+                    .from('pack_topics')
+                    .select('pack_id, topic_id, topics(id, name)')
+                    .in('pack_id', packIds);
+                packTopicsData = data || [];
+            }
 
             const packTopicsMap: Record<string, Topic[]> = {};
-            packTopicsData?.forEach((pt: any) => {
+            packTopicsData.forEach((pt: any) => {
                 if (!packTopicsMap[pt.pack_id]) {
                     packTopicsMap[pt.pack_id] = [];
                 }
@@ -159,11 +176,18 @@ export function PacksPage() {
         } finally {
             setLoading(false);
         }
-    }, [categoryId]);
+    }, [categoryId, page, pageSize]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
 
     // =============================================================================
     // Handlers
@@ -211,7 +235,7 @@ export function PacksPage() {
                         is_public: form.formData.is_public,
                         is_explicit: form.formData.is_explicit,
                         category_id: categoryId || null,
-                        sort_order: packs.length,
+                        sort_order: totalCount,
                     })
                     .select('id')
                     .single();
@@ -534,6 +558,19 @@ export function PacksPage() {
                         </Card>
                     ))}
                 </div>
+            )}
+
+            {packs.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
             )}
         </div>
     );

@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
+import { PaginationControls } from '@/components/ui/pagination';
 import {
     Table,
     TableBody,
@@ -121,6 +122,18 @@ export function UserActivityPage() {
     const [matches, setMatches] = useState<MatchActivity[]>([]);
     const [messages, setMessages] = useState<MessageActivity[]>([]);
     const [signups, setSignups] = useState<SignupActivity[]>([]);
+    const [responsesPage, setResponsesPage] = useState(1);
+    const [responsesPageSize, setResponsesPageSize] = useState(25);
+    const [responsesTotal, setResponsesTotal] = useState(0);
+    const [matchesPage, setMatchesPage] = useState(1);
+    const [matchesPageSize, setMatchesPageSize] = useState(25);
+    const [matchesTotal, setMatchesTotal] = useState(0);
+    const [messagesPage, setMessagesPage] = useState(1);
+    const [messagesPageSize, setMessagesPageSize] = useState(25);
+    const [messagesTotal, setMessagesTotal] = useState(0);
+    const [signupsPage, setSignupsPage] = useState(1);
+    const [signupsPageSize, setSignupsPageSize] = useState(25);
+    const [signupsTotal, setSignupsTotal] = useState(0);
     const [loading, setLoading] = useState({
         responses: true,
         matches: true,
@@ -132,7 +145,10 @@ export function UserActivityPage() {
     const fetchResponses = useCallback(async () => {
         setLoading(prev => ({ ...prev, responses: true }));
         try {
-            const { data, error } = await supabase
+            const from = (responsesPage - 1) * responsesPageSize;
+            const to = from + responsesPageSize - 1;
+
+            const { data, error, count } = await supabase
                 .from('responses')
                 .select(`
                     id, user_id, answer, created_at,
@@ -141,11 +157,13 @@ export function UserActivityPage() {
                         id, text,
                         pack:question_packs(name)
                     )
-                `)
+                `, { count: 'exact' })
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .range(from, to);
 
             if (error) throw error;
+
+            setResponsesTotal(count || 0);
 
             // Transform data to match our types (Supabase returns nested objects, not arrays for 1:1 relations)
             const transformed: ResponseActivity[] = (data || []).map((item: any) => ({
@@ -167,22 +185,27 @@ export function UserActivityPage() {
         } finally {
             setLoading(prev => ({ ...prev, responses: false }));
         }
-    }, []);
+    }, [responsesPage, responsesPageSize]);
 
     // Fetch matches with couple profiles
     const fetchMatches = useCallback(async () => {
         setLoading(prev => ({ ...prev, matches: true }));
         try {
-            const { data: matchesData, error: matchesError } = await supabase
+            const from = (matchesPage - 1) * matchesPageSize;
+            const to = from + matchesPageSize - 1;
+
+            const { data: matchesData, error: matchesError, count } = await supabase
                 .from('matches')
                 .select(`
                     id, couple_id, match_type, is_new, created_at,
                     question:questions(id, text)
-                `)
+                `, { count: 'exact' })
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .range(from, to);
 
             if (matchesError) throw matchesError;
+
+            setMatchesTotal(count || 0);
 
             // Get unique couple IDs and fetch profiles
             const coupleIds = [...new Set((matchesData || []).map((m: any) => m.couple_id))];
@@ -223,14 +246,17 @@ export function UserActivityPage() {
         } finally {
             setLoading(prev => ({ ...prev, matches: false }));
         }
-    }, []);
+    }, [matchesPage, matchesPageSize]);
 
     // Fetch messages
     const fetchMessages = useCallback(async () => {
         setLoading(prev => ({ ...prev, messages: true }));
         try {
+            const from = (messagesPage - 1) * messagesPageSize;
+            const to = from + messagesPageSize - 1;
+
             // Fetch messages with match data
-            const { data: messagesData, error: messagesError } = await supabase
+            const { data: messagesData, error: messagesError, count } = await supabase
                 .from('messages')
                 .select(`
                     id, user_id, content, media_path, media_type, created_at,
@@ -238,11 +264,13 @@ export function UserActivityPage() {
                         id,
                         question:questions(text)
                     )
-                `)
+                `, { count: 'exact' })
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .range(from, to);
 
             if (messagesError) throw messagesError;
+
+            setMessagesTotal(count || 0);
 
             // Get unique user IDs and fetch profiles
             const userIds = [...new Set((messagesData || []).map((m: any) => m.user_id))];
@@ -283,27 +311,31 @@ export function UserActivityPage() {
         } finally {
             setLoading(prev => ({ ...prev, messages: false }));
         }
-    }, []);
+    }, [messagesPage, messagesPageSize]);
 
     // Fetch signups
     const fetchSignups = useCallback(async () => {
         setLoading(prev => ({ ...prev, signups: true }));
         try {
-            const { data, error } = await supabase
+            const from = (signupsPage - 1) * signupsPageSize;
+            const to = from + signupsPageSize - 1;
+
+            const { data, error, count } = await supabase
                 .from('profiles')
-                .select('id, name, email, avatar_url, created_at, onboarding_completed, couple_id')
+                .select('id, name, email, avatar_url, created_at, onboarding_completed, couple_id', { count: 'exact' })
                 .order('created_at', { ascending: false })
-                .limit(50);
+                .range(from, to);
 
             if (error) throw error;
             setSignups(data || []);
+            setSignupsTotal(count || 0);
         } catch (error) {
             console.error('Failed to load signups:', error);
             toast.error("Failed to load signups");
         } finally {
             setLoading(prev => ({ ...prev, signups: false }));
         }
-    }, []);
+    }, [signupsPage, signupsPageSize]);
 
     // Real-time subscriptions
     const { status: responsesStatus } = useRealtimeSubscription({
@@ -337,6 +369,34 @@ export function UserActivityPage() {
         fetchMessages();
         fetchSignups();
     }, [fetchResponses, fetchMatches, fetchMessages, fetchSignups]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(responsesTotal / responsesPageSize));
+        if (responsesPage > totalPages) {
+            setResponsesPage(totalPages);
+        }
+    }, [responsesPage, responsesPageSize, responsesTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(matchesTotal / matchesPageSize));
+        if (matchesPage > totalPages) {
+            setMatchesPage(totalPages);
+        }
+    }, [matchesPage, matchesPageSize, matchesTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(messagesTotal / messagesPageSize));
+        if (messagesPage > totalPages) {
+            setMessagesPage(totalPages);
+        }
+    }, [messagesPage, messagesPageSize, messagesTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(signupsTotal / signupsPageSize));
+        if (signupsPage > totalPages) {
+            setSignupsPage(totalPages);
+        }
+    }, [signupsPage, signupsPageSize, signupsTotal]);
 
     // Get current realtime status based on active tab
     const getCurrentRealtimeStatus = () => {
@@ -461,6 +521,19 @@ export function UserActivityPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {responsesTotal > 0 && (
+                        <PaginationControls
+                            page={responsesPage}
+                            pageSize={responsesPageSize}
+                            totalCount={responsesTotal}
+                            onPageChange={setResponsesPage}
+                            onPageSizeChange={(size) => {
+                                setResponsesPage(1);
+                                setResponsesPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
 
                 {/* Matches Tab */}
@@ -535,6 +608,19 @@ export function UserActivityPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {matchesTotal > 0 && (
+                        <PaginationControls
+                            page={matchesPage}
+                            pageSize={matchesPageSize}
+                            totalCount={matchesTotal}
+                            onPageChange={setMatchesPage}
+                            onPageSizeChange={(size) => {
+                                setMatchesPage(1);
+                                setMatchesPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
 
                 {/* Messages Tab */}
@@ -593,6 +679,19 @@ export function UserActivityPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {messagesTotal > 0 && (
+                        <PaginationControls
+                            page={messagesPage}
+                            pageSize={messagesPageSize}
+                            totalCount={messagesTotal}
+                            onPageChange={setMessagesPage}
+                            onPageSizeChange={(size) => {
+                                setMessagesPage(1);
+                                setMessagesPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
 
                 {/* Signups Tab */}
@@ -666,6 +765,19 @@ export function UserActivityPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {signupsTotal > 0 && (
+                        <PaginationControls
+                            page={signupsPage}
+                            pageSize={signupsPageSize}
+                            totalCount={signupsTotal}
+                            onPageChange={setSignupsPage}
+                            onPageSizeChange={(size) => {
+                                setSignupsPage(1);
+                                setSignupsPageSize(size);
+                            }}
+                        />
+                    )}
                 </TabsContent>
             </Tabs>
         </div>

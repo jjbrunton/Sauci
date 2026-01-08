@@ -43,8 +43,8 @@ import { useState, useCallback } from 'react';
  * ```
  */
 export function useEntityForm<
-    TFormData extends Record<string, unknown>,
-    TEntity extends Record<string, unknown> = TFormData
+    TFormData extends object,
+    TEntity extends object = TFormData
 >(
     initialFormData: TFormData,
     /**

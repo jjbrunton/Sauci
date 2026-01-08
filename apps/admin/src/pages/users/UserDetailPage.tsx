@@ -8,6 +8,7 @@ import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -237,6 +238,15 @@ export function UserDetailPage() {
     const [responses, setResponses] = useState<Response[]>([]);
     const [matches, setMatches] = useState<Match[]>([]);
     const [mediaMessages, setMediaMessages] = useState<any[]>([]);
+    const [responsesPage, setResponsesPage] = useState(1);
+    const [responsesPageSize, setResponsesPageSize] = useState(10);
+    const [responsesTotal, setResponsesTotal] = useState(0);
+    const [matchesPage, setMatchesPage] = useState(1);
+    const [matchesPageSize, setMatchesPageSize] = useState(10);
+    const [matchesTotal, setMatchesTotal] = useState(0);
+    const [mediaPage, setMediaPage] = useState(1);
+    const [mediaPageSize, setMediaPageSize] = useState(12);
+    const [mediaTotal, setMediaTotal] = useState(0);
     const [loading, setLoading] = useState(true);
 
     const canViewResponses = hasPermission(PERMISSION_KEYS.VIEW_RESPONSES);
@@ -308,43 +318,120 @@ export function UserDetailPage() {
                 setPartner(null);
             }
 
-            const { data: responseData } = await supabase.from('responses').select('id, answer, created_at, question:questions(id, text, pack:question_packs(name))').eq('user_id', userId).order('created_at', { ascending: false }).limit(50);
+            const responsesFrom = (responsesPage - 1) * responsesPageSize;
+            const responsesTo = responsesFrom + responsesPageSize - 1;
+
+            const { data: responseData, count: responsesCount, error: responsesError } = await supabase
+                .from('responses')
+                .select('id, answer, created_at, question:questions(id, text, pack:question_packs(name))', { count: 'exact' })
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .range(responsesFrom, responsesTo);
+
+            if (responsesError) throw responsesError;
+
             setResponses((responseData || []) as unknown as Response[]);
+            setResponsesTotal(responsesCount || 0);
 
             if (profileData?.couple_id) {
-                const { data: matchData } = await supabase.from('matches').select('id, match_type, is_new, created_at, question:questions(id, text)').eq('couple_id', profileData.couple_id).order('created_at', { ascending: false }).limit(50);
+                const matchesFrom = (matchesPage - 1) * matchesPageSize;
+                const matchesTo = matchesFrom + matchesPageSize - 1;
+
+                const { data: matchData, count: matchesCount, error: matchesError } = await supabase
+                    .from('matches')
+                    .select('id, match_type, is_new, created_at, question:questions(id, text)', { count: 'exact' })
+                    .eq('couple_id', profileData.couple_id)
+                    .order('created_at', { ascending: false })
+                    .range(matchesFrom, matchesTo);
+
+                if (matchesError) throw matchesError;
+
+                setMatchesTotal(matchesCount || 0);
+
                 const matchIds = (matchData || []).map(m => m.id);
                 if (matchIds.length > 0) {
                     const { data: messages } = await supabase.from('messages').select('match_id').in('match_id', matchIds);
                     const messageCounts: Record<string, number> = {};
                     messages?.forEach(m => { messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1; });
                     setMatches((matchData || []).map(m => ({ ...m, message_count: messageCounts[m.id] || 0 })) as unknown as Match[]);
-                    const { data: mediaMessagesData, error: mediaError } = await supabase.from('messages').select('id, user_id, media_path, media_type, version, created_at, keys_metadata, match_id').in('match_id', matchIds).not('media_path', 'is', null).order('created_at', { ascending: false });
+                } else {
+                    setMatches([]);
+                }
+
+                const { data: allMatchIdsData } = await supabase
+                    .from('matches')
+                    .select('id')
+                    .eq('couple_id', profileData.couple_id);
+
+                const allMatchIds = (allMatchIdsData || []).map(m => m.id);
+                if (allMatchIds.length > 0) {
+                    const mediaFrom = (mediaPage - 1) * mediaPageSize;
+                    const mediaTo = mediaFrom + mediaPageSize - 1;
+
+                    const { data: mediaMessagesData, error: mediaError, count: mediaCount } = await supabase
+                        .from('messages')
+                        .select('id, user_id, media_path, media_type, version, created_at, keys_metadata, match_id', { count: 'exact' })
+                        .in('match_id', allMatchIds)
+                        .not('media_path', 'is', null)
+                        .order('created_at', { ascending: false })
+                        .range(mediaFrom, mediaTo);
+
                     if (mediaError) {
                         console.error("Error fetching media messages:", mediaError);
                         setMediaMessages([]);
+                        setMediaTotal(0);
                     } else {
                         setMediaMessages(mediaMessagesData || []);
+                        setMediaTotal(mediaCount || 0);
                     }
                 } else {
-                    setMatches([]);
                     setMediaMessages([]);
+                    setMediaTotal(0);
                 }
             } else {
                 setMatches([]);
+                setMatchesTotal(0);
                 setMediaMessages([]);
+                setMediaTotal(0);
             }
         } catch (error) {
             console.error('Failed to load user data:', error);
         } finally {
             setLoading(false);
         }
-    }, [userId]);
+    }, [userId, responsesPage, responsesPageSize, matchesPage, matchesPageSize, mediaPage, mediaPageSize]);
 
     const { status: profileStatus } = useRealtimeSubscription<Profile>({ table: 'profiles', filter: userId ? `id=eq.${userId}` : undefined, enabled: !!userId, onUpdate: useCallback(({ new: updated }: { old: Profile; new: Profile }) => { setProfile(updated); }, []) });
     const { status: responsesStatus } = useRealtimeSubscription<Response>({ table: 'responses', filter: userId ? `user_id=eq.${userId}` : undefined, enabled: !!userId, onInsert: fetchData, onDelete: fetchData });
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    useEffect(() => {
+        setResponsesPage(1);
+        setMatchesPage(1);
+        setMediaPage(1);
+    }, [userId]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(responsesTotal / responsesPageSize));
+        if (responsesPage > totalPages) {
+            setResponsesPage(totalPages);
+        }
+    }, [responsesPage, responsesPageSize, responsesTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(matchesTotal / matchesPageSize));
+        if (matchesPage > totalPages) {
+            setMatchesPage(totalPages);
+        }
+    }, [matchesPage, matchesPageSize, matchesTotal]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(mediaTotal / mediaPageSize));
+        if (mediaPage > totalPages) {
+            setMediaPage(totalPages);
+        }
+    }, [mediaPage, mediaPageSize, mediaTotal]);
 
     if (loading) return <div className="space-y-6"><Skeleton className="h-32" /><Skeleton className="h-96" /></div>;
     if (!profile) return <div className="flex flex-col items-center justify-center py-12"><p className="text-lg font-medium">User not found</p><Link to="/users"><Button variant="link">Back to users</Button></Link></div>;
@@ -378,19 +465,19 @@ export function UserDetailPage() {
             {/* Tabs */}
             <Tabs defaultValue={canViewResponses ? "responses" : canViewMatches ? "matches" : canViewMedia ? "media" : "responses"}>
                 <TabsList>
-                    {canViewResponses && <TabsTrigger value="responses">Responses ({responses.length})</TabsTrigger>}
-                    {canViewMatches && <TabsTrigger value="matches" disabled={!profile.couple_id}>Matches ({matches.length})</TabsTrigger>}
-                    {canViewMedia && <TabsTrigger value="media">Media ({mediaMessages.length})</TabsTrigger>}
+                    {canViewResponses && <TabsTrigger value="responses">Responses ({responsesTotal})</TabsTrigger>}
+                    {canViewMatches && <TabsTrigger value="matches" disabled={!profile.couple_id}>Matches ({matchesTotal})</TabsTrigger>}
+                    {canViewMedia && <TabsTrigger value="media">Media ({mediaTotal})</TabsTrigger>}
                 </TabsList>
-                {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-24">Answer</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md"><span className="line-clamp-2">{r.question.text}</span></TableCell><TableCell className="text-muted-foreground">{r.question.pack?.name || '—'}</TableCell><TableCell><div className="flex items-center gap-2">{answerIcons[r.answer]}<span className="capitalize">{r.answer}</span></div></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div>}</TabsContent>}
-                {canViewMatches && <TabsContent value="matches" className="mt-4">{matches.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No matches yet</p></Card> : <div className="grid gap-4 md:grid-cols-2">{matches.map((match) => (<Card key={match.id} className="hover:shadow-md transition-shadow"><CardHeader className="pb-2"><div className="flex items-start justify-between"><Badge variant="secondary">{matchTypeLabels[match.match_type]}</Badge>{match.is_new && <Badge variant="default" className="text-xs">New</Badge>}</div><CardDescription className="line-clamp-2 mt-2">{match.question?.text || 'Unknown question'}</CardDescription></CardHeader><CardContent><div className="flex items-center justify-between"><div className="flex items-center gap-1 text-sm text-muted-foreground"><MessageCircle className="h-4 w-4" />{match.message_count} message{match.message_count !== 1 ? 's' : ''}</div>{canViewChats && <Link to={`/users/${userId}/matches/${match.id}`}><Button variant="ghost" size="sm">View Chat<ChevronRight className="ml-1 h-4 w-4" /></Button></Link>}</div></CardContent></Card>))}</div>}</TabsContent>}
+                {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="space-y-4"><div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-24">Answer</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md"><span className="line-clamp-2">{r.question.text}</span></TableCell><TableCell className="text-muted-foreground">{r.question.pack?.name || '—'}</TableCell><TableCell><div className="flex items-center gap-2">{answerIcons[r.answer]}<span className="capitalize">{r.answer}</span></div></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div><PaginationControls page={responsesPage} pageSize={responsesPageSize} totalCount={responsesTotal} onPageChange={setResponsesPage} onPageSizeChange={(size) => { setResponsesPage(1); setResponsesPageSize(size); }} /></div>}</TabsContent>}
+                {canViewMatches && <TabsContent value="matches" className="mt-4">{matches.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No matches yet</p></Card> : <div className="space-y-4"><div className="grid gap-4 md:grid-cols-2">{matches.map((match) => (<Card key={match.id} className="hover:shadow-md transition-shadow"><CardHeader className="pb-2"><div className="flex items-start justify-between"><Badge variant="secondary">{matchTypeLabels[match.match_type]}</Badge>{match.is_new && <Badge variant="default" className="text-xs">New</Badge>}</div><CardDescription className="line-clamp-2 mt-2">{match.question?.text || 'Unknown question'}</CardDescription></CardHeader><CardContent><div className="flex items-center justify-between"><div className="flex items-center gap-1 text-sm text-muted-foreground"><MessageCircle className="h-4 w-4" />{match.message_count} message{match.message_count !== 1 ? 's' : ''}</div>{canViewChats && <Link to={`/users/${userId}/matches/${match.id}`}><Button variant="ghost" size="sm">View Chat<ChevronRight className="ml-1 h-4 w-4" /></Button></Link>}</div></CardContent></Card>))}</div><PaginationControls page={matchesPage} pageSize={matchesPageSize} totalCount={matchesTotal} onPageChange={setMatchesPage} onPageSizeChange={(size) => { setMatchesPage(1); setMatchesPageSize(size); }} /></div>}</TabsContent>}
                 {canViewMedia && <TabsContent value="media" className="mt-4">{mediaMessages.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><Image className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No media uploaded</p></Card> : <div className="space-y-4"><div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">{mediaMessages.map((message) => (<Card key={message.id} className="overflow-hidden"><div className="aspect-square bg-muted relative">
                     {message.media_type === 'video' ? (
                         <AdminDecryptedVideo messageId={message.id} />
                     ) : (
                         <AdminDecryptedImage messageId={message.id} alt={`Media from ${message.created_at}`} />
                     )}
-                </div><CardContent className="p-3"><div className="flex items-center justify-between text-sm"><div className="truncate text-muted-foreground">{message.media_type === 'video' ? 'Video' : 'Image'}</div>{canViewChats && message.match_id && <Link to={`/users/${userId}/matches/${message.match_id}`} className="text-primary hover:underline text-xs">View Chat</Link>}</div><div className="text-xs text-muted-foreground mt-1">{message.created_at ? format(new Date(message.created_at), 'MMM d, yyyy') : '—'}</div></CardContent></Card>))}</div></div>}</TabsContent>}
+                </div><CardContent className="p-3"><div className="flex items-center justify-between text-sm"><div className="truncate text-muted-foreground">{message.media_type === 'video' ? 'Video' : 'Image'}</div>{canViewChats && message.match_id && <Link to={`/users/${userId}/matches/${message.match_id}`} className="text-primary hover:underline text-xs">View Chat</Link>}</div><div className="text-xs text-muted-foreground mt-1">{message.created_at ? format(new Date(message.created_at), 'MMM d, yyyy') : '—'}</div></CardContent></Card>))}</div><PaginationControls page={mediaPage} pageSize={mediaPageSize} totalCount={mediaTotal} onPageChange={setMediaPage} onPageSizeChange={(size) => { setMediaPage(1); setMediaPageSize(size); }} /></div>}</TabsContent>}
             </Tabs>
         </div>
     );

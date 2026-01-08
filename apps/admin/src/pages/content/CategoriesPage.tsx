@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { IconPicker, IconPreview } from '@/components/ui/icon-picker';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PaginationControls } from '@/components/ui/pagination';
 import {
     Dialog,
     DialogContent,
@@ -53,6 +54,9 @@ export function CategoriesPage() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [aiIdeasOpen, setAiIdeasOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(12);
+    const [totalCount, setTotalCount] = useState(0);
 
     // Form state using the new hook
     const form = useEntityForm<CategoryFormData, Category>(
@@ -71,25 +75,34 @@ export function CategoriesPage() {
     const fetchCategories = useCallback(async () => {
         setLoading(true);
         try {
-            // Fetch categories with pack count
-            const { data: cats, error } = await supabase
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data: cats, error, count } = await supabase
                 .from('categories')
-                .select('*')
-                .order('sort_order', { ascending: true });
+                .select('*', { count: 'exact' })
+                .order('sort_order', { ascending: true })
+                .range(from, to);
 
             if (error) throw error;
 
-            // Fetch pack counts per category
-            const { data: packs } = await supabase
-                .from('question_packs')
-                .select('category_id');
+            setTotalCount(count || 0);
 
+            const categoryIds = (cats || []).map(c => c.id);
             const packCounts: Record<string, number> = {};
-            packs?.forEach(p => {
-                if (p.category_id) {
-                    packCounts[p.category_id] = (packCounts[p.category_id] || 0) + 1;
-                }
-            });
+
+            if (categoryIds.length > 0) {
+                const { data: packs } = await supabase
+                    .from('question_packs')
+                    .select('category_id')
+                    .in('category_id', categoryIds);
+
+                packs?.forEach(p => {
+                    if (p.category_id) {
+                        packCounts[p.category_id] = (packCounts[p.category_id] || 0) + 1;
+                    }
+                });
+            }
 
             setCategories(
                 (cats || []).map(c => ({
@@ -103,11 +116,18 @@ export function CategoriesPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, pageSize]);
 
     useEffect(() => {
         fetchCategories();
     }, [fetchCategories]);
+
+    useEffect(() => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+        if (page > totalPages) {
+            setPage(totalPages);
+        }
+    }, [page, pageSize, totalCount]);
 
     // =============================================================================
     // Handlers
@@ -143,7 +163,7 @@ export function CategoriesPage() {
             } else {
                 const { error } = await auditedSupabase.insert('categories', {
                     ...data,
-                    sort_order: categories.length,
+                    sort_order: totalCount,
                 });
                 if (error) throw error;
                 toast.success('Category created');
@@ -404,6 +424,19 @@ export function CategoriesPage() {
                         </Card>
                     ))}
                 </div>
+            )}
+
+            {categories.length > 0 && (
+                <PaginationControls
+                    page={page}
+                    pageSize={pageSize}
+                    totalCount={totalCount}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                        setPage(1);
+                        setPageSize(size);
+                    }}
+                />
             )}
 
             {/* AI Dialog */}

@@ -86,10 +86,10 @@ export const auditedSupabase = {
     /**
      * Update a single record with audit logging
      */
-    async update<T extends { id: string }>(
+    async update<T extends object = Record<string, unknown>>(
         table: string,
         id: string,
-        updates: Partial<T>
+        updates: Partial<T> | Record<string, unknown>
     ): Promise<SingleResult<T>> {
         // Fetch old values before update
         let oldValues: Record<string, unknown> | null = null;
