@@ -2,12 +2,8 @@ import type { Ionicons } from "@expo/vector-icons";
 
 type IoniconsName = keyof typeof Ionicons.glyphMap;
 
-/**
- * Maps emoji icons to Ionicons for a more professional, consistent appearance.
- * This eliminates the "AI slop" feel of heavy emoji usage while maintaining
- * visual differentiation between packs.
- */
-export const PACK_ICON_MAP: Record<string, IoniconsName> = {
+// Legacy emoji mappings (for backwards compatibility with existing packs)
+const EMOJI_TO_IONICON: Record<string, IoniconsName> = {
     // Career & Professional
     "💼": "briefcase-outline",
 
@@ -49,13 +45,67 @@ export const PACK_ICON_MAP: Record<string, IoniconsName> = {
     "📁": "folder-outline",
 };
 
+export const PACK_ICON_MAP = EMOJI_TO_IONICON;
+
 export const DEFAULT_PACK_ICON: IoniconsName = "layers-outline";
 
+// List of valid Ionicon names (subset we support)
+const VALID_IONICONS = new Set([
+    "heart-outline",
+    "heart-half-outline",
+    "heart-circle-outline",
+    "chatbubbles-outline",
+    "chatbox-outline",
+    "mail-outline",
+    "flower-outline",
+    "wine-outline",
+    "restaurant-outline",
+    "cafe-outline",
+    "airplane-outline",
+    "car-outline",
+    "compass-outline",
+    "map-outline",
+    "home-outline",
+    "people-outline",
+    "person-outline",
+    "eye-off-outline",
+    "key-outline",
+    "lock-closed-outline",
+    "dice-outline",
+    "gift-outline",
+    "sparkles-outline",
+    "star-outline",
+    "flame-outline",
+    "flash-outline",
+    "moon-outline",
+    "sunny-outline",
+    "flag-outline",
+    "calendar-outline",
+    "checkbox-outline",
+    "trophy-outline",
+    "layers-outline",
+    "cube-outline",
+    "folder-outline",
+    "bookmark-outline",
+    "bulb-outline",
+    "color-wand-outline",
+    "sync-outline",
+    "refresh-outline",
+    "briefcase-outline",
+]);
+
 /**
- * Converts an emoji icon string to an Ionicons name.
- * Falls back to DEFAULT_PACK_ICON if no mapping exists.
+ * Converts an icon value to an Ionicons name.
+ * Handles both:
+ * - Ionicon names directly (new packs): "briefcase-outline" -> "briefcase-outline"
+ * - Legacy emojis (existing packs): "💼" -> "briefcase-outline"
  */
-export function getPackIconName(emoji: string | null | undefined): IoniconsName {
-    if (!emoji) return DEFAULT_PACK_ICON;
-    return PACK_ICON_MAP[emoji] || DEFAULT_PACK_ICON;
+export function getPackIconName(icon: string | null | undefined): IoniconsName {
+    if (!icon) return DEFAULT_PACK_ICON;
+
+    if (VALID_IONICONS.has(icon)) {
+        return icon as IoniconsName;
+    }
+
+    return EMOJI_TO_IONICON[icon] || DEFAULT_PACK_ICON;
 }

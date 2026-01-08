@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
-import { clearKeys } from '../../../lib/encryption';
 
 export function useCoupleManagement() {
     const router = useRouter();
@@ -114,7 +113,6 @@ export function useCoupleManagement() {
             clearMatches();
             clearMessages();
             clearPacks();
-            await clearKeys();
 
             Events.accountDeleted();
 

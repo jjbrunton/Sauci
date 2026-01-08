@@ -48,7 +48,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { useAuthStore } from "../src/store";
 import { supabase } from "../src/lib/supabase";
-import { EncryptionKeyInitializer } from "../src/components/EncryptionKeyInitializer";
 
 const queryClient = new QueryClient();
 
@@ -213,7 +212,6 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
                 <StatusBar style="light" />
-                <EncryptionKeyInitializer />
                 <Stack
                     screenOptions={{
                         headerShown: false,

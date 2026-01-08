@@ -144,7 +144,8 @@ ${explicitInstruction}${crudeLangInstruction}${inspirationInstruction}${avoidIns
 Return a JSON object with an "ideas" array containing 5 objects, where each object has:
 - name: Pack name (catchy, 3-6 words) - should evoke activities/experiences, not questions
 - description: Brief description (1-2 sentences) focusing on the activities/experiences in the pack
-- icon: A single descriptive emoji
+       - icon: An Ionicon name from this list: heart-outline, flame-outline, sparkles-outline, gift-outline, wine-outline, airplane-outline, home-outline, key-outline, flash-outline, sunny-outline, flower-outline, star-outline, dice-outline, compass-outline, bulb-outline
+
 
 Make them engaging and specific to "${categoryName}".`;
 

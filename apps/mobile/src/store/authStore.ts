@@ -1,31 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import { Events } from "../lib/analytics";
-import { clearKeys } from "../lib/encryption";
-import { clearDecryptedMediaCache } from "../lib/mediaCache";
 import type { Profile, Couple } from "@/types";
-import type { RSAPublicKeyJWK, RSAPrivateKeyJWK } from "../lib/encryption/types";
-
-/**
- * Encryption key state - stored globally to ensure all components
- * share the same key state and avoid race conditions during encryption.
- */
-type EncryptionRecoveryReason = 'stale-key' | 'pending-recipient' | 'rotation' | 'keys-unavailable';
-
-interface EncryptionKeyState {
-    privateKeyJwk: RSAPrivateKeyJWK | null;
-    publicKeyJwk: RSAPublicKeyJWK | null;
-    hasKeys: boolean;
-    isLoadingKeys: boolean;
-    keysError: Error | null;
-    /** Incremented when keys change - consumers can use this to trigger re-renders */
-    keysVersion: number;
-    /** Background recovery status for E2EE issues */
-    isRecovering: boolean;
-    recoveryReason: EncryptionRecoveryReason | null;
-    recoveryCount: number;
-    recoveryUpdatedAt: number | null;
-}
 
 
 interface AuthState {
@@ -35,22 +11,12 @@ interface AuthState {
     isLoading: boolean;
     isAuthenticated: boolean;
 
-    // Encryption key state (global to avoid hook instance sync issues)
-    encryptionKeys: EncryptionKeyState;
-
     // Actions
     fetchUser: () => Promise<void>;
     fetchCouple: () => Promise<void>;
     refreshPartner: () => Promise<Profile | null>;
     signOut: () => Promise<void>;
     setUser: (user: Profile | null) => void;
-
-    // Encryption key actions
-    setEncryptionKeys: (keys: Partial<EncryptionKeyState>) => void;
-    clearEncryptionKeys: () => void;
-    beginEncryptionRecovery: (reason: EncryptionRecoveryReason) => void;
-    endEncryptionRecovery: () => void;
-
 }
 
 // Import other stores lazily to avoid circular dependency issues
@@ -62,19 +28,6 @@ const getOtherStores = () => {
     return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore };
 };
 
-const initialEncryptionKeyState: EncryptionKeyState = {
-    privateKeyJwk: null,
-    publicKeyJwk: null,
-    hasKeys: false,
-    isLoadingKeys: true,
-    keysError: null,
-    keysVersion: 0,
-    isRecovering: false,
-    recoveryReason: null,
-    recoveryCount: 0,
-    recoveryUpdatedAt: null,
-};
-
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
@@ -82,7 +35,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     partner: null,
     isLoading: true,
     isAuthenticated: false,
-    encryptionKeys: initialEncryptionKeyState,
 
     fetchUser: async () => {
         try {
@@ -100,13 +52,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             if (authError || !authUser) {
                 console.log("[Auth] Session invalid, signing out:", authError?.message);
-                
-                // Clear E2EE keys
-                try {
-                    await clearKeys();
-                } catch (error) {
-                    console.error("Failed to clear encryption keys:", error);
-                }
 
                 // Session is invalid - clear everything
                 set({ user: null, couple: null, partner: null, isAuthenticated: false, isLoading: false });
@@ -191,20 +136,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     signOut: async () => {
         Events.signOut();
 
-        // Clear E2EE keys from storage
-        try {
-            await clearKeys();
-        } catch (error) {
-            console.error("Failed to clear encryption keys:", error);
-        }
-
-        // Clear decrypted media cache to free storage
-        try {
-            await clearDecryptedMediaCache();
-        } catch (error) {
-            console.error("Failed to clear media cache:", error);
-        }
-
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
         set({
             user: null,
@@ -212,7 +143,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             partner: null,
             isAuthenticated: false,
             isLoading: false,
-            encryptionKeys: initialEncryptionKeyState,
         });
         // Clear other stores
         const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore } = getOtherStores();
@@ -245,61 +175,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             useMessageStore.getState().clearMessages();
             useSubscriptionStore.getState().clearSubscription();
         }
-    },
-
-    /**
-     * Update encryption key state. This is the ONLY way to update keys
-     * to ensure all consumers see the same state.
-     */
-    setEncryptionKeys: (keys) => {
-        set((state) => ({
-            encryptionKeys: {
-                ...state.encryptionKeys,
-                ...keys,
-                // Increment version when keys actually change
-                keysVersion: (keys.publicKeyJwk !== undefined || keys.privateKeyJwk !== undefined)
-                    ? state.encryptionKeys.keysVersion + 1
-                    : state.encryptionKeys.keysVersion,
-            },
-        }));
-    },
-
-    beginEncryptionRecovery: (reason) => {
-        set((state) => {
-            const nextCount = state.encryptionKeys.recoveryCount + 1;
-            return {
-                encryptionKeys: {
-                    ...state.encryptionKeys,
-                    recoveryCount: nextCount,
-                    isRecovering: true,
-                    recoveryReason: reason,
-                    recoveryUpdatedAt: Date.now(),
-                },
-            };
-        });
-    },
-
-    endEncryptionRecovery: () => {
-        set((state) => {
-            const nextCount = Math.max(0, state.encryptionKeys.recoveryCount - 1);
-            const isRecovering = nextCount > 0;
-            return {
-                encryptionKeys: {
-                    ...state.encryptionKeys,
-                    recoveryCount: nextCount,
-                    isRecovering,
-                    recoveryReason: isRecovering ? state.encryptionKeys.recoveryReason : null,
-                    recoveryUpdatedAt: Date.now(),
-                },
-            };
-        });
-    },
-
-    /**
-     * Clear encryption keys (called on sign out or when leaving couple)
-     */
-    clearEncryptionKeys: () => {
-        set({ encryptionKeys: initialEncryptionKeyState });
     },
 }));
 

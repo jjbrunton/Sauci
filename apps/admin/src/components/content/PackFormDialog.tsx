@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { EmojiPicker } from '@/components/ui/emoji-picker';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
@@ -98,9 +98,9 @@ export function PackFormDialog({
                     {/* Icon */}
                     <div className="space-y-2">
                         <Label>Icon</Label>
-                        <EmojiPicker
+                        <IconPicker
                             value={formData.icon}
-                            onChange={(emoji) => setField('icon', emoji)}
+                            onChange={(iconName) => setField('icon', iconName)}
                         />
                     </div>
 

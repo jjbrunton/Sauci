@@ -5,8 +5,6 @@ import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore } from "../../src/store";
-import { useDecryptedMessage } from "../../src/hooks";
-import type { KeysMetadata } from "../../src/lib/encryption";
 import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
@@ -20,10 +18,8 @@ type Message = Database["public"]["Tables"]["messages"]["Row"];
 
 function MessageToastPreview({
     message,
-    currentUserId,
 }: {
     message: Message;
-    currentUserId: string;
 }) {
     if (message.media_path) {
         const fallback = message.media_type === 'video' ? 'Sent a video' : 'Sent an image';
@@ -34,41 +30,9 @@ function MessageToastPreview({
         );
     }
 
-    const version = message.version ?? 1;
-    const isV2 = version === 2;
-
-    const { content, isDecrypting, error } = useDecryptedMessage({
-        message: {
-            id: message.id,
-            content: message.content,
-            version,
-            encrypted_content: message.encrypted_content,
-            encryption_iv: message.encryption_iv,
-            keys_metadata: message.keys_metadata as unknown as KeysMetadata | null,
-            user_id: message.user_id,
-        },
-        currentUserId,
-    });
-
-    if (isDecrypting) {
-        return (
-            <Text style={styles.messageToastBody} numberOfLines={1}>
-                Waiting for message...
-            </Text>
-        );
-    }
-
-    if (error) {
-        return (
-            <Text style={styles.messageToastBody} numberOfLines={1}>
-                Encrypted message
-            </Text>
-        );
-    }
-
     return (
         <Text style={styles.messageToastBody} numberOfLines={1}>
-            {content ?? (!isV2 ? message.content : null) ?? 'New message'}
+            {message.content ?? 'New message'}
         </Text>
     );
 }
@@ -886,7 +850,7 @@ export default function AppLayout() {
                             <Text style={styles.messageToastTitle} numberOfLines={1}>
                                 New message
                             </Text>
-                            <MessageToastPreview message={lastMessage} currentUserId={user?.id ?? ''} />
+                            <MessageToastPreview message={lastMessage} />
                         </View>
                         <Pressable onPress={dismissMessageToast} hitSlop={8}>
                             <Ionicons name="close" size={20} color={colors.textTertiary} />

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
 import { PackFormDialog, type PackFormData } from '@/components/content/PackFormDialog';
+import { IconPreview } from '@/components/ui/icon-picker';
 
 // =============================================================================
 // Types
@@ -65,7 +66,7 @@ export function PacksPage() {
         {
             name: '',
             description: '',
-            icon: '💕',
+            icon: 'heart-outline',
             is_premium: false,
             is_public: false,
             is_explicit: false,
@@ -73,7 +74,7 @@ export function PacksPage() {
         (pack) => ({
             name: pack.name,
             description: pack.description || '',
-            icon: pack.icon || '💕',
+            icon: pack.icon || 'heart-outline',
             is_premium: pack.is_premium,
             is_public: pack.is_public,
             is_explicit: pack.is_explicit,
@@ -265,7 +266,7 @@ export function PacksPage() {
             form.openCreateWith({
                 name: result.name || '',
                 description: result.description,
-                icon: result.icon || '💕',
+                icon: result.icon || 'heart-outline',
                 is_premium: false,
                 is_public: false,
                 is_explicit: false,
@@ -331,7 +332,9 @@ export function PacksPage() {
                     <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                         {category && (
                             <>
-                                <span className="text-3xl">{category.icon}</span>
+                                <span className="text-3xl">
+                                    <IconPreview value={category.icon} fallback="bookmark-outline" className="text-3xl" />
+                                </span>
                                 {category.name}:
                             </>
                         )}
@@ -437,7 +440,9 @@ export function PacksPage() {
                                                 <ChevronDown className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                        <div className="text-4xl mb-2">{pack.icon || '💕'}</div>
+                                        <div className="text-4xl mb-2">
+                                            <IconPreview value={pack.icon} fallback="heart-outline" className="text-4xl" />
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-1">
                                         {pack.is_premium && (

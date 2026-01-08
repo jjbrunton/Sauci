@@ -16,7 +16,7 @@ import type { ReportReason } from "./types";
 
 import { supabase } from "../../lib/supabase";
 import { useAuthStore, useMessageStore } from "../../store";
-import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useEncryptedSend, useMediaSaver } from "../../hooks";
+import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useMediaSaver } from "../../hooks";
 import { Database } from "../../types/supabase";
 import { GradientBackground } from "../../components/ui";
 import { colors, gradients, radius, spacing, typography } from "../../theme";
@@ -34,7 +34,7 @@ export const ChatScreen: React.FC = () => {
     const matchId = id as string;
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { user, partner, encryptionKeys } = useAuthStore();
+    const { user, partner } = useAuthStore();
     const { setActiveMatchId, markMatchMessagesAsRead } = useMessageStore();
     const [match, setMatch] = useState<any>(null);
     const [inputText, setInputText] = useState("");
@@ -74,23 +74,6 @@ export const ChatScreen: React.FC = () => {
         onNewMessage: clearTypingIndicator,
     });
 
-    // E2EE encryption hook for sending messages
-    const { encryptMessage, isE2EEAvailable, isAdminKeyReady, isEncrypting } = useEncryptedSend();
-    const secureReady = isE2EEAvailable && isAdminKeyReady;
-    const recoveryMessage = (() => {
-        if (!encryptionKeys.isRecovering) return null;
-        switch (encryptionKeys.recoveryReason) {
-            case 'pending-recipient':
-                return 'Finishing security setup for older messages...';
-            case 'keys-unavailable':
-                return 'Setting up secure keys...';
-            case 'stale-key':
-            case 'rotation':
-                return 'Updating security for this device...';
-            default:
-                return 'Updating security...';
-        }
-    })();
 
     // Message actions hook for deletion and reporting
     const { showDeleteOptions, deleteForSelf } = useMessageActions({
@@ -196,35 +179,18 @@ export const ChatScreen: React.FC = () => {
     const handleSend = async () => {
         if (!inputText.trim()) return;
         if (!user) return;
-        if (!secureReady) return;
-        if (isEncrypting) return;
 
         const content = inputText.trim();
         setInputText("");
 
         try {
-            // Encrypt the message (secure-only)
-            console.log(`[E2EE Send] isE2EEAvailable=${isE2EEAvailable}`);
-            const encryptedPayload = await encryptMessage(content);
-            console.log(`[E2EE Send] encryptedPayload=`, {
-                version: encryptedPayload.version,
-                encrypted_content_length: encryptedPayload.encrypted_content.length,
-                encryption_iv_length: encryptedPayload.encryption_iv.length,
-                keys_metadata: encryptedPayload.keys_metadata,
-            });
-
-            // Send encrypted message (v2)
-            const { error, data } = await supabase.from("messages").insert({
+            // Send plaintext message (v1) - protected by TLS in transit and RLS policies
+            const { error } = await supabase.from("messages").insert({
                 match_id: matchId,
                 user_id: user.id,
-                content: null,
-                version: encryptedPayload.version,
-                encrypted_content: encryptedPayload.encrypted_content,
-                encryption_iv: encryptedPayload.encryption_iv,
-                keys_metadata: encryptedPayload.keys_metadata as unknown as Record<string, unknown>,
-            }).select();
-            
-            console.log(`[E2EE Send] Insert result:`, { error, data });
+                content: content,
+                version: 1,
+            });
 
             if (error) {
                 Alert.alert("Error", "Failed to send message");
@@ -234,26 +200,12 @@ export const ChatScreen: React.FC = () => {
             }
         } catch (err) {
             console.error("Error sending message:", err);
-            // Show the actual error message if it's user-friendly (from encryption)
-            const errorMessage = err instanceof Error && err.message
-                ? err.message
-                : "Failed to send message";
-            
-            // Map technical/unknown errors to friendly ones
-            let friendlyMessage = errorMessage;
-            if (errorMessage.includes('Failed to send') && !errorMessage.includes('connection')) {
-                friendlyMessage = "Couldn't send secure message. Please check your connection.";
-            } else if (errorMessage.includes('verification failed')) {
-                friendlyMessage = "Security check failed. Please restart the app.";
-            }
-
-            Alert.alert("Delivery Failed", friendlyMessage);
+            Alert.alert("Delivery Failed", "Couldn't send message. Please check your connection.");
             setInputText(content);
         }
     };
 
     const handlePickMedia = async () => {
-        if (!secureReady) return;
         const result = await pickMedia();
         if (result) {
             uploadMedia(result.uri, result.mediaType);
@@ -261,7 +213,6 @@ export const ChatScreen: React.FC = () => {
     };
 
     const handleTakePhoto = async () => {
-        if (!secureReady) return;
         const result = await takePhoto();
         if (result) {
             uploadMedia(result.uri, 'image');
@@ -269,7 +220,6 @@ export const ChatScreen: React.FC = () => {
     };
 
     const handleRecordVideo = async () => {
-        if (!secureReady) return;
         const result = await recordVideo();
         if (result) {
             uploadMedia(result.uri, 'video');
@@ -335,13 +285,6 @@ export const ChatScreen: React.FC = () => {
                     onBack={() => router.push('/(app)/matches')}
                 />
 
-                {recoveryMessage && (
-                    <View style={styles.securityBanner}>
-                        <Ionicons name="shield-checkmark-outline" size={16} color={ACCENT} />
-                        <Text style={styles.securityBannerText}>{recoveryMessage}</Text>
-                        <ActivityIndicator size="small" color={ACCENT} />
-                    </View>
-                )}
 
                 <ChatMessages
                     messages={messages}
@@ -370,17 +313,9 @@ export const ChatScreen: React.FC = () => {
                     {/* Top border glow */}
                     <View style={styles.inputWrapperBorder} />
 
-                    {!secureReady && (
-                        <View style={styles.secureStatus}>
-                            <Ionicons name="lock-closed-outline" size={14} color={colors.textSecondary} />
-                            <Text style={styles.secureStatusText}>Finishing security setup...</Text>
-                        </View>
-                    )}
-
                     <InputBar
                         inputText={inputText}
                         uploading={uploading}
-                        secureReady={secureReady}
                         onChangeText={handleTyping}
                         onSend={handleSend}
                         onPickMedia={handlePickMedia}
@@ -584,42 +519,5 @@ const styles = StyleSheet.create({
         right: 0,
         height: 1,
         backgroundColor: `${ACCENT_RGBA}0.15)`,
-    },
-    securityBanner: {
-        marginHorizontal: spacing.md,
-        marginTop: spacing.sm,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.md,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        backgroundColor: 'rgba(212, 175, 55, 0.12)',
-        borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.25)',
-    },
-    securityBannerText: {
-        flex: 1,
-        color: colors.textSecondary,
-        fontSize: 13,
-        fontWeight: '600',
-    },
-    secureStatus: {
-        alignSelf: 'flex-start',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-        marginHorizontal: spacing.md,
-        marginTop: spacing.sm,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.full,
-        backgroundColor: colors.glass.background,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-    },
-    secureStatusText: {
-        ...typography.caption1,
-        color: colors.textTertiary,
     },
 });

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { EmojiPicker } from '@/components/ui/emoji-picker';
+import { IconPicker, IconPreview } from '@/components/ui/icon-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
     Dialog,
@@ -56,11 +56,11 @@ export function CategoriesPage() {
 
     // Form state using the new hook
     const form = useEntityForm<CategoryFormData, Category>(
-        { name: '', description: '', icon: '📚' },
+        { name: '', description: '', icon: 'bookmark-outline' },
         (category) => ({
             name: category.name,
             description: category.description || '',
-            icon: category.icon || '📚',
+            icon: category.icon || 'bookmark-outline',
         })
     );
 
@@ -118,7 +118,7 @@ export function CategoriesPage() {
         form.openCreateWith({
             name: idea.name,
             description: idea.description || '',
-            icon: idea.icon || '📚',
+            icon: idea.icon || 'bookmark-outline',
         });
     };
 
@@ -261,9 +261,9 @@ export function CategoriesPage() {
                             <div className="space-y-4 py-4">
                                 <div className="space-y-2">
                                     <Label>Icon</Label>
-                                    <EmojiPicker
+                                    <IconPicker
                                         value={form.formData.icon}
-                                        onChange={(emoji) => form.setField('icon', emoji)}
+                                        onChange={(iconName) => form.setField('icon', iconName)}
                                     />
                                 </div>
 
@@ -363,7 +363,9 @@ export function CategoriesPage() {
                                                 <ChevronDown className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                        <div className="text-4xl mb-2">{category.icon || '📚'}</div>
+                                        <div className="text-4xl mb-2">
+                                            <IconPreview value={category.icon} fallback="bookmark-outline" className="text-4xl" />
+                                        </div>
                                     </div>
                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                         <Button

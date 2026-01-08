@@ -14,7 +14,6 @@ import { colors, gradients, spacing, radius, typography } from '../../../theme';
 export interface InputBarProps {
     inputText: string;
     uploading: boolean;
-    secureReady: boolean;
     onChangeText: (text: string) => void;
     onSend: () => void;
     onPickMedia: () => void;
@@ -31,7 +30,6 @@ const ACCENT = colors.premium.gold;
 export function InputBar({
     inputText,
     uploading,
-    secureReady,
     onChangeText,
     onSend,
     onPickMedia,
@@ -65,10 +63,8 @@ export function InputBar({
         transform: [{ rotate: `${buttonRotation.value}deg` }],
     }));
 
-    const sendDisabled = !inputText.trim() || !secureReady;
-    const mediaDisabled = uploading || !secureReady;
-    // Determine if send is disabled specifically because of security (not empty input)
-    const waitingForSecurity = !secureReady && inputText.trim().length > 0;
+    const sendDisabled = !inputText.trim();
+    const mediaDisabled = uploading;
 
     return (
         <View style={styles.container}>
@@ -153,8 +149,7 @@ export function InputBar({
                 disabled={sendDisabled}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel={waitingForSecurity ? "Send message - securing connection" : "Send message"}
-                accessibilityHint={waitingForSecurity ? "Please wait while we secure your connection" : undefined}
+                accessibilityLabel="Send message"
                 testID="chat-input-send"
             >
                 <LinearGradient
@@ -173,8 +168,8 @@ export function InputBar({
                         />
                     )}
                     <Ionicons
-                        name={waitingForSecurity ? "lock-closed" : "send"}
-                        size={waitingForSecurity ? 16 : 18}
+                        name="send"
+                        size={18}
                         color={sendDisabled ? colors.textTertiary : colors.text}
                     />
                 </LinearGradient>

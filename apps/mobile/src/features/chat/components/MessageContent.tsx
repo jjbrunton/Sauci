@@ -1,18 +1,16 @@
 /**
  * MessageContent - Renders message content (text, images, videos)
  * Handles media reveal logic, expired media, and loading states.
- * Supports both v1 (plaintext) and v2 (E2EE encrypted) messages.
  */
-import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, gradients, spacing, radius } from '../../../theme';
 import { MessageMeta } from './MessageMeta';
 import { ChatVideoPlayer } from './ChatVideoPlayer';
-import { useDecryptedMessage, useDecryptedMedia } from '../../../hooks';
-import type { KeysMetadata } from '../../../lib/encryption';
+import { supabase } from '../../../lib/supabase';
 import type { Message } from '../types';
 
 const ACCENT = colors.premium.gold;
@@ -52,61 +50,41 @@ export function MessageContent({
         );
     }
 
-    // Use decryption hook for E2EE text messages
-    const {
-        content: decryptedContent,
-        isDecrypting,
-        error: decryptError,
-        errorCode: decryptErrorCode,
-        retry: retryDecrypt,
-    } = useDecryptedMessage({
-        message: {
-            id: item.id,
-            content: item.content,
-            version: item.version,
-            encrypted_content: item.encrypted_content,
-            encryption_iv: item.encryption_iv,
-            keys_metadata: item.keys_metadata as KeysMetadata | null,
-            user_id: item.user_id,
-        },
-        currentUserId,
-    });
-
     const isVideo = (item as any).media_type === 'video';
     const isViewed = !!item.media_viewed_at;
     const isRecipientHidden = !isMe && !isViewed;
 
-    // Use decryption hook for E2EE media (images/videos)
-    const {
-        uri: mediaUri,
-        isDecrypting: isDecryptingMedia,
-        error: mediaError,
-        errorCode: mediaErrorCode,
-        retry: retryMedia,
-        isEncrypted: isMediaEncrypted,
-    } = useDecryptedMedia({
-        messageId: item.id,
-        mediaPath: item.media_path ?? null,
-        version: item.version,
-        encryptionIv: item.encryption_iv,
-        keysMetadata: item.keys_metadata as KeysMetadata | null,
-        isMe,
-        mediaType: isVideo ? 'video' : 'image',
-        shouldFetch: !!item.media_path && !isRecipientHidden,
-    });
+    // Get signed URL for media
+    const [mediaUri, setMediaUri] = useState<string | null>(null);
+    const [mediaLoading, setMediaLoading] = useState(false);
+    const [mediaError, setMediaError] = useState(false);
 
-    const isPendingMedia = mediaErrorCode === 'E2EE_PENDING_RECIPIENT_KEY';
+    useEffect(() => {
+        if (!item.media_path || isRecipientHidden) {
+            setMediaUri(null);
+            return;
+        }
 
-    const showSecureMediaInfo = () => {
-        Alert.alert(
-            'Secure media',
-            "To keep your chats private, photos and videos are locked to each person’s secure key.\n\nThis media was sent before your secure key was ready, so it’s still locked. We’re now securely updating the lock for your device (without exposing the media) so you can open it.\n\nIf it doesn’t unlock in a few seconds, tap “Try again”.",
-            [
-                { text: 'OK', style: 'cancel' },
-                { text: 'Try again', onPress: () => retryMedia() },
-            ]
-        );
-    };
+        const fetchMediaUrl = async () => {
+            setMediaLoading(true);
+            setMediaError(false);
+            try {
+                const { data, error } = await supabase.storage
+                    .from('chat-media')
+                    .createSignedUrl(item.media_path!, 3600); // 1 hour expiry
+
+                if (error) throw error;
+                setMediaUri(data.signedUrl);
+            } catch (err) {
+                console.error('Failed to get media URL:', err);
+                setMediaError(true);
+            } finally {
+                setMediaLoading(false);
+            }
+        };
+
+        fetchMediaUrl();
+    }, [item.media_path, isRecipientHidden]);
 
     // Handle expired videos
     const isExpired = !!(item as any).media_expired;
@@ -135,8 +113,7 @@ export function MessageContent({
     // Handle media (images and videos)
     if (item.media_path || isExpired) {
         const canOpenFullScreen = (isMe || isViewed) && !isVideo; // Only images can go fullscreen
-        const hasMediaError = !!mediaError;
-        const isLoading = isDecryptingMedia || (!mediaUri && !hasMediaError && !isRecipientHidden);
+        const isLoading = mediaLoading || (!mediaUri && !mediaError && !isRecipientHidden);
 
         // Video content
         if (isVideo) {
@@ -166,26 +143,11 @@ export function MessageContent({
                             <Text style={styles.unrevealedText}>Video hidden</Text>
                             <Text style={styles.revealHint}>Tap to reveal</Text>
                         </TouchableOpacity>
-                    ) : isPendingMedia ? (
-                        <TouchableOpacity activeOpacity={0.85} onPress={showSecureMediaInfo}>
-                            <View style={[styles.messageVideo, styles.secureMediaPlaceholder]}>
-                                <LinearGradient
-                                    colors={['rgba(22, 33, 62, 0.85)', 'rgba(13, 13, 26, 0.95)']}
-                                    style={StyleSheet.absoluteFill}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                />
-                                <Ionicons name="lock-closed-outline" size={32} color={colors.textSecondary} />
-                                <Text style={styles.secureMediaPlaceholderText}>Secure video</Text>
-                                <Text style={styles.secureMediaPlaceholderSubtext}>Finishing security setup • Tap for info</Text>
-                                {isDecryptingMedia && <ActivityIndicator color={ACCENT} />}
-                            </View>
-                        </TouchableOpacity>
-                    ) : mediaUri || hasMediaError ? (
+                    ) : mediaUri || mediaError ? (
                         <ChatVideoPlayer
                             signedUrl={mediaUri}
                             storagePath={item.media_path!}
-                            urlError={hasMediaError}
+                            urlError={mediaError}
                             onFullScreen={onVideoFullScreen}
                         />
                     ) : (
@@ -209,17 +171,13 @@ export function MessageContent({
         return (
             <View>
                 <TouchableOpacity
-                    activeOpacity={isPendingMedia || canOpenFullScreen ? 0.8 : 1}
+                    activeOpacity={canOpenFullScreen ? 0.8 : 1}
                     onPress={() => {
-                        if (isPendingMedia) {
-                            showSecureMediaInfo();
-                            return;
-                        }
                         if (canOpenFullScreen && mediaUri) {
                             onImagePress(mediaUri);
                         }
                     }}
-                    disabled={!(isPendingMedia || (canOpenFullScreen && !!mediaUri))}
+                    disabled={!(canOpenFullScreen && !!mediaUri)}
                 >
                     {isRecipientHidden ? (
                         <TouchableOpacity
@@ -252,20 +210,7 @@ export function MessageContent({
                             cachePolicy="disk"
                             transition={200}
                         />
-                    ) : isPendingMedia ? (
-                        <View style={[styles.messageImage, styles.secureMediaPlaceholder]}>
-                            <LinearGradient
-                                colors={['rgba(22, 33, 62, 0.85)', 'rgba(13, 13, 26, 0.95)']}
-                                style={StyleSheet.absoluteFill}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            />
-                            <Ionicons name="lock-closed-outline" size={32} color={colors.textSecondary} />
-                            <Text style={styles.secureMediaPlaceholderText}>Secure photo</Text>
-                            <Text style={styles.secureMediaPlaceholderSubtext}>Finishing security setup • Tap for info</Text>
-                            {isDecryptingMedia && <ActivityIndicator color={ACCENT} />}
-                        </View>
-                    ) : hasMediaError ? (
+                    ) : mediaError ? (
                         <View style={[styles.messageImage, styles.messageImageError]}>
                             <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
                             <Text style={styles.messageImageErrorText}>Failed to load image</Text>
@@ -288,73 +233,10 @@ export function MessageContent({
         );
     }
 
-    // Text message
-    const version = item.version ?? 1;
-    const isV2 = version === 2;
-
-    const showSecureMessageInfo = () => {
-        Alert.alert(
-            'Secure message',
-            "To keep your chats private, each message is locked to your device’s secure key.\n\nThis message was sent before your secure key was ready, so it’s still locked. We’re now securely updating the lock for your device (without exposing the message content) so you can read it.\n\nIf it doesn’t unlock in a few seconds, tap “Try again”.",
-            [
-                { text: 'OK', style: 'cancel' },
-                { text: 'Try again', onPress: () => retryDecrypt() },
-            ]
-        );
-    };
-
-    const renderText = () => {
-        if (decryptErrorCode === 'E2EE_PENDING_RECIPIENT_KEY') {
-            return (
-                <TouchableOpacity 
-                    activeOpacity={0.85} 
-                    onPress={showSecureMessageInfo}
-                    onLongPress={onLongPress}
-                    delayLongPress={300}
-                >
-                    <View style={styles.securePlaceholder}>
-                        <View style={styles.securePlaceholderRow}>
-                            <Ionicons name="lock-closed-outline" size={16} color={colors.textSecondary} />
-                            <Text style={styles.securePlaceholderTitle}>Secure message</Text>
-                            {isDecrypting && <ActivityIndicator size="small" color={ACCENT} />}
-                        </View>
-                        <Text style={styles.securePlaceholderSubtext}>Finishing security setup • Tap for info</Text>
-                    </View>
-                </TouchableOpacity>
-            );
-        }
-
-        if (isDecrypting) {
-            return (
-                <View style={styles.decryptingContainer}>
-                    <ActivityIndicator size="small" color={ACCENT} />
-                </View>
-            );
-        }
-
-        if (decryptError) {
-            return (
-                <TouchableOpacity 
-                    activeOpacity={0.85} 
-                    onPress={retryDecrypt}
-                    onLongPress={onLongPress}
-                    delayLongPress={300}
-                >
-                    <Text style={[styles.messageText, styles.errorText]}>Couldn’t open secure message • Tap to retry</Text>
-                </TouchableOpacity>
-            );
-        }
-
-        if (isV2) {
-            return <Text style={styles.messageText}>{decryptedContent ?? 'Secure message'}</Text>;
-        }
-
-        return <Text style={styles.messageText}>{item.content ?? 'Failed to load message'}</Text>;
-    };
-
+    // Text message - display content directly
     return (
         <>
-            {renderText()}
+            <Text style={styles.messageText}>{item.content ?? 'Message unavailable'}</Text>
             <MessageMeta item={item} isMe={isMe} />
         </>
     );
@@ -376,60 +258,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         lineHeight: 22,
     },
-    securePlaceholder: {
-        gap: spacing.xs,
-    },
-    securePlaceholderRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-    },
-    securePlaceholderTitle: {
-        color: colors.textSecondary,
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    securePlaceholderSubtext: {
-        color: colors.textTertiary,
-        fontSize: 12,
-    },
-    decryptingContainer: {
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    decryptingText: {
-        color: colors.textSecondary,
-        fontSize: 11,
-        marginTop: spacing.xs,
-    },
-    errorText: {
-        color: colors.textSecondary,
-        fontStyle: 'italic',
-    },
     messageImage: {
         width: 200,
         height: 200,
         borderRadius: radius.md,
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    secureMediaPlaceholder: {
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: spacing.sm,
-        overflow: 'hidden',
-    },
-    secureMediaPlaceholderText: {
-        color: colors.textSecondary,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    secureMediaPlaceholderSubtext: {
-        color: colors.textTertiary,
-        fontSize: 11,
-        textAlign: 'center',
-        paddingHorizontal: spacing.md,
     },
     messageImageLoading: {
         justifyContent: 'center',
