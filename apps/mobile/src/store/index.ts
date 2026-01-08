@@ -5,4 +5,4 @@ export { usePacksStore } from "./packsStore";
 export { useMessageStore } from "./messageStore";
 export { useSubscriptionStore } from "./subscriptionStore";
 export { useResponsesStore, groupResponses } from "./responsesStore";
-export type { ResponseWithQuestion, UpdateResponseResult, GroupByOption } from "./responsesStore";
+export type { ResponseWithQuestion, UpdateResponseResult, GroupByOption, DateSortOrder } from "./responsesStore";

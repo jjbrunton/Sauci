@@ -22,7 +22,7 @@ const ACCENT_COLOR = colors.primary;
 
 export default function HomeScreen() {
     const { user, partner, couple } = useAuthStore();
-    const { matches, newMatchesCount, fetchMatches } = useMatchStore();
+    const { matches, newMatchesCount, totalCount, fetchMatches } = useMatchStore();
     const { enabledPackIds, fetchPacks } = usePacksStore();
     const { width } = useWindowDimensions();
 
@@ -146,7 +146,7 @@ export default function HomeScreen() {
                                         color={matches.length > 0 ? colors.text : ACCENT_COLOR}
                                     />
                                 </View>
-                                <Text style={styles.statNumber}>{matches.length}</Text>
+                                <Text style={styles.statNumber}>{totalCount ?? matches.length}</Text>
                                 <Text style={styles.statLabel}>Matches</Text>
                             </View>
                         </TouchableOpacity>

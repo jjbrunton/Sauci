@@ -149,6 +149,7 @@ export const ChatScreen: React.FC = () => {
         if (!matchId) return;
 
         const fetchMatch = async () => {
+            setMatch(null); // Clear previous match data immediately
             const { data } = await supabase
                 .from("matches")
                 .select("*, question:questions(*)")

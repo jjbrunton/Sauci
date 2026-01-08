@@ -1,48 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { IconType } from 'react-icons';
-import {
-    IoHeartOutline,
-    IoHeartHalfOutline,
-    IoHeartCircleOutline,
-    IoChatbubblesOutline,
-    IoChatboxOutline,
-    IoMailOutline,
-    IoFlowerOutline,
-    IoWineOutline,
-    IoRestaurantOutline,
-    IoCafeOutline,
-    IoAirplaneOutline,
-    IoCarOutline,
-    IoCompassOutline,
-    IoMapOutline,
-    IoHomeOutline,
-    IoPeopleOutline,
-    IoPersonOutline,
-    IoEyeOffOutline,
-    IoKeyOutline,
-    IoLockClosedOutline,
-    IoDiceOutline,
-    IoGiftOutline,
-    IoSparklesOutline,
-    IoStarOutline,
-    IoFlameOutline,
-    IoFlashOutline,
-    IoMoonOutline,
-    IoSunnyOutline,
-    IoFlagOutline,
-    IoCalendarOutline,
-    IoCheckboxOutline,
-    IoTrophyOutline,
-    IoLayersOutline,
-    IoCubeOutline,
-    IoFolderOutline,
-    IoBookmarkOutline,
-    IoBulbOutline,
-    IoColorWandOutline,
-    IoSyncOutline,
-    IoRefreshOutline,
-    IoBriefcaseOutline,
-} from 'react-icons/io5';
+import * as Io5Icons from 'react-icons/io5';
 import { Button } from './button';
 import { Input } from './input';
 
@@ -51,68 +9,28 @@ interface IconOption {
     Icon: IconType;
 }
 
-const ICON_OPTIONS: IconOption[] = [
-    // Relationships & Love
-    { name: 'heart-outline', Icon: IoHeartOutline },
-    { name: 'heart-half-outline', Icon: IoHeartHalfOutline },
-    { name: 'heart-circle-outline', Icon: IoHeartCircleOutline },
+/**
+ * Convert PascalCase component name to kebab-case Ionicon name.
+ * e.g., "IoHeartOutline" -> "heart-outline"
+ */
+function toKebabCase(componentName: string): string {
+    // Remove "Io" prefix
+    const withoutPrefix = componentName.slice(2);
+    // Convert PascalCase to kebab-case
+    return withoutPrefix
+        .replace(/([a-z])([A-Z])/g, '$1-$2')
+        .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+        .toLowerCase();
+}
 
-    // Communication
-    { name: 'chatbubbles-outline', Icon: IoChatbubblesOutline },
-    { name: 'chatbox-outline', Icon: IoChatboxOutline },
-    { name: 'mail-outline', Icon: IoMailOutline },
-
-    // Romance & Dates
-    { name: 'flower-outline', Icon: IoFlowerOutline },
-    { name: 'wine-outline', Icon: IoWineOutline },
-    { name: 'restaurant-outline', Icon: IoRestaurantOutline },
-    { name: 'cafe-outline', Icon: IoCafeOutline },
-
-    // Adventure & Travel
-    { name: 'airplane-outline', Icon: IoAirplaneOutline },
-    { name: 'car-outline', Icon: IoCarOutline },
-    { name: 'compass-outline', Icon: IoCompassOutline },
-    { name: 'map-outline', Icon: IoMapOutline },
-
-    // Home & Family
-    { name: 'home-outline', Icon: IoHomeOutline },
-    { name: 'people-outline', Icon: IoPeopleOutline },
-    { name: 'person-outline', Icon: IoPersonOutline },
-
-    // Mystery & Secrets
-    { name: 'eye-off-outline', Icon: IoEyeOffOutline },
-    { name: 'key-outline', Icon: IoKeyOutline },
-    { name: 'lock-closed-outline', Icon: IoLockClosedOutline },
-
-    // Fun & Games
-    { name: 'dice-outline', Icon: IoDiceOutline },
-    { name: 'gift-outline', Icon: IoGiftOutline },
-    { name: 'sparkles-outline', Icon: IoSparklesOutline },
-    { name: 'star-outline', Icon: IoStarOutline },
-
-    // Intimacy
-    { name: 'flame-outline', Icon: IoFlameOutline },
-    { name: 'flash-outline', Icon: IoFlashOutline },
-    { name: 'moon-outline', Icon: IoMoonOutline },
-    { name: 'sunny-outline', Icon: IoSunnyOutline },
-
-    // Goals & Planning
-    { name: 'flag-outline', Icon: IoFlagOutline },
-    { name: 'calendar-outline', Icon: IoCalendarOutline },
-    { name: 'checkbox-outline', Icon: IoCheckboxOutline },
-    { name: 'trophy-outline', Icon: IoTrophyOutline },
-
-    // General
-    { name: 'layers-outline', Icon: IoLayersOutline },
-    { name: 'cube-outline', Icon: IoCubeOutline },
-    { name: 'folder-outline', Icon: IoFolderOutline },
-    { name: 'bookmark-outline', Icon: IoBookmarkOutline },
-    { name: 'bulb-outline', Icon: IoBulbOutline },
-    { name: 'color-wand-outline', Icon: IoColorWandOutline },
-    { name: 'sync-outline', Icon: IoSyncOutline },
-    { name: 'refresh-outline', Icon: IoRefreshOutline },
-    { name: 'briefcase-outline', Icon: IoBriefcaseOutline },
-];
+// Build icon options from all Io5 icons dynamically
+const ICON_OPTIONS: IconOption[] = Object.entries(Io5Icons)
+    .filter(([name]) => name.startsWith('Io'))
+    .map(([componentName, Icon]) => ({
+        name: toKebabCase(componentName),
+        Icon: Icon as IconType,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
 const ICONS_BY_NAME = ICON_OPTIONS.reduce<Record<string, IconOption>>((acc, option) => {
     acc[option.name] = option;
@@ -168,8 +86,9 @@ export function IconPicker({ value, onChange }: IconPickerProps) {
         return ICON_OPTIONS.filter((option) => option.name.includes(normalized));
     }, [query]);
 
-    const SelectedIcon = ICONS_BY_NAME[value]?.Icon;
-    const buttonLabel = SelectedIcon ? value : value ? 'Legacy icon' : 'Select an icon';
+    const selectedOption = ICONS_BY_NAME[value];
+    const SelectedIcon = selectedOption?.Icon;
+    const buttonLabel = selectedOption ? value : value ? 'Legacy icon' : 'Select an icon';
 
     return (
         <div className="relative" ref={containerRef}>

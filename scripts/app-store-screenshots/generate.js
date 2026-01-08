@@ -16,46 +16,46 @@ const DIMENSIONS = {
 // Screenshot configurations with marketing text
 const SCREENSHOTS = [
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 19.57.14.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.18.40.png",
     headline: "Your Couple Dashboard",
     subheadline: "Track matches, packs & explore together",
     outputName: "01-home",
   },
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 20.10.53.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.10.03.png",
     headline: "Curated Question Packs",
     subheadline: "From first dates to spicy adventures",
     outputName: "02-packs",
   },
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 19.57.35.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.06.40.png",
     headline: "Swipe on Questions",
     subheadline: "Answer yes, no, or maybe together",
     outputName: "03-swipe",
   },
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 21.00.55.png",
-    headline: "Express Yourself",
-    subheadline: "Swipe right on what excites you",
-    outputName: "04-swipe-yes",
-  },
-  {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 19.57.51.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.07.29.png",
     headline: "It's a Match!",
     subheadline: "Celebrate when you both say yes",
-    outputName: "05-match",
+    outputName: "04-match",
   },
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 20.02.50.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.09.54.png",
     headline: "Discover Your Matches",
     subheadline: "See where you both agree",
-    outputName: "06-home-matches",
+    outputName: "05-matches",
   },
   {
-    source: "Simulator Screenshot - iPhone 16 Pro - 2025-12-30 at 20.01.31.png",
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.08.25.png",
     headline: "Chat About It",
     subheadline: "Every match unlocks a conversation",
-    outputName: "07-chat",
+    outputName: "06-chat",
+  },
+  {
+    source: "Simulator Screenshot - iPhone 16e - 2026-01-08 at 19.09.48.png",
+    headline: "Set Your Comfort Zone",
+    subheadline: "Customize your intimacy preferences",
+    outputName: "07-settings",
   },
 ];
 

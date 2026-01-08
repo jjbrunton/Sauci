@@ -32,6 +32,7 @@ export interface UpdateResponseResult {
 }
 
 export type GroupByOption = "pack" | "date" | "answer";
+export type DateSortOrder = "newest" | "oldest";
 
 const BATCH_SIZE = 20;
 
@@ -40,6 +41,7 @@ interface ResponsesState {
     isLoading: boolean;
     isLoadingMore: boolean;
     groupBy: GroupByOption;
+    dateSortOrder: DateSortOrder;
     hasMore: boolean;
     page: number;
     totalCount: number | null;
@@ -50,6 +52,8 @@ interface ResponsesState {
         confirmDelete?: boolean
     ) => Promise<UpdateResponseResult>;
     setGroupBy: (groupBy: GroupByOption) => void;
+    setDateSortOrder: (order: DateSortOrder) => void;
+    toggleDateSortOrder: () => void;
     clearResponses: () => void;
 }
 
@@ -57,7 +61,8 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
     responses: [],
     isLoading: false,
     isLoadingMore: false,
-    groupBy: "pack",
+    groupBy: "date",
+    dateSortOrder: "newest",
     hasMore: true,
     page: 0,
     totalCount: null,
@@ -270,15 +275,26 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
         set({ groupBy });
     },
 
-clearResponses: () => {
-        set({ responses: [], isLoading: false, groupBy: "pack", page: 0, hasMore: true, isLoadingMore: false, totalCount: null });
+    setDateSortOrder: (order: DateSortOrder) => {
+        set({ dateSortOrder: order });
+    },
+
+    toggleDateSortOrder: () => {
+        set((state) => ({
+            dateSortOrder: state.dateSortOrder === "newest" ? "oldest" : "newest",
+        }));
+    },
+
+    clearResponses: () => {
+        set({ responses: [], isLoading: false, groupBy: "date", dateSortOrder: "newest", page: 0, hasMore: true, isLoadingMore: false, totalCount: null });
     },
 }));
 
 // Helper function to group responses
 export function groupResponses(
     responses: ResponseWithQuestion[],
-    groupBy: GroupByOption
+    groupBy: GroupByOption,
+    dateSortOrder: DateSortOrder = "newest"
 ): { title: string; data: ResponseWithQuestion[] }[] {
     if (groupBy === "pack") {
         // Group by pack name
@@ -307,9 +323,16 @@ export function groupResponses(
     }
 
     if (groupBy === "date") {
+        // Sort responses by date based on sort order
+        const sortedResponses = [...responses].sort((a, b) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateSortOrder === "newest" ? dateB - dateA : dateA - dateB;
+        });
+
         // Group by date (day)
         const groups = new Map<string, ResponseWithQuestion[]>();
-        responses.forEach((r) => {
+        sortedResponses.forEach((r) => {
             const date = new Date(r.created_at).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",

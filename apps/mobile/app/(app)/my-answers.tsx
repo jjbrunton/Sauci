@@ -47,7 +47,7 @@ const AnimatedSectionList = Animated.createAnimatedComponent(SectionList);
 type GroupByOption = "pack" | "date" | "answer";
 
 export default function MyAnswersScreen() {
-    const { responses, isLoading, isLoadingMore, hasMore, groupBy, fetchResponses, setGroupBy, totalCount } = useResponsesStore();
+    const { responses, isLoading, isLoadingMore, hasMore, groupBy, dateSortOrder, fetchResponses, setGroupBy, toggleDateSortOrder, totalCount } = useResponsesStore();
     const { user } = useAuthStore();
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -123,7 +123,7 @@ export default function MyAnswersScreen() {
         }
     }, [isLoading, isLoadingMore, hasMore]);
 
-    const sections = groupResponses(responses, groupBy);
+    const sections = groupResponses(responses, groupBy, dateSortOrder);
 
     const handleEditPress = (response: ResponseWithQuestion) => {
         setSelectedResponse(response);
@@ -164,16 +164,39 @@ export default function MyAnswersScreen() {
         );
     };
 
-    const GroupByButton = ({ option, label }: { option: GroupByOption; label: string }) => (
-        <TouchableOpacity
-            style={[styles.groupByButton, groupBy === option && styles.groupByButtonActive]}
-            onPress={() => setGroupBy(option)}
-        >
-            <Text style={[styles.groupByText, groupBy === option && styles.groupByTextActive]}>
-                {label}
-            </Text>
-        </TouchableOpacity>
-    );
+    const GroupByButton = ({ option, label }: { option: GroupByOption; label: string }) => {
+        const isActive = groupBy === option;
+        const isDateButton = option === "date";
+        const showChevron = isDateButton && isActive;
+
+        const handlePress = () => {
+            if (isDateButton && isActive) {
+                // Toggle sort order when date is already selected
+                toggleDateSortOrder();
+            } else {
+                setGroupBy(option);
+            }
+        };
+
+        return (
+            <TouchableOpacity
+                style={[styles.groupByButton, isActive && styles.groupByButtonActive]}
+                onPress={handlePress}
+            >
+                <Text style={[styles.groupByText, isActive && styles.groupByTextActive]}>
+                    {label}
+                </Text>
+                {showChevron && (
+                    <Ionicons
+                        name={dateSortOrder === "newest" ? "chevron-down" : "chevron-up"}
+                        size={14}
+                        color={ACCENT}
+                        style={styles.sortChevron}
+                    />
+                )}
+            </TouchableOpacity>
+        );
+    };
 
     if (!user) {
         return (
@@ -441,6 +464,8 @@ const styles = StyleSheet.create({
         marginTop: spacing.md,
     },
     groupByButton: {
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: radius.full,
@@ -460,6 +485,9 @@ const styles = StyleSheet.create({
     groupByTextActive: {
         color: ACCENT,
         fontWeight: "600",
+    },
+    sortChevron: {
+        marginLeft: spacing.xs,
     },
     // Section header
     sectionHeader: {

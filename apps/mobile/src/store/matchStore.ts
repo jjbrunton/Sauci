@@ -147,15 +147,27 @@ export const useMatchStore = create<MatchState>((set, get) => ({
             // Ideally we should have a separate query for count, but we'll just count in current batch
             const newMatchesInBatch = sortedData.filter((m) => m.is_new).length;
             
-            set((state) => ({
-                matches: refresh ? sortedData : [...state.matches, ...sortedData],
+            set((state) => {
+                // Deduplicate matches by ID when appending new pages
+                const mergedMatches = refresh
+                    ? sortedData
+                    : [...state.matches, ...sortedData].reduce<Match[]>((acc, match) => {
+                        if (!acc.some((m: Match) => m.id === match.id)) {
+                            acc.push(match);
+                        }
+                        return acc;
+                    }, []);
+
+                return {
+                matches: mergedMatches,
                 newMatchesCount: refresh ? newMatchesInBatch : state.newMatchesCount + newMatchesInBatch,
                 totalCount: refresh ? totalCount : state.totalCount,
                 isLoading: false,
                 isLoadingMore: false,
                 page: currentPage + 1,
                 hasMore: matches.length === BATCH_SIZE
-            }));
+                };
+            });
         } catch (err) {
             console.error("Error fetching matches:", err);
             set({ error: "Failed to load matches", isLoading: false, isLoadingMore: false });

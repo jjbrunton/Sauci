@@ -104,6 +104,7 @@ export const useMessageSubscription = (
 
         const fetchMessagesAndMarkRead = async () => {
             setLoading(true);
+            setAllMessages([]); // Clear previous chat's messages immediately
 
             const { data } = await supabase
                 .from('messages')
