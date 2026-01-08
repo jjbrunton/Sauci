@@ -359,14 +359,14 @@ export function DarePacksPage() {
                             <div className="space-y-2">
                                 <Label>Category (optional)</Label>
                                 <Select
-                                    value={form.formData.category_id}
-                                    onValueChange={(value) => form.setField('category_id', value)}
+                                    value={form.formData.category_id || '__none__'}
+                                    onValueChange={(value) => form.setField('category_id', value === '__none__' ? '' : value)}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">No category</SelectItem>
+                                        <SelectItem value="__none__">No category</SelectItem>
                                         {categories.map((cat) => (
                                             <SelectItem key={cat.id} value={cat.id}>
                                                 {cat.name}
