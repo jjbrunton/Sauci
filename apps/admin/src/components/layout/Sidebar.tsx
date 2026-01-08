@@ -18,6 +18,7 @@ import {
     Home,
     Activity,
     AlertTriangle,
+    Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -46,6 +47,12 @@ const contentNav: NavItem[] = [
         href: '/categories',
         icon: <LayoutGrid className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.MANAGE_CATEGORIES,
+    },
+    {
+        label: 'Dare Packs',
+        href: '/dare-packs',
+        icon: <Zap className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_PACKS,
     },
 ];
 

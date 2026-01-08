@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { CategoriesPage } from '@/pages/content/CategoriesPage';
 import { PacksPage } from '@/pages/content/PacksPage';
 import { QuestionsPage } from '@/pages/content/QuestionsPage';
+import { DarePacksPage } from '@/pages/content/DarePacksPage';
+import { DaresPage } from '@/pages/content/DaresPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { UserDetailPage } from '@/pages/users/UserDetailPage';
 import { MatchChatPage } from '@/pages/users/MatchChatPage';
@@ -61,6 +63,22 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
                                     <QuestionsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dare-packs"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_PACKS}>
+                                    <DarePacksPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dare-packs/:packId/dares"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
+                                    <DaresPage />
                                 </ProtectedRoute>
                             }
                         />
