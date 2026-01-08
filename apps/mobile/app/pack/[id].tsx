@@ -16,6 +16,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { GradientBackground, GlassCard } from "../../src/components/ui";
 import { colors, gradients, spacing, radius, typography } from "../../src/theme";
+import { getPackIconName } from "../../src/lib/packIcons";
 import { Question } from "../../src/types";
 
 type TooltipType = 'initiator' | 'coupleType' | null;
@@ -259,7 +260,11 @@ export default function PackDetailsScreen() {
                                 style={StyleSheet.absoluteFill}
                             />
                         )}
-                        <Text style={styles.emoji}>{pack?.icon || "📦"}</Text>
+                        <Ionicons
+                            name={getPackIconName(pack?.icon)}
+                            size={32}
+                            color={pack?.is_premium ? colors.premium.gold : colors.textSecondary}
+                        />
                     </View>
                     {/* Crown for premium */}
                     {pack?.is_premium && (
@@ -574,9 +579,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 4,
         elevation: 4,
-    },
-    emoji: {
-        fontSize: 36,
     },
     title: {
         ...typography.largeTitle,

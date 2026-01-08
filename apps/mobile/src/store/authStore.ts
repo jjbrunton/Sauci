@@ -10,6 +10,8 @@ import type { RSAPublicKeyJWK, RSAPrivateKeyJWK } from "../lib/encryption/types"
  * Encryption key state - stored globally to ensure all components
  * share the same key state and avoid race conditions during encryption.
  */
+type EncryptionRecoveryReason = 'stale-key' | 'pending-recipient' | 'rotation' | 'keys-unavailable';
+
 interface EncryptionKeyState {
     privateKeyJwk: RSAPrivateKeyJWK | null;
     publicKeyJwk: RSAPublicKeyJWK | null;
@@ -18,7 +20,13 @@ interface EncryptionKeyState {
     keysError: Error | null;
     /** Incremented when keys change - consumers can use this to trigger re-renders */
     keysVersion: number;
+    /** Background recovery status for E2EE issues */
+    isRecovering: boolean;
+    recoveryReason: EncryptionRecoveryReason | null;
+    recoveryCount: number;
+    recoveryUpdatedAt: number | null;
 }
+
 
 interface AuthState {
     user: Profile | null;
@@ -40,6 +48,9 @@ interface AuthState {
     // Encryption key actions
     setEncryptionKeys: (keys: Partial<EncryptionKeyState>) => void;
     clearEncryptionKeys: () => void;
+    beginEncryptionRecovery: (reason: EncryptionRecoveryReason) => void;
+    endEncryptionRecovery: () => void;
+
 }
 
 // Import other stores lazily to avoid circular dependency issues
@@ -58,7 +69,12 @@ const initialEncryptionKeyState: EncryptionKeyState = {
     isLoadingKeys: true,
     keysError: null,
     keysVersion: 0,
+    isRecovering: false,
+    recoveryReason: null,
+    recoveryCount: 0,
+    recoveryUpdatedAt: null,
 };
+
 
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
@@ -248,6 +264,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }));
     },
 
+    beginEncryptionRecovery: (reason) => {
+        set((state) => {
+            const nextCount = state.encryptionKeys.recoveryCount + 1;
+            return {
+                encryptionKeys: {
+                    ...state.encryptionKeys,
+                    recoveryCount: nextCount,
+                    isRecovering: true,
+                    recoveryReason: reason,
+                    recoveryUpdatedAt: Date.now(),
+                },
+            };
+        });
+    },
+
+    endEncryptionRecovery: () => {
+        set((state) => {
+            const nextCount = Math.max(0, state.encryptionKeys.recoveryCount - 1);
+            const isRecovering = nextCount > 0;
+            return {
+                encryptionKeys: {
+                    ...state.encryptionKeys,
+                    recoveryCount: nextCount,
+                    isRecovering,
+                    recoveryReason: isRecovering ? state.encryptionKeys.recoveryReason : null,
+                    recoveryUpdatedAt: Date.now(),
+                },
+            };
+        });
+    },
+
     /**
      * Clear encryption keys (called on sign out or when leaving couple)
      */
@@ -255,3 +302,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ encryptionKeys: initialEncryptionKeyState });
     },
 }));
+

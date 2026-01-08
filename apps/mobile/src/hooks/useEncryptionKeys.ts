@@ -40,6 +40,8 @@ interface UseEncryptionKeysReturn {
   initializeAndUploadKeys: () => Promise<{ wasRegenerated: boolean }>;
   /** Refresh the key state from storage */
   refresh: () => Promise<void>;
+  /** Ensure local keys are uploaded to database. Blocks until complete. */
+  ensureKeysUploaded: () => Promise<boolean>;
 }
 
 // Global promise to track in-flight key loading across all hook instances
@@ -274,6 +276,11 @@ export function useEncryptionKeys(): UseEncryptionKeysReturn {
 
       // Upload if remote key is missing/invalid or doesn't match local.
       // If we just regenerated the key, we MUST upload it regardless
+      if (publicKey && localValid && !sameKey) {
+        // Treat a mismatch as regeneration so we trigger key rotation later.
+        wasRegenerated = true;
+      }
+
       if ((publicKey && localValid && !sameKey) || (publicKey && wasRegenerated)) {
         console.log('[E2EE Global] Uploading public key to profile...');
 
@@ -323,6 +330,75 @@ export function useEncryptionKeys(): UseEncryptionKeysReturn {
     await loadKeys();
   }, [loadKeys]);
 
+  /**
+   * Ensure local keys are uploaded to database.
+   * Blocks until upload is complete or fails.
+   * This is critical for E2EE repair flows where the edge function needs
+   * the current public key to re-wrap message AES keys.
+   */
+  const ensureKeysUploaded = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'web') {
+      console.log('[E2EE] ensureKeysUploaded: Web platform, skipping');
+      return false;
+    }
+
+    if (!user?.id) {
+      console.log('[E2EE] ensureKeysUploaded: No user ID, skipping');
+      return false;
+    }
+
+    try {
+      // Check if local key matches database key
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('public_key_jwk')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('[E2EE] ensureKeysUploaded: Failed to fetch profile:', profileError);
+        // Fall through to initializeAndUploadKeys which will handle this
+      }
+
+      const remoteKey = (profile?.public_key_jwk ?? null) as RSAPublicKeyJWK | null;
+      const localKey = encryptionKeys.publicKeyJwk;
+
+      if (!localKey) {
+        // No local key, need to initialize
+        console.log('[E2EE] ensureKeysUploaded: No local key, initializing...');
+        await initializeAndUploadKeys();
+        return true;
+      }
+
+      // Compare keys (sanitize both for accurate comparison)
+      const sanitizedLocal = sanitizePublicKeyJwk(localKey);
+      const sanitizedRemote = remoteKey ? sanitizePublicKeyJwk(remoteKey) : null;
+
+      const keysMatch = sanitizedRemote &&
+        sanitizedLocal.n === sanitizedRemote.n &&
+        sanitizedLocal.e === sanitizedRemote.e;
+
+      if (!keysMatch) {
+        // Mismatch - upload local key
+        console.log('[E2EE] ensureKeysUploaded: Key mismatch detected, uploading local key...');
+        await initializeAndUploadKeys();
+        return true;
+      }
+
+      console.log('[E2EE] ensureKeysUploaded: Keys already synced');
+      return true;
+    } catch (error) {
+      console.error('[E2EE] ensureKeysUploaded: Error:', error);
+      // Try to initialize anyway as a fallback
+      try {
+        await initializeAndUploadKeys();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }, [user?.id, encryptionKeys.publicKeyJwk, initializeAndUploadKeys]);
+
   // Load keys on mount if not already loaded
   useEffect(() => {
     if (!hasLoadedRef.current && !isLoadingRef.current && !encryptionKeys.hasKeys) {
@@ -345,5 +421,6 @@ export function useEncryptionKeys(): UseEncryptionKeysReturn {
     error: encryptionKeys.keysError,
     initializeAndUploadKeys,
     refresh,
+    ensureKeysUploaded,
   };
 }

@@ -61,7 +61,7 @@ export {
 } from './utils';
 
 // Key Rotation
-export { triggerKeyRotation } from './triggerKeyRotation';
+export { triggerKeyRotation, triggerAutoKeyRotation } from './triggerKeyRotation';
 
 // Stale Key Repair
 export { repairStaleKey } from './repairStaleKey';

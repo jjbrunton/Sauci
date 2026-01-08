@@ -34,7 +34,7 @@ export const ChatScreen: React.FC = () => {
     const matchId = id as string;
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { user, partner } = useAuthStore();
+    const { user, partner, encryptionKeys } = useAuthStore();
     const { setActiveMatchId, markMatchMessagesAsRead } = useMessageStore();
     const [match, setMatch] = useState<any>(null);
     const [inputText, setInputText] = useState("");
@@ -77,6 +77,20 @@ export const ChatScreen: React.FC = () => {
     // E2EE encryption hook for sending messages
     const { encryptMessage, isE2EEAvailable, isAdminKeyReady, isEncrypting } = useEncryptedSend();
     const secureReady = isE2EEAvailable && isAdminKeyReady;
+    const recoveryMessage = (() => {
+        if (!encryptionKeys.isRecovering) return null;
+        switch (encryptionKeys.recoveryReason) {
+            case 'pending-recipient':
+                return 'Finishing security setup for older messages...';
+            case 'keys-unavailable':
+                return 'Setting up secure keys...';
+            case 'stale-key':
+            case 'rotation':
+                return 'Updating security for this device...';
+            default:
+                return 'Updating security...';
+        }
+    })();
 
     // Message actions hook for deletion and reporting
     const { showDeleteOptions, deleteForSelf } = useMessageActions({
@@ -321,6 +335,14 @@ export const ChatScreen: React.FC = () => {
                     onBack={() => router.push('/(app)/matches')}
                 />
 
+                {recoveryMessage && (
+                    <View style={styles.securityBanner}>
+                        <Ionicons name="shield-checkmark-outline" size={16} color={ACCENT} />
+                        <Text style={styles.securityBannerText}>{recoveryMessage}</Text>
+                        <ActivityIndicator size="small" color={ACCENT} />
+                    </View>
+                )}
+
                 <ChatMessages
                     messages={messages}
                     userId={user?.id}
@@ -562,6 +584,25 @@ const styles = StyleSheet.create({
         right: 0,
         height: 1,
         backgroundColor: `${ACCENT_RGBA}0.15)`,
+    },
+    securityBanner: {
+        marginHorizontal: spacing.md,
+        marginTop: spacing.sm,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        backgroundColor: 'rgba(212, 175, 55, 0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.25)',
+    },
+    securityBannerText: {
+        flex: 1,
+        color: colors.textSecondary,
+        fontSize: 13,
+        fontWeight: '600',
     },
     secureStatus: {
         alignSelf: 'flex-start',

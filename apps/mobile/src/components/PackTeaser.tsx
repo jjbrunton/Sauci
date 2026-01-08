@@ -19,6 +19,7 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../lib/supabase";
+import { getPackIconName } from "../lib/packIcons";
 import { colors, gradients, spacing, radius, typography } from "../theme";
 
 interface PackTeaserProps {
@@ -159,7 +160,11 @@ export function PackTeaser({
                                         colors={['rgba(212, 175, 55, 0.15)', 'rgba(184, 134, 11, 0.1)']}
                                         style={StyleSheet.absoluteFill}
                                     />
-                                    <Text style={styles.packEmoji}>{packIcon || "📦"}</Text>
+                                    <Ionicons
+                                        name={getPackIconName(packIcon)}
+                                        size={36}
+                                        color={colors.premium.gold}
+                                    />
                                 </View>
                                 {/* Crown badge */}
                                 <View style={styles.crownBadge}>
@@ -369,9 +374,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 4,
         elevation: 4,
-    },
-    packEmoji: {
-        fontSize: 40,
     },
     title: {
         ...typography.title1,

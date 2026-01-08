@@ -18,6 +18,7 @@ import { GradientBackground } from "../../../src/components/ui";
 import { Paywall } from "../../../src/components/paywall";
 import { PackTeaser } from "../../../src/components/PackTeaser";
 import { colors, spacing, radius, typography } from "../../../src/theme";
+import { getPackIconName } from "../../../src/lib/packIcons";
 import type { QuestionPack, Category } from "../../../src/types";
 
 const HEADER_MAX_HEIGHT = 180;
@@ -72,7 +73,11 @@ function PackRow({ pack, isEnabled, isPremiumLocked, isExpanded, onToggle, onPre
         <Pressable onPress={onPress} style={styles.packRow}>
             <View style={styles.packRowMain}>
                 <View style={[styles.packIcon, isEnabled && styles.packIconEnabled]}>
-                    <Text style={styles.packIconText}>{pack.icon || "📦"}</Text>
+                    <Ionicons
+                        name={getPackIconName(pack.icon)}
+                        size={20}
+                        color={isEnabled ? colors.primary : colors.textSecondary}
+                    />
                 </View>
 
                 <View style={styles.packContent}>
@@ -206,9 +211,11 @@ function CategorySection({
         <View style={styles.categorySection}>
             <Pressable style={styles.categoryHeader} onPress={handleToggleCollapse}>
                 <View style={styles.categoryHeaderLeft}>
-                    {category.icon && (
-                        <Text style={styles.categoryIcon}>{category.icon}</Text>
-                    )}
+                    <Ionicons
+                        name={getPackIconName(category.icon)}
+                        size={16}
+                        color={colors.textSecondary}
+                    />
                     <Text style={styles.categoryName}>{category.name}</Text>
                     {enabledCount > 0 && (
                         <View style={styles.categoryBadge}>
@@ -616,9 +623,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: spacing.sm,
     },
-    categoryIcon: {
-        fontSize: 18,
-    },
     categoryName: {
         ...typography.headline,
         color: colors.text,
@@ -671,9 +675,6 @@ const styles = StyleSheet.create({
     packIconEnabled: {
         backgroundColor: "rgba(233, 69, 96, 0.1)",
         borderColor: "rgba(233, 69, 96, 0.2)",
-    },
-    packIconText: {
-        fontSize: 20,
     },
     packContent: {
         flex: 1,

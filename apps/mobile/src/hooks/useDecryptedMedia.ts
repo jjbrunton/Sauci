@@ -8,12 +8,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import { decryptMediaFile, cleanupDecryptedMedia, MESSAGE_VERSION_E2EE, repairStaleKey } from '../lib/encryption';
+import {
+  decryptMediaFile,
+  cleanupDecryptedMedia,
+  MESSAGE_VERSION_E2EE,
+  repairStaleKey,
+  triggerAutoKeyRotation,
+} from '../lib/encryption';
 import type { KeysMetadata, RSAPrivateKeyJWK } from '../lib/encryption';
 import { useEncryptionKeys } from './useEncryptionKeys';
 import { getCachedSignedUrl, getStoragePath } from '../lib/imageCache';
 import { supabase } from '../lib/supabase';
 import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMessages';
+import { useAuthStore } from '../store/authStore';
 // Import shared cache from mediaCache to avoid circular dependency
 import { decryptedMediaCache, clearDecryptedMediaCache } from '../lib/mediaCache';
 
@@ -86,6 +93,8 @@ export function useDecryptedMedia({
   });
 
   const { privateKeyJwk, hasKeys, isLoading: keysLoading } = useEncryptionKeys();
+  const beginEncryptionRecovery = useAuthStore((s) => s.beginEncryptionRecovery);
+  const endEncryptionRecovery = useAuthStore((s) => s.endEncryptionRecovery);
   const isMounted = useRef(true);
 
   const repairAttemptedByMessageId = useRef(new Set<string>());
@@ -216,26 +225,31 @@ export function useDecryptedMedia({
       );
 
       if (!isMe) {
-        setState({
-          uri: null,
-          isDecrypting: true,
-          error: null,
-          errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
-        });
+        beginEncryptionRecovery('pending-recipient');
+        try {
+          setState({
+            uri: null,
+            isDecrypting: true,
+            error: null,
+            errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
+          });
 
-        if (!repairAttemptedByMessageId.current.has(messageId)) {
-          repairAttemptedByMessageId.current.add(messageId);
-          await reencryptPendingMessages();
+          if (!repairAttemptedByMessageId.current.has(messageId)) {
+            repairAttemptedByMessageId.current.add(messageId);
+            await reencryptPendingMessages();
+          }
+
+          const { data: refreshed } = await supabase
+            .from('messages')
+            .select('keys_metadata')
+            .eq('id', messageId)
+            .maybeSingle();
+
+          effectiveKeysMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
+          wrappedKey = getWrappedKey(effectiveKeysMetadata);
+        } finally {
+          endEncryptionRecovery();
         }
-
-        const { data: refreshed } = await supabase
-          .from('messages')
-          .select('keys_metadata')
-          .eq('id', messageId)
-          .maybeSingle();
-
-        effectiveKeysMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
-        wrappedKey = getWrappedKey(effectiveKeysMetadata);
       }
 
       if (!wrappedKey) {
@@ -298,67 +312,80 @@ export function useDecryptedMedia({
 
       // Attempt stale key repair if not already attempted
       if (isStaleKeyFailure && !repairAttemptedByMessageId.current.has(messageId)) {
-        console.log(`[E2EE Media] Message ${messageId}: Attempting stale key repair...`);
-
-        if (isMounted.current) {
-          setState({
-            uri: null,
-            isDecrypting: true,
-            error: null,
-            errorCode: undefined,
-          });
-        }
-
-        repairAttemptedByMessageId.current.add(messageId);
+        beginEncryptionRecovery('stale-key');
+        const autoRotationPromise = triggerAutoKeyRotation();
+        let didDecrypt = false;
 
         try {
-          const repairResult = await repairStaleKey(messageId);
+          console.log(`[E2EE Media] Message ${messageId}: Attempting stale key repair...`);
 
-          if (repairResult.success) {
-            console.log(`[E2EE Media] Message ${messageId}: Stale key repaired, retrying decryption...`);
-
-            // Fetch updated message and retry
-            const { data: refreshed } = await supabase
-              .from('messages')
-              .select('keys_metadata')
-              .eq('id', messageId)
-              .maybeSingle();
-
-            const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
-
-            if (refreshedMetadata && encryptionIv && mediaPath) {
-              const storagePath = getStoragePath(mediaPath);
-              const encryptedUrl = await getCachedSignedUrl(storagePath);
-
-              if (encryptedUrl) {
-                const decryptedUri = await decryptMediaFile(
-                  encryptedUrl,
-                  encryptionIv,
-                  refreshedMetadata,
-                  privateKeyJwk as RSAPrivateKeyJWK,
-                  !isMe,
-                  mediaType,
-                );
-
-                const cacheKey = `${messageId}-${mediaPath}`;
-                decryptedMediaCache.set(cacheKey, decryptedUri);
-
-                if (isMounted.current) {
-                  setState({
-                    uri: decryptedUri,
-                    isDecrypting: false,
-                    error: null,
-                    errorCode: undefined,
-                  });
-                }
-                return;
-              }
-            }
-          } else {
-            console.error(`[E2EE Media] Message ${messageId}: Stale key repair failed:`, repairResult.error);
+          if (isMounted.current) {
+            setState({
+              uri: null,
+              isDecrypting: true,
+              error: null,
+              errorCode: undefined,
+            });
           }
-        } catch (repairErr) {
-          console.error(`[E2EE Media] Message ${messageId}: Stale key repair threw:`, repairErr);
+
+          repairAttemptedByMessageId.current.add(messageId);
+
+          try {
+            const repairResult = await repairStaleKey(messageId);
+
+            if (repairResult.success) {
+              console.log(`[E2EE Media] Message ${messageId}: Stale key repaired, retrying decryption...`);
+
+              // Fetch updated message and retry
+              const { data: refreshed } = await supabase
+                .from('messages')
+                .select('keys_metadata')
+                .eq('id', messageId)
+                .maybeSingle();
+
+              const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
+
+              if (refreshedMetadata && encryptionIv && mediaPath) {
+                const storagePath = getStoragePath(mediaPath);
+                const encryptedUrl = await getCachedSignedUrl(storagePath);
+
+                if (encryptedUrl) {
+                  const decryptedUri = await decryptMediaFile(
+                    encryptedUrl,
+                    encryptionIv,
+                    refreshedMetadata,
+                    privateKeyJwk as RSAPrivateKeyJWK,
+                    !isMe,
+                    mediaType,
+                  );
+
+                  const cacheKey = `${messageId}-${mediaPath}`;
+                  decryptedMediaCache.set(cacheKey, decryptedUri);
+
+                  if (isMounted.current) {
+                    setState({
+                      uri: decryptedUri,
+                      isDecrypting: false,
+                      error: null,
+                      errorCode: undefined,
+                    });
+                  }
+                  didDecrypt = true;
+                  return;
+                }
+              }
+            } else {
+              console.error(`[E2EE Media] Message ${messageId}: Stale key repair failed:`, repairResult.error);
+            }
+          } catch (repairErr) {
+            console.error(`[E2EE Media] Message ${messageId}: Stale key repair threw:`, repairErr);
+          }
+        } finally {
+          await autoRotationPromise;
+          if (autoRotationPromise && !didDecrypt) {
+            retry();
+          }
+          endEncryptionRecovery();
         }
       }
 
@@ -385,6 +412,9 @@ export function useDecryptedMedia({
     hasKeys,
     keysLoading,
     retryNonce,
+    beginEncryptionRecovery,
+    endEncryptionRecovery,
+    retry,
   ]);
 
   useEffect(() => {

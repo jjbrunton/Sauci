@@ -10,6 +10,8 @@
  */
 
 import { supabase } from '../supabase';
+import { reencryptPendingMessages } from './reencryptPendingMessages';
+
 
 export interface KeyRotationResult {
   success: boolean;
@@ -19,6 +21,11 @@ export interface KeyRotationResult {
 }
 
 let inFlight: Promise<KeyRotationResult | null> | null = null;
+let autoRotationInFlight: Promise<KeyRotationResult | null> | null = null;
+let lastAutoRotationAt = 0;
+
+const AUTO_ROTATION_MIN_INTERVAL_MS = 60_000;
+
 
 export async function triggerKeyRotation(): Promise<KeyRotationResult | null> {
   // Prevent concurrent calls
@@ -70,3 +77,26 @@ export async function triggerKeyRotation(): Promise<KeyRotationResult | null> {
 
   return inFlight;
 }
+
+export function triggerAutoKeyRotation(): Promise<KeyRotationResult | null> | null {
+  const now = Date.now();
+
+  if (autoRotationInFlight) return autoRotationInFlight;
+  if (now - lastAutoRotationAt < AUTO_ROTATION_MIN_INTERVAL_MS) {
+    return null;
+  }
+
+  lastAutoRotationAt = now;
+
+  autoRotationInFlight = (async () => {
+    console.log('[E2EE] Auto key rotation triggered by decryption failure.');
+    const result = await triggerKeyRotation();
+    await reencryptPendingMessages({ force: true });
+    return result;
+  })().finally(() => {
+    autoRotationInFlight = null;
+  });
+
+  return autoRotationInFlight;
+}
+

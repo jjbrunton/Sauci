@@ -8,6 +8,12 @@ export async function initAnalytics() {
     return;
   }
 
+  // Skip initialization in non-RN environments (e.g., during tsc/Node.js)
+  // AsyncStorage requires window to be defined
+  if (typeof window === "undefined" && typeof global !== "undefined" && !("__BUNDLE_START_TIME__" in global)) {
+    return;
+  }
+
   const apiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
   const host = process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
 

@@ -12,6 +12,7 @@ import {
   MESSAGE_VERSION_PLAINTEXT,
   MESSAGE_VERSION_E2EE,
   repairStaleKey,
+  triggerAutoKeyRotation,
 } from '../lib/encryption';
 import type {
   DecryptedMessageState,
@@ -21,6 +22,7 @@ import type {
 import { supabase } from '../lib/supabase';
 import { reencryptPendingMessages } from '../lib/encryption/reencryptPendingMessages';
 import { useEncryptionKeys } from './useEncryptionKeys';
+import { useAuthStore } from '../store/authStore';
 
 const AUTO_RETRY_BASE_DELAY_MS = 3000;
 const MAX_AUTO_RETRIES = 2;
@@ -67,7 +69,9 @@ export function useDecryptedMessage({
     error: null,
   });
 
-  const { privateKeyJwk, hasKeys, isLoading: keysLoading } = useEncryptionKeys();
+  const { privateKeyJwk, hasKeys, isLoading: keysLoading, ensureKeysUploaded } = useEncryptionKeys();
+  const beginEncryptionRecovery = useAuthStore((s) => s.beginEncryptionRecovery);
+  const endEncryptionRecovery = useAuthStore((s) => s.endEncryptionRecovery);
 
   // Track per-message repair attempts to avoid tight retry loops.
   const repairAttemptedByMessageId = useRef(new Set<string>());
@@ -215,99 +219,40 @@ export function useDecryptedMessage({
           !repairAttemptedByMessageId.current.has(message.id);
 
         if (shouldAttemptPendingRepair) {
-          setState({
-            content: null,
-            mediaUri: null,
-            isDecrypting: true,
-            error: null,
-            errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
-          });
-
-          if (!repairAttemptedByMessageId.current.has(message.id)) {
-            repairAttemptedByMessageId.current.add(message.id);
-            await reencryptPendingMessages();
-          }
-
-          // Fetch the latest keys_metadata and retry once locally.
-          const { data: refreshed } = await supabase
-            .from('messages')
-            .select('encrypted_content, encryption_iv, keys_metadata, user_id')
-            .eq('id', message.id)
-            .maybeSingle();
-
-          const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
-          const refreshedEncryptedContent = refreshed?.encrypted_content ?? null;
-          const refreshedIv = refreshed?.encryption_iv ?? null;
-
-          if (refreshedMetadata && refreshedEncryptedContent && refreshedIv) {
-            try {
-              const decryptedContent = await decryptTextMessage(
-                refreshedEncryptedContent,
-                refreshedIv,
-                refreshedMetadata,
-                privateKeyJwk as RSAPrivateKeyJWK,
-                true, // isRecipient
-              );
-
-              setState({
-                content: decryptedContent,
-                mediaUri: null,
-                isDecrypting: false,
-                error: null,
-                errorCode: undefined,
-              });
-              return;
-            } catch {
-              // Still pending (or repair failed); show the placeholder instead of a hard error.
-            }
-          }
-
-          setState({
-            content: null,
-            mediaUri: null,
-            isDecrypting: false,
-            error: null,
-            errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
-          });
-          return;
-        }
-
-        if (shouldAttemptStaleKeyRepair) {
-          console.log(`[E2EE Decrypt] Message ${message.id}: Attempting stale key repair...`);
-          setState({
-            content: null,
-            mediaUri: null,
-            isDecrypting: true,
-            error: null,
-            errorCode: 'E2EE_REPAIRING_STALE_KEY',
-          });
-
-          repairAttemptedByMessageId.current.add(message.id);
-
+          beginEncryptionRecovery('pending-recipient');
           try {
-            const repairResult = await repairStaleKey(message.id);
+            setState({
+              content: null,
+              mediaUri: null,
+              isDecrypting: true,
+              error: null,
+              errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
+            });
 
-            if (repairResult.success) {
-              console.log(`[E2EE Decrypt] Message ${message.id}: Stale key repaired, retrying decryption...`);
+            if (!repairAttemptedByMessageId.current.has(message.id)) {
+              repairAttemptedByMessageId.current.add(message.id);
+              await reencryptPendingMessages();
+            }
 
-              // Fetch updated message and retry
-              const { data: refreshed } = await supabase
-                .from('messages')
-                .select('encrypted_content, encryption_iv, keys_metadata, user_id')
-                .eq('id', message.id)
-                .maybeSingle();
+            // Fetch the latest keys_metadata and retry once locally.
+            const { data: refreshed } = await supabase
+              .from('messages')
+              .select('encrypted_content, encryption_iv, keys_metadata, user_id')
+              .eq('id', message.id)
+              .maybeSingle();
 
-              const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
-              const refreshedEncryptedContent = refreshed?.encrypted_content ?? null;
-              const refreshedIv = refreshed?.encryption_iv ?? null;
+            const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
+            const refreshedEncryptedContent = refreshed?.encrypted_content ?? null;
+            const refreshedIv = refreshed?.encryption_iv ?? null;
 
-              if (refreshedMetadata && refreshedEncryptedContent && refreshedIv) {
+            if (refreshedMetadata && refreshedEncryptedContent && refreshedIv) {
+              try {
                 const decryptedContent = await decryptTextMessage(
                   refreshedEncryptedContent,
                   refreshedIv,
                   refreshedMetadata,
                   privateKeyJwk as RSAPrivateKeyJWK,
-                  !isMe, // isRecipient
+                  true, // isRecipient
                 );
 
                 setState({
@@ -318,23 +263,122 @@ export function useDecryptedMessage({
                   errorCode: undefined,
                 });
                 return;
+              } catch {
+                // Still pending (or repair failed); show the placeholder instead of a hard error.
               }
-            } else {
-              console.error(`[E2EE Decrypt] Message ${message.id}: Stale key repair failed:`, repairResult.error);
             }
-          } catch (repairErr) {
-            console.error(`[E2EE Decrypt] Message ${message.id}: Stale key repair threw:`, repairErr);
-          }
 
-          // Repair failed or retry failed
-          setState({
-            content: null,
-            mediaUri: null,
-            isDecrypting: false,
-            error: new Error('Waiting for message...'),
-            errorCode: 'E2EE_DECRYPT_FAILED',
-          });
-          return;
+            setState({
+              content: null,
+              mediaUri: null,
+              isDecrypting: false,
+              error: null,
+              errorCode: 'E2EE_PENDING_RECIPIENT_KEY',
+            });
+            return;
+          } finally {
+            endEncryptionRecovery();
+          }
+        }
+
+        if (shouldAttemptStaleKeyRepair) {
+          beginEncryptionRecovery('stale-key');
+          let didDecrypt = false;
+
+          try {
+            console.log(`[E2EE Decrypt] Message ${message.id}: Attempting stale key repair...`);
+            setState({
+              content: null,
+              mediaUri: null,
+              isDecrypting: true,
+              error: null,
+              errorCode: 'E2EE_REPAIRING_STALE_KEY',
+            });
+
+            repairAttemptedByMessageId.current.add(message.id);
+
+            // CRITICAL: Ensure local keys are uploaded to database BEFORE repair.
+            // The repair edge function uses the database public key to re-wrap.
+            // If the database has a stale key, repair will "succeed" but decryption will fail.
+            console.log(`[E2EE Decrypt] Message ${message.id}: Ensuring keys are synced before repair...`);
+            const keysUploaded = await ensureKeysUploaded();
+            console.log(`[E2EE Decrypt] Message ${message.id}: Keys sync result: ${keysUploaded}`);
+
+            // Run auto key rotation to re-wrap recent messages BEFORE individual repair.
+            // This ensures handle-key-rotation uses the correct database key.
+            const autoRotationResult = await triggerAutoKeyRotation();
+            if (autoRotationResult) {
+              console.log(`[E2EE Decrypt] Message ${message.id}: Auto rotation completed: ${autoRotationResult.updated} messages updated`);
+            }
+
+            try {
+              const repairResult = await repairStaleKey(message.id);
+
+              if (repairResult.success) {
+                console.log(`[E2EE Decrypt] Message ${message.id}: Stale key repaired, retrying decryption...`);
+
+                // Fetch updated message and retry
+                const { data: refreshed } = await supabase
+                  .from('messages')
+                  .select('encrypted_content, encryption_iv, keys_metadata, user_id')
+                  .eq('id', message.id)
+                  .maybeSingle();
+
+                const refreshedMetadata = (refreshed?.keys_metadata ?? null) as KeysMetadata | null;
+                const refreshedEncryptedContent = refreshed?.encrypted_content ?? null;
+                const refreshedIv = refreshed?.encryption_iv ?? null;
+
+                // Log key metadata for debugging
+                console.log(`[E2EE Decrypt] Message ${message.id}: Refreshed metadata:`, {
+                  hasSenderKey: !!refreshedMetadata?.sender_wrapped_key,
+                  hasRecipientKey: !!refreshedMetadata?.recipient_wrapped_key,
+                  adminKeyId: refreshedMetadata?.admin_key_id,
+                  isRecipient: !isMe,
+                });
+
+                if (refreshedMetadata && refreshedEncryptedContent && refreshedIv) {
+                  const decryptedContent = await decryptTextMessage(
+                    refreshedEncryptedContent,
+                    refreshedIv,
+                    refreshedMetadata,
+                    privateKeyJwk as RSAPrivateKeyJWK,
+                    !isMe, // isRecipient
+                  );
+
+                  setState({
+                    content: decryptedContent,
+                    mediaUri: null,
+                    isDecrypting: false,
+                    error: null,
+                    errorCode: undefined,
+                  });
+                  didDecrypt = true;
+                  return;
+                }
+              } else {
+                console.error(`[E2EE Decrypt] Message ${message.id}: Stale key repair failed:`, repairResult.error);
+              }
+            } catch (repairErr) {
+              // Note: This catch includes decryption errors after successful repair
+              console.error(`[E2EE Decrypt] Message ${message.id}: Decryption retry failed after repair:`, repairErr);
+            }
+
+            // Repair failed or retry failed
+            setState({
+              content: null,
+              mediaUri: null,
+              isDecrypting: false,
+              error: new Error('Waiting for message...'),
+              errorCode: 'E2EE_DECRYPT_FAILED',
+            });
+            return;
+          } finally {
+            if (!didDecrypt) {
+              // Schedule another retry after a delay - keys may sync in the background
+              retry();
+            }
+            endEncryptionRecovery();
+          }
         }
 
         setState({
@@ -359,6 +403,10 @@ export function useDecryptedMessage({
     hasKeys,
     keysLoading,
     retryNonce,
+    beginEncryptionRecovery,
+    endEncryptionRecovery,
+    retry,
+    ensureKeysUploaded,
   ]);
 
   useEffect(() => {
