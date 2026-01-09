@@ -109,12 +109,6 @@ export function ResponseCard({ response, index, onEditPress, onChatPress }: Resp
                                 </Text>
                             </View>
 
-                            {/* Partner status indicator */}
-                            {response.partner_answered && (
-                                <View style={styles.partnerBadge}>
-                                    <Ionicons name="person" size={10} color={colors.textTertiary} />
-                                </View>
-                            )}
                         </View>
                     </View>
 
@@ -214,14 +208,6 @@ const styles = StyleSheet.create({
     packText: {
         ...typography.caption2,
         color: colors.textTertiary,
-    },
-    partnerBadge: {
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        backgroundColor: "rgba(255, 255, 255, 0.08)",
-        justifyContent: "center",
-        alignItems: "center",
     },
     rightSection: {
         flexDirection: "row",
