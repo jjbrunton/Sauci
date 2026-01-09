@@ -23,4 +23,6 @@ services:
       - ./vite.config.ts:/app/apps/admin/vite.config.ts
       - ./tsconfig.json:/app/apps/admin/tsconfig.json
       - ../../packages/shared/src:/app/packages/shared/src
+      # Preserve node_modules from container (don't override with host)
+      - /app/node_modules
     restart: unless-stopped

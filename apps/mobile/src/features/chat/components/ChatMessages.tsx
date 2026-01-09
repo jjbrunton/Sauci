@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -12,14 +12,14 @@ import { MatchCard } from './MatchCard';
 import { DecorativeSeparator } from '../../../components/ui';
 import { colors, spacing, typography } from '../../../theme';
 import { Database } from '../../../types/supabase';
-import { UploadStatus } from '../types';
+import { UploadStatus, Match } from '../types';
 
 type Message = Database['public']['Tables']['messages']['Row'];
 
 interface ChatMessagesProps {
     messages: Message[];
     userId: string | undefined;
-    match: any;
+    match: Match | null;
     uploadStatus: UploadStatus | null;
     partnerTyping: boolean;
     onImagePress: (uri: string) => void;
@@ -43,7 +43,7 @@ function isSameDay(date1: Date, date2: Date): boolean {
     );
 }
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({
+const ChatMessagesComponent: React.FC<ChatMessagesProps> = ({
     messages,
     userId,
     match,
@@ -56,7 +56,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
 }) => {
     const flatListRef = useRef<FlatList>(null);
 
-    const renderMessage = ({ item, index }: { item: Message; index: number }) => {
+    // Memoize keyExtractor to prevent recreation
+    const keyExtractor = useCallback((item: Message) => item.id, []);
+
+    // Memoize user object for MatchCard to prevent re-renders
+    const userObject = useMemo(() => ({ id: userId || '' }), [userId]);
+
+    // Memoize renderMessage to prevent recreation on every render
+    const renderMessage = useCallback(({ item, index }: { item: Message; index: number }) => {
         const isMe = item.user_id === userId;
         const messageDate = new Date(item.created_at!);
 
@@ -70,7 +77,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
         );
 
         return (
-            <>
+            <View>
                 <MessageBubble
                     isMe={isMe}
                     index={index}
@@ -86,57 +93,67 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({
                     />
                 </MessageBubble>
                 {showDateSeparator && <DateSeparator date={messageDate} />}
-            </>
+            </View>
         );
-    };
+    }, [messages, userId, onMessageLongPress, revealMessage, onImagePress, onVideoFullScreen]);
+
+    // Memoize ListHeaderComponent to prevent recreation
+    const listHeaderComponent = useMemo(() => (
+        <View>
+            {uploadStatus && <UploadProgress uploadStatus={uploadStatus} />}
+            {partnerTyping && <TypingIndicator />}
+        </View>
+    ), [uploadStatus, partnerTyping]);
+
+    // Memoize ListFooterComponent to prevent recreation
+    const listFooterComponent = useMemo(() => (
+        <View style={styles.footerContainer}>
+            <MatchCard match={match} user={userObject} />
+        </View>
+    ), [match, userObject]);
+
+    // Memoize ListEmptyComponent to prevent recreation
+    const listEmptyComponent = useMemo(() => (
+        <Animated.View
+            entering={FadeIn.delay(200).duration(400)}
+            style={styles.emptyChat}
+        >
+            <View style={styles.emptyIconContainer}>
+                <Ionicons name="chatbubbles-outline" size={32} color={ACCENT} />
+            </View>
+            <DecorativeSeparator variant="gold" width={100} marginVertical={spacing.md} />
+            <Text style={styles.emptyChatTitle}>Start the Conversation</Text>
+            <Text style={styles.emptyChatSubtitle}>
+                Share your thoughts about this match
+            </Text>
+        </Animated.View>
+    ), []);
 
     return (
         <FlatList
             ref={flatListRef}
             data={messages}
             renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractor}
             inverted
             style={styles.messageList}
             contentContainerStyle={styles.listContent}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-                <>
-                    {/* Show uploading status when media is being uploaded */}
-                    {uploadStatus && <UploadProgress uploadStatus={uploadStatus} />}
-
-                    {/* Show typing indicator when partner is typing */}
-                    {partnerTyping && <TypingIndicator />}
-                </>
-            }
-            ListFooterComponent={
-                <View style={{ paddingBottom: spacing.md }}>
-                    <MatchCard match={match} user={{ id: userId || '' }} />
-                </View>
-            }
-            ListEmptyComponent={
-                <Animated.View
-                    entering={FadeIn.delay(200).duration(400)}
-                    style={styles.emptyChat}
-                >
-                    {/* Premium icon */}
-                    <View style={styles.emptyIconContainer}>
-                        <Ionicons name="chatbubbles-outline" size={32} color={ACCENT} />
-                    </View>
-
-                    {/* Decorative separator */}
-                    <DecorativeSeparator variant="gold" width={100} marginVertical={spacing.md} />
-
-                    <Text style={styles.emptyChatTitle}>Start the Conversation</Text>
-                    <Text style={styles.emptyChatSubtitle}>
-                        Share your thoughts about this match
-                    </Text>
-                </Animated.View>
-            }
+            // Performance optimizations
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={15}
+            windowSize={10}
+            initialNumToRender={20}
+            ListHeaderComponent={listHeaderComponent}
+            ListFooterComponent={listFooterComponent}
+            ListEmptyComponent={listEmptyComponent}
         />
     );
 };
+
+// Wrap with React.memo for performance
+export const ChatMessages = React.memo(ChatMessagesComponent);
 
 const styles = StyleSheet.create({
     messageList: {
@@ -145,6 +162,9 @@ const styles = StyleSheet.create({
     listContent: {
         flexGrow: 1,
         padding: spacing.md,
+    },
+    footerContainer: {
+        paddingBottom: spacing.md,
     },
     emptyChat: {
         alignItems: 'center',

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 export interface UseTypingIndicatorConfig {
@@ -10,6 +11,8 @@ export interface UseTypingIndicatorConfig {
     typingTimeout?: number;
     /** Whether the screen is currently focused */
     isFocused?: boolean;
+    /** Throttle interval in ms for sending typing events. Default: 2000 */
+    throttleInterval?: number;
 }
 
 export interface UseTypingIndicatorReturn {
@@ -22,6 +25,7 @@ export interface UseTypingIndicatorReturn {
 }
 
 const DEFAULT_TYPING_TIMEOUT = 3000;
+const DEFAULT_THROTTLE_INTERVAL = 2000;
 
 /**
  * Hook for managing typing indicator state and broadcast events.
@@ -33,11 +37,19 @@ const DEFAULT_TYPING_TIMEOUT = 3000;
 export const useTypingIndicator = (
     config: UseTypingIndicatorConfig
 ): UseTypingIndicatorReturn => {
-    const { channelName, userId, typingTimeout = DEFAULT_TYPING_TIMEOUT, isFocused = true } = config;
+    const {
+        channelName,
+        userId,
+        typingTimeout = DEFAULT_TYPING_TIMEOUT,
+        isFocused = true,
+        throttleInterval = DEFAULT_THROTTLE_INTERVAL,
+    } = config;
 
     const [partnerTyping, setPartnerTyping] = useState(false);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isFocusedRef = useRef(isFocused);
+    const lastTypingEventRef = useRef<number>(0);
+    const channelRef = useRef<RealtimeChannel | null>(null);
 
     // Update ref when focus changes and clear state if blurred
     useEffect(() => {
@@ -65,6 +77,7 @@ export const useTypingIndicator = (
         if (!channelName || !userId) return;
 
         const channel = supabase.channel(channelName);
+        channelRef.current = channel;
 
         channel.on('broadcast', { event: 'typing' }, (payload) => {
             // Only process events if the screen is focused
@@ -88,6 +101,7 @@ export const useTypingIndicator = (
         channel.subscribe();
 
         return () => {
+            channelRef.current = null;
             supabase.removeChannel(channel);
             if (typingTimeoutRef.current) {
                 clearTimeout(typingTimeoutRef.current);
@@ -96,17 +110,22 @@ export const useTypingIndicator = (
     }, [channelName, userId, typingTimeout]);
 
     /**
-     * Send a typing event to the partner
+     * Send a typing event to the partner (throttled to reduce network traffic)
      */
     const sendTypingEvent = useCallback(() => {
-        if (!channelName || !userId) return;
+        if (!channelRef.current || !userId) return;
 
-        supabase.channel(channelName).send({
+        // Throttle typing events to reduce network traffic
+        const now = Date.now();
+        if (now - lastTypingEventRef.current < throttleInterval) return;
+        lastTypingEventRef.current = now;
+
+        channelRef.current.send({
             type: 'broadcast',
             event: 'typing',
             payload: { userId },
         });
-    }, [channelName, userId]);
+    }, [userId, throttleInterval]);
 
     /**
      * Manually clear the typing indicator (e.g., when a message is received)

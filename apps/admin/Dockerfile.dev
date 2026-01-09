@@ -2,15 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Copy root package files and workspace configs
 COPY package*.json ./
 COPY turbo.json ./
+
+# Copy all workspace package.json files
 COPY apps/admin/package.json ./apps/admin/
+COPY apps/mobile/package.json ./apps/mobile/
+COPY apps/supabase/package.json ./apps/supabase/
+COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
+# Install all dependencies at root level (workspaces)
 RUN npm install
 
+# Copy all source code
 COPY . .
 
+# Build shared package
 RUN npx turbo run build --filter=@sauci/shared
 
 WORKDIR /app/apps/admin

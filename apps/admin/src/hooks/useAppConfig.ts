@@ -4,6 +4,7 @@ import { supabase } from '@/config';
 export interface AppConfig {
     id: string;
     answer_gap_threshold: number;
+    daily_response_limit: number;
     updated_at: string | null;
     updated_by: string | null;
 }

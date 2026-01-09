@@ -28,6 +28,7 @@ export function AppSettingsPage() {
         if (config) {
             setFormData({
                 answer_gap_threshold: config.answer_gap_threshold ?? 10,
+                daily_response_limit: config.daily_response_limit ?? 0,
             });
             setHasChanges(false);
         }
@@ -59,6 +60,7 @@ export function AppSettingsPage() {
         if (config) {
             setFormData({
                 answer_gap_threshold: config.answer_gap_threshold ?? 10,
+                daily_response_limit: config.daily_response_limit ?? 0,
             });
             setHasChanges(false);
         }
@@ -172,6 +174,43 @@ export function AppSettingsPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                             Set to <strong>0</strong> to disable this feature.
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Daily Response Limit */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Daily Response Limit (Free Users)
+                    </CardTitle>
+                    <CardDescription>
+                        Limit the number of questions non-premium users can answer per day (UTC 00:00-23:59)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="dailyLimit">Daily Response Limit</Label>
+                        <Input
+                            id="dailyLimit"
+                            type="number"
+                            min="0"
+                            max="1000"
+                            value={formData.daily_response_limit ?? 0}
+                            onChange={(e) => handleChange('daily_response_limit', parseInt(e.target.value) || 0)}
+                            className="max-w-[200px]"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Maximum number of questions a non-premium user can answer per UTC day.
+                            Premium users (via personal or partner subscription) bypass this limit.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Set to <strong>0</strong> to disable daily limits entirely.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Limit resets daily at 00:00 UTC. Editing existing answers does not count toward the limit.
                         </p>
                     </div>
                 </CardContent>

@@ -24,8 +24,17 @@ import { SwipeCardPremium as SwipeCard } from "../../src/components/swipe"; // P
 import { SwipeTutorial } from "../../src/components/tutorials";
 import { QuestionFeedbackModal } from "../../src/components/feedback";
 import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
+import { Paywall } from "../../src/components/paywall";
 import { Events } from "../../src/lib/analytics";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
+
+interface DailyLimitInfo {
+    responses_today: number;
+    limit_value: number;
+    remaining: number;
+    reset_at: string;
+    is_blocked: boolean;
+}
 
 export default function SwipeScreen() {
     const params = useLocalSearchParams();
@@ -38,6 +47,8 @@ export default function SwipeScreen() {
     const [feedbackQuestion, setFeedbackQuestion] = useState<{id: string, text: string} | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
     const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
+    const [dailyLimitInfo, setDailyLimitInfo] = useState<DailyLimitInfo | null>(null);
+    const [showPaywall, setShowPaywall] = useState(false);
     const { enabledPackIds, ensureEnabledPacksLoaded } = usePacksStore();
     const { partner, couple } = useAuthStore();
     const hasTrackedExhausted = useRef(false);
@@ -48,6 +59,40 @@ export default function SwipeScreen() {
 
     // Progress bar shimmer animation
     const shimmerPosition = useSharedValue(-1);
+
+    // Countdown for daily limit reset
+    const [countdown, setCountdown] = useState<string>("");
+
+    useEffect(() => {
+        if (!dailyLimitInfo?.is_blocked || !dailyLimitInfo.reset_at) {
+            setCountdown("");
+            return;
+        }
+
+        const updateCountdown = () => {
+            const now = new Date();
+            const reset = new Date(dailyLimitInfo.reset_at);
+            const diff = reset.getTime() - now.getTime();
+
+            if (diff <= 0) {
+                setCountdown("00:00:00");
+                // Refresh questions when timer expires
+                fetchQuestions();
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        };
+
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+
+        return () => clearInterval(interval);
+    }, [dailyLimitInfo?.is_blocked, dailyLimitInfo?.reset_at]);
 
     useEffect(() => {
         // Progress bar shimmer sweep - 2.5 second cycle
@@ -139,16 +184,48 @@ export default function SwipeScreen() {
         }
     };
 
-    // Calculate effective total questions (accounting for gap limit)
-    const effectiveTotal = (() => {
-        if (!gapInfo || gapInfo.threshold === 0) {
-            // No gap limit active, show all questions
-            return questions.length;
+    // Check if user has reached daily response limit
+    const checkDailyLimit = async (): Promise<boolean> => {
+        try {
+            const { data, error } = await supabase.rpc('get_daily_response_limit_status');
+
+            if (error) {
+                console.error('Error checking daily limit:', error);
+                setDailyLimitInfo(null);
+                return false;
+            }
+
+            if (data && data.length > 0) {
+                const result = data[0];
+                setDailyLimitInfo(result);
+                return result.is_blocked;
+            }
+
+            setDailyLimitInfo(null);
+            return false;
+        } catch (error) {
+            console.error('Failed to check daily limit:', error);
+            setDailyLimitInfo(null);
+            return false;
         }
-        // remaining = how many more questions until blocked
-        const remaining = gapInfo.threshold - gapInfo.unanswered;
-        // effective total = current position + remaining (capped by actual questions)
-        return Math.min(questions.length, currentIndex + Math.max(0, remaining));
+    };
+
+    // Calculate effective total questions (accounting for gap limit AND daily limit)
+    const effectiveTotal = (() => {
+        let total = questions.length;
+
+        // Apply gap limit if active
+        if (gapInfo && gapInfo.threshold > 0) {
+            const remaining = gapInfo.threshold - gapInfo.unanswered;
+            total = Math.min(total, currentIndex + Math.max(0, remaining));
+        }
+
+        // Apply daily limit if active
+        if (dailyLimitInfo && dailyLimitInfo.limit_value > 0 && !dailyLimitInfo.is_blocked) {
+            total = Math.min(total, currentIndex + dailyLimitInfo.remaining);
+        }
+
+        return total;
     })();
 
     // Track when all questions are exhausted
@@ -212,14 +289,14 @@ export default function SwipeScreen() {
             // Filter out recently skipped questions
             const filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
 
-            // Always check answer gap when user has partner and not viewing specific pack
-            // This gives us the gap info for accurate counter display
+            // Always check answer gap and daily limit when user has partner and not viewing specific pack
             if (partner && !packId) {
-                await checkAnswerGap();
+                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
             } else {
                 // Reset blocked state if no partner or viewing specific pack
                 setIsBlocked(false);
                 setGapInfo(null);
+                setDailyLimitInfo(null);
             }
 
             // Server provides ordering (daily seeded random with priority)
@@ -264,8 +341,19 @@ export default function SwipeScreen() {
                 console.error("Submit response error:", error);
             } else {
                 Events.questionAnswered(answer, question.pack_id);
-                // Check if we've hit the answer gap threshold
-                await checkAnswerGap();
+                
+                // Increment local daily count if we have limit info
+                if (dailyLimitInfo && dailyLimitInfo.limit_value > 0) {
+                    setDailyLimitInfo(prev => prev ? {
+                        ...prev,
+                        responses_today: prev.responses_today + 1,
+                        remaining: Math.max(0, prev.remaining - 1),
+                        is_blocked: prev.responses_today + 1 >= prev.limit_value
+                    } : null);
+                }
+
+                // Check both gap and daily limit
+                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
             }
         } catch (error) {
             console.error("Failed to submit response", error);
@@ -346,6 +434,117 @@ export default function SwipeScreen() {
                         </GlassButton>
                     </Animated.View>
                 </View>
+            </GradientBackground>
+        );
+    }
+
+    // Show "daily limit reached" screen when user has exhausted their daily quota
+    if (dailyLimitInfo?.is_blocked) {
+        const LIMIT_ACCENT = colors.premium.gold;
+        return (
+            <GradientBackground>
+                {/* Ambient Orbs - Gold/warm glow */}
+                <Animated.View style={[styles.ambientOrb, styles.dailyLimitOrbTop, orbStyle1]} pointerEvents="none">
+                    <LinearGradient
+                        colors={[colors.premium.goldGlow, 'transparent']}
+                        style={styles.orbGradient}
+                        start={{ x: 0.5, y: 0.5 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                </Animated.View>
+                <Animated.View style={[styles.ambientOrb, styles.dailyLimitOrbBottom, orbStyle2]} pointerEvents="none">
+                    <LinearGradient
+                        colors={['rgba(212, 175, 55, 0.15)', 'transparent']}
+                        style={styles.orbGradient}
+                        start={{ x: 0.5, y: 0.5 }}
+                        end={{ x: 0, y: 0 }}
+                    />
+                </Animated.View>
+
+                <View style={styles.centerContainer}>
+                    <Animated.View
+                        entering={FadeInUp.duration(600).springify()}
+                        style={styles.waitingContent}
+                    >
+                        {/* Icon with glow effect */}
+                        <View style={styles.dailyLimitIconWrapper}>
+                            <View style={styles.dailyLimitIconGlow} />
+                            <View style={styles.dailyLimitIconContainer}>
+                                <Ionicons name="hourglass-outline" size={36} color={LIMIT_ACCENT} />
+                            </View>
+                        </View>
+
+                        {/* Title section */}
+                        <Text style={styles.dailyLimitLabel}>DAILY LIMIT REACHED</Text>
+                        <Text style={styles.dailyLimitTitle}>Take a Breather</Text>
+
+                        <DecorativeSeparator variant="gold" />
+
+                        {/* Countdown timer - prominent display */}
+                        <Animated.View
+                            entering={FadeIn.delay(300).duration(400)}
+                            style={styles.countdownContainer}
+                        >
+                            <Text style={styles.countdownLabel}>REFRESHES IN</Text>
+                            <View style={styles.countdownBadge}>
+                                <Ionicons name="timer-outline" size={20} color={LIMIT_ACCENT} />
+                                <Text style={styles.countdownText}>{countdown}</Text>
+                            </View>
+                        </Animated.View>
+
+                        {/* Description */}
+                        <Text style={styles.dailyLimitDescription}>
+                            You've answered {dailyLimitInfo.limit_value} questions today!{'\n'}
+                            Let the anticipation build while you wait.
+                        </Text>
+
+                        {/* Feature hints - vertical list */}
+                        <View style={styles.waitingFeatures}>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="chatbubbles-outline" size={16} color={colors.premium.gold} />
+                                <Text style={styles.waitingFeatureText}>Chat about your matches</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="sparkles" size={16} color={colors.premium.gold} />
+                                <Text style={styles.waitingFeatureText}>Fresh questions tomorrow</Text>
+                            </View>
+                            <View style={styles.waitingFeatureItem}>
+                                <Ionicons name="infinite-outline" size={16} color={colors.premium.gold} />
+                                <Text style={styles.waitingFeatureText}>Go unlimited with Premium</Text>
+                            </View>
+                        </View>
+
+                        {/* Premium upsell button */}
+                        <Text style={styles.premiumUpsellText}>Want to keep exploring?</Text>
+                        <TouchableOpacity
+                            onPress={() => setShowPaywall(true)}
+                            style={styles.premiumButton}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient
+                                colors={[colors.premium.gold, colors.premium.goldDark]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.premiumButtonGradient}
+                            />
+                            <View style={styles.premiumButtonContent}>
+                                <Ionicons name="infinite" size={18} color="#000" />
+                                <Text style={styles.premiumButtonText}>Unlock Unlimited</Text>
+                            </View>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </View>
+
+                {/* Paywall Modal */}
+                <Paywall
+                    visible={showPaywall}
+                    onClose={() => setShowPaywall(false)}
+                    onSuccess={() => {
+                        setShowPaywall(false);
+                        // Refresh to clear limit status
+                        fetchQuestions();
+                    }}
+                />
             </GradientBackground>
         );
     }
@@ -656,6 +855,17 @@ export default function SwipeScreen() {
                 questionId={feedbackQuestion?.id || ''}
                 questionText={feedbackQuestion?.text || ''}
             />
+
+            {/* Paywall Modal */}
+            <Paywall
+                visible={showPaywall}
+                onClose={() => setShowPaywall(false)}
+                onSuccess={() => {
+                    setShowPaywall(false);
+                    // Refresh to clear limit status
+                    fetchQuestions();
+                }}
+            />
         </GradientBackground>
     );
 }
@@ -888,5 +1098,114 @@ const styles = StyleSheet.create({
         color: colors.premium.rose,
         textAlign: 'center',
         marginBottom: spacing.xs,
+    },
+    // Daily limit screen styles
+    dailyLimitOrbTop: {
+        top: 80,
+        right: -60,
+    },
+    dailyLimitOrbBottom: {
+        bottom: 200,
+        left: -80,
+    },
+    dailyLimitIconWrapper: {
+        position: 'relative',
+        marginBottom: spacing.xl,
+    },
+    dailyLimitIconGlow: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(212, 175, 55, 0.15)',
+        top: -24,
+        left: -24,
+    },
+    dailyLimitIconContainer: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(212, 175, 55, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    dailyLimitLabel: {
+        ...typography.caption2,
+        fontWeight: '600',
+        letterSpacing: 2,
+        color: colors.premium.gold,
+        textAlign: 'center',
+        marginBottom: spacing.xs,
+    },
+    dailyLimitTitle: {
+        ...typography.largeTitle,
+        color: colors.text,
+        textAlign: 'center',
+    },
+    countdownContainer: {
+        alignItems: 'center',
+        marginBottom: spacing.xl,
+    },
+    countdownLabel: {
+        ...typography.caption2,
+        letterSpacing: 1.5,
+        color: colors.textTertiary,
+        marginBottom: spacing.sm,
+    },
+    countdownBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.25)',
+        gap: spacing.sm,
+    },
+    countdownText: {
+        ...typography.title2,
+        fontWeight: '700',
+        color: colors.premium.gold,
+        fontVariant: ['tabular-nums'],
+        letterSpacing: 2,
+    },
+    dailyLimitDescription: {
+        ...typography.body,
+        color: colors.textSecondary,
+        textAlign: 'center',
+        marginBottom: spacing.lg,
+        lineHeight: 24,
+        paddingHorizontal: spacing.md,
+    },
+    premiumUpsellText: {
+        ...typography.footnote,
+        fontStyle: 'italic',
+        color: colors.textTertiary,
+        textAlign: 'center',
+        marginBottom: spacing.md,
+    },
+    premiumButton: {
+        position: 'relative',
+        borderRadius: radius.lg,
+        overflow: 'hidden',
+        ...shadows.md,
+    },
+    premiumButtonGradient: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    premiumButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.xl,
+        gap: spacing.sm,
+    },
+    premiumButtonText: {
+        ...typography.body,
+        fontWeight: '600',
+        color: '#000',
     },
 });

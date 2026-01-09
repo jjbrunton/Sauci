@@ -3,5 +3,10 @@
     "allow": [
       "Bash(wc:*)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "sauci-prod",
+    "sauci-non-prod"
+  ],
+  "enableAllProjectMcpServers": true
 }

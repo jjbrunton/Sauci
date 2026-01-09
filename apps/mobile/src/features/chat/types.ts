@@ -25,6 +25,7 @@ export interface Match {
     responses?: Array<{
         user_id: string;
         answer: string;
+        created_at: string;
         profiles?: {
             name?: string;
         };

@@ -24,12 +24,12 @@ const ACCENT = colors.premium.gold;
  * Video player component with native-like tap behavior.
  * Supports play/pause, fullscreen, caching, and loading states.
  */
-export function ChatVideoPlayer({
+const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
     signedUrl,
     storagePath,
     urlError,
     onFullScreen,
-}: ChatVideoPlayerProps) {
+}) => {
     const videoRef = useRef<Video>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [hasEnded, setHasEnded] = useState(false);
@@ -43,11 +43,6 @@ export function ChatVideoPlayer({
     const isLocalFile = signedUrl?.startsWith('file://');
     const videoSource = isLocalFile ? signedUrl : (cachedUri || signedUrl);
     
-    // Debug logging
-    useEffect(() => {
-        console.log(`[ChatVideoPlayer] isLocalFile=${isLocalFile}, storagePath=${storagePath}, signedUrl=${signedUrl?.substring(0, 60)}..., videoSource=${videoSource?.substring(0, 60)}...`);
-    }, [storagePath, signedUrl, videoSource, isLocalFile]);
-
     // Handle playback status updates
     const handlePlaybackStatusUpdate = useCallback(async (status: AVPlaybackStatus) => {
         if (!status.isLoaded) {
@@ -71,7 +66,7 @@ export function ChatVideoPlayer({
                 cacheVideoFile();
             }
         }
-    }, [signedUrl, storagePath, cachedUri, isLocalFile]);
+    }, [signedUrl, cachedUri, isLocalFile, cacheVideoFile]);
 
     // Toggle play/pause with native-like behavior
     const handleTapToPlay = useCallback(async () => {
@@ -93,7 +88,7 @@ export function ChatVideoPlayer({
                 cacheVideoFile();
             }
         }
-    }, [isPlaying, hasEnded, signedUrl, storagePath, cachedUri]);
+    }, [isPlaying, hasEnded, signedUrl, cachedUri, cacheVideoFile]);
 
     // Handle full screen
     const handleFullScreen = useCallback(() => {
@@ -180,7 +175,10 @@ export function ChatVideoPlayer({
             )}
         </TouchableOpacity>
     );
-}
+};
+
+// Wrap with React.memo for performance
+export const ChatVideoPlayer = React.memo(ChatVideoPlayerComponent);
 
 const styles = StyleSheet.create({
     container: {
@@ -245,5 +243,3 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 });
-
-export default ChatVideoPlayer;

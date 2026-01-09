@@ -98,18 +98,21 @@ export type Database = {
       app_config: {
         Row: {
           answer_gap_threshold: number | null
+          daily_response_limit: number | null
           id: string
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
           answer_gap_threshold?: number | null
+          daily_response_limit?: number | null
           id?: string
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
           answer_gap_threshold?: number | null
+          daily_response_limit?: number | null
           id?: string
           updated_at?: string | null
           updated_by?: string | null
@@ -372,6 +375,42 @@ export type Database = {
           rotated_at?: string | null
         }
         Relationships: []
+      }
+      match_archives: {
+        Row: {
+          id: string
+          match_id: string
+          user_id: string
+          archived_at: string | null
+        }
+        Insert: {
+          id?: string
+          match_id: string
+          user_id: string
+          archived_at?: string | null
+        }
+        Update: {
+          id?: string
+          match_id?: string
+          user_id?: string
+          archived_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_archives_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_archives_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       matches: {
         Row: {
@@ -925,6 +964,16 @@ export type Database = {
         }[]
       }
       get_auth_user_couple_id: { Args: never; Returns: string }
+      get_daily_response_limit_status: {
+        Args: never
+        Returns: {
+          is_blocked: boolean
+          limit_value: number
+          remaining: number
+          reset_at: string
+          responses_today: number
+        }[]
+      }
       get_feature_interest_counts: {
         Args: never
         Returns: {

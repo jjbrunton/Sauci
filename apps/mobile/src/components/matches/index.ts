@@ -1,0 +1,1 @@
+export { SwipeableMatchItem } from './SwipeableMatchItem';

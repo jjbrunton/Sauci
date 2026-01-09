@@ -15,7 +15,7 @@ interface TypingDotProps {
     delay: number;
 }
 
-function TypingDot({ delay }: TypingDotProps) {
+const TypingDot = React.memo(function TypingDot({ delay }: TypingDotProps) {
     const opacity = useSharedValue(0.4);
 
     useEffect(() => {
@@ -43,13 +43,13 @@ function TypingDot({ delay }: TypingDotProps) {
             />
         </Animated.View>
     );
-}
+});
 
 /**
  * Typing indicator component showing three animated dots
  * when partner is typing.
  */
-export function TypingIndicator() {
+const TypingIndicatorComponent: React.FC = () => {
     return (
         <Animated.View
             entering={FadeIn.duration(200)}
@@ -71,7 +71,10 @@ export function TypingIndicator() {
             </View>
         </Animated.View>
     );
-}
+};
+
+// Wrap with React.memo for performance
+export const TypingIndicator = React.memo(TypingIndicatorComponent);
 
 const styles = StyleSheet.create({
     container: {
@@ -104,5 +107,3 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
 });
-
-export default TypingIndicator;

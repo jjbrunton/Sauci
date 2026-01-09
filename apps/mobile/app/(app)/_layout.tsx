@@ -10,8 +10,9 @@ import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
+import { MatchNotificationModal, MatchNotificationData } from "../../src/components/MatchNotificationModal";
 import { Events } from "../../src/lib/analytics";
-import type { MatchWithQuestion } from "../../src/types";
+import type { MatchWithQuestion, AnswerType } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -143,8 +144,7 @@ export default function AppLayout() {
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
-    const [matchNotification, setMatchNotification] = useState<MatchWithQuestion | null>(null);
-    const matchModalAnim = useRef(new Animated.Value(0)).current;
+    const [matchNotification, setMatchNotification] = useState<MatchNotificationData | null>(null);
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isLocked, setIsLocked] = useState(false);
@@ -381,10 +381,42 @@ export default function AppLayout() {
                             Events.milestoneMatch(currentMatchCount + 1);
                         }
 
-                        // Add to store and show notification
+                        // Add to store
                         addMatch(matchWithQuestion);
-                        setMatchNotification(matchWithQuestion);
                         Events.matchCreated(matchWithQuestion.match_type || "unknown");
+
+                        // Fetch individual responses to show what each person said
+                        const { data: responses } = await supabase
+                            .from("responses")
+                            .select("user_id, answer")
+                            .eq("question_id", matchWithQuestion.question_id)
+                            .eq("couple_id", user.couple_id);
+
+                        let userResponse: AnswerType | undefined;
+                        let partnerResponse: AnswerType | undefined;
+
+                        if (responses && responses.length >= 2) {
+                            for (const r of responses) {
+                                if (r.user_id === user.id) {
+                                    userResponse = r.answer as AnswerType;
+                                } else {
+                                    partnerResponse = r.answer as AnswerType;
+                                }
+                            }
+                        }
+
+                        // Get partner name from auth store
+                        const { partner } = useAuthStore.getState();
+
+                        // Show notification with response data
+                        setMatchNotification({
+                            id: matchWithQuestion.id,
+                            match_type: matchWithQuestion.match_type,
+                            question: matchWithQuestion.question,
+                            userResponse,
+                            partnerResponse,
+                            partnerName: partner?.name,
+                        });
                     }
                 }
             )
@@ -509,27 +541,17 @@ export default function AppLayout() {
         };
     }, [lastMessage]);
 
-    // Animate match modal when notification changes
-    useEffect(() => {
-        if (matchNotification) {
-            Animated.spring(matchModalAnim, {
-                toValue: 1,
-                useNativeDriver: true,
-                tension: 80,
-                friction: 10,
-            }).start();
-        }
-    }, [matchNotification, matchModalAnim]);
-
     const dismissNotification = useCallback(() => {
-        Animated.timing(matchModalAnim, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-        }).start(() => {
+        setMatchNotification(null);
+    }, []);
+
+    const handleMatchChat = useCallback(() => {
+        if (matchNotification) {
+            const matchId = matchNotification.id;
             setMatchNotification(null);
-        });
-    }, [matchModalAnim]);
+            router.push(`/(app)/chat/${matchId}`);
+        }
+    }, [matchNotification, router]);
 
     const dismissMessageToast = useCallback(() => {
         Animated.timing(messageToastAnim, {
@@ -786,53 +808,13 @@ export default function AppLayout() {
                 })}
             </Animated.View>
 
-            {/* Match Notification Overlay - Using Animated.View instead of Modal for Android compatibility */}
-            {matchNotification && (
-                <Animated.View
-                    style={[
-                        styles.matchOverlay,
-                        {
-                            opacity: matchModalAnim,
-                        },
-                    ]}
-                >
-                    <Pressable style={styles.matchOverlayBackground} onPress={dismissNotification} />
-                    <Animated.View
-                        style={[
-                            styles.modalContent,
-                            {
-                                transform: [
-                                    {
-                                        scale: matchModalAnim.interpolate({
-                                            inputRange: [0, 1],
-                                            outputRange: [0.8, 1],
-                                        }),
-                                    },
-                                ],
-                            },
-                        ]}
-                    >
-                        <View style={styles.modalHeader}>
-                            <Ionicons name="heart" size={48} color={colors.primary} />
-                            <Text style={styles.modalTitle}>It's a Match!</Text>
-                        </View>
-                        <Text style={styles.modalSubtitle}>You both agreed on:</Text>
-                        <Text style={styles.modalQuestion}>
-                            "{matchNotification?.question?.text}"
-                        </Text>
-                        <View style={styles.matchTypeBadge}>
-                            <Text style={styles.matchTypeText}>
-                                {matchNotification?.match_type === 'yes_yes' ? 'YES + YES' :
-                                    matchNotification?.match_type === 'yes_maybe' ? 'YES + MAYBE' :
-                                        'MAYBE + MAYBE'}
-                            </Text>
-                        </View>
-                        <Pressable style={styles.dismissButton} onPress={dismissNotification}>
-                            <Text style={styles.dismissButtonText}>Nice!</Text>
-                        </Pressable>
-                    </Animated.View>
-                </Animated.View>
-            )}
+            {/* Match Notification Modal - Premium styling with response details */}
+            <MatchNotificationModal
+                visible={!!matchNotification}
+                match={matchNotification}
+                onDismiss={dismissNotification}
+                onChat={handleMatchChat}
+            />
 
             {/* Message Toast Notification */}
             {lastMessage && (
@@ -874,72 +856,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: colors.background,
-    },
-    matchOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9999,
-        elevation: 9999,
-    },
-    matchOverlayBackground: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    },
-    modalContent: {
-        backgroundColor: colors.backgroundLight,
-        borderRadius: radius.xl,
-        padding: spacing.xl,
-        alignItems: 'center',
-        width: '90%',
-        maxWidth: 340,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-        ...shadows.lg,
-    },
-    modalHeader: {
-        alignItems: 'center',
-        marginBottom: spacing.lg,
-    },
-    modalTitle: {
-        ...typography.title1,
-        color: colors.text,
-        marginTop: spacing.md,
-    },
-    modalSubtitle: {
-        ...typography.body,
-        color: colors.textSecondary,
-        marginBottom: spacing.sm,
-    },
-    modalQuestion: {
-        ...typography.headline,
-        color: colors.text,
-        textAlign: 'center',
-        marginBottom: spacing.lg,
-    },
-    matchTypeBadge: {
-        backgroundColor: colors.primaryLight,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.full,
-        marginBottom: spacing.lg,
-    },
-    matchTypeText: {
-        ...typography.caption1,
-        color: colors.primary,
-        fontWeight: '600',
-    },
-    dismissButton: {
-        backgroundColor: colors.primary,
-        paddingHorizontal: spacing.xl,
-        paddingVertical: spacing.md,
-        borderRadius: radius.lg,
-        minWidth: 120,
-    },
-    dismissButtonText: {
-        ...typography.headline,
-        color: colors.text,
-        textAlign: 'center',
     },
     messageToast: {
         position: 'absolute',

@@ -27,7 +27,7 @@ const ACCENT = colors.premium.gold;
  * Chat input bar with expandable media menu.
  * Includes text input, send button, and media action buttons.
  */
-export function InputBar({
+const InputBarComponent: React.FC<InputBarProps> = ({
     inputText,
     uploading,
     onChangeText,
@@ -35,7 +35,7 @@ export function InputBar({
     onPickMedia,
     onTakePhoto,
     onRecordVideo,
-}: InputBarProps) {
+}) => {
     const [menuExpanded, setMenuExpanded] = useState(false);
     const menuWidth = useSharedValue(0);
     const buttonRotation = useSharedValue(0);
@@ -176,7 +176,10 @@ export function InputBar({
             </TouchableOpacity>
         </View>
     );
-}
+};
+
+// Wrap with React.memo for performance
+export const InputBar = React.memo(InputBarComponent);
 
 const styles = StyleSheet.create({
     container: {
@@ -261,5 +264,3 @@ const styles = StyleSheet.create({
         height: 20,
     },
 });
-
-export default InputBar;

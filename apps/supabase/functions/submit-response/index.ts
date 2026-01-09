@@ -77,6 +77,67 @@ Deno.serve(async (req) => {
             );
         }
 
+        // Check if this is a new response or an edit (edits bypass daily limit)
+        const { data: existingResponse } = await supabase
+            .from("responses")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("question_id", question_id)
+            .maybeSingle();
+
+        const isNewResponse = !existingResponse;
+
+        // Enforce daily response limit for new responses only
+        if (isNewResponse) {
+            // Check if user has premium access
+            const { data: hasPremiumData } = await supabase.rpc("has_premium_access", {
+                check_user_id: user.id,
+            });
+
+            const hasPremium = hasPremiumData === true;
+
+            // If non-premium, check daily limit
+            if (!hasPremium) {
+                // Get daily limit from app_config
+                const { data: configData } = await supabase
+                    .from("app_config")
+                    .select("daily_response_limit")
+                    .limit(1)
+                    .maybeSingle();
+
+                const dailyLimit = configData?.daily_response_limit || 0;
+
+                // If daily limit is enabled (> 0), check if user has reached it
+                if (dailyLimit > 0) {
+                    // Calculate UTC day boundaries
+                    const now = new Date();
+                    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+                    const tomorrowStart = new Date(todayStart);
+                    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+                    // Count responses created today (UTC)
+                    const { count: dailyCount } = await supabase
+                        .from("responses")
+                        .select("*", { count: "exact", head: true })
+                        .eq("user_id", user.id)
+                        .gte("created_at", todayStart.toISOString())
+                        .lt("created_at", tomorrowStart.toISOString());
+
+                    // If over limit, reject
+                    if ((dailyCount || 0) >= dailyLimit) {
+                        return new Response(
+                            JSON.stringify({
+                                error: "Daily response limit reached",
+                                daily_limit: dailyLimit,
+                                reset_at: tomorrowStart.toISOString(),
+                            }),
+                            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                        );
+                    }
+                }
+            }
+        }
+
         // Save or update response
         const { data: response, error: responseError } = await supabase
             .from("responses")

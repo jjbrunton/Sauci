@@ -23,6 +23,16 @@ export interface AiConfig {
     classifier_enabled: boolean | null;
     classifier_model: string | null;
     classifier_prompt: string | null;
+    heuristics_enabled: boolean | null;
+    heuristic_min_text_length: number | null;
+    heuristic_whitelist_max_length: number | null;
+    heuristic_skip_if_no_alnum: boolean | null;
+    heuristic_skip_media_without_text: boolean | null;
+    heuristic_record_reason: boolean | null;
+    heuristic_use_default_whitelist: boolean | null;
+    heuristic_use_default_keywords: boolean | null;
+    heuristic_whitelist: string | null;
+    heuristic_keyword_triggers: string | null;
     updated_at: string | null;
     updated_by: string | null;
 }

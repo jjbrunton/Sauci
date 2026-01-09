@@ -12,7 +12,7 @@ export interface MessageMetaProps {
 /**
  * Message metadata component showing timestamp and read receipts.
  */
-export function MessageMeta({ item, isMe }: MessageMetaProps) {
+const MessageMetaComponent: React.FC<MessageMetaProps> = ({ item, isMe }) => {
     const status = getReceiptStatus(item.delivered_at, item.read_at);
 
     return (
@@ -27,7 +27,10 @@ export function MessageMeta({ item, isMe }: MessageMetaProps) {
             )}
         </View>
     );
-}
+};
+
+// Wrap with React.memo for performance
+export const MessageMeta = React.memo(MessageMetaComponent);
 
 const styles = StyleSheet.create({
     container: {
@@ -43,5 +46,3 @@ const styles = StyleSheet.create({
         marginLeft: spacing.xs,
     },
 });
-
-export default MessageMeta;

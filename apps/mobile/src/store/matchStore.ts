@@ -14,12 +14,24 @@ interface MatchState {
     page: number;
     hasMore: boolean;
     error: string | null;
+    // Archive state
+    archivedMatches: Match[];
+    archivedMatchIds: Set<string>;
+    showArchived: boolean;
+    isLoadingArchived: boolean;
+    // Methods
     fetchMatches: (refresh?: boolean) => Promise<void>;
     markAsSeen: (matchId: string) => Promise<void>;
     markAllAsSeen: () => Promise<void>;
     addMatch: (match: Match) => void;
     updateMatchUnreadCount: (matchId: string, delta: number) => void;
     clearMatches: () => void;
+    // Archive methods
+    archiveMatch: (matchId: string) => Promise<void>;
+    unarchiveMatch: (matchId: string) => Promise<void>;
+    fetchArchivedMatches: () => Promise<void>;
+    toggleShowArchived: () => void;
+    isMatchArchived: (matchId: string) => boolean;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -31,6 +43,11 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     page: 0,
     hasMore: true,
     error: null,
+    // Archive state
+    archivedMatches: [],
+    archivedMatchIds: new Set<string>(),
+    showArchived: false,
+    isLoadingArchived: false,
 
     fetchMatches: async (refresh = false) => {
         const userId = useAuthStore.getState().user?.id;
@@ -57,7 +74,18 @@ export const useMatchStore = create<MatchState>((set, get) => ({
             const from = currentPage * BATCH_SIZE;
             const to = from + BATCH_SIZE - 1;
 
-            // Fetch total count on refresh
+            // Fetch archived match IDs for this user on refresh
+            let archivedMatchIds = state.archivedMatchIds;
+            if (refresh && userId) {
+                const { data: archives } = await supabase
+                    .from("match_archives")
+                    .select("match_id")
+                    .eq("user_id", userId);
+
+                archivedMatchIds = new Set(archives?.map(a => a.match_id) ?? []);
+            }
+
+            // Fetch total count on refresh (excluding archived)
             let totalCount = state.totalCount;
             if (refresh) {
                 const { count, error: countError } = await supabase
@@ -66,7 +94,8 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                     .eq("couple_id", coupleId);
 
                 if (!countError) {
-                    totalCount = count ?? 0;
+                    // Subtract archived count from total
+                    totalCount = (count ?? 0) - archivedMatchIds.size;
                 }
             }
 
@@ -81,9 +110,13 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                 .range(from, to);
 
             if (matchError) throw matchError;
-            if (!matches || matches.length === 0) {
+
+            // Filter out archived matches
+            const nonArchivedMatches = matches?.filter(m => !archivedMatchIds.has(m.id)) ?? [];
+
+            if (nonArchivedMatches.length === 0) {
                  if (refresh) {
-                    set({ matches: [], newMatchesCount: 0, totalCount: totalCount ?? 0, isLoading: false, hasMore: false });
+                    set({ matches: [], newMatchesCount: 0, totalCount: totalCount ?? 0, isLoading: false, hasMore: false, archivedMatchIds });
                 } else {
                     set({ isLoadingMore: false, hasMore: false });
                 }
@@ -91,7 +124,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
             }
 
             // Fetch all responses for these questions to determine who answered first
-            const questionIds = matches.map(m => m.question_id);
+            const questionIds = nonArchivedMatches.map(m => m.question_id);
             let responses: any[] = [];
             if (questionIds.length > 0) {
                 const { data } = await supabase
@@ -102,7 +135,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
             }
 
             // Fetch unread message counts per match
-            const matchIds = matches.map(m => m.id);
+            const matchIds = nonArchivedMatches.map(m => m.id);
             let unreadCounts: Record<string, number> = {};
 
             if (userId && matchIds.length > 0) {
@@ -123,7 +156,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                 });
             }
 
-            const data = matches.map(match => ({
+            const data = nonArchivedMatches.map(match => ({
                 ...match,
                 responses: responses.filter(r => r.question_id === match.question_id),
                 unreadCount: unreadCounts[match.id] || 0
@@ -165,7 +198,8 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                 isLoading: false,
                 isLoadingMore: false,
                 page: currentPage + 1,
-                hasMore: matches.length === BATCH_SIZE
+                hasMore: nonArchivedMatches.length === BATCH_SIZE,
+                archivedMatchIds: refresh ? archivedMatchIds : state.archivedMatchIds,
                 };
             });
         } catch (err) {
@@ -222,6 +256,195 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     },
 
 clearMatches: () => {
-        set({ matches: [], newMatchesCount: 0, totalCount: null, isLoading: false, error: null, page: 0, hasMore: true, isLoadingMore: false });
+        set({
+            matches: [],
+            newMatchesCount: 0,
+            totalCount: null,
+            isLoading: false,
+            error: null,
+            page: 0,
+            hasMore: true,
+            isLoadingMore: false,
+            archivedMatches: [],
+            archivedMatchIds: new Set<string>(),
+            showArchived: false,
+            isLoadingArchived: false,
+        });
+    },
+
+    // Archive methods
+    archiveMatch: async (matchId: string) => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) return;
+
+        // Optimistically update UI
+        const state = get();
+        const matchToArchive = state.matches.find(m => m.id === matchId);
+
+        if (matchToArchive) {
+            const newArchivedMatchIds = new Set(state.archivedMatchIds);
+            newArchivedMatchIds.add(matchId);
+
+            set({
+                matches: state.matches.filter(m => m.id !== matchId),
+                archivedMatches: [...state.archivedMatches, matchToArchive],
+                archivedMatchIds: newArchivedMatchIds,
+                totalCount: state.totalCount !== null ? state.totalCount - 1 : null,
+            });
+        }
+
+        // Insert archive record
+        const { error } = await supabase
+            .from("match_archives")
+            .insert({ match_id: matchId, user_id: userId });
+
+        if (error) {
+            console.error("Error archiving match:", error);
+            // Revert on error
+            if (matchToArchive) {
+                const revertArchivedIds = new Set(get().archivedMatchIds);
+                revertArchivedIds.delete(matchId);
+                const currentTotalCount = get().totalCount;
+                set({
+                    matches: [matchToArchive, ...get().matches],
+                    archivedMatches: get().archivedMatches.filter(m => m.id !== matchId),
+                    archivedMatchIds: revertArchivedIds,
+                    totalCount: currentTotalCount !== null ? currentTotalCount + 1 : null,
+                });
+            }
+        }
+    },
+
+    unarchiveMatch: async (matchId: string) => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) return;
+
+        // Optimistically update UI
+        const state = get();
+        const matchToUnarchive = state.archivedMatches.find(m => m.id === matchId);
+
+        if (matchToUnarchive) {
+            const newArchivedMatchIds = new Set(state.archivedMatchIds);
+            newArchivedMatchIds.delete(matchId);
+
+            set({
+                archivedMatches: state.archivedMatches.filter(m => m.id !== matchId),
+                matches: [matchToUnarchive, ...state.matches],
+                archivedMatchIds: newArchivedMatchIds,
+                totalCount: state.totalCount !== null ? state.totalCount + 1 : null,
+            });
+        }
+
+        // Delete archive record
+        const { error } = await supabase
+            .from("match_archives")
+            .delete()
+            .eq("match_id", matchId)
+            .eq("user_id", userId);
+
+        if (error) {
+            console.error("Error unarchiving match:", error);
+            // Revert on error
+            if (matchToUnarchive) {
+                const revertArchivedIds = new Set(get().archivedMatchIds);
+                revertArchivedIds.add(matchId);
+                const currentTotalCount = get().totalCount;
+                set({
+                    archivedMatches: [matchToUnarchive, ...get().archivedMatches],
+                    matches: get().matches.filter(m => m.id !== matchId),
+                    archivedMatchIds: revertArchivedIds,
+                    totalCount: currentTotalCount !== null ? currentTotalCount - 1 : null,
+                });
+            }
+        }
+    },
+
+    fetchArchivedMatches: async () => {
+        const userId = useAuthStore.getState().user?.id;
+        const coupleId = useAuthStore.getState().user?.couple_id;
+
+        if (!coupleId || !userId) return;
+
+        const state = get();
+        if (state.isLoadingArchived) return;
+
+        set({ isLoadingArchived: true });
+
+        try {
+            // Get archived match IDs for this user
+            const { data: archives, error: archiveError } = await supabase
+                .from("match_archives")
+                .select("match_id")
+                .eq("user_id", userId);
+
+            if (archiveError) throw archiveError;
+
+            const archivedIds = archives?.map(a => a.match_id) ?? [];
+
+            if (archivedIds.length === 0) {
+                set({ archivedMatches: [], isLoadingArchived: false });
+                return;
+            }
+
+            // Fetch the actual match data
+            const { data: matches, error: matchError } = await supabase
+                .from("matches")
+                .select(`
+                    *,
+                    question:questions(*)
+                `)
+                .in("id", archivedIds)
+                .eq("couple_id", coupleId)
+                .order("created_at", { ascending: false });
+
+            if (matchError) throw matchError;
+
+            // Fetch unread counts for archived matches
+            const matchIds = matches?.map(m => m.id) ?? [];
+            let unreadCounts: Record<string, number> = {};
+
+            if (matchIds.length > 0) {
+                const { data: unreadMessages } = await supabase
+                    .from("messages")
+                    .select("match_id")
+                    .in("match_id", matchIds)
+                    .neq("user_id", userId)
+                    .is("read_at", null);
+
+                unreadMessages?.forEach(msg => {
+                    unreadCounts[msg.match_id] = (unreadCounts[msg.match_id] || 0) + 1;
+                });
+            }
+
+            const archivedMatches = (matches ?? []).map(match => ({
+                ...match,
+                unreadCount: unreadCounts[match.id] || 0
+            }));
+
+            set({
+                archivedMatches,
+                isLoadingArchived: false,
+                archivedMatchIds: new Set(archivedIds),
+            });
+        } catch (err) {
+            console.error("Error fetching archived matches:", err);
+            set({ isLoadingArchived: false });
+        }
+    },
+
+    toggleShowArchived: () => {
+        const state = get();
+        const newShowArchived = !state.showArchived;
+
+        set({ showArchived: newShowArchived });
+
+        // Fetch archived matches if switching to archived view and not yet loaded
+        if (newShowArchived && state.archivedMatches.length === 0) {
+            get().fetchArchivedMatches();
+        }
+    },
+
+    isMatchArchived: (matchId: string) => {
+        return get().archivedMatchIds.has(matchId);
     },
 }));

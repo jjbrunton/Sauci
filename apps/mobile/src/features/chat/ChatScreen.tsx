@@ -1,21 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, Dimensions, Alert } from "react-native";
-import { Image } from "expo-image";
-import { Video, ResizeMode } from "expo-av";
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown, useAnimatedStyle } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
-import { InputBar, ChatHeader, ChatMessages, ReportMessageSheet } from "./components";
+import { InputBar, ChatHeader, ChatMessages, ReportMessageSheet, ChatSettingsSheet, FullScreenImageModal, FullScreenVideoModal } from "./components";
 import { useMediaUpload } from "./hooks/useMediaUpload";
 import { useMessageActions } from "./hooks/useMessageActions";
-import type { ReportReason } from "./types";
+import type { ReportReason, Match } from "./types";
 
 import { supabase } from "../../lib/supabase";
-import { useAuthStore, useMessageStore } from "../../store";
+import { useAuthStore, useMessageStore, useMatchStore } from "../../store";
 import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useMediaSaver } from "../../hooks";
 import { Database } from "../../types/supabase";
 import { GradientBackground } from "../../components/ui";
@@ -25,7 +22,6 @@ import { Events } from "../../lib/analytics";
 type Message = Database["public"]["Tables"]["messages"]["Row"];
 
 // Premium color palette for Chat
-const ACCENT = colors.premium.gold;
 const ROSE_RGBA = 'rgba(232, 164, 174, ';
 const ACCENT_RGBA = 'rgba(212, 175, 55, ';
 
@@ -36,8 +32,10 @@ export const ChatScreen: React.FC = () => {
     const insets = useSafeAreaInsets();
     const { user, partner } = useAuthStore();
     const { setActiveMatchId, markMatchMessagesAsRead } = useMessageStore();
-    const [match, setMatch] = useState<any>(null);
+    const { archiveMatch, unarchiveMatch, isMatchArchived } = useMatchStore();
+    const [match, setMatch] = useState<Match | null>(null);
     const [inputText, setInputText] = useState("");
+    const [showSettingsSheet, setShowSettingsSheet] = useState(false);
     const { uploading, uploadStatus, uploadMedia } = useMediaUpload(matchId, user?.id);
     const { saveMedia, saving: mediaSaving } = useMediaSaver();
     const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
@@ -81,6 +79,62 @@ export const ChatScreen: React.FC = () => {
         onReport: (message) => setReportingMessage(message),
     });
 
+    // Memoized navigation callbacks
+    const handleBack = useCallback(() => {
+        router.push('/(app)/matches');
+    }, [router]);
+
+    const handleOpenSettings = useCallback(() => {
+        setShowSettingsSheet(true);
+    }, []);
+
+    const handleCloseSettings = useCallback(() => {
+        setShowSettingsSheet(false);
+    }, []);
+
+    // Memoized modal callbacks
+    const handleCloseImage = useCallback(() => {
+        setFullScreenImage(null);
+    }, []);
+
+    const handleSaveImage = useCallback(() => {
+        if (fullScreenImage) {
+            saveMedia(fullScreenImage, 'image');
+        }
+    }, [fullScreenImage, saveMedia]);
+
+    const handleImageLoadStart = useCallback(() => {
+        setFullScreenImageLoading(true);
+    }, []);
+
+    const handleImageLoadEnd = useCallback(() => {
+        setFullScreenImageLoading(false);
+    }, []);
+
+    const handleCloseVideo = useCallback(() => {
+        setFullScreenVideo(null);
+    }, []);
+
+    const handleSaveVideo = useCallback(() => {
+        if (fullScreenVideo) {
+            saveMedia(fullScreenVideo, 'video');
+        }
+    }, [fullScreenVideo, saveMedia]);
+
+    const handleCloseReport = useCallback(() => {
+        setReportingMessage(null);
+    }, []);
+
+    // Memoized archive/unarchive callbacks
+    const handleArchive = useCallback(async () => {
+        await archiveMatch(matchId);
+        router.push('/(app)/matches');
+    }, [archiveMatch, matchId, router]);
+
+    const handleUnarchive = useCallback(async () => {
+        await unarchiveMatch(matchId);
+    }, [unarchiveMatch, matchId]);
+
     // Handle long press on message to show options
     const handleMessageLongPress = useCallback((message: Message, isMe: boolean) => {
         // Don't show options for already deleted messages
@@ -89,7 +143,7 @@ export const ChatScreen: React.FC = () => {
     }, [showDeleteOptions]);
 
     // Handle report submission
-    const handleSubmitReport = async (reason: ReportReason) => {
+    const handleSubmitReport = useCallback(async (reason: ReportReason) => {
         if (!reportingMessage || !user?.id) return;
 
         try {
@@ -127,7 +181,7 @@ export const ChatScreen: React.FC = () => {
             Alert.alert('Error', 'Failed to submit report');
             setReportingMessage(null);
         }
-    };
+    }, [reportingMessage, user?.id, deleteForSelf, setMessages]);
 
     // Track active chat to prevent notifications for current chat
     useFocusEffect(
@@ -169,15 +223,15 @@ export const ChatScreen: React.FC = () => {
         fetchMatch();
     }, [matchId]);
 
-    const handleTyping = (text: string) => {
+    const handleTyping = useCallback((text: string) => {
         setInputText(text);
 
         if (text.length > 0) {
             sendTypingEvent();
         }
-    };
+    }, [sendTypingEvent]);
 
-    const handleSend = async () => {
+    const handleSend = useCallback(async () => {
         if (!inputText.trim()) return;
         if (!user) return;
 
@@ -204,30 +258,30 @@ export const ChatScreen: React.FC = () => {
             Alert.alert("Delivery Failed", "Couldn't send message. Please check your connection.");
             setInputText(content);
         }
-    };
+    }, [inputText, user, matchId]);
 
-    const handlePickMedia = async () => {
+    const handlePickMedia = useCallback(async () => {
         const result = await pickMedia();
         if (result) {
             uploadMedia(result.uri, result.mediaType);
         }
-    };
+    }, [pickMedia, uploadMedia]);
 
-    const handleTakePhoto = async () => {
+    const handleTakePhoto = useCallback(async () => {
         const result = await takePhoto();
         if (result) {
             uploadMedia(result.uri, 'image');
         }
-    };
+    }, [takePhoto, uploadMedia]);
 
-    const handleRecordVideo = async () => {
+    const handleRecordVideo = useCallback(async () => {
         const result = await recordVideo();
         if (result) {
             uploadMedia(result.uri, 'video');
         }
-    };
+    }, [recordVideo, uploadMedia]);
 
-    const revealMessage = async (messageId: string) => {
+    const revealMessage = useCallback(async (messageId: string) => {
         const message = messages.find(m => m.id === messageId);
         const now = new Date();
         // Set expiration 30 days from now for videos only
@@ -250,7 +304,7 @@ export const ChatScreen: React.FC = () => {
                 media_expires_at: expiresAt
             })
             .eq("id", messageId);
-    };
+    }, [messages, setMessages]);
 
     return (
         <GradientBackground>
@@ -280,10 +334,9 @@ export const ChatScreen: React.FC = () => {
 
                 <ChatHeader
                     partner={partner}
-                    user={user}
-                    match={match}
                     insets={insets}
-                    onBack={() => router.push('/(app)/matches')}
+                    onBack={handleBack}
+                    onSettingsPress={handleOpenSettings}
                 />
 
 
@@ -327,123 +380,40 @@ export const ChatScreen: React.FC = () => {
             </KeyboardAvoidingView>
 
             {/* Full Screen Image Modal */}
-            <Modal
+            <FullScreenImageModal
+                uri={fullScreenImage}
                 visible={!!fullScreenImage}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setFullScreenImage(null)}
-            >
-                <View style={styles.fullScreenOverlay}>
-                    <TouchableOpacity
-                        style={styles.fullScreenSaveButton}
-                        onPress={() => fullScreenImage && saveMedia(fullScreenImage, 'image')}
-                        activeOpacity={0.8}
-                        disabled={mediaSaving}
-                    >
-                        <LinearGradient
-                            colors={gradients.premiumGold as [string, string]}
-                            style={styles.fullScreenCloseGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
-                            {mediaSaving ? (
-                                <ActivityIndicator size="small" color={colors.text} />
-                            ) : (
-                                <Ionicons name="download-outline" size={24} color={colors.text} />
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.fullScreenCloseButton}
-                        onPress={() => setFullScreenImage(null)}
-                        activeOpacity={0.8}
-                    >
-                        <LinearGradient
-                            colors={gradients.premiumGold as [string, string]}
-                            style={styles.fullScreenCloseGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
-                            <Ionicons name="close" size={24} color={colors.text} />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                    {fullScreenImageLoading && (
-                        <ActivityIndicator size="large" color={ACCENT} style={styles.fullScreenSpinner} />
-                    )}
-                    {fullScreenImage && (
-                        <Image
-                            source={{ uri: fullScreenImage }}
-                            style={styles.fullScreenImage}
-                            contentFit="contain"
-                            cachePolicy="disk"
-                            onLoadStart={() => setFullScreenImageLoading(true)}
-                            onLoadEnd={() => setFullScreenImageLoading(false)}
-                        />
-                    )}
-                </View>
-            </Modal>
+                loading={fullScreenImageLoading}
+                saving={mediaSaving}
+                onClose={handleCloseImage}
+                onSave={handleSaveImage}
+                onLoadStart={handleImageLoadStart}
+                onLoadEnd={handleImageLoadEnd}
+            />
 
             {/* Full Screen Video Modal */}
-            <Modal
+            <FullScreenVideoModal
+                uri={fullScreenVideo}
                 visible={!!fullScreenVideo}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setFullScreenVideo(null)}
-            >
-                <View style={styles.fullScreenOverlay}>
-                    <TouchableOpacity
-                        style={styles.fullScreenSaveButton}
-                        onPress={() => fullScreenVideo && saveMedia(fullScreenVideo, 'video')}
-                        activeOpacity={0.8}
-                        disabled={mediaSaving}
-                    >
-                        <LinearGradient
-                            colors={gradients.premiumGold as [string, string]}
-                            style={styles.fullScreenCloseGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
-                            {mediaSaving ? (
-                                <ActivityIndicator size="small" color={colors.text} />
-                            ) : (
-                                <Ionicons name="download-outline" size={24} color={colors.text} />
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.fullScreenCloseButton}
-                        onPress={() => setFullScreenVideo(null)}
-                        activeOpacity={0.8}
-                    >
-                        <LinearGradient
-                            colors={gradients.premiumGold as [string, string]}
-                            style={styles.fullScreenCloseGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        >
-                            <Ionicons name="close" size={24} color={colors.text} />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                    {fullScreenVideo && (
-                        <Video
-                            source={{ uri: fullScreenVideo }}
-                            style={styles.fullScreenVideo}
-                            resizeMode={ResizeMode.CONTAIN}
-                            useNativeControls
-                            shouldPlay
-                            isLooping={false}
-                        />
-                    )}
-                </View>
-            </Modal>
+                saving={mediaSaving}
+                onClose={handleCloseVideo}
+                onSave={handleSaveVideo}
+            />
 
             {/* Report Message Sheet */}
             <ReportMessageSheet
                 visible={reportingMessage !== null}
-                onClose={() => setReportingMessage(null)}
+                onClose={handleCloseReport}
                 onSubmit={handleSubmitReport}
+            />
+
+            {/* Chat Settings Sheet */}
+            <ChatSettingsSheet
+                visible={showSettingsSheet}
+                onClose={handleCloseSettings}
+                isArchived={isMatchArchived(matchId)}
+                onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
             />
         </GradientBackground>
     );
@@ -472,43 +442,6 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 140,
-    },
-    // Full Screen Modal
-    fullScreenOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.95)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    fullScreenCloseButton: {
-        position: "absolute",
-        top: 50,
-        right: 20,
-        zIndex: 10,
-    },
-    fullScreenSaveButton: {
-        position: "absolute",
-        top: 50,
-        left: 20,
-        zIndex: 10,
-    },
-    fullScreenCloseGradient: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    fullScreenImage: {
-        width: Dimensions.get("window").width,
-        height: Dimensions.get("window").height * 0.8,
-    },
-    fullScreenVideo: {
-        width: Dimensions.get("window").width,
-        height: Dimensions.get("window").height * 0.8,
-    },
-    fullScreenSpinner: {
-        position: "absolute",
     },
     inputWrapper: {
         overflow: 'hidden',

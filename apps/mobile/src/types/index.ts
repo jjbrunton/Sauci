@@ -100,6 +100,14 @@ export interface MatchWithQuestion extends Match {
     question: Question;
 }
 
+// Match archive (per-user)
+export interface MatchArchive {
+    id: string;
+    match_id: string;
+    user_id: string;
+    archived_at: string;
+}
+
 // Pack with progress info
 export interface PackProgress {
     pack: QuestionPack;

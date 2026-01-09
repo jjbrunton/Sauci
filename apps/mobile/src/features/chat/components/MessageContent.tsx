@@ -22,18 +22,16 @@ export interface MessageContentProps {
     revealMessage: (id: string) => void;
     onImagePress: (uri: string) => void;
     onVideoFullScreen: (uri: string) => void;
-    onLongPress?: () => void;
 }
 
-export function MessageContent({
+const MessageContentComponent: React.FC<MessageContentProps> = ({
     item,
     isMe,
     currentUserId,
     revealMessage,
     onImagePress,
     onVideoFullScreen,
-    onLongPress,
-}: MessageContentProps) {
+}) => {
     // Check if message was deleted for everyone
     if (item.deleted_at) {
         return (
@@ -50,7 +48,7 @@ export function MessageContent({
         );
     }
 
-    const isVideo = (item as any).media_type === 'video';
+    const isVideo = item.media_type === 'video';
     const isViewed = !!item.media_viewed_at;
     const isRecipientHidden = !isMe && !isViewed;
 
@@ -87,7 +85,7 @@ export function MessageContent({
     }, [item.media_path, isRecipientHidden]);
 
     // Handle expired videos
-    const isExpired = !!(item as any).media_expired;
+    const isExpired = !!item.media_expired;
 
     if (isExpired && isVideo) {
         return (
@@ -240,7 +238,10 @@ export function MessageContent({
             <MessageMeta item={item} isMe={isMe} />
         </>
     );
-}
+};
+
+// Wrap with React.memo for performance
+export const MessageContent = React.memo(MessageContentComponent);
 
 const styles = StyleSheet.create({
     deletedContainer: {
@@ -347,5 +348,3 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
     },
 });
-
-export default MessageContent;

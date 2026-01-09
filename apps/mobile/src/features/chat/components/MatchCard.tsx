@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,24 +6,38 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { DecorativeSeparator } from '../../../components/ui';
 import { colors, gradients, spacing, radius, typography } from '../../../theme';
+import { Match } from '../types';
 
 // Premium color palette
 const ACCENT = colors.premium.gold;
 const ACCENT_RGBA = 'rgba(212, 175, 55, ';
 
 interface MatchCardProps {
-    match: any;
+    match: Match | null;
     user: { id: string } | null;
 }
 
-export const MatchCard: React.FC<MatchCardProps> = ({ match, user }) => {
+const MatchCardComponent: React.FC<MatchCardProps> = ({ match, user }) => {
+    // Track if animation has already played to prevent re-animation on re-renders
+    const hasAnimatedRef = useRef(false);
+    const shouldAnimate = !hasAnimatedRef.current;
+
+    // Mark as animated after first render
+    if (!hasAnimatedRef.current) {
+        hasAnimatedRef.current = true;
+    }
     if (!match?.question) return null;
 
     const isYesYes = match?.match_type === 'yes_yes';
 
+    // Only animate on first render to prevent re-animation when list re-renders
+    const enteringAnimation = shouldAnimate
+        ? FadeInDown.delay(100).duration(400).springify()
+        : undefined;
+
     return (
         <Animated.View
-            entering={FadeInDown.delay(100).duration(400).springify()}
+            entering={enteringAnimation}
             style={styles.matchCardContainer}
         >
             <View style={styles.matchCard}>
@@ -66,19 +80,19 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, user }) => {
                         {(() => {
                             // Sort responses by created_at to determine who answered first
                             const sortedResponses = [...match.responses].sort(
-                                (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                                (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                             );
-                            const isTwoPart = !!match.question.partner_text;
+                            const isTwoPart = !!match.question?.partner_text;
 
-                            return sortedResponses.map((response: any, index: number) => {
+                            return sortedResponses.map((response, index) => {
                                 const isUser = response.user_id === user?.id;
                                 const isYes = response.answer === 'yes';
                                 const name = isUser ? 'You' : (response.profiles?.name?.split(' ')[0] || 'Partner');
 
                                 // First responder sees main text, second sees partner_text
                                 const questionText = isTwoPart && index === 1
-                                    ? match.question.partner_text
-                                    : match.question.text;
+                                    ? match.question?.partner_text
+                                    : match.question?.text;
 
                                 return (
                                     <View key={response.user_id} style={styles.responseCard}>
@@ -129,6 +143,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, user }) => {
         </Animated.View>
     );
 };
+
+// Wrap with React.memo for performance
+export const MatchCard = React.memo(MatchCardComponent);
 
 const styles = StyleSheet.create({
     matchCardContainer: {

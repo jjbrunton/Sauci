@@ -130,6 +130,14 @@ export interface Message {
     category?: 'Neutral' | 'Romantic' | 'Playful' | 'Explicit' | string | null;
 }
 
+// Match archive (per-user)
+export interface MatchArchive {
+    id: string;
+    match_id: string;
+    user_id: string;
+    archived_at: string;
+}
+
 // Master key for admin E2EE access
 export interface MasterKey {
     id: string;

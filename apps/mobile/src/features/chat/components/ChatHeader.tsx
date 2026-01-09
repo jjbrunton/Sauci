@@ -15,16 +15,16 @@ const ACCENT_RGBA = 'rgba(212, 175, 55, ';
 
 interface ChatHeaderProps {
     partner: Profile | null;
-    user: { id: string } | null;
-    match: any; // Kept for compatibility but unused
     insets: EdgeInsets;
     onBack: () => void;
+    onSettingsPress?: () => void;
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({
+const ChatHeaderComponent: React.FC<ChatHeaderProps> = ({
     partner,
     insets,
     onBack,
+    onSettingsPress,
 }) => {
     return (
         <Animated.View
@@ -50,6 +50,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 onPress={onBack}
                 style={styles.backButton}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Go back to matches"
             >
                 <View style={styles.backButtonInner}>
                     <Ionicons name="chevron-back" size={20} color={ACCENT} />
@@ -86,13 +88,30 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 </View>
             </View>
 
-            <View style={styles.headerSpacer} />
+            {onSettingsPress ? (
+                <TouchableOpacity
+                    onPress={onSettingsPress}
+                    style={styles.settingsButton}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Chat settings"
+                >
+                    <View style={styles.backButtonInner}>
+                        <Ionicons name="ellipsis-horizontal" size={20} color={ACCENT} />
+                    </View>
+                </TouchableOpacity>
+            ) : (
+                <View style={styles.headerSpacer} />
+            )}
 
             {/* Bottom border */}
             <View style={styles.headerBorderBottom} />
         </Animated.View>
     );
 };
+
+// Wrap with React.memo for performance
+export const ChatHeader = React.memo(ChatHeaderComponent);
 
 const styles = StyleSheet.create({
     header: {
@@ -178,6 +197,12 @@ const styles = StyleSheet.create({
     },
     headerSpacer: {
         width: 40,
+    },
+    settingsButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerBorderBottom: {
         position: 'absolute',

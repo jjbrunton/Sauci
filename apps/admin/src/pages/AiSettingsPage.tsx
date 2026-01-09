@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { KeyboardEvent } from 'react';
 import { useAiConfig, AiConfig, CouncilGenerator } from '@/hooks/useAiConfig';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { Save, Eye, EyeOff, AlertTriangle, Bot, Sparkles, RefreshCw, Plus, Trash2, Package, Cherry, Shield } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Save, Eye, EyeOff, AlertTriangle, Bot, Sparkles, RefreshCw, Plus, Trash2, Package, Cherry, Shield, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ModelCombobox } from '@/components/ModelCombobox';
+
+type ListField = 'heuristic_whitelist' | 'heuristic_keyword_triggers';
+
+const parseListValue = (value?: string | null): string[] => {
+    if (!value) return [];
+    return value
+        .split(/[\n,]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+};
+
+const appendUniqueItem = (items: string[], value: string): string[] => {
+    const trimmed = value.trim();
+    if (!trimmed) return items;
+    const existing = new Set(items.map((item) => item.toLowerCase()));
+    if (existing.has(trimmed.toLowerCase())) return items;
+    return [...items, trimmed];
+};
+
+const removeItem = (items: string[], value: string): string[] => {
+    const target = value.toLowerCase();
+    return items.filter((item) => item.toLowerCase() !== target);
+};
 
 export function AiSettingsPage() {
     const { hasPermission, isSuperAdmin } = useAuth();
@@ -24,6 +49,8 @@ export function AiSettingsPage() {
     const [showApiKey, setShowApiKey] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
+    const [whitelistInput, setWhitelistInput] = useState('');
+    const [keywordInput, setKeywordInput] = useState('');
 
     // Permission check - only super admins or those with MANAGE_AI_CONFIG can access
     const canManage = isSuperAdmin || hasPermission(PERMISSION_KEYS.MANAGE_AI_CONFIG);
@@ -51,6 +78,16 @@ export function AiSettingsPage() {
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
                 classifier_prompt: config.classifier_prompt || '',
+                heuristics_enabled: config.heuristics_enabled ?? false,
+                heuristic_min_text_length: config.heuristic_min_text_length ?? 12,
+                heuristic_whitelist_max_length: config.heuristic_whitelist_max_length ?? 30,
+                heuristic_skip_if_no_alnum: config.heuristic_skip_if_no_alnum ?? true,
+                heuristic_skip_media_without_text: config.heuristic_skip_media_without_text ?? false,
+                heuristic_record_reason: config.heuristic_record_reason ?? false,
+                heuristic_use_default_whitelist: config.heuristic_use_default_whitelist ?? true,
+                heuristic_use_default_keywords: config.heuristic_use_default_keywords ?? true,
+                heuristic_whitelist: config.heuristic_whitelist || '',
+                heuristic_keyword_triggers: config.heuristic_keyword_triggers || '',
             });
             setHasChanges(false);
         }
@@ -59,6 +96,46 @@ export function AiSettingsPage() {
     const handleChange = <K extends keyof AiConfig>(field: K, value: AiConfig[K]) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         setHasChanges(true);
+    };
+
+    const whitelistItems = parseListValue(formData.heuristic_whitelist ?? '');
+    const keywordItems = parseListValue(formData.heuristic_keyword_triggers ?? '');
+
+    const updateListField = (field: ListField, items: string[]) => {
+        handleChange(field, items.length > 0 ? items.join('\n') : '');
+    };
+
+    const handleAddListItem = (
+        field: ListField,
+        value: string,
+        clearValue: (next: string) => void
+    ) => {
+        const current = field === 'heuristic_whitelist' ? whitelistItems : keywordItems;
+        const nextItems = appendUniqueItem(current, value);
+        if (nextItems !== current) {
+            updateListField(field, nextItems);
+        }
+        if (value.trim()) {
+            clearValue('');
+        }
+    };
+
+    const handleRemoveListItem = (field: ListField, value: string) => {
+        const current = field === 'heuristic_whitelist' ? whitelistItems : keywordItems;
+        const nextItems = removeItem(current, value);
+        updateListField(field, nextItems);
+    };
+
+    const handleListKeyDown = (
+        event: KeyboardEvent<HTMLInputElement>,
+        field: ListField,
+        value: string,
+        clearValue: (next: string) => void
+    ) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleAddListItem(field, value, clearValue);
+        }
     };
 
     const handleSave = async () => {
@@ -99,6 +176,16 @@ export function AiSettingsPage() {
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
                 classifier_prompt: config.classifier_prompt || '',
+                heuristics_enabled: config.heuristics_enabled ?? false,
+                heuristic_min_text_length: config.heuristic_min_text_length ?? 12,
+                heuristic_whitelist_max_length: config.heuristic_whitelist_max_length ?? 30,
+                heuristic_skip_if_no_alnum: config.heuristic_skip_if_no_alnum ?? true,
+                heuristic_skip_media_without_text: config.heuristic_skip_media_without_text ?? false,
+                heuristic_record_reason: config.heuristic_record_reason ?? false,
+                heuristic_use_default_whitelist: config.heuristic_use_default_whitelist ?? true,
+                heuristic_use_default_keywords: config.heuristic_use_default_keywords ?? true,
+                heuristic_whitelist: config.heuristic_whitelist || '',
+                heuristic_keyword_triggers: config.heuristic_keyword_triggers || '',
             });
             setHasChanges(false);
         }
@@ -304,6 +391,223 @@ export function AiSettingsPage() {
                         <p className="text-xs text-muted-foreground">
                             Instructions for the AI classifier.
                         </p>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label>Enable Heuristic Pre-Filter</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Skip AI calls for low-risk messages using simple rules
+                                </p>
+                            </div>
+                            <Switch
+                                checked={formData.heuristics_enabled ?? false}
+                                onCheckedChange={(checked) => handleChange('heuristics_enabled', checked)}
+                            />
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="heuristic-min-length">Minimum Text Length</Label>
+                                <Input
+                                    id="heuristic-min-length"
+                                    type="number"
+                                    min={0}
+                                    value={formData.heuristic_min_text_length ?? 12}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            'heuristic_min_text_length',
+                                            e.target.value === '' ? null : Number(e.target.value)
+                                        )
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Skip AI for shorter messages without media
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="heuristic-whitelist-max">Whitelist Max Length</Label>
+                                <Input
+                                    id="heuristic-whitelist-max"
+                                    type="number"
+                                    min={0}
+                                    value={formData.heuristic_whitelist_max_length ?? 30}
+                                    onChange={(e) =>
+                                        handleChange(
+                                            'heuristic_whitelist_max_length',
+                                            e.target.value === '' ? null : Number(e.target.value)
+                                        )
+                                    }
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Only apply whitelist to messages below this length
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label>Skip If No Letters/Numbers</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Treat emoji-only or punctuation-only messages as safe
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.heuristic_skip_if_no_alnum ?? true}
+                                    onCheckedChange={(checked) => handleChange('heuristic_skip_if_no_alnum', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label>Skip Media Without Text</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Skip AI when only media is present
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.heuristic_skip_media_without_text ?? false}
+                                    onCheckedChange={(checked) => handleChange('heuristic_skip_media_without_text', checked)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label>Use Default Whitelist</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Include built-in common phrases
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.heuristic_use_default_whitelist ?? true}
+                                    onCheckedChange={(checked) => handleChange('heuristic_use_default_whitelist', checked)}
+                                />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label>Use Default Keywords</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Include built-in safety keywords
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.heuristic_use_default_keywords ?? true}
+                                    onCheckedChange={(checked) => handleChange('heuristic_use_default_keywords', checked)}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label>Record Heuristic Reason</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Store skip reason in flag_reason for debugging
+                                </p>
+                            </div>
+                            <Switch
+                                checked={formData.heuristic_record_reason ?? false}
+                                onCheckedChange={(checked) => handleChange('heuristic_record_reason', checked)}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Custom Whitelist</Label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Input
+                                    value={whitelistInput}
+                                    onChange={(e) => setWhitelistInput(e.target.value)}
+                                    onKeyDown={(event) =>
+                                        handleListKeyDown(event, 'heuristic_whitelist', whitelistInput, setWhitelistInput)
+                                    }
+                                    placeholder="Add phrase"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        handleAddListItem('heuristic_whitelist', whitelistInput, setWhitelistInput)
+                                    }
+                                    disabled={!whitelistInput.trim()}
+                                >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add
+                                </Button>
+                            </div>
+                            {whitelistItems.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {whitelistItems.map((item) => (
+                                        <Badge key={item} variant="secondary" className="flex items-center gap-1">
+                                            <span className="font-mono text-xs">{item}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveListItem('heuristic_whitelist', item)}
+                                                className="rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                                                aria-label={`Remove ${item}`}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">No phrases added yet.</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                                Messages matching these phrases are marked safe
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Keyword Triggers</Label>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Input
+                                    value={keywordInput}
+                                    onChange={(e) => setKeywordInput(e.target.value)}
+                                    onKeyDown={(event) =>
+                                        handleListKeyDown(event, 'heuristic_keyword_triggers', keywordInput, setKeywordInput)
+                                    }
+                                    placeholder="Add keyword"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        handleAddListItem('heuristic_keyword_triggers', keywordInput, setKeywordInput)
+                                    }
+                                    disabled={!keywordInput.trim()}
+                                >
+                                    <Plus className="h-4 w-4 mr-1" />
+                                    Add
+                                </Button>
+                            </div>
+                            {keywordItems.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {keywordItems.map((item) => (
+                                        <Badge key={item} variant="secondary" className="flex items-center gap-1">
+                                            <span className="font-mono text-xs">{item}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveListItem('heuristic_keyword_triggers', item)}
+                                                className="rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                                                aria-label={`Remove ${item}`}
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">No keywords added yet.</p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                                If any term appears, the message will be sent to AI
+                            </p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

@@ -18,6 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
 import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
+import { SwipeableMatchItem } from "../../src/components/matches";
 import { useAmbientOrbAnimation } from "../../src/hooks";
 import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
 import { MatchesTutorial } from "../../src/components/tutorials";
@@ -37,7 +38,23 @@ const HEADER_SCROLL_DISTANCE = 100;
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
 
 export default function MatchesScreen() {
-    const { matches, fetchMatches, markAllAsSeen, isLoading, hasMore, isLoadingMore, totalCount } = useMatchStore();
+    const {
+        matches,
+        fetchMatches,
+        markAllAsSeen,
+        isLoading,
+        hasMore,
+        isLoadingMore,
+        totalCount,
+        // Archive state and methods
+        archivedMatches,
+        showArchived,
+        toggleShowArchived,
+        archiveMatch,
+        unarchiveMatch,
+        isLoadingArchived,
+        fetchArchivedMatches,
+    } = useMatchStore();
     const { user } = useAuthStore();
     const router = useRouter();
     const { width } = useWindowDimensions();
@@ -150,84 +167,97 @@ export default function MatchesScreen() {
 
         const isYesYes = item.match_type === "yes_yes";
 
+        const handleArchive = async () => {
+            if (showArchived) {
+                await unarchiveMatch(item.id);
+            } else {
+                await archiveMatch(item.id);
+            }
+        };
+
         return (
             <Animated.View entering={FadeInRight.delay(index * 50).duration(300)}>
-                <TouchableOpacity
-                    onPress={() => router.push(`/chat/${item.id}`)}
-                    activeOpacity={0.8}
+                <SwipeableMatchItem
+                    onArchive={handleArchive}
+                    isArchived={showArchived}
                 >
-                    <View style={styles.matchCardPremium}>
-                        {/* Subtle gradient background */}
-                        <LinearGradient
-                            colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
-                            style={StyleSheet.absoluteFill}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                        {/* Top silk highlight */}
-                        <LinearGradient
-                            colors={[`${ACCENT_RGBA}0.06)`, 'transparent']}
-                            style={styles.cardSilkHighlight}
-                            start={{ x: 0.5, y: 0 }}
-                            end={{ x: 0.5, y: 1 }}
-                        />
+                    <TouchableOpacity
+                        onPress={() => router.push(`/chat/${item.id}`)}
+                        activeOpacity={0.8}
+                    >
+                        <View style={styles.matchCardPremium}>
+                            {/* Subtle gradient background */}
+                            <LinearGradient
+                                colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
+                                style={StyleSheet.absoluteFill}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                            />
+                            {/* Top silk highlight */}
+                            <LinearGradient
+                                colors={[`${ACCENT_RGBA}0.06)`, 'transparent']}
+                                style={styles.cardSilkHighlight}
+                                start={{ x: 0.5, y: 0 }}
+                                end={{ x: 0.5, y: 1 }}
+                            />
 
-                        <View style={styles.matchRow}>
-                            {/* Premium icon container */}
-                            <View style={[
-                                styles.iconContainerPremium,
-                                isYesYes && styles.iconContainerYesYes
-                            ]}>
-                                <Ionicons
-                                    name={isYesYes ? "heart" : "heart-half"}
-                                    size={20}
-                                    color={isYesYes ? ACCENT : ROSE}
-                                />
-                            </View>
+                            <View style={styles.matchRow}>
+                                {/* Premium icon container */}
+                                <View style={[
+                                    styles.iconContainerPremium,
+                                    isYesYes && styles.iconContainerYesYes
+                                ]}>
+                                    <Ionicons
+                                        name={isYesYes ? "heart" : "heart-half"}
+                                        size={20}
+                                        color={isYesYes ? ACCENT : ROSE}
+                                    />
+                                </View>
 
-                            <View style={styles.content}>
-                                <Text style={styles.questionTextPremium} numberOfLines={2}>
-                                    {userText}
-                                </Text>
-                                {item.question.partner_text && (
-                                    <Text style={styles.partnerTextPremium} numberOfLines={1}>
-                                        Partner: {partnerText}
+                                <View style={styles.content}>
+                                    <Text style={styles.questionTextPremium} numberOfLines={2}>
+                                        {userText}
                                     </Text>
-                                )}
-                                <View style={styles.metaRow}>
-                                    <View style={[
-                                        styles.tagPremium,
-                                        isYesYes && styles.tagPremiumHighlight
-                                    ]}>
-                                        <Text style={[
-                                            styles.tagTextPremium,
-                                            isYesYes && styles.tagTextPremiumHighlight
+                                    {item.question.partner_text && (
+                                        <Text style={styles.partnerTextPremium} numberOfLines={1}>
+                                            Partner: {partnerText}
+                                        </Text>
+                                    )}
+                                    <View style={styles.metaRow}>
+                                        <View style={[
+                                            styles.tagPremium,
+                                            isYesYes && styles.tagPremiumHighlight
                                         ]}>
-                                            {isYesYes ? "YES + YES" : "YES + MAYBE"}
+                                            <Text style={[
+                                                styles.tagTextPremium,
+                                                isYesYes && styles.tagTextPremiumHighlight
+                                            ]}>
+                                                {isYesYes ? "YES + YES" : "YES + MAYBE"}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.datePremium}>
+                                            {new Date(item.created_at).toLocaleDateString()}
                                         </Text>
                                     </View>
-                                    <Text style={styles.datePremium}>
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                    </Text>
                                 </View>
-                            </View>
 
-                            <View style={styles.rightSection}>
-                                {item.unreadCount > 0 && (
-                                    <View style={styles.unreadBadgePremium}>
-                                        <Ionicons name="chatbubble" size={10} color={colors.text} />
+                                <View style={styles.rightSection}>
+                                    {item.unreadCount > 0 && (
+                                        <View style={styles.unreadBadgePremium}>
+                                            <Ionicons name="chatbubble" size={10} color={colors.text} />
+                                        </View>
+                                    )}
+                                    <View style={styles.chevronContainerPremium}>
+                                        <Ionicons name="chevron-forward" size={16} color={`${ACCENT_RGBA}0.6)`} />
                                     </View>
-                                )}
-                                <View style={styles.chevronContainerPremium}>
-                                    <Ionicons name="chevron-forward" size={16} color={`${ACCENT_RGBA}0.6)`} />
                                 </View>
                             </View>
-                        </View>
 
-                        {/* Premium border */}
-                        <View style={styles.cardPremiumBorder} pointerEvents="none" />
-                    </View>
-                </TouchableOpacity>
+                            {/* Premium border */}
+                            <View style={styles.cardPremiumBorder} pointerEvents="none" />
+                        </View>
+                    </TouchableOpacity>
+                </SwipeableMatchItem>
             </Animated.View>
         );
     };
@@ -296,7 +326,7 @@ export default function MatchesScreen() {
                 </View>
 
                 <AnimatedFlatList
-                    data={matches}
+                    data={showArchived ? archivedMatches : matches}
                     renderItem={renderItem}
                     keyExtractor={(item: any) => item.id}
                     contentContainerStyle={[styles.list, isWideScreen && styles.listWide]}
@@ -328,50 +358,122 @@ export default function MatchesScreen() {
                                 {/* Decorative separator */}
                                 <DecorativeSeparator variant="gold" />
 
+                                {/* Filter toggle */}
+                                <View style={styles.filterContainer}>
+                                    <TouchableOpacity
+                                        style={[styles.filterTab, !showArchived && styles.filterTabActive]}
+                                        onPress={() => showArchived && toggleShowArchived()}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons
+                                            name="heart"
+                                            size={14}
+                                            color={!showArchived ? ACCENT : colors.textTertiary}
+                                        />
+                                        <Text style={[styles.filterTabText, !showArchived && styles.filterTabTextActive]}>
+                                            Active
+                                        </Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.filterTab, showArchived && styles.filterTabActive]}
+                                        onPress={() => {
+                                            if (!showArchived) {
+                                                toggleShowArchived();
+                                            }
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        {isLoadingArchived ? (
+                                            <ActivityIndicator size="small" color={ACCENT} />
+                                        ) : (
+                                            <>
+                                                <Ionicons
+                                                    name="archive-outline"
+                                                    size={14}
+                                                    color={showArchived ? ACCENT : colors.textTertiary}
+                                                />
+                                                <Text style={[styles.filterTabText, showArchived && styles.filterTabTextActive]}>
+                                                    Archived
+                                                </Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+
                                 {/* Count badge */}
                                 <View style={styles.countBadgePremium}>
-                                    <Ionicons name="heart" size={12} color={ACCENT} />
-                                    <Text style={styles.countTextPremium}>{totalCount ?? matches.length} {(totalCount ?? matches.length) === 1 ? 'MATCH' : 'MATCHES'}</Text>
+                                    <Ionicons name={showArchived ? "archive" : "heart"} size={12} color={ACCENT} />
+                                    <Text style={styles.countTextPremium}>
+                                        {showArchived
+                                            ? `${archivedMatches.length} ARCHIVED`
+                                            : `${totalCount ?? matches.length} ${(totalCount ?? matches.length) === 1 ? 'MATCH' : 'MATCHES'}`
+                                        }
+                                    </Text>
                                 </View>
                             </View>
                         </Animated.View>
                     }
                     ListEmptyComponent={
-                        <Animated.View
-                            entering={FadeInUp.duration(600).springify()}
-                            style={styles.emptyContent}
-                        >
-                            {/* Description */}
-                            <Text style={styles.emptyDescription}>
-                                Answer questions together to discover what you both enjoy. Matches appear when you agree!
-                            </Text>
-
-                            {/* Feature hints */}
-                            <View style={styles.emptyFeatures}>
-                                <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="heart" size={16} color={ACCENT} />
-                                    <Text style={styles.emptyFeatureText}>Swipe right for yes</Text>
-                                </View>
-                                <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="sparkles" size={16} color={ACCENT} />
-                                    <Text style={styles.emptyFeatureText}>Match when you both agree</Text>
-                                </View>
-                                <View style={styles.emptyFeatureItem}>
-                                    <Ionicons name="chatbubbles-outline" size={16} color={ACCENT} />
-                                    <Text style={styles.emptyFeatureText}>Chat about your matches</Text>
-                                </View>
-                            </View>
-
-                            {/* Bottom teaser */}
-                            <Text style={styles.emptyTeaser}>Your first match is just a swipe away</Text>
-
-                            <GlassButton
-                                onPress={() => router.push("/(app)/swipe")}
-                                style={{ marginTop: spacing.lg }}
+                        showArchived ? (
+                            <Animated.View
+                                entering={FadeInUp.duration(600).springify()}
+                                style={styles.emptyContent}
                             >
-                                Start Swiping
-                            </GlassButton>
-                        </Animated.View>
+                                {/* Archive icon */}
+                                <View style={styles.emptyIconContainer}>
+                                    <Ionicons name="archive-outline" size={48} color={ACCENT} />
+                                </View>
+
+                                {/* Description */}
+                                <Text style={styles.emptyTitle}>No Archived Matches</Text>
+                                <Text style={styles.emptyDescription}>
+                                    Matches you archive will appear here. Swipe left on any match to archive it.
+                                </Text>
+
+                                <GlassButton
+                                    onPress={() => toggleShowArchived()}
+                                    style={{ marginTop: spacing.lg }}
+                                >
+                                    View Active Matches
+                                </GlassButton>
+                            </Animated.View>
+                        ) : (
+                            <Animated.View
+                                entering={FadeInUp.duration(600).springify()}
+                                style={styles.emptyContent}
+                            >
+                                {/* Description */}
+                                <Text style={styles.emptyDescription}>
+                                    Answer questions together to discover what you both enjoy. Matches appear when you agree!
+                                </Text>
+
+                                {/* Feature hints */}
+                                <View style={styles.emptyFeatures}>
+                                    <View style={styles.emptyFeatureItem}>
+                                        <Ionicons name="heart" size={16} color={ACCENT} />
+                                        <Text style={styles.emptyFeatureText}>Swipe right for yes</Text>
+                                    </View>
+                                    <View style={styles.emptyFeatureItem}>
+                                        <Ionicons name="sparkles" size={16} color={ACCENT} />
+                                        <Text style={styles.emptyFeatureText}>Match when you both agree</Text>
+                                    </View>
+                                    <View style={styles.emptyFeatureItem}>
+                                        <Ionicons name="chatbubbles-outline" size={16} color={ACCENT} />
+                                        <Text style={styles.emptyFeatureText}>Chat about your matches</Text>
+                                    </View>
+                                </View>
+
+                                {/* Bottom teaser */}
+                                <Text style={styles.emptyTeaser}>Your first match is just a swipe away</Text>
+
+                                <GlassButton
+                                    onPress={() => router.push("/(app)/swipe")}
+                                    style={{ marginTop: spacing.lg }}
+                                >
+                                    Start Swiping
+                                </GlassButton>
+                            </Animated.View>
+                        )
                     }
                 />
             </View>
@@ -477,6 +579,36 @@ const styles = StyleSheet.create({
         ...typography.largeTitle,
         color: colors.text,
         textAlign: 'center',
+    },
+    // Filter toggle
+    filterContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: radius.lg,
+        padding: 4,
+        marginBottom: spacing.md,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.08)',
+    },
+    filterTab: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        gap: spacing.xs,
+    },
+    filterTabActive: {
+        backgroundColor: `${ACCENT_RGBA}0.15)`,
+    },
+    filterTabText: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        fontWeight: '500',
+    },
+    filterTabTextActive: {
+        color: ACCENT,
+        fontWeight: '600',
     },
     countBadgePremium: {
         flexDirection: 'row',
@@ -627,6 +759,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xl,
+    },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        borderWidth: 1,
+        borderColor: `${ACCENT_RGBA}0.2)`,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+        ...typography.title3,
+        color: colors.text,
+        marginBottom: spacing.sm,
     },
     emptyDescription: {
         ...typography.body,
