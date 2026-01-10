@@ -42,6 +42,7 @@ export interface Question {
     target_user_genders?: string[] | null;
     required_props?: string[] | null;
     created_at: string;
+    deleted_at?: string | null;
 }
 
 // User's answer type

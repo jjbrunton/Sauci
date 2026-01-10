@@ -17,86 +17,66 @@ async function run() {
   console.error(`[Bridge] Connecting to ${url.href}`);
   console.error(`[Bridge] Using API Key (length: ${apiKey.length})`);
 
-  // 1. Diagnostic Fetch
-  try {
-    const response = await fetch(url.href, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Accept': 'text/event-stream'
-      }
-    });
-
-    console.error(`[Bridge] Diagnostic fetch status: ${response.status} ${response.statusText}`);
-    
-    if (response.status === 401) {
-      console.error('[Bridge] Critical: Server returned 401 Unauthorized.');
-      console.error('[Bridge] Please verify SAUCI_MCP_API_KEY environment variable on the server matches the key in Claude Desktop config.');
-      const text = await response.text();
-      console.error(`[Bridge] Server response: ${text}`);
-      process.exit(1);
-    } else if (!response.ok) {
-       console.error(`[Bridge] Diagnostic fetch failed with status ${response.status}`);
-       const text = await response.text();
-       console.error(`[Bridge] Server response: ${text}`);
-    } else {
-       console.error('[Bridge] Diagnostic fetch successful (connection accepted). Proceeding with StreamableHTTP.');
-       // Cancel body to close connection
-       await response.body?.cancel();
-    }
-  } catch (error) {
-    console.error('[Bridge] Diagnostic fetch failed with network error:', error);
-  }
-
   const local = new StdioServerTransport();
-  
+
   const remote = new StreamableHTTPClientTransport(url, {
     requestInit: {
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'Accept': 'application/json, text/event-stream'
       }
     }
   });
 
-  // Bridge messages
+  // Bridge messages from Claude Desktop to remote server
   local.onmessage = async (message) => {
+    console.error(`[Bridge] -> Remote: ${JSON.stringify(message).slice(0, 100)}...`);
     try {
       await remote.send(message);
     } catch (err) {
-      console.error('Failed to forward message to remote:', err);
+      console.error('[Bridge] Failed to forward message to remote:', err);
     }
   };
 
+  // Bridge messages from remote server to Claude Desktop
   remote.onmessage = async (message) => {
+    console.error(`[Bridge] <- Remote: ${JSON.stringify(message).slice(0, 100)}...`);
     try {
       await local.send(message);
     } catch (err) {
-      console.error('Failed to forward message to local:', err);
+      console.error('[Bridge] Failed to forward message to local:', err);
     }
   };
 
   remote.onerror = (err) => {
-    console.error('Remote transport error:', err);
-    // Don't exit process immediately on error, allow reconnection logic if handled by transport,
-    // but StreamableHTTPClientTransport usually handles its own reconnection for SSE.
-    // If it's a fatal error, maybe we should exit?
-    // Let's log it.
+    console.error('[Bridge] Remote transport error:', err);
   };
 
   local.onerror = (err) => {
-    console.error('Local transport error:', err);
+    console.error('[Bridge] Local transport error:', err);
     process.exit(1);
   };
 
-  // Start connections
+  local.onclose = () => {
+    console.error('[Bridge] Local transport closed');
+    process.exit(0);
+  };
+
+  remote.onclose = () => {
+    console.error('[Bridge] Remote transport closed');
+  };
+
+  // Start both transports
+  console.error('[Bridge] Starting remote transport...');
   await remote.start();
-  
-  // Keep process alive
-  process.stdin.resume();
+  console.error('[Bridge] Remote transport started');
+
+  console.error('[Bridge] Starting local transport...');
+  await local.start();
+  console.error('[Bridge] Local transport started - ready for messages');
 }
 
 run().catch(err => {
-  console.error('Bridge error:', err);
+  console.error('[Bridge] Fatal error:', err);
   process.exit(1);
 });
-

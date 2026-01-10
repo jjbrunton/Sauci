@@ -149,6 +149,11 @@ export default function MatchesScreen() {
     }, [matches.length]);
 
     const renderItem = ({ item, index }: { item: any; index: number }) => {
+        // Skip rendering if question was deleted
+        if (!item.question) {
+            return null;
+        }
+
         const userResponse = item.responses?.find((r: any) => r.user_id === user?.id);
         const partnerResponse = item.responses?.find((r: any) => r.user_id !== user?.id);
 

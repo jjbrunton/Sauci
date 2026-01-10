@@ -39,6 +39,9 @@ Each question has:
 - `text` - What Partner A sees
 - `partner_text` - What Partner B sees (can be NULL)
 - `intensity` - 1-5 scale
+- `allowed_couple_genders` - Which couple types see this (NULL = all)
+- `target_user_genders` - Which gender initiates (NULL = any)
+- `required_props` - Physical items needed (NULL = none)
 
 ### When to use partner_text
 
@@ -74,6 +77,69 @@ This ensures:
 - Partner A gets asked if they want to give AND receive
 - Partner B gets asked if they want to give AND receive
 - All four combinations can be discovered through matching
+
+**IMPORTANT: Inverse pairs are NOT duplicates.** When one question's `text` matches another's `partner_text`, they form a valid inverse pair. This is intentional and required - do not flag or remove these as duplicates.
+
+---
+
+## Targeting Rules
+
+### Couple Targeting (allowed_couple_genders)
+
+Controls which couple types see the question. Options: `male+male`, `female+male`, `female+female`
+
+**DEFAULT: NULL** (all couples) unless explicit anatomical requirement.
+
+| Activity Type | Targeting | Reason |
+|--------------|-----------|--------|
+| Gender-neutral | NULL | Anyone can do it |
+| Requires penis | `['male+male', 'female+male']` | Exclude F+F |
+| Requires vagina | `['female+male', 'female+female']` | Exclude M+M |
+| Sex toys | NULL | Toys work for everyone |
+
+Examples:
+- "Give your partner a massage" → NULL
+- "Give your partner a blowjob" → `['male+male', 'female+male']`
+- "Go down on your partner" → NULL (oral is possible for all)
+- "Use a vibrator on your partner" → NULL
+
+### Initiator Targeting (target_user_genders)
+
+For asymmetric questions, controls who does the action in `text`.
+
+**DEFAULT: NULL** (anyone can initiate).
+
+Only set when the `text` field requires specific anatomy:
+- "Swallow your partner's cum" → partner has penis → `['female']` in M+F
+- "Deep throat your partner" → partner has penis → `['female']` in M+F
+- "Let your partner cum inside you" → receiver has vagina → `['female']`
+
+When in doubt, use NULL.
+
+### Anatomical Consistency
+
+**NEVER mix male-specific and female-specific acts in the same question.**
+
+- BAD: "Finger or give your partner a handjob"
+- GOOD: Create separate questions for each
+
+---
+
+## Required Props
+
+Identify physical items/accessories needed for the activity.
+
+**Rules:**
+- Props are physical items, NOT body parts or acts
+- Use lowercase, short, singular names
+- Reuse existing prop names when possible
+- Set to NULL if no props needed
+
+**Common props:**
+- blindfold, handcuffs, rope, massage oil
+- remote vibrator, butt plug, dildo, cock ring
+- ice cubes, feather, candle (for wax play)
+- mirror, camera/phone (for recording)
 
 ---
 
@@ -164,6 +230,7 @@ Most categories should have 3-5 packs that progress in intensity:
 - Use time-specific language
 - Be preachy or educational in tone
 - Include judgment about activities
+- Treat inverse pairs as duplicates (one's `text` = other's `partner_text` is INTENTIONAL)
 
 ### Avoid Cliches:
 - Candlelit dinner (unless specific twist)
@@ -218,17 +285,20 @@ When generating packs, output in this format:
 -- Description: [Pack description]
 -- Intensity range: [X-Y]
 
-INSERT INTO questions (pack_id, text, partner_text, intensity) VALUES
-('[pack_id]', 'Question text here', 'Partner text or NULL', intensity),
-('[pack_id]', 'Question text here', NULL, intensity),
+INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props) VALUES
+('[pack_id]', 'Question text here', 'Partner text or NULL', intensity, NULL, NULL, NULL),
+('[pack_id]', 'Blowjob question', 'Partner text', 3, ARRAY['male+male', 'female+male'], ARRAY['female'], NULL),
+('[pack_id]', 'Toy question', 'Partner text', 4, NULL, NULL, ARRAY['remote vibrator']),
 -- ... etc
 ```
 
 Or as a table:
 
-| Text | Partner Text | Intensity |
-|------|--------------|-----------|
-| Question here | Partner perspective or null | 4 |
+| Text | Partner Text | Intensity | Couple Targets | Initiator | Props |
+|------|--------------|-----------|----------------|-----------|-------|
+| Question here | Partner perspective or null | 4 | NULL | NULL | NULL |
+| Blowjob | Partner text | 3 | M+M, F+M | female | NULL |
+| Toy play | Partner text | 4 | NULL | NULL | remote vibrator |
 
 ---
 
@@ -239,6 +309,9 @@ Or as a table:
 text: "Cook the same recipe together over video call"
 partner_text: NULL
 intensity: 1
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: NULL
 ```
 
 ### Romantic (Intensity 2)
@@ -246,32 +319,67 @@ intensity: 1
 text: "Send a tipsy voice note telling them you miss them"
 partner_text: NULL
 intensity: 2
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: NULL
 ```
 
-### Playful (Intensity 3)
+### Playful (Intensity 3) - With Props
 ```
 text: "Blindfold your partner and tease them with different sensations"
 partner_text: "Be blindfolded while your partner teases you"
 intensity: 3
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: ["blindfold"]
 ```
 AND its inverse:
 ```
 text: "Be blindfolded while your partner teases you"
 partner_text: "Blindfold your partner and tease them with different sensations"
 intensity: 3
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: ["blindfold"]
 ```
 
-### Steamy (Intensity 4)
+### Steamy (Intensity 4) - With Props and Targeting
 ```
 text: "Control your partner's remote vibrator while out at dinner"
 partner_text: "Wear a remote vibrator at dinner while your partner controls it"
 intensity: 4
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: ["remote vibrator"]
 ```
 AND its inverse:
 ```
 text: "Wear a remote vibrator at dinner while your partner controls it"
 partner_text: "Control your partner's remote vibrator while out at dinner"
 intensity: 4
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: ["remote vibrator"]
+```
+
+### With Couple Targeting (Intensity 3)
+```
+text: "Give your partner a blowjob in a risky location"
+partner_text: "Receive a blowjob from your partner in a risky location"
+intensity: 3
+allowed_couple_genders: ["male+male", "female+male"]  -- requires penis
+target_user_genders: NULL
+required_props: NULL
+```
+
+### With Initiator Targeting (Intensity 4)
+```
+text: "Swallow your partner's cum"
+partner_text: "Have your partner swallow your cum"
+intensity: 4
+allowed_couple_genders: ["male+male", "female+male"]  -- requires penis
+target_user_genders: ["female"]  -- in M+F, female receives
+required_props: NULL
 ```
 
 ### Intense (Intensity 5)
@@ -279,25 +387,48 @@ intensity: 4
 text: "Edge your partner repeatedly, denying release until you decide"
 partner_text: "Be edged and denied until your partner allows you to finish"
 intensity: 5
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: NULL
 ```
 AND its inverse:
 ```
 text: "Be edged and denied until your partner allows you to finish"
 partner_text: "Edge your partner repeatedly, denying release until you decide"
 intensity: 5
+allowed_couple_genders: NULL
+target_user_genders: NULL
+required_props: NULL
 ```
 
 ---
 
 ## Checklist Before Submitting
 
-- [ ] All asymmetric questions have their inverse created
-- [ ] No gendered pronouns (him/her/he/she)
-- [ ] No time-specific language (tonight, now, today)
+**Language & Format:**
+- [ ] Uses "your partner" (no gendered pronouns like him/her/he/she)
 - [ ] Questions are proposals, not interview questions
-- [ ] Intensity levels are accurate
+- [ ] No wishy-washy language ("Would you...", "Have you ever...")
+- [ ] No time-specific language (tonight, now, today)
+- [ ] 5-12 words per question (concise)
 - [ ] No cheesy or cliche language
 - [ ] Mix of sentence structures
 - [ ] Appropriate for 25-40 year old couples
+
+**Structure:**
+- [ ] All asymmetric questions have their inverse created (these are NOT duplicates - they're required pairs)
+- [ ] Partner text is appealing (not clinical)
+- [ ] Partner text frames responses as "allowing" not forced
+- [ ] No actual duplicates (same `text` appearing twice)
+
+**Accuracy:**
+- [ ] Intensity levels match the activities
+- [ ] Couple targeting is correct (NULL unless anatomy-specific)
+- [ ] Initiator targeting is correct for asymmetric questions
+- [ ] Required props are identified where needed
 - [ ] Consider same-sex couples
+
+**Consistency:**
+- [ ] No mixed anatomy in alternatives
+- [ ] Tone matches explicit/non-explicit category
 - [ ] Pack fits its position in the progression

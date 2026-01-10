@@ -22,10 +22,27 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Package, Pencil, Trash2, Sparkles, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Package, Pencil, Trash2, Sparkles, Loader2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // =============================================================================
 // Types
@@ -47,6 +64,108 @@ interface CategoryFormData {
     description: string;
     icon: string;
     is_public: boolean;
+}
+
+// =============================================================================
+// Sortable Card Component
+// =============================================================================
+
+interface SortableCategoryCardProps {
+    category: Category;
+    onEdit: (category: Category) => void;
+    onDelete: (category: Category) => void;
+    onToggleVisibility: (category: Category) => void;
+}
+
+function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility }: SortableCategoryCardProps) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: category.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 1000 : 'auto',
+    };
+
+    return (
+        <Card
+            ref={setNodeRef}
+            style={style}
+            className="group flex flex-col hover:border-primary/50 transition-colors"
+        >
+            <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
+                <div className="flex items-center gap-2">
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity touch-none"
+                        aria-label="Drag to reorder"
+                    >
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                    <div className="rounded-lg bg-primary/10 p-2.5">
+                        <IconPreview value={category.icon} className="h-6 w-6 text-primary" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                        {category.is_public ? 'Public' : 'Hidden'}
+                    </span>
+                    <Switch
+                        checked={category.is_public}
+                        onCheckedChange={() => onToggleVisibility(category)}
+                        className="scale-75 origin-right"
+                    />
+                </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col gap-4">
+                <div className="space-y-1">
+                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                    <CardDescription className="line-clamp-2 h-10">
+                        {category.description || 'No description'}
+                    </CardDescription>
+                </div>
+
+                <div className="flex items-center justify-between mt-auto">
+                    <Badge variant="secondary" className="font-normal">
+                        {category.pack_count} pack{category.pack_count !== 1 ? 's' : ''}
+                    </Badge>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => onEdit(category)}
+                        >
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => onDelete(category)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+
+                <Link to={`/categories/${category.id}/packs`}>
+                    <Button variant="outline" className="w-full">
+                        View Packs
+                    </Button>
+                </Link>
+            </CardContent>
+        </Card>
+    );
 }
 
 // =============================================================================
@@ -202,39 +321,6 @@ export function CategoriesPage() {
         }
     };
 
-    const handleMove = async (category: Category, direction: 'up' | 'down') => {
-        const currentIndex = categories.findIndex(c => c.id === category.id);
-        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-        if (targetIndex < 0 || targetIndex >= categories.length) return;
-
-        const targetCategory = categories[targetIndex];
-
-        try {
-            const currentOrder = category.sort_order ?? currentIndex;
-            const targetOrder = targetCategory.sort_order ?? targetIndex;
-
-            const [currentUpdate, targetUpdate] = await Promise.all([
-                auditedSupabase.update('categories', category.id, { sort_order: targetOrder }),
-                auditedSupabase.update('categories', targetCategory.id, { sort_order: currentOrder }),
-            ]);
-
-            if (currentUpdate.error || targetUpdate.error) {
-                throw currentUpdate.error ?? targetUpdate.error ?? new Error('Failed to update category order');
-            }
-
-            // Optimistic update
-            const newCategories = [...categories];
-            newCategories[currentIndex] = { ...targetCategory, sort_order: currentOrder };
-            newCategories[targetIndex] = { ...category, sort_order: targetOrder };
-            setCategories(newCategories);
-        } catch (error) {
-            toast.error('Failed to reorder categories');
-            console.error(error);
-            fetchCategories();
-        }
-    };
-
     const handleToggleVisibility = async (category: Category) => {
         try {
             // Optimistic update
@@ -253,6 +339,52 @@ export function CategoriesPage() {
             toast.error('Failed to update visibility');
             console.error(error);
             fetchCategories(); // Revert
+        }
+    };
+
+    // =============================================================================
+    // Drag and Drop
+    // =============================================================================
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = categories.findIndex(c => c.id === active.id);
+        const newIndex = categories.findIndex(c => c.id === over.id);
+
+        // Optimistic UI update
+        const newCategories = arrayMove(categories, oldIndex, newIndex);
+        setCategories(newCategories);
+
+        // Persist new order to database
+        try {
+            const updates = newCategories.map((category, index) =>
+                auditedSupabase.update('categories', category.id, { sort_order: index })
+            );
+
+            const results = await Promise.all(updates);
+            const hasError = results.some(r => r.error);
+
+            if (hasError) {
+                throw new Error('Failed to update some categories');
+            }
+        } catch (error) {
+            toast.error('Failed to save new order');
+            console.error(error);
+            fetchCategories(); // Revert on error
         }
     };
 
@@ -403,86 +535,28 @@ export function CategoriesPage() {
                     </Button>
                 </Card>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((category, index) => (
-                        <Card key={category.id} className="group flex flex-col hover:border-primary/50 transition-colors">
-                            <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
-                                <div className="rounded-lg bg-primary/10 p-2.5">
-                                    <IconPreview value={category.icon} className="h-6 w-6 text-primary" />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
-                                        {category.is_public ? 'Public' : 'Hidden'}
-                                    </span>
-                                    <Switch
-                                        checked={category.is_public}
-                                        onCheckedChange={() => handleToggleVisibility(category)}
-                                        className="scale-75 origin-right"
-                                    />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="flex-1 flex flex-col gap-4">
-                                <div className="space-y-1">
-                                    <CardTitle className="text-lg">{category.name}</CardTitle>
-                                    <CardDescription className="line-clamp-2 h-10">
-                                        {category.description || 'No description'}
-                                    </CardDescription>
-                                </div>
-
-                                <div className="flex items-center justify-between mt-auto">
-                                    <Badge variant="secondary" className="font-normal">
-                                        {category.pack_count} pack{category.pack_count !== 1 ? 's' : ''}
-                                    </Badge>
-
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div className="flex flex-col gap-0.5 mr-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 rounded-full"
-                                                onClick={() => handleMove(category, 'up')}
-                                                disabled={index === 0}
-                                            >
-                                                <ChevronUp className="h-3 w-3" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-5 w-5 rounded-full"
-                                                onClick={() => handleMove(category, 'down')}
-                                                disabled={index === categories.length - 1}
-                                            >
-                                                <ChevronDown className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                            onClick={() => form.openEdit(category)}
-                                        >
-                                            <Pencil className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                            onClick={() => handleDelete(category)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <Link to={`/categories/${category.id}/packs`}>
-                                    <Button variant="outline" className="w-full">
-                                        View Packs
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={categories.map(c => c.id)}
+                        strategy={rectSortingStrategy}
+                    >
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {categories.map((category) => (
+                                <SortableCategoryCard
+                                    key={category.id}
+                                    category={category}
+                                    onEdit={form.openEdit}
+                                    onDelete={handleDelete}
+                                    onToggleVisibility={handleToggleVisibility}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
             )}
 
             {categories.length > 0 && (

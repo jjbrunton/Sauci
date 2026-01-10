@@ -15,8 +15,9 @@ First, read the pack generation guidelines:
 
 ## Current State
 
-- Existing categories: !`mcp__sauci-prod__execute_sql` with query: SELECT name, id FROM categories ORDER BY sort_order
+- Existing categories: can be retrieved from supabase with query: SELECT name, id FROM categories ORDER BY sort_order
 - Existing packs in target category: Will query once category is identified
+- Existing props: can be retrieved with: SELECT DISTINCT unnest(required_props) as prop FROM questions WHERE required_props IS NOT NULL ORDER BY prop
 
 ## Task
 
@@ -38,7 +39,12 @@ Extract from $ARGUMENTS:
    - What intensity levels are covered?
    - Where does this new pack fit in the progression?
 
-2. If new category, establish the progression plan:
+2. Check if category is explicit:
+   ```sql
+   SELECT id, name, is_explicit FROM categories WHERE name ILIKE '%<category>%';
+   ```
+
+3. If new category, establish the progression plan:
    - What will the beginner pack cover?
    - What will intermediate cover?
    - What will advanced cover?
@@ -47,19 +53,46 @@ Extract from $ARGUMENTS:
 
 Follow these rules strictly:
 
-#### Format Rules
-- Questions are PROPOSALS, not interview questions
-- Use "your partner" - never gendered pronouns
-- No time-specific language (tonight, now, today)
-- Keep concise: 5-15 words ideal
+#### 3.1 Core Language Rules
+
+- ALWAYS use "your partner" - NEVER use "me", "I", "you" (as receiver), "him", "her", or gendered pronouns
+- Questions are PROPOSALS, NOT interview questions - "Give your partner a massage" not "Would you like to give a massage?"
+- Avoid wishy-washy language - NO "Would you...", "Have you ever...", "Do you think...", "Maybe we could..."
+- No time-specific words - NO "tonight", "now", "today", "right now"
+- Keep concise: 5-12 words ideal
 - Modern language for 25-40 year olds
-- Avoid cheesy/cliche phrasing
+- Avoid cheesy/cliche phrasing (candlelit dinner, rose petals, bubble bath, Netflix and chill)
 
-#### Partner Text Rules
-- **NULL** for symmetric activities (both do the same thing)
-- **Filled** for asymmetric activities (different roles)
+#### 3.2 Tone Rules (based on category's is_explicit flag)
 
-#### Critical: Inverse Questions
+**For EXPLICIT categories (is_explicit = true):**
+- Use tasteful phrasing for common acts: "Have sex in X" (not "fuck in X"), "Perform oral" or "go down on" (not crude oral terms)
+- BUT keep crude/specific terms when they ARE the activity: "Cum on your partner's tits" (cum is the act), "Use a cock ring" (that's the name), "Edge until they beg"
+- Rule: crude terms for specific acts/objects, tasteful terms for general sex/oral
+- NEVER sanitize "cum" to "come" - they have different meanings
+
+**For NON-EXPLICIT categories (is_explicit = false):**
+- CRITICAL: No sexual acts, crude language, or NSFW content
+- Keep language romantic, sensual, or playful without graphic terms
+- If intensity 3+ activities are needed, use suggestive but not explicit language
+
+#### 3.3 Partner Text Rules
+
+- **NULL** for symmetric activities (both partners do the same thing together)
+- **Filled** for asymmetric activities (one does something to/for the other)
+  - `text` = what the INITIATOR does
+  - `partner_text` = what the RECEIVER experiences
+
+**Partner Text Quality:**
+- Make partner_text APPEALING - don't just grammatically flip, make receiver feel excited
+- When initiator causes a response (moan, cum, beg), frame as ALLOWING:
+  - text: "Make your partner moan" -> partner_text: "Let your partner make you moan"
+  - NOT: "Moan for your partner" (sounds forced, not natural)
+- BAD: "Receive oral from your partner" (clinical)
+- GOOD: "Let your partner pleasure you with their mouth" (enticing)
+
+#### 3.4 Critical: Inverse Questions
+
 For EVERY asymmetric question, create its inverse:
 
 ```
@@ -74,24 +107,77 @@ Inverse (MUST CREATE):
 
 This ensures both partners are asked about both roles.
 
-#### Intensity Guidelines
-- **1**: Non-sexual bonding (cooking, gaming, quality time)
-- **2**: Romantic, flirty (kisses, cuddles, sweet messages)
-- **3**: Light sexual (oral, mutual masturbation, basic toys)
-- **4**: Explicit sexual (sex, light bondage, anal play)
-- **5**: Intense/BDSM (impact play, power exchange, edge play)
+#### 3.5 Intensity Guidelines
+
+| Level | Name | Description | Examples |
+|-------|------|-------------|----------|
+| 1 | Gentle | Emotional bonding, non-sexual | cooking, cuddling, foot massage |
+| 2 | Warm | Romantic, affectionate touch | slow dance, sensual massage, kissing |
+| 3 | Playful | Light sexual exploration | oral, mutual masturbation, light roleplay |
+| 4 | Steamy | Explicit sex, moderate adventure | intercourse, light bondage, anal play |
+| 5 | Intense | Advanced/BDSM/extreme | impact play, power dynamics, taboo kinks |
+
+#### 3.6 Targeting Rules
+
+**Couple Targeting (allowed_couple_genders):**
+- DEFAULT: null (ALL couples) unless explicit anatomical requirement
+- Options: `['male+male', 'female+male', 'female+female']` or subset
+- Restrict to `['male+male', 'female+male']` ONLY if activity requires penis (blowjob, handjob)
+- Restrict to `['female+male', 'female+female']` ONLY if activity requires vagina (cunnilingus)
+- Sex toys are GENDER-NEUTRAL (vibrators, dildos, plugs work for anyone) -> null
+
+**Initiator Targeting (target_user_genders):**
+- DEFAULT: null (anyone can initiate)
+- Only for asymmetric questions (those with partner_text)
+- Set based on who does the action in "text" field:
+  - "Swallow your partner's cum" -> partner has penis -> initiator: `['female']` in M+F couples
+  - "Deep throat your partner" -> partner has penis -> `['female']` in M+F couples
+  - "Give your partner a massage" -> gender-neutral -> null
+- When in doubt, use null
+
+**Anatomical Consistency:**
+- NEVER mix male-specific and female-specific acts as alternatives
+- BAD: "Finger or give your partner a handjob" (mixed anatomy)
+- GOOD: Pick one activity per question
+
+#### 3.7 Required Props
+
+Identify physical items/accessories needed:
+- Props are items like: blindfold, remote vibrator, handcuffs, massage oil, ice cubes
+- Props are NOT body parts or acts
+- Use lowercase, short, singular names
+- Reuse existing prop names from catalog when possible
+- Set to null if no props are required
 
 ### Step 4: Review & Validate
 
-Before outputting, verify:
-- [ ] All asymmetric questions have inverses
-- [ ] No gendered pronouns
-- [ ] No time-specific language
-- [ ] Questions are proposals, not questions
-- [ ] Intensity levels are accurate
-- [ ] No cheesy language
+Before outputting, verify each question against this checklist:
+
+**Language & Format:**
+- [ ] Uses "your partner" (no gendered pronouns)
+- [ ] Is a proposal, not an interview question
+- [ ] No wishy-washy language
+- [ ] No time-specific words
+- [ ] 5-12 words (concise)
+- [ ] No cheesy/cliche language
 - [ ] Varied sentence structures
+
+**Structure:**
+- [ ] All asymmetric questions have inverses (these are NOT duplicates - they're required pairs)
+- [ ] Partner text is appealing (not clinical)
+- [ ] Partner text frames responses as "allowing" not forced
+- [ ] No actual duplicates (same `text` appearing twice)
+
+**Accuracy:**
+- [ ] Intensity level matches the activity
+- [ ] Couple targeting is correct (or null for universal)
+- [ ] Initiator targeting is correct for asymmetric questions
+- [ ] Required props are identified
 - [ ] Considers same-sex couples
+
+**Consistency:**
+- [ ] No mixed anatomy in alternatives
+- [ ] Tone matches explicit/non-explicit category
 - [ ] Fits progression within category
 
 ### Step 5: Output
@@ -110,10 +196,17 @@ VALUES (
 RETURNING id;
 
 -- Then insert questions (use returned pack_id)
-INSERT INTO questions (pack_id, text, partner_text, intensity) VALUES
-('[pack_id]', 'Question text', 'Partner text or NULL', intensity),
+INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props) VALUES
+('[pack_id]', 'Question text', 'Partner text or NULL', intensity, NULL, NULL, NULL),
+('[pack_id]', 'Blowjob question', 'Partner text', 3, ARRAY['male+male', 'female+male'], ARRAY['female'], NULL),
+('[pack_id]', 'Toy question', 'Partner text', 4, NULL, NULL, ARRAY['remote vibrator']),
 -- ... all questions
 ```
+
+**Field notes:**
+- `allowed_couple_genders`: NULL for all couples, or array like `ARRAY['male+male', 'female+male']`
+- `target_user_genders`: NULL for any initiator, or array like `ARRAY['female']`
+- `required_props`: NULL if no props needed, or array like `ARRAY['blindfold', 'ice cubes']`
 
 Also provide a summary table:
 
@@ -127,6 +220,9 @@ Also provide a summary table:
 | Intensity 5 | X |
 | Symmetric (null partner_text) | X |
 | Asymmetric (with inverses) | X pairs |
+| With couple targeting | X |
+| With initiator targeting | X |
+| With required props | X |
 
 ## Example Usage
 
@@ -146,3 +242,4 @@ Also provide a summary table:
 - DON'T assume heterosexual couples
 - DON'T skip the inverse question requirement
 - DON'T use interview-style questions ("Would you like to...")
+- DON'T treat inverse pairs as duplicates - they are REQUIRED (one's `text` = other's `partner_text`)

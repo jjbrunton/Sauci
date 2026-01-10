@@ -36,7 +36,7 @@ ${toneInstruction}
 </content_type>
 
 <deletion_categories>
-- duplicate: same core action as another question (near-duplicate)
+- duplicate: same core action AND same initiator as another question (near-duplicate). Note: swapped perspectives (e.g., "give" vs "receive") are NOT duplicates.
 - redundant: minor variation with no added value
 - off-tone: violates explicit vs non-explicit rules
 - unsafe: coercion, minors, illegal acts, or consent violations
@@ -50,6 +50,7 @@ ${toneInstruction}
 2. Duplicates: delete the weaker/less specific version and keep the clearer one.
 3. If duplicate, set duplicate_of_id to the kept question's id.
 4. Do NOT delete for minor wording issues or intensity mismatches.
+5. IMPORTANT: Asymmetric versions of the same activity are NOT duplicates. If one question has text="Do X to your partner" and another has text="Let your partner do X to you", these are DIFFERENT questions because they have different initiators. Only flag as duplicate if both questions have the SAME initiator doing the SAME action.
 </rules>
 
 <questions_to_analyze>

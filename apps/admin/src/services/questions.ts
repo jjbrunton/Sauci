@@ -12,6 +12,7 @@ export interface Question {
     intensity: number;
     pack_id: string;
     created_at: string | null;
+    deleted_at: string | null;
 }
 
 export interface QuestionFormData {
@@ -25,14 +26,20 @@ export interface QuestionFormData {
 // =============================================================================
 
 /**
- * Fetch all questions for a pack
+ * Fetch all questions for a pack (excludes soft-deleted by default)
  */
-export async function fetchQuestionsForPack(packId: string): Promise<Question[]> {
-    const { data, error } = await supabase
+export async function fetchQuestionsForPack(packId: string, includeDeleted = false): Promise<Question[]> {
+    let query = supabase
         .from('questions')
         .select('*')
         .eq('pack_id', packId)
         .order('created_at', { ascending: true });
+
+    if (!includeDeleted) {
+        query = query.is('deleted_at', null);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -53,13 +60,14 @@ export async function fetchQuestionById(id: string): Promise<Question | null> {
 }
 
 /**
- * Fetch question count for a pack
+ * Fetch question count for a pack (excludes soft-deleted)
  */
 export async function fetchQuestionCount(packId: string): Promise<number> {
     const { count, error } = await supabase
         .from('questions')
         .select('*', { count: 'exact', head: true })
-        .eq('pack_id', packId);
+        .eq('pack_id', packId)
+        .is('deleted_at', null);
 
     if (error) throw error;
     return count || 0;
@@ -105,20 +113,34 @@ export async function updateQuestion(
 }
 
 /**
- * Delete a question
+ * Soft delete a question (sets deleted_at timestamp)
  */
 export async function deleteQuestion(id: string): Promise<void> {
-    const { error } = await auditedSupabase.delete('questions', id);
+    const { error } = await auditedSupabase.update('questions', id, {
+        deleted_at: new Date().toISOString(),
+    });
     if (error) throw error;
 }
 
 /**
- * Delete multiple questions
+ * Soft delete multiple questions
  */
 export async function deleteQuestions(ids: string[]): Promise<void> {
     await Promise.all(
-        ids.map(id => auditedSupabase.delete('questions', id))
+        ids.map(id => auditedSupabase.update('questions', id, {
+            deleted_at: new Date().toISOString(),
+        }))
     );
+}
+
+/**
+ * Restore a soft-deleted question
+ */
+export async function restoreQuestion(id: string): Promise<void> {
+    const { error } = await auditedSupabase.update('questions', id, {
+        deleted_at: null,
+    });
+    if (error) throw error;
 }
 
 /**
