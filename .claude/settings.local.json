@@ -1,12 +1,17 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(for f in /Users/jjbrunton/Projects/Sauci/apps/supabase/migrations/*.sql)",
+      "Bash(do grep -q \"deleted_at\" \"$f\")",
+      "Bash(echo:*)",
+      "Bash(done)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sauci-prod",
     "sauci-non-prod"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, Pie, PieChart as RechartsPieChart } from 'recharts';
-import { Crown, MessageCircle, PieChart, Sparkles, Tag } from 'lucide-react';
+import { Crown, MessageCircle, PieChart, Sparkles, Tag, Eye, EyeOff } from 'lucide-react';
 
 interface QuestionRow {
     id: string;
@@ -19,6 +19,7 @@ interface PackRow {
     name: string;
     is_premium: boolean;
     is_explicit: boolean;
+    is_public: boolean;
     category_id: string | null;
     category?: { name: string } | { name: string }[] | null;
 }
@@ -75,8 +76,11 @@ const normalizeTopics = (topics?: PackTopicRow['topics']) => {
     return Array.isArray(topics) ? topics : [topics];
 };
 
+type PublishFilter = 'all' | 'published' | 'unpublished';
+
 export function QuestionAnalyticsPage() {
     const [loading, setLoading] = useState(true);
+    const [publishFilter, setPublishFilter] = useState<PublishFilter>('published');
     const [stats, setStats] = useState({
         totalQuestions: 0,
         premiumQuestions: 0,
@@ -141,10 +145,19 @@ export function QuestionAnalyticsPage() {
         const fetchAnalytics = async () => {
             setLoading(true);
             try {
+                // Build pack query with optional is_public filter
+                let packQuery = supabase
+                    .from('question_packs')
+                    .select('id, name, is_premium, is_explicit, is_public, category_id, category:categories(name)');
+
+                if (publishFilter === 'published') {
+                    packQuery = packQuery.eq('is_public', true);
+                } else if (publishFilter === 'unpublished') {
+                    packQuery = packQuery.eq('is_public', false);
+                }
+
                 const [packsResult, topicsResult, packTopicsResult, questions] = await Promise.all([
-                    supabase
-                        .from('question_packs')
-                        .select('id, name, is_premium, is_explicit, category_id, category:categories(name)'),
+                    packQuery,
                     supabase
                         .from('topics')
                         .select('id, name')
@@ -351,7 +364,7 @@ export function QuestionAnalyticsPage() {
         };
 
         fetchAnalytics();
-    }, []);
+    }, [publishFilter]);
 
     const premiumPercent = formatPercent(stats.premiumQuestions, stats.totalQuestions);
     const freePercent = formatPercent(stats.freeQuestions, stats.totalQuestions);
@@ -386,16 +399,44 @@ export function QuestionAnalyticsPage() {
     const categoryData = categoryBreakdown[categorySegment];
     const packData = packBreakdown[packSegment];
 
+    const publishFilterOptions: { key: PublishFilter; label: string; icon: typeof Eye }[] = [
+        { key: 'all', label: 'All Packs', icon: Eye },
+        { key: 'published', label: 'Published Only', icon: Eye },
+        { key: 'unpublished', label: 'Unpublished Only', icon: EyeOff },
+    ];
+
     return (
         <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <PieChart className="h-8 w-8 text-primary" />
-                    Question Analytics
-                </h1>
-                <p className="text-muted-foreground">
-                    Deep dive into premium coverage, tags, categories, and intensity distribution
-                </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+                        <PieChart className="h-8 w-8 text-primary" />
+                        Question Analytics
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Deep dive into premium coverage, tags, categories, and intensity distribution
+                    </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <p className="text-sm text-muted-foreground">Scope</p>
+                    <div className="flex items-center gap-2">
+                        {publishFilterOptions.map((option) => {
+                            const Icon = option.icon;
+                            return (
+                                <Button
+                                    key={option.key}
+                                    variant={publishFilter === option.key ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setPublishFilter(option.key)}
+                                    className="gap-2"
+                                >
+                                    <Icon className="h-4 w-4" />
+                                    {option.label}
+                                </Button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
