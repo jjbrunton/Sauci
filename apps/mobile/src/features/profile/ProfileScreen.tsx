@@ -55,7 +55,9 @@ export function ProfileScreen() {
     const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
 
     // Derived formatting
-    const isOwnSubscription = user?.is_premium && subscription.isProUser;
+    // Use OR: if RevenueCat says they're subscribed OR database says premium, it's their own
+    // This handles the race condition after purchase (RevenueCat updates before webhook syncs DB)
+    const isOwnSubscription = subscription.isProUser || user?.is_premium;
     const hasPremiumAccess = user?.is_premium || partner?.is_premium || subscription.isProUser;
 
     const formatExpirationDate = (date: Date | null | string) => {
