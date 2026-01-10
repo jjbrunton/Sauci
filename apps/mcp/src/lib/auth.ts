@@ -11,11 +11,15 @@ export const authMiddleware = async (c: Context, next: Next) => {
     return next();
   }
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return c.json({ error: 'Unauthorized: Missing or invalid Authorization header' }, 401);
+  let token = c.req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    token = c.req.query('apiKey');
   }
 
-  const token = authHeader.replace('Bearer ', '');
+  if (!token) {
+    return c.json({ error: 'Unauthorized: Missing or invalid Authorization header or apiKey query param' }, 401);
+  }
 
   if (token !== apiKey) {
     return c.json({ error: 'Unauthorized: Invalid API key' }, 401);

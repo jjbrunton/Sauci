@@ -8,19 +8,15 @@ const app = new Hono();
 
 app.use('*', logger());
 app.use('/mcp', authMiddleware);
+app.use('/mcp/*', authMiddleware);
 
 app.get('/health', (c) => c.json({ status: 'ok', service: 'sauci-mcp' }));
 
-// Initialize MCP server
+// Initialize MCP server with StreamableHTTP transport
 const mcpServer = createMcpServer();
 
-// Mount MCP server
+// StreamableHTTP endpoint - handles all MCP communication
 app.all('/mcp', async (c) => {
-  // Add headers to prevent Nginx/proxy buffering for SSE
-  c.header('X-Accel-Buffering', 'no');
-  c.header('Cache-Control', 'no-cache');
-  c.header('Connection', 'keep-alive');
-  
   return mcpServer.handleRequest(c);
 });
 
