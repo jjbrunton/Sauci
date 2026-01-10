@@ -6,7 +6,10 @@
       "Bash(for f in /Users/jjbrunton/Projects/Sauci/apps/supabase/migrations/*.sql)",
       "Bash(do grep -q \"deleted_at\" \"$f\")",
       "Bash(echo:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(claude --version:*)",
+      "Bash(strace:*)",
+      "Bash(dtruss:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
