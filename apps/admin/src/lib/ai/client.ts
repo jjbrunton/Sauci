@@ -79,6 +79,31 @@ export function getModel(purpose?: ModelPurpose): string {
 }
 
 /**
+ * Get the appropriate temperature for a given purpose
+ * Uses remote config > default temperature > fallback
+ */
+export function getTemperature(purpose?: ModelPurpose, fallback?: number): number {
+    const remoteConfig = getCachedAiConfig();
+    const defaultTemperature = remoteConfig?.default_temperature;
+    const baseFallback = defaultTemperature ?? fallback ?? 0.7;
+
+    if (!purpose) return baseFallback;
+
+    switch (purpose) {
+        case 'generate':
+            return remoteConfig?.temperature_generate ?? defaultTemperature ?? fallback ?? 0.9;
+        case 'fix':
+            return remoteConfig?.temperature_fix ?? defaultTemperature ?? fallback ?? 0.5;
+        case 'polish':
+            return remoteConfig?.temperature_polish ?? defaultTemperature ?? fallback ?? 0.7;
+        case 'describe_image':
+            return remoteConfig?.classifier_temperature ?? defaultTemperature ?? fallback ?? 1.0;
+        default:
+            return baseFallback;
+    }
+}
+
+/**
  * Extract a short display name from a model identifier
  * e.g., "anthropic/claude-3.5-sonnet" -> "Claude 3.5 Sonnet"
  */

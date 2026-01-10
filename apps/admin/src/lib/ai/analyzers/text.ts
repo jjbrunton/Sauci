@@ -3,14 +3,14 @@
 // Analyze and suggest improvements for question text
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
+import { getOpenAI, getModel, getTemperature } from '../client';
 import type { TextAnalysis } from '../types';
 
 /**
  * Analyze question text and suggest improvements
  */
 export async function analyzeQuestionText(
-    questions: { id: string; text: string; partner_text?: string | null }[],
+    questions: { id: string; text: string; partner_text?: string | null; intensity?: number }[],
     isExplicit: boolean = false
 ): Promise<TextAnalysis[]> {
     const openai = getOpenAI();
@@ -19,6 +19,7 @@ export async function analyzeQuestionText(
         id: q.id,
         text: q.text,
         partner_text: q.partner_text,
+        intensity: q.intensity,
     }));
 
     const toneInstruction = isExplicit
@@ -38,56 +39,81 @@ export async function analyzeQuestionText(
    - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Receive a love letter from your partner", "Be surprised with a date by your partner").
    - GOOD: "Give your partner a massage" / "Receive a massage from your partner"`;
 
-    const prompt = `Analyze the following questions for a couples app and suggest improved text that follows our style guidelines.
+    const prompt = `<task>
+Analyze the following questions and suggest improved text that follows our style guidelines.
+Only include questions that NEED improvement - skip well-phrased ones.
+</task>
 
+<content_type>
 ${toneInstruction}
+</content_type>
 
+<app_context>
 The app uses a swipe-based interface (Like/Dislike/Maybe).
-Cards should be "Proposals" relative to a specific action, NOT interview questions.
+Cards should be "Proposals" for specific actions, NOT interview questions.
+</app_context>
 
-For each question, decide if it is a SYMMETRIC activity (shared) or ASYMMETRIC action (one-way).
-
-1. SYMMETRIC Activities (Single Card - partner_text should be null):
-   - Use for shared experiences where both partners do the same thing together.
-   - Phrasing: Direct action proposal.
+<question_types>
+1. SYMMETRIC Activities (partner_text = null):
+   - Both partners do the same thing together
    - ${symmetricExamples}
-   - BAD: "Have you ever thought about...", "Do you think we should...", "How about we..."
+   - BAD: "Have you ever thought about...", "Do you think we should..."
 
-2. ASYMMETRIC Actions (Two-Part Card - needs both text and partner_text):
-   - Use for actions where one partner does something TO/FOR the other, or where roles differ.
-   - text = what the INITIATOR does (their action/perspective)
-   - partner_text = what the RECEIVER does/experiences (their action/perspective)
+2. ASYMMETRIC Actions (needs both text AND partner_text):
+   - One partner does something TO/FOR the other
+   - text = what the INITIATOR does
+   - partner_text = what the RECEIVER experiences
    - ${asymmetricExamples}
-   - IMPORTANT: partner_text should describe the RECEIVER's experience clearly:
-     - text: "Send your partner to the bathroom and follow a minute later"
-     - partner_text: "Go to the bathroom and wait for your partner to join you" (NOT "Wait for your partner to follow you")
-   - When initiator CAUSES a response (moan, cum, beg, etc.), partner_text should frame as ALLOWING/RECEIVING:
-     - text: "Make your partner moan in public" -> partner_text: "Let your partner make you moan in public"
-     - NOT: "Moan for your partner in public" (sounds like deliberate performance, not natural response)
-   - BAD: "Would you like to...?" (Ambiguous who "me" is)
 
-CRITICAL RULES:
-1. PRESERVE THE CORE ACTION - Do NOT change what the question is about. Only improve phrasing.
-2. Keep text SHORT and DIRECT - no explanatory parentheticals. Aim for 5-12 words.
-3. Remove wishy-washy language: "Would you want to...", "Have you ever...", "Do you think...", "...fantasy"
-4. Make it direct and actionable.
-5. For asymmetric cards, ensure text is initiator-focused and partner_text is receiver-focused.
-6. Use "your partner" instead of "me", "you", "him", "her" to keep it gender-neutral.
-7. If a question is ALREADY well-phrased, do NOT include it in the results.
-8. NEVER add explanatory text in parentheses - keep the proposal clean and simple.
-9. NEVER MIX ANATOMICALLY INCOMPATIBLE ACTIVITIES - Do NOT combine male-specific and female-specific acts as alternatives in the same question.
-10. MAKE PARTNER_TEXT APPEALING - Don't just grammatically flip the text. Make the receiver feel excited.
-11. FLAG CLICHES for improvement - "candlelit dinner", "rose petals", "bubble bath", "Netflix and chill" are overused
+   Partner text rules:
+   - Describe RECEIVER's experience clearly
+   - When initiator CAUSES a response (moan, cum, beg), frame as ALLOWING:
+     * text: "Make your partner moan" -> partner_text: "Let your partner make you moan"
+     * NOT: "Moan for your partner" (sounds forced, not natural)
+</question_types>
 
-Return a JSON object with a "suggestions" array containing ONLY questions that need improvement.
-Each object should have:
-- id: The question ID
-- suggested_text: The improved text (short, direct, no parentheticals)
-- suggested_partner_text: The improved partner_text (or null if symmetric)
-- reason: Brief explanation of what was improved
+<rules>
+1. PRESERVE THE CORE ACTION - only improve phrasing, don't change what it's about
+2. Keep SHORT and DIRECT - aim for 5-12 words, no parentheticals
+3. Remove wishy-washy: "Would you want to...", "Have you ever...", "Do you think..."
+4. Use "your partner" instead of "me", "you", "him", "her"
+5. NEVER mix anatomically incompatible activities in same question
+6. Make partner_text APPEALING - don't just grammatically flip, make receiver feel excited
+7. FLAG CLICHES: "candlelit dinner", "rose petals", "bubble bath", "Netflix and chill"
+8. Skip questions that are ALREADY well-phrased
+</rules>
 
-Questions:
-${JSON.stringify(simplifiedQuestions)}`;
+<intensity_guide>
+Check if current intensity matches the activity:
+1 (Gentle): Emotional bonding, non-sexual (cooking, cuddling, foot massage)
+2 (Warm): Romantic, affectionate touch (slow dance, sensual massage, kissing)
+3 (Playful): Light sexual exploration (oral, mutual masturbation, light roleplay)
+4 (Steamy): Explicit sex, moderate adventure (intercourse, light bondage, anal play)
+5 (Intense): Advanced/BDSM/extreme (impact play, power dynamics, taboo kinks)
+
+If intensity seems wrong, include suggested_intensity and intensity_reason.
+</intensity_guide>
+
+<questions_to_analyze>
+${JSON.stringify(simplifiedQuestions)}
+</questions_to_analyze>
+
+<output_format>
+{
+  "suggestions": [
+    {
+      "id": string,                    // Question ID
+      "suggested_text": string,        // Improved text (short, direct)
+      "suggested_partner_text": string|null,  // Improved partner_text or null if symmetric
+      "reason": string,                // Brief explanation of text improvement
+      "suggested_intensity": number|null,  // 1-5 if intensity seems wrong, null if correct
+      "intensity_reason": string|null      // Why intensity should change (if applicable)
+    }
+  ]
+}
+
+Only include questions that need text improvement OR intensity adjustment.
+</output_format>`;
 
     const systemMessage = isExplicit
         ? 'You are an adult content editor for a couples intimacy app. Use nuanced language: tasteful phrasing for general acts (have sex, perform oral) but crude specific terms when relevant (cum, cock ring, etc). Preserve original intent. Always respond with valid JSON only.'
@@ -103,7 +129,7 @@ ${JSON.stringify(simplifiedQuestions)}`;
             { role: 'user', content: prompt }
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.5,
+        temperature: getTemperature('fix', 0.5),
     });
 
     const content = response.choices[0].message.content;

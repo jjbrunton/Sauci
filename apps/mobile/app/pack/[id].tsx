@@ -71,7 +71,7 @@ export default function PackDetailsScreen() {
         try {
             const { data, error } = await supabase
                 .from("questions")
-                .select("*")
+                .select("id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, created_at")
                 .eq("pack_id", id)
                 .order("created_at");
 

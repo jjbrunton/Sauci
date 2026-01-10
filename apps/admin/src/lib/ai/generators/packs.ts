@@ -3,7 +3,7 @@
 // Generate pack names, descriptions, and pack ideas
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
+import { getOpenAI, getModel, getTemperature } from '../client';
 import type { GeneratedPack, GeneratedPackIdea } from '../types';
 
 /**
@@ -26,48 +26,48 @@ export async function generatePack(
         ? 'CRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms throughout - "fuck", "cock", "pussy" etc.'
         : '';
 
-    const inspirationInstruction = inspiration
-        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your generation.`
+    // Sanitize inspiration to prevent prompt injection
+    const sanitizedInspiration = inspiration
+        ? inspiration
+            .replace(/<[^>]*>/g, '')
+            .replace(/\b(CRITICAL|PRIORITY|INSTRUCTION|OVERRIDE|IGNORE|SYSTEM|ASSISTANT)\b:?/gi, '')
+            .trim()
         : '';
 
-    const avoidInstruction = previousNames && previousNames.length > 0
-        ? `\n\nIMPORTANT - DO NOT generate any of these pack names (already suggested): ${previousNames.join(', ')}\nGenerate something completely different and fresh.`
+    const inspirationSection = sanitizedInspiration
+        ? `\n<user_guidance>\n${sanitizedInspiration}\n</user_guidance>`
         : '';
 
-    const appContext = `This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
+    const avoidSection = previousNames && previousNames.length > 0
+        ? `\n<avoid_names>\n${previousNames.join(', ')}\n</avoid_names>`
+        : '';
+
+    const prompt = `<task>
+Generate a creative activity pack for a couples' intimacy/connection app${categoryName ? ` in the category "${categoryName}"` : ''}.
+</task>
+
+<app_context>
+This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
 Each partner independently swipes Like/Dislike/Maybe, and when both swipe positively they "match".
 Packs contain collections of activities to try together (date ideas, intimate experiences, adventures, challenges, etc.).
-This is NOT a Q&A app - it's about discovering shared interests in activities.`;
+This is NOT a Q&A app - it's about discovering shared interests in activities.
+</app_context>
+${inspirationSection}
 
-    const prompt = categoryName
-        ? `Generate a creative activity pack for a couples' intimacy/connection app in the category "${categoryName}".
+<content_guidelines>
+${explicitInstruction}
+${crudeLangInstruction}
+</content_guidelines>
+${avoidSection}
 
-       ${appContext}
+<output_format>
+{
+  "name": string,        // Catchy pack name, 3-6 words, evokes activities/experiences
+  "description": string  // Brief, enticing description, 1-2 sentences, activity-focused
+}
 
-       The pack should contain a themed collection of activities couples can explore together.
-
-       ${explicitInstruction}
-       ${crudeLangInstruction}${inspirationInstruction}${avoidInstruction}
-
-       Return a JSON object with:
-       - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
-       - description: A brief, enticing description (1-2 sentences) focusing on the activities in the pack
-
-       Make it romantic, playful, and activity-focused.`
-        : `Generate a creative activity pack for a couples' intimacy/connection app.
-
-       ${appContext}
-
-       The pack should contain a themed collection of activities couples can explore together.
-
-       ${explicitInstruction}
-       ${crudeLangInstruction}${inspirationInstruction}${avoidInstruction}
-
-       Return a JSON object with:
-       - name: A catchy, engaging pack name (3-6 words) that evokes activities/experiences
-       - description: A brief, enticing description (1-2 sentences) focusing on the activities in the pack
-
-       Make it romantic, playful, and activity-focused.`;
+Make it romantic, playful, and activity-focused.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
@@ -79,7 +79,7 @@ This is NOT a Q&A app - it's about discovering shared interests in activities.`;
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.8,
+        temperature: getTemperature('generate', 0.8),
     });
 
     const content = response.choices[0].message.content;
@@ -112,42 +112,67 @@ export async function suggestPacks(
         ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the pack names and descriptions.'
         : '';
 
-    const inspirationInstruction = inspiration
-        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your pack suggestions.`
+    // Sanitize inspiration to prevent prompt injection
+    const sanitizedInspiration = inspiration
+        ? inspiration
+            .replace(/<[^>]*>/g, '')
+            .replace(/\b(CRITICAL|PRIORITY|INSTRUCTION|OVERRIDE|IGNORE|SYSTEM|ASSISTANT)\b:?/gi, '')
+            .trim()
         : '';
 
-    const avoidInstruction = previousSuggestions && previousSuggestions.length > 0
-        ? `\n\nIMPORTANT - DO NOT suggest any of these pack names (already suggested): ${previousSuggestions.join(', ')}\nGenerate completely different and fresh ideas.`
+    const inspirationSection = sanitizedInspiration
+        ? `\n<user_guidance>\n${sanitizedInspiration}\n</user_guidance>`
         : '';
 
-    const prompt = `We are building activity packs for the category "${categoryName}" in a couples' intimacy app.
+    const avoidSection = previousSuggestions && previousSuggestions.length > 0
+        ? `\n<avoid_names>\n${previousSuggestions.join(', ')}\n</avoid_names>`
+        : '';
 
-IMPORTANT - HOW THE APP WORKS:
-- This is an ACTIVITY-FOCUSED app, NOT a Q&A app
+    const prompt = `<task>
+Suggest 5 NEW, UNIQUE activity pack ideas for the category "${categoryName}" in a couples' intimacy app.
+</task>
+
+<app_context>
+This is an ACTIVITY-FOCUSED app, NOT a Q&A app.
 - Packs contain ACTIVITY PROPOSALS (things couples can do together)
 - Each partner independently swipes Like/Dislike/Maybe on activities
-- When BOTH partners swipe positively on the same activity, they "match" and can discuss it
-- Activities are things like: date ideas, intimate experiences, adventures, challenges, conversations to have, etc.
-- This is NOT about asking each other questions - it's about discovering shared interests in activities
+- When BOTH partners swipe positively, they "match" and can discuss it
+- Activities include: date ideas, intimate experiences, adventures, challenges, conversations
+- Focus on discovering shared interests in activities, not asking questions
+</app_context>
+${inspirationSection}
 
-PACK THEMES should focus on:
+<pack_themes>
+Focus on:
 - Collections of related activities couples might want to try
 - Experiences to share together
 - Things to do, not questions to ask
 - Date ideas, adventures, intimate moments, challenges, bonding activities
+</pack_themes>
 
-Existing packs in this category: ${existingList}.
+<existing_packs>
+Current packs in this category: ${existingList}
+</existing_packs>
 
-Suggest 5 NEW, UNIQUE pack ideas that fit this category and differ from existing ones.
-${explicitInstruction}${crudeLangInstruction}${inspirationInstruction}${avoidInstruction}
+<content_guidelines>
+${explicitInstruction}
+${crudeLangInstruction}
+</content_guidelines>
+${avoidSection}
 
-Return a JSON object with an "ideas" array containing 5 objects, where each object has:
-- name: Pack name (catchy, 3-6 words) - should evoke activities/experiences, not questions
-- description: Brief description (1-2 sentences) focusing on the activities/experiences in the pack
-       - icon: An Ionicon name from this list: heart-outline, flame-outline, sparkles-outline, gift-outline, wine-outline, airplane-outline, home-outline, key-outline, flash-outline, sunny-outline, flower-outline, star-outline, dice-outline, compass-outline, bulb-outline
+<output_format>
+{
+  "ideas": [
+    {
+      "name": string,        // Catchy, 3-6 words, evokes activities/experiences
+      "description": string, // 1-2 sentences, activity-focused
+      "icon": string         // Ionicon: heart-outline, flame-outline, sparkles-outline, gift-outline, wine-outline, airplane-outline, home-outline, key-outline, flash-outline, sunny-outline, flower-outline, star-outline, dice-outline, compass-outline, bulb-outline
+    }
+  ]
+}
 
-
-Make them engaging and specific to "${categoryName}".`;
+Generate 5 unique pack ideas that differ from existing ones. Make them engaging and specific to "${categoryName}".
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
@@ -159,7 +184,7 @@ Make them engaging and specific to "${categoryName}".`;
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.9,
+        temperature: getTemperature('generate', 0.9),
     });
 
     const content = response.choices[0].message.content;

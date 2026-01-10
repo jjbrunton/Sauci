@@ -39,47 +39,68 @@ export async function reviewGeneratedQuestions(
         intensity: q.intensity,
         location_type: q.location_type,
         effort_level: q.effort_level,
+        // Include targeting for review (may not always be present)
+        allowed_couple_genders: (q as { allowed_couple_genders?: string[] | null }).allowed_couple_genders || null,
+        target_user_genders: (q as { target_user_genders?: string[] | null }).target_user_genders || null,
     }));
 
     const toneDescription = TONE_LEVELS.find(t => t.level === packContext.tone)?.label || 'Unknown';
 
-    const prompt = `You are a quality reviewer for a couples intimacy app. Review each generated question against our guidelines.
+    const prompt = `<task>
+Review each generated question against our quality guidelines.
+</task>
 
-PACK CONTEXT:
+<pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
 - Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
 - Tone Level: ${packContext.tone} (${toneDescription})
+</pack_context>
 
+<scoring_criteria>
 ${REVIEW_GUIDELINES}
+</scoring_criteria>
 
-VERDICT RULES:
+<verdict_rules>
 - PASS: All scores >= 7, no major issues
 - FLAG: Any score 5-7, or minor issues worth noting (admin should review but can use)
 - REJECT: Any score < 5, or major violations (mixed anatomy, wrong intensity, severe guideline violation)
+</verdict_rules>
 
-QUESTIONS TO REVIEW:
+<questions_to_review>
 ${JSON.stringify(questionsForReview, null, 2)}
+</questions_to_review>
 
-Return a JSON object with:
+<output_format>
 {
   "reviews": [
     {
-      "index": 0,
-      "verdict": "pass" | "flag" | "reject",
-      "issues": ["Issue 1", "Issue 2"],
-      "suggestions": "Optional improvement suggestion",
+      "index": number,                    // 0-based index of the question
+      "verdict": "pass"|"flag"|"reject",
+      "issues": string[],                 // List of issues found, empty if none
+      "suggestions": string|null,         // Optional improvement suggestion
       "scores": {
-        "guidelineCompliance": 8,
-        "creativity": 7,
-        "clarity": 9,
-        "intensityAccuracy": 8
-      }
+        "guidelineCompliance": 1-10,      // Criterion 1
+        "creativity": 1-10,               // Criterion 2
+        "clarity": 1-10,                  // Criterion 3
+        "intensityAccuracy": 1-10,        // Criterion 4
+        "anatomicalConsistency": 1-10,    // Criterion 5
+        "partnerTextQuality": 1-10,       // Criterion 6 (10 if no partner_text needed)
+        "coupleTargeting": 1-10,          // Criterion 7
+        "initiatorTargeting": 1-10        // Criterion 8 (10 if symmetric)
+      },
+      "intensitySuggestion": number|null, // Suggested intensity (1-5) if current seems wrong, null if correct
+      "targetingSuggestions": {           // Only include if targeting needs changes
+        "suggestedCoupleTargets": string[]|null,  // ["male+male", "female+male", "female+female"] or subset
+        "suggestedInitiator": string[]|null,      // ["male", "female"] or null for any
+        "reason": string                          // Why targeting should change
+      }|null
     }
   ]
 }
 
-Review ALL questions. Be thorough but fair - only flag/reject for genuine issues.`;
+Review ALL questions against ALL 8 criteria. Be thorough but fair - only flag/reject for genuine issues.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: config.reviewerModel,
@@ -91,7 +112,7 @@ Review ALL questions. Be thorough but fair - only flag/reject for genuine issues
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        temperature: config.reviewerTemperature ?? 0.3,
     });
 
     const content = response.choices[0].message.content;
@@ -111,19 +132,31 @@ Review ALL questions. Be thorough but fair - only flag/reject for genuine issues
     const flagged = reviews.filter(r => r.verdict === 'flag').length;
     const rejected = reviews.filter(r => r.verdict === 'reject').length;
 
-    // Calculate overall quality as average of all scores
-    let totalScore = 0;
-    let scoreCount = 0;
+    // Calculate overall quality as weighted average of all 8 scores
+    // Weights: guidelineCompliance 20%, creativity 15%, clarity 15%, intensityAccuracy 15%,
+    //          anatomicalConsistency 15%, partnerTextQuality 10%, coupleTargeting 5%, initiatorTargeting 5%
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+    const weights = {
+        guidelineCompliance: 0.20,
+        creativity: 0.15,
+        clarity: 0.15,
+        intensityAccuracy: 0.15,
+        anatomicalConsistency: 0.15,
+        partnerTextQuality: 0.10,
+        coupleTargeting: 0.05,
+        initiatorTargeting: 0.05,
+    };
     for (const review of reviews) {
         if (review.scores) {
-            totalScore += review.scores.guidelineCompliance || 0;
-            totalScore += review.scores.creativity || 0;
-            totalScore += review.scores.clarity || 0;
-            totalScore += review.scores.intensityAccuracy || 0;
-            scoreCount += 4;
+            for (const [key, weight] of Object.entries(weights)) {
+                const score = review.scores[key as keyof typeof review.scores] || 0;
+                totalWeightedScore += score * weight;
+                totalWeight += weight;
+            }
         }
     }
-    const overallQuality = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 10) / 10 : 0;
+    const overallQuality = totalWeight > 0 ? Math.round((totalWeightedScore / (totalWeight / Object.keys(weights).length)) * 10) / 10 : 0;
 
     return {
         reviews,
@@ -168,54 +201,77 @@ export async function selectBestGeneration(
             text: q.text,
             partner_text: q.partner_text || null,
             intensity: q.intensity,
+            allowed_couple_genders: (q as { allowed_couple_genders?: string[] | null }).allowed_couple_genders || null,
+            target_user_genders: (q as { target_user_genders?: string[] | null }).target_user_genders || null,
         })),
     }));
 
-    const prompt = `You are a quality reviewer for a couples intimacy app. You have received ${candidates.length} different sets of generated questions from different AI models. Your task is to:
+    const prompt = `<task>
+Compare ${candidates.length} different sets of generated questions from different AI models. Select the best set and review it in detail.
+</task>
 
+<objectives>
 1. COMPARE all sets and SELECT the BEST one overall
 2. REVIEW the selected set in detail
+</objectives>
 
-PACK CONTEXT:
+<pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
 - Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
 - Tone Level: ${packContext.tone} (${toneDescription})
+</pack_context>
 
+<scoring_criteria>
 ${REVIEW_GUIDELINES}
+</scoring_criteria>
 
-CANDIDATE SETS:
+<candidate_sets>
 ${JSON.stringify(candidatesForReview, null, 2)}
+</candidate_sets>
 
-SELECTION CRITERIA (in order of importance):
-1. Overall quality and creativity of questions
-2. Variety and uniqueness within the set
-3. Adherence to pack theme and tone
-4. Proper intensity grading
-5. Correct use of "your partner" language
-6. Quality of partner_text for asymmetric questions
+<selection_criteria>
+Ranked by importance (approximate weights):
+1. Overall quality and creativity of questions (30%)
+2. Variety and uniqueness within the set (20%)
+3. Adherence to pack theme and tone (20%)
+4. Proper intensity grading (15%)
+5. Correct use of "your partner" language (10%)
+6. Quality of partner_text for asymmetric questions (5%)
+</selection_criteria>
 
-Return a JSON object with:
+<output_format>
 {
-  "selectedIndex": <0-based index of the best candidate set>,
-  "reasoning": "<brief explanation of why this set was chosen>",
+  "selectedIndex": number,          // 0-based index of the best candidate set
+  "reasoning": string,              // Brief explanation of why this set was chosen
   "reviews": [
     {
-      "index": <question index within selected set>,
-      "verdict": "pass" | "flag" | "reject",
-      "issues": ["Issue 1", "Issue 2"],
-      "suggestions": "Optional improvement suggestion",
+      "index": number,              // Question index within selected set
+      "verdict": "pass"|"flag"|"reject",
+      "issues": string[],
+      "suggestions": string|null,
       "scores": {
         "guidelineCompliance": 1-10,
         "creativity": 1-10,
         "clarity": 1-10,
-        "intensityAccuracy": 1-10
-      }
+        "intensityAccuracy": 1-10,
+        "anatomicalConsistency": 1-10,
+        "partnerTextQuality": 1-10,
+        "coupleTargeting": 1-10,
+        "initiatorTargeting": 1-10
+      },
+      "intensitySuggestion": number|null,
+      "targetingSuggestions": {
+        "suggestedCoupleTargets": string[]|null,
+        "suggestedInitiator": string[]|null,
+        "reason": string
+      }|null
     }
   ]
 }
 
-Select the best set and review ALL questions in that set.`;
+Select the best set and review ALL questions in that set against ALL 8 criteria.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: config.reviewerModel,
@@ -227,7 +283,7 @@ Select the best set and review ALL questions in that set.`;
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        temperature: config.reviewerTemperature ?? 0.3,
     });
 
     const content = response.choices[0].message.content;
@@ -244,23 +300,33 @@ Select the best set and review ALL questions in that set.`;
     const reviews: QuestionReview[] = parsed.reviews || [];
     const reasoning = parsed.reasoning || 'No reasoning provided';
 
-    // Calculate summary
+    // Calculate summary with weighted average of all 8 scores
     const passed = reviews.filter(r => r.verdict === 'pass').length;
     const flagged = reviews.filter(r => r.verdict === 'flag').length;
     const rejected = reviews.filter(r => r.verdict === 'reject').length;
 
-    let totalScore = 0;
-    let scoreCount = 0;
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+    const weights = {
+        guidelineCompliance: 0.20,
+        creativity: 0.15,
+        clarity: 0.15,
+        intensityAccuracy: 0.15,
+        anatomicalConsistency: 0.15,
+        partnerTextQuality: 0.10,
+        coupleTargeting: 0.05,
+        initiatorTargeting: 0.05,
+    };
     for (const review of reviews) {
         if (review.scores) {
-            totalScore += review.scores.guidelineCompliance || 0;
-            totalScore += review.scores.creativity || 0;
-            totalScore += review.scores.clarity || 0;
-            totalScore += review.scores.intensityAccuracy || 0;
-            scoreCount += 4;
+            for (const [key, weight] of Object.entries(weights)) {
+                const score = review.scores[key as keyof typeof review.scores] || 0;
+                totalWeightedScore += score * weight;
+                totalWeight += weight;
+            }
         }
     }
-    const overallQuality = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 10) / 10 : 0;
+    const overallQuality = totalWeight > 0 ? Math.round((totalWeightedScore / (totalWeight / Object.keys(weights).length)) * 10) / 10 : 0;
 
     return {
         selectedIndex,

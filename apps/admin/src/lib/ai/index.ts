@@ -25,6 +25,8 @@ export type {
     CherryPickResult,
     TargetAnalysis,
     TextAnalysis,
+    DeletionAnalysis,
+    PropsAnalysis,
     ExtractedTopic,
     TopicExtractionResult,
     SelectionResult,
@@ -59,6 +61,8 @@ export { reviewGeneratedQuestions, selectBestGeneration } from './review';
 // Analyzers
 export { analyzeQuestionText } from './analyzers/text';
 export { analyzeQuestionTargets } from './analyzers/targets';
+export { analyzeQuestionDeletions } from './analyzers/deletions';
+export { analyzeQuestionProps } from './analyzers/props';
 
 // Tools
 export { polishContent } from './tools/polish';

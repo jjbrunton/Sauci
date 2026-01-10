@@ -66,17 +66,23 @@ export function AiSettingsPage() {
             setFormData({
                 openrouter_api_key: config.openrouter_api_key || '',
                 default_model: config.default_model || '',
+                default_temperature: config.default_temperature,
                 model_generate: config.model_generate || '',
+                temperature_generate: config.temperature_generate,
                 model_fix: config.model_fix || '',
+                temperature_fix: config.temperature_fix,
                 model_polish: config.model_polish || '',
+                temperature_polish: config.temperature_polish,
                 council_enabled: config.council_enabled || false,
                 council_generator_model: config.council_generator_model || '',
                 council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
+                council_reviewer_temperature: config.council_reviewer_temperature,
                 council_selection_mode: config.council_selection_mode || 'whole_set',
                 cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
+                classifier_temperature: config.classifier_temperature,
                 classifier_prompt: config.classifier_prompt || '',
                 heuristics_enabled: config.heuristics_enabled ?? false,
                 heuristic_min_text_length: config.heuristic_min_text_length ?? 12,
@@ -164,17 +170,23 @@ export function AiSettingsPage() {
             setFormData({
                 openrouter_api_key: config.openrouter_api_key || '',
                 default_model: config.default_model || '',
+                default_temperature: config.default_temperature,
                 model_generate: config.model_generate || '',
+                temperature_generate: config.temperature_generate,
                 model_fix: config.model_fix || '',
+                temperature_fix: config.temperature_fix,
                 model_polish: config.model_polish || '',
+                temperature_polish: config.temperature_polish,
                 council_enabled: config.council_enabled || false,
                 council_generator_model: config.council_generator_model || '',
                 council_generators: generators,
                 council_reviewer_model: config.council_reviewer_model || '',
+                council_reviewer_temperature: config.council_reviewer_temperature,
                 council_selection_mode: config.council_selection_mode || 'whole_set',
                 cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
+                classifier_temperature: config.classifier_temperature,
                 classifier_prompt: config.classifier_prompt || '',
                 heuristics_enabled: config.heuristics_enabled ?? false,
                 heuristic_min_text_length: config.heuristic_min_text_length ?? 12,
@@ -208,8 +220,8 @@ export function AiSettingsPage() {
         handleChange('council_generators', newGenerators);
     };
 
-    const updateGeneratorModel = (index: number, model: string) => {
-        const newGenerators = generators.map((g, i) => i === index ? { ...g, model } : g);
+    const updateGenerator = (index: number, updates: Partial<CouncilGenerator>) => {
+        const newGenerators = generators.map((g, i) => i === index ? { ...g, ...updates } : g);
         handleChange('council_generators', newGenerators);
     };
 
@@ -367,16 +379,31 @@ export function AiSettingsPage() {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="classifier-model">Classifier Model</Label>
-                        <ModelCombobox
-                            value={formData.classifier_model || ''}
-                            onChange={(value) => handleChange('classifier_model', value)}
-                            placeholder="openai/gpt-4o"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Model used for classification (must support vision if image moderation is needed)
-                        </p>
+                    <div className="grid grid-cols-[1fr,120px] gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="classifier-model">Classifier Model</Label>
+                            <ModelCombobox
+                                value={formData.classifier_model || ''}
+                                onChange={(value) => handleChange('classifier_model', value)}
+                                placeholder="openai/gpt-4o"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Model used for classification (must support vision if image moderation is needed)
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="classifier-temperature">Temp</Label>
+                            <Input
+                                id="classifier-temperature"
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="2"
+                                value={formData.classifier_temperature ?? ''}
+                                onChange={(e) => handleChange('classifier_temperature', e.target.value === '' ? null : Number(e.target.value))}
+                                placeholder="1.0"
+                            />
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -624,16 +651,31 @@ export function AiSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="default-model">Default Model</Label>
-                        <ModelCombobox
-                            value={formData.default_model || ''}
-                            onChange={(value) => handleChange('default_model', value)}
-                            placeholder="openai/gpt-4o-mini"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                            Fallback model when no specific model is configured
-                        </p>
+                    <div className="grid grid-cols-[1fr,120px] gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="default-model">Default Model</Label>
+                            <ModelCombobox
+                                value={formData.default_model || ''}
+                                onChange={(value) => handleChange('default_model', value)}
+                                placeholder="openai/gpt-4o-mini"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Fallback model when no specific model is configured
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="default-temperature">Temp</Label>
+                            <Input
+                                id="default-temperature"
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="2"
+                                value={formData.default_temperature ?? ''}
+                                onChange={(e) => handleChange('default_temperature', e.target.value === '' ? null : Number(e.target.value))}
+                                placeholder="0.7"
+                            />
+                        </div>
                     </div>
 
                     <Separator />
@@ -663,16 +705,31 @@ export function AiSettingsPage() {
 
                         {!formData.council_enabled ? (
                             /* Single generator mode */
-                            <div className="space-y-2">
-                                <Label htmlFor="model-generate">Generation Model</Label>
-                                <ModelCombobox
-                                    value={formData.model_generate || ''}
-                                    onChange={(value) => handleChange('model_generate', value)}
-                                    placeholder="Uses default model"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    For questions, category ideas, and pack ideas
-                                </p>
+                            <div className="grid grid-cols-[1fr,120px] gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="model-generate">Generation Model</Label>
+                                    <ModelCombobox
+                                        value={formData.model_generate || ''}
+                                        onChange={(value) => handleChange('model_generate', value)}
+                                        placeholder="Uses default model"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        For questions, category ideas, and pack ideas
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="generate-temperature">Temp</Label>
+                                    <Input
+                                        id="generate-temperature"
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="2"
+                                        value={formData.temperature_generate ?? ''}
+                                        onChange={(e) => handleChange('temperature_generate', e.target.value === '' ? null : Number(e.target.value))}
+                                        placeholder="0.9"
+                                    />
+                                </div>
                             </div>
                         ) : (
                             /* Council mode - multiple generators + reviewer */
@@ -698,9 +755,20 @@ export function AiSettingsPage() {
                                             </div>
                                             <ModelCombobox
                                                 value={gen.model}
-                                                onChange={(value) => updateGeneratorModel(index, value)}
+                                                onChange={(value) => updateGenerator(index, { model: value })}
                                                 placeholder={index === 0 ? "anthropic/claude-3.5-sonnet" : "Select model..."}
                                                 className="flex-1"
+                                            />
+                                            <Input
+                                                type="number"
+                                                step="0.1"
+                                                min="0"
+                                                max="2"
+                                                value={gen.temperature ?? ''}
+                                                onChange={(e) => updateGenerator(index, { temperature: e.target.value === '' ? undefined : Number(e.target.value) })}
+                                                placeholder="0.9"
+                                                className="w-[80px]"
+                                                aria-label={`Generator ${index + 1} temperature`}
                                             />
                                             <Button
                                                 type="button"
@@ -717,16 +785,31 @@ export function AiSettingsPage() {
                                 </div>
 
                                 {/* Reviewer */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="council-reviewer" className="text-sm">Reviewer Model</Label>
-                                    <ModelCombobox
-                                        value={formData.council_reviewer_model || ''}
-                                        onChange={(value) => handleChange('council_reviewer_model', value)}
-                                        placeholder="google/gemini-pro-1.5"
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Reviews outputs and selects the best
-                                    </p>
+                                <div className="grid grid-cols-[1fr,120px] gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="council-reviewer" className="text-sm">Reviewer Model</Label>
+                                        <ModelCombobox
+                                            value={formData.council_reviewer_model || ''}
+                                            onChange={(value) => handleChange('council_reviewer_model', value)}
+                                            placeholder="google/gemini-pro-1.5"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Reviews outputs and selects the best
+                                        </p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="reviewer-temperature" className="text-sm">Temp</Label>
+                                        <Input
+                                            id="reviewer-temperature"
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            max="2"
+                                            value={formData.council_reviewer_temperature ?? ''}
+                                            onChange={(e) => handleChange('council_reviewer_temperature', e.target.value === '' ? null : Number(e.target.value))}
+                                            placeholder="0.3"
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Selection Mode */}
@@ -794,16 +877,31 @@ export function AiSettingsPage() {
 
                         {/* Ideas Model - shown when council mode is ON (since council only applies to questions) */}
                         {formData.council_enabled && (
-                            <div className="space-y-2">
-                                <Label htmlFor="model-generate">Ideas Model</Label>
-                                <ModelCombobox
-                                    value={formData.model_generate || ''}
-                                    onChange={(value) => handleChange('model_generate', value)}
-                                    placeholder="Uses default model"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    For category ideas and pack ideas (council mode only applies to questions)
-                                </p>
+                            <div className="grid grid-cols-[1fr,120px] gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="model-generate">Ideas Model</Label>
+                                    <ModelCombobox
+                                        value={formData.model_generate || ''}
+                                        onChange={(value) => handleChange('model_generate', value)}
+                                        placeholder="Uses default model"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        For category ideas and pack ideas (council mode only applies to questions)
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="ideas-temperature">Temp</Label>
+                                    <Input
+                                        id="ideas-temperature"
+                                        type="number"
+                                        step="0.1"
+                                        min="0"
+                                        max="2"
+                                        value={formData.temperature_generate ?? ''}
+                                        onChange={(e) => handleChange('temperature_generate', e.target.value === '' ? null : Number(e.target.value))}
+                                        placeholder="0.9"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
@@ -812,28 +910,58 @@ export function AiSettingsPage() {
 
                     {/* Other models - always visible */}
                     <div className="grid md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="model-fix">Analysis Model</Label>
-                            <ModelCombobox
-                                value={formData.model_fix || ''}
-                                onChange={(value) => handleChange('model_fix', value)}
-                                placeholder="Uses default model"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                For analyzing & fixing content
-                            </p>
+                        <div className="grid grid-cols-[1fr,100px] gap-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="model-fix">Analysis Model</Label>
+                                <ModelCombobox
+                                    value={formData.model_fix || ''}
+                                    onChange={(value) => handleChange('model_fix', value)}
+                                    placeholder="Uses default model"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    For analyzing & fixing content
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="fix-temperature">Temp</Label>
+                                <Input
+                                    id="fix-temperature"
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="2"
+                                    value={formData.temperature_fix ?? ''}
+                                    onChange={(e) => handleChange('temperature_fix', e.target.value === '' ? null : Number(e.target.value))}
+                                    placeholder="0.5"
+                                />
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="model-polish">Polish Model</Label>
-                            <ModelCombobox
-                                value={formData.model_polish || ''}
-                                onChange={(value) => handleChange('model_polish', value)}
-                                placeholder="Uses default model"
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                For polishing & improving text
-                            </p>
+                        <div className="grid grid-cols-[1fr,100px] gap-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="model-polish">Polish Model</Label>
+                                <ModelCombobox
+                                    value={formData.model_polish || ''}
+                                    onChange={(value) => handleChange('model_polish', value)}
+                                    placeholder="Uses default model"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    For polishing & improving text
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="polish-temperature">Temp</Label>
+                                <Input
+                                    id="polish-temperature"
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    max="2"
+                                    value={formData.temperature_polish ?? ''}
+                                    onChange={(e) => handleChange('temperature_polish', e.target.value === '' ? null : Number(e.target.value))}
+                                    placeholder="0.7"
+                                />
+                            </div>
                         </div>
                     </div>
 

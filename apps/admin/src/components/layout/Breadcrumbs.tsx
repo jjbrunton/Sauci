@@ -109,6 +109,8 @@ function useBreadcrumbs(): { breadcrumbs: BreadcrumbItem[]; loading: boolean } {
             });
         } else if (segment === 'questions' && params.packId) {
             breadcrumbs.push({ label: 'Questions', href: currentPath });
+        } else if (segment === 'tags') {
+            breadcrumbs.push({ label: 'Tags', href: '/tags' });
         } else if (segment === 'users') {
             breadcrumbs.push({ label: 'Users', href: '/users' });
             // If we have a userId, add the user's name as a breadcrumb

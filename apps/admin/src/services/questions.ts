@@ -84,7 +84,8 @@ export async function createQuestion(
     });
 
     if (error) throw error;
-    return created as Question;
+    if (!created || created.length === 0) throw new Error('Failed to create question');
+    return created[0] as Question;
 }
 
 /**
@@ -138,7 +139,7 @@ export async function bulkCreateQuestions(
         });
 
         if (error) throw error;
-        if (data) results.push(data as Question);
+        if (data && data.length > 0) results.push(data[0] as Question);
     }
 
     return results;

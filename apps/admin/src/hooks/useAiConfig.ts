@@ -3,6 +3,7 @@ import { supabase } from '@/config';
 
 export interface CouncilGenerator {
     model: string;
+    temperature?: number;
 }
 
 export type CouncilSelectionMode = 'whole_set' | 'cherry_pick';
@@ -11,17 +12,23 @@ export interface AiConfig {
     id: string;
     openrouter_api_key: string | null;
     default_model: string | null;
+    default_temperature: number | null;
     model_generate: string | null;
+    temperature_generate: number | null;
     model_fix: string | null;
+    temperature_fix: number | null;
     model_polish: string | null;
+    temperature_polish: number | null;
     council_enabled: boolean;
     council_generator_model: string | null; // Legacy - kept for backwards compatibility
     council_generators: CouncilGenerator[] | null; // New array of generators
     council_reviewer_model: string | null;
+    council_reviewer_temperature: number | null;
     council_selection_mode: CouncilSelectionMode | null; // 'whole_set' or 'cherry_pick'
     cherry_pick_ensure_intensity_distribution: boolean | null; // Balance intensity levels in cherry-pick mode
     classifier_enabled: boolean | null;
     classifier_model: string | null;
+    classifier_temperature: number | null;
     classifier_prompt: string | null;
     heuristics_enabled: boolean | null;
     heuristic_min_text_length: number | null;

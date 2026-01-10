@@ -18,6 +18,8 @@ import {
     Home,
     Activity,
     AlertTriangle,
+    PieChart,
+    Tags,
     Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,18 @@ const contentNav: NavItem[] = [
         label: 'Dare Packs',
         href: '/dare-packs',
         icon: <Zap className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_PACKS,
+    },
+    {
+        label: 'Question Analytics',
+        href: '/question-analytics',
+        icon: <PieChart className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_QUESTIONS,
+    },
+    {
+        label: 'Tags',
+        href: '/tags',
+        icon: <Tags className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.MANAGE_PACKS,
     },
 ];

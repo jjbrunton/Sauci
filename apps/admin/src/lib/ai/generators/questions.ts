@@ -3,8 +3,8 @@
 // Generate questions for packs with various tone/intensity settings
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
-import { INTENSITY_GUIDE_SHORT, TONE_INSTRUCTIONS, SYSTEM_MESSAGES } from '../config';
+import { getOpenAI, getModel, getTemperature } from '../client';
+import { INTENSITY_GUIDE_SHORT, TONE_INSTRUCTIONS, SYSTEM_MESSAGES, CORE_LANGUAGE_RULES } from '../config';
 import type { GeneratedQuestion, ToneLevel } from '../types';
 
 /**
@@ -20,53 +20,59 @@ function buildQuestionPrompt(
     crudeLang: boolean = false,
     inspiration?: string
 ): string {
-    const isClean = tone === 0;
     const isExplicit = tone >= 4;
 
     const crudeLangInstruction = crudeLang
         ? '\n\nCRUDE LANGUAGE OVERRIDE: Ignore nuanced language rules. Use crude, vulgar terms throughout - "fuck" instead of "have sex", "suck cock" instead of "perform oral", etc. Be raw and direct like uncensored sexting.'
         : '';
 
-    const inspirationInstruction = inspiration
-        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide the types of questions you generate.`
+    // Sanitize inspiration to prevent prompt injection (remove XML-like tags and authority phrases)
+    const sanitizedInspiration = inspiration
+        ? inspiration
+            .replace(/<[^>]*>/g, '') // Remove XML-like tags
+            .replace(/\b(CRITICAL|PRIORITY|INSTRUCTION|OVERRIDE|IGNORE|SYSTEM|ASSISTANT)\b:?/gi, '') // Remove authority words
+            .trim()
         : '';
 
-    const intensityInstruction = isClean
-        ? 'All questions should be intensity level 1 (non-physical activities).'
+    const inspirationInstruction = sanitizedInspiration
+        ? `\n\n<user_guidance>\n${sanitizedInspiration}\n</user_guidance>\n\nIncorporate the user guidance above into your generation where appropriate. Use it to inform the theme and style of questions.`
+        : '';
+
+    const intensityInstruction = tone === 1
+        ? 'All questions should be intensity level 1 (non-sexual bonding).'
         : intensity
             ? `All questions should be at intensity level ${intensity}.`
-            : 'Vary the intensity levels from 1 to 5 across the questions for good variety.';
+            : 'Vary the intensity levels appropriate for the tone.';
 
     const toneInstruction = TONE_INSTRUCTIONS[tone];
 
     // Examples based on tone level
-    const symmetricExamples = isClean
-        ? 'GOOD: "Cook a new recipe together", "Play a board game", "Go on a hike", "Have a deep conversation about your goals".'
+    const symmetricExamples = tone <= 2
+        ? 'GOOD: "Cook a new recipe together", "Take a walk holding hands", "Slow dance in the living room", "Sensual massage".'
         : isExplicit
-            ? 'GOOD: "Fuck in a risky place", "Try a new position", "Sixty-nine together", "Watch porn and recreate a scene".'
-            : 'GOOD: "Cook a romantic dinner together", "Stargaze and share dreams", "Give each other massages", "Dance together at home".';
+            ? 'GOOD: "Sex in different positions", "Light bondage", "Anal play with toys", "Record intimate moments".'
+            : 'GOOD: "Mutual masturbation", "Oral sex", "Light roleplay", "Using basic toys together".';
 
-    const asymmetricExamples = isClean
+    const asymmetricExamples = tone <= 2
         ? `Examples:
    - text: "Cook your partner their favorite meal" → partner_text: "Have your partner cook your favorite meal"
-   - text: "Plan a surprise for your partner" → partner_text: "Be surprised by your partner"
-   - text: "Give your partner a compliment" → partner_text: "Receive a compliment from your partner"`
+   - text: "Give your partner a massage" → partner_text: "Receive a massage from your partner"
+   - text: "Plan a surprise for your partner" → partner_text: "Be surprised by your partner"`
         : isExplicit
             ? `Examples:
-   - text: "Go down on your partner" → partner_text: "Have your partner go down on you"
-   - text: "Send your partner a nude" → partner_text: "Receive a nude from your partner"
    - text: "Tie your partner up" → partner_text: "Get tied up by your partner"
-   - text: "Spank your partner" → partner_text: "Get spanked by your partner"`
+   - text: "Spank your partner" → partner_text: "Get spanked by your partner"
+   - text: "Use a toy on your partner" → partner_text: "Have a toy used on you"`
             : `Examples:
-   - text: "Give your partner a massage" → partner_text: "Receive a massage from your partner"
-   - text: "Write your partner a love letter" → partner_text: "Receive a love letter from your partner"
-   - text: "Plan a surprise date for your partner" → partner_text: "Be surprised with a date by your partner"`;
+   - text: "Perform oral on your partner" → partner_text: "Receive oral from your partner"
+   - text: "Tease your partner" → partner_text: "Be teased by your partner"
+   - text: "Undress your partner" → partner_text: "Be undressed by your partner"`;
 
-    const explicitWarning = isClean
-        ? '\n\nCRITICAL: This is a CLEAN pack with NO romantic or sexual content. Focus ONLY on communication, activities, challenges, and bonding. NO romance, NO flirting, NO intimacy, NO physical affection beyond friendly gestures.'
+    const explicitWarning = tone === 1
+        ? '\n\nCRITICAL: This is a GENTLE pack. Focus on emotional connection and non-sexual bonding. NO explicit sexual acts.'
         : isExplicit
             ? ''
-            : '\n\nCRITICAL: This is a NON-EXPLICIT pack. Do NOT include any sexual acts, crude language, or NSFW content. Keep all proposals romantic, playful, or emotionally intimate without being sexually explicit.';
+            : '\n\nCRITICAL: Avoid extreme kinks or hardcore content unless specifically requested.';
 
     const descriptionContext = packDescription
         ? `\nPack Description: "${packDescription}"\nUse this description to guide the theme and style of questions.`
@@ -79,43 +85,55 @@ ${existingQuestions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
 CRITICAL: Generate completely NEW and DIFFERENT questions. Do not repeat any of the above questions or create minor variations of them. Each new question must offer a genuinely distinct activity or experience.`
         : '';
 
-    return `Generate ${count} unique questions for a couples' intimacy question pack called "${packName}".${descriptionContext}${existingQuestionsContext}
+    return `<task>
+Generate ${count} unique questions for a couples' intimacy question pack called "${packName}".
+</task>
+${descriptionContext}${inspirationInstruction}${existingQuestionsContext}
 
+<intensity_guide>
 ${INTENSITY_GUIDE_SHORT}
+</intensity_guide>
 
+<instructions>
 ${intensityInstruction}
-${toneInstruction}${explicitWarning}${crudeLangInstruction}${inspirationInstruction}
+${toneInstruction}${explicitWarning}${crudeLangInstruction}
+</instructions>
 
-IMPORTANT: The app uses a swipe-based interface (Like/Dislike/Maybe).
-Cards should be "Proposals" for specific actions, NOT interview questions.
+${CORE_LANGUAGE_RULES}
 
-CRITICAL LANGUAGE RULES:
-- ALWAYS use "your partner" - NEVER use "me", "I", "you" (as the receiver), "him", "her"
-- BAD: "Send me a photo" (who is "me"?), "Let me spank you", "I want you to..."
-- GOOD: "Send your partner a photo", "Spank your partner", "Give your partner..."
-- The card reader is the DOER. Their partner is "your partner".
+<examples>
+GOOD language: "Send your partner a photo", "Spank your partner", "Give your partner..."
+BAD language: "Send me a photo" (who is "me"?), "Let me spank you", "I want you to..."
+The card reader is the DOER. Their partner is "your partner".
+</examples>
 
-For each question, decide if it is SYMMETRIC (shared) or ASYMMETRIC (one does to the other):
-
+<question_types>
 1. SYMMETRIC Activities (partner_text = null):
-   - Both partners do the same thing together.
+   - Both partners do the same thing together
    - ${symmetricExamples}
 
 2. ASYMMETRIC Actions (requires partner_text):
-   - One partner does something TO/FOR the other, or roles differ.
+   - One partner does something TO/FOR the other, or roles differ
    - text = what the INITIATOR does
    - partner_text = what the RECEIVER does/experiences
    - ${asymmetricExamples}
+</question_types>
 
-Required JSON structure:
-- text: The proposal (DOER's perspective, uses "your partner")
-- partner_text: For asymmetric only - RECEIVER's perspective
-- intensity: 1-5 based on INTENSITY LEVELS above.
-- requires_props: (optional) Array of items needed
-- location_type: (optional) "home" | "public" | "outdoors" | "travel" | "anywhere"
-- effort_level: (optional) "spontaneous" | "low" | "medium" | "planned"
-
-Return a JSON object with a "questions" array.`;
+<output_format>
+Return a JSON object with this exact structure:
+{
+  "questions": [
+    {
+      "text": string,              // REQUIRED: 5-12 words, doer's perspective using "your partner"
+      "partner_text": string|null, // REQUIRED for asymmetric, null for symmetric
+      "intensity": 1-5,            // REQUIRED: must match the intensity level guidelines
+      "requires_props": string[]|null,  // Optional: items needed (e.g., ["blindfold", "massage oil"])
+      "location_type": "home"|"public"|"outdoors"|"travel"|"anywhere",  // Optional
+      "effort_level": "spontaneous"|"low"|"medium"|"planned"            // Optional
+    }
+  ]
+}
+</output_format>`;
 }
 
 /**
@@ -154,7 +172,7 @@ export async function generateQuestions(
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.9,
+        temperature: getTemperature('generate', 0.9),
     });
 
     const content = response.choices[0].message.content;
@@ -177,7 +195,8 @@ export async function generateQuestionsWithModel(
     packDescription: string | undefined,
     existingQuestions: string[] | undefined,
     crudeLang: boolean,
-    inspiration: string | undefined
+    inspiration: string | undefined,
+    temperature?: number
 ): Promise<GeneratedQuestion[]> {
     const openai = getOpenAI();
 
@@ -202,7 +221,7 @@ export async function generateQuestionsWithModel(
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.9,
+        temperature: temperature ?? getTemperature('generate', 0.9),
     });
 
     const content = response.choices[0].message.content;

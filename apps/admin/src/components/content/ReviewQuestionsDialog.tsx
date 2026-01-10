@@ -11,8 +11,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Sparkles, ArrowRight, Check, Wand2, ShieldCheck } from 'lucide-react';
-import { analyzeQuestionText, analyzeQuestionTargets, TextAnalysis, TargetAnalysis } from '@/lib/openai';
+import { Loader2, Sparkles, ArrowRight, Check, Wand2, ShieldCheck, Gauge, Trash2, Package } from 'lucide-react';
+import {
+    analyzeQuestionText,
+    analyzeQuestionTargets,
+    analyzeQuestionDeletions,
+    analyzeQuestionProps,
+    TextAnalysis,
+    TargetAnalysis,
+    DeletionAnalysis,
+    PropsAnalysis,
+} from '@/lib/openai';
+import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { toast } from 'sonner';
 
@@ -23,6 +33,7 @@ interface Question {
     intensity: number;
     allowed_couple_genders: string[] | null;
     target_user_genders: string[] | null;
+    required_props?: string[] | null;
 }
 
 interface ReviewQuestionsDialogProps {
@@ -38,13 +49,19 @@ interface CombinedSuggestion {
     question: Question;
     textSuggestion?: TextAnalysis;
     targetSuggestion?: TargetAnalysis;
+    propsSuggestion?: PropsAnalysis;
+    deleteSuggestion?: DeletionAnalysis;
 }
 
 export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplicit = false, onUpdated }: ReviewQuestionsDialogProps) {
     const [analyzing, setAnalyzing] = useState(false);
     const [suggestions, setSuggestions] = useState<CombinedSuggestion[]>([]);
+    const [existingProps, setExistingProps] = useState<string[]>([]);
     const [selectedTextIds, setSelectedTextIds] = useState<Set<string>>(new Set());
     const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set());
+    const [selectedPropsIds, setSelectedPropsIds] = useState<Set<string>>(new Set());
+    const [selectedIntensityIds, setSelectedIntensityIds] = useState<Set<string>>(new Set());
+    const [selectedDeleteIds, setSelectedDeleteIds] = useState<Set<string>>(new Set());
     const [step, setStep] = useState<'initial' | 'review'>('initial');
     const [applying, setApplying] = useState(false);
 
@@ -71,14 +88,55 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
         return sortedA.every((val, i) => val === sortedB[i]);
     };
 
+    const loadExistingProps = async (): Promise<string[]> => {
+        if (existingProps.length > 0) return existingProps;
+
+        try {
+            const { data, error } = await supabase
+                .from('questions')
+                .select('required_props')
+                .not('required_props', 'is', null)
+                .limit(5000);
+
+            if (error) throw error;
+
+            const next = new Set<string>();
+            data?.forEach(row => {
+                row.required_props?.forEach((prop: string) => next.add(prop));
+            });
+
+            const list = Array.from(next).sort((a, b) => a.localeCompare(b));
+            setExistingProps(list);
+            return list;
+        } catch (error) {
+            console.error('Failed to load existing props:', error);
+            return [];
+        }
+    };
+
     const handleAnalyze = async () => {
         setAnalyzing(true);
         try {
-            // Run both analyses in parallel
-            const [textResults, targetResults] = await Promise.all([
-                analyzeQuestionText(questions, isExplicit),
-                analyzeQuestionTargets(questions)
-            ]);
+            const propsCatalog = await loadExistingProps();
+
+            // Run analyses in parallel (pass intensity for text analysis)
+            const [textResults, targetResults, deleteResults, propsResults] = await Promise.all([
+                analyzeQuestionText(
+                    questions.map(q => ({ ...q, intensity: q.intensity })),
+                    isExplicit
+                ),
+                analyzeQuestionTargets(questions),
+                analyzeQuestionDeletions(questions, isExplicit),
+                analyzeQuestionProps(
+                    questions.map(q => ({
+                        id: q.id,
+                        text: q.text,
+                        partner_text: q.partner_text,
+                        required_props: q.required_props || null,
+                    })),
+                    propsCatalog
+                ),
+            ]) as [TextAnalysis[], TargetAnalysis[], DeletionAnalysis[], PropsAnalysis[]];
 
             // Filter target results to only meaningful changes
             const meaningfulTargetResults = targetResults.filter(suggestion => {
@@ -98,26 +156,35 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                 return coupleChanged || initiatorChanged;
             });
 
-            // Combine results by question ID
-            const questionIds = new Set([
-                ...textResults.map(t => t.id),
-                ...meaningfulTargetResults.map(t => t.id)
-            ]);
+            const meaningfulPropsResults = propsResults.filter(suggestion => {
+                const question = questions.find(q => q.id === suggestion.id);
+                if (!question) return false;
 
-            const combined: CombinedSuggestion[] = Array.from(questionIds).map(id => {
-                const question = questions.find(q => q.id === id)!;
-                return {
-                    questionId: id,
-                    question,
-                    textSuggestion: textResults.find(t => t.id === id),
-                    targetSuggestion: meaningfulTargetResults.find(t => t.id === id),
-                };
+                return !arraysEqual(
+                    question.required_props || null,
+                    suggestion.suggested_required_props || null
+                );
             });
+
+            const combined: CombinedSuggestion[] = questions.map(question => ({
+                questionId: question.id,
+                question,
+                textSuggestion: textResults.find(t => t.id === question.id),
+                targetSuggestion: meaningfulTargetResults.find(t => t.id === question.id),
+                propsSuggestion: meaningfulPropsResults.find(p => p.id === question.id),
+                deleteSuggestion: deleteResults.find(d => d.id === question.id),
+            }));
 
             setSuggestions(combined);
             // Default select all
             setSelectedTextIds(new Set(textResults.map(r => r.id)));
             setSelectedTargetIds(new Set(meaningfulTargetResults.map(r => r.id)));
+            setSelectedPropsIds(new Set(meaningfulPropsResults.map(r => r.id)));
+            setSelectedDeleteIds(new Set(deleteResults.map(r => r.id)));
+            // Select intensity suggestions by default
+            setSelectedIntensityIds(new Set(
+                textResults.filter(r => r.suggested_intensity != null).map(r => r.id)
+            ));
             setStep('review');
         } catch (error) {
             console.error(error);
@@ -131,13 +198,19 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
         setApplying(true);
         try {
             const updates: { id: string; data: Record<string, unknown> }[] = [];
+            const deleteIds = Array.from(selectedDeleteIds);
 
-            // Build update objects combining text and target changes
+            // Build update objects combining text, target, and intensity changes
             suggestions.forEach(suggestion => {
+                if (selectedDeleteIds.has(suggestion.questionId)) return;
+
                 const textSelected = selectedTextIds.has(suggestion.questionId) && suggestion.textSuggestion;
                 const targetSelected = selectedTargetIds.has(suggestion.questionId) && suggestion.targetSuggestion;
+                const propsSelected = selectedPropsIds.has(suggestion.questionId) && suggestion.propsSuggestion;
+                const intensitySelected = selectedIntensityIds.has(suggestion.questionId) &&
+                    suggestion.textSuggestion?.suggested_intensity != null;
 
-                if (textSelected || targetSelected) {
+                if (textSelected || targetSelected || propsSelected || intensitySelected) {
                     const updateData: Record<string, unknown> = {};
 
                     if (textSelected && suggestion.textSuggestion) {
@@ -156,23 +229,49 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                             : null;
                     }
 
+                    if (propsSelected && suggestion.propsSuggestion) {
+                        updateData.required_props = suggestion.propsSuggestion.suggested_required_props &&
+                            suggestion.propsSuggestion.suggested_required_props.length > 0
+                            ? suggestion.propsSuggestion.suggested_required_props
+                            : null;
+                    }
+
+                    if (intensitySelected && suggestion.textSuggestion?.suggested_intensity != null) {
+                        updateData.intensity = suggestion.textSuggestion.suggested_intensity;
+                    }
+
                     if (Object.keys(updateData).length > 0) {
                         updates.push({ id: suggestion.questionId, data: updateData });
                     }
                 }
             });
 
-            if (updates.length === 0) {
+            if (updates.length === 0 && deleteIds.length === 0) {
                 onOpenChange(false);
                 return;
             }
 
-            // Apply updates in parallel with audit logging
-            await Promise.all(updates.map(update =>
+            // Apply updates/deletions in parallel with audit logging
+            const operations: Promise<unknown>[] = updates.map(update =>
                 auditedSupabase.update('questions', update.id, update.data)
-            ));
+            );
 
-            toast.success(`Updated ${updates.length} questions`);
+            if (deleteIds.length > 0) {
+                operations.push(
+                    auditedSupabase.deleteMany('questions', deleteIds).then(result => {
+                        if (result.error) throw result.error;
+                    })
+                );
+            }
+
+            await Promise.all(operations);
+
+            const updateMessage = updates.length > 0 ? `Updated ${updates.length} questions` : null;
+            const deleteMessage = deleteIds.length > 0 ? `Deleted ${deleteIds.length} questions` : null;
+            const message = [updateMessage, deleteMessage].filter(Boolean).join('. ');
+            if (message) {
+                toast.success(message);
+            }
             onUpdated();
             handleClose();
         } catch (error) {
@@ -190,6 +289,9 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
             setSuggestions([]);
             setSelectedTextIds(new Set());
             setSelectedTargetIds(new Set());
+            setSelectedPropsIds(new Set());
+            setSelectedIntensityIds(new Set());
+            setSelectedDeleteIds(new Set());
         }, 300);
     };
 
@@ -207,6 +309,27 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
         setSelectedTargetIds(next);
     };
 
+    const togglePropsSelection = (id: string) => {
+        const next = new Set(selectedPropsIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedPropsIds(next);
+    };
+
+    const toggleIntensitySelection = (id: string) => {
+        const next = new Set(selectedIntensityIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedIntensityIds(next);
+    };
+
+    const toggleDeleteSelection = (id: string) => {
+        const next = new Set(selectedDeleteIds);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        setSelectedDeleteIds(next);
+    };
+
     const formatTargets = (targets: string[] | null) => {
         if (!targets || targets.length === 0) return 'All';
         return targets.map(t => t.replace('male+male', 'M+M').replace('female+male', 'M+F').replace('female+female', 'F+F')).join(', ');
@@ -217,35 +340,89 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
         return targets.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ');
     };
 
+    const formatProps = (props: string[] | null | undefined) => {
+        if (!props || props.length === 0) return 'None';
+        return props.join(', ');
+    };
+
+    const formatDeleteCategory = (category?: DeletionAnalysis['category']) => {
+        switch (category) {
+            case 'duplicate':
+                return 'Duplicate';
+            case 'redundant':
+                return 'Redundant';
+            case 'off-tone':
+                return 'Off tone';
+            case 'unsafe':
+                return 'Unsafe';
+            case 'too-vague':
+                return 'Too vague';
+            case 'broken':
+                return 'Broken';
+            case 'off-topic':
+                return 'Off topic';
+            default:
+                return 'Delete';
+        }
+    };
+
+    const getQuestionTextById = (id?: string | null) => {
+        if (!id) return null;
+        const match = questions.find(q => q.id === id);
+        return match ? match.text : null;
+    };
+
     // Count suggestions by type
     const textSuggestionCount = suggestions.filter(s => s.textSuggestion).length;
     const targetSuggestionCount = suggestions.filter(s => s.targetSuggestion).length;
-    const totalSelectedCount = selectedTextIds.size + selectedTargetIds.size;
+    const propsSuggestionCount = suggestions.filter(s => s.propsSuggestion).length;
+    const intensitySuggestionCount = suggestions.filter(s => s.textSuggestion?.suggested_intensity != null).length;
+    const deleteSuggestionCount = suggestions.filter(s => s.deleteSuggestion).length;
+    const effectiveTextCount = Array.from(selectedTextIds).filter(id => !selectedDeleteIds.has(id)).length;
+    const effectiveTargetCount = Array.from(selectedTargetIds).filter(id => !selectedDeleteIds.has(id)).length;
+    const effectivePropsCount = Array.from(selectedPropsIds).filter(id => !selectedDeleteIds.has(id)).length;
+    const effectiveIntensityCount = Array.from(selectedIntensityIds).filter(id => !selectedDeleteIds.has(id)).length;
+    const totalSelectedCount = effectiveTextCount + effectiveTargetCount + effectivePropsCount + effectiveIntensityCount + selectedDeleteIds.size;
+    const hasSuggestions = textSuggestionCount > 0 || targetSuggestionCount > 0 || propsSuggestionCount > 0 || intensitySuggestionCount > 0 || deleteSuggestionCount > 0;
 
     // Select all/none helpers
     const selectAllText = () => setSelectedTextIds(new Set(suggestions.filter(s => s.textSuggestion).map(s => s.questionId)));
     const selectNoneText = () => setSelectedTextIds(new Set());
     const selectAllTargets = () => setSelectedTargetIds(new Set(suggestions.filter(s => s.targetSuggestion).map(s => s.questionId)));
     const selectNoneTargets = () => setSelectedTargetIds(new Set());
+    const selectAllProps = () => setSelectedPropsIds(new Set(suggestions.filter(s => s.propsSuggestion).map(s => s.questionId)));
+    const selectNoneProps = () => setSelectedPropsIds(new Set());
+    const selectAllIntensity = () => setSelectedIntensityIds(new Set(
+        suggestions.filter(s => s.textSuggestion?.suggested_intensity != null).map(s => s.questionId)
+    ));
+    const selectNoneIntensity = () => setSelectedIntensityIds(new Set());
+    const selectAllDeletes = () => setSelectedDeleteIds(new Set(suggestions.filter(s => s.deleteSuggestion).map(s => s.questionId)));
+    const selectNoneDeletes = () => setSelectedDeleteIds(new Set());
     const selectAll = () => {
         selectAllText();
         selectAllTargets();
+        selectAllProps();
+        selectAllIntensity();
+        selectAllDeletes();
     };
     const selectNone = () => {
         selectNoneText();
         selectNoneTargets();
+        selectNoneProps();
+        selectNoneIntensity();
+        selectNoneDeletes();
     };
 
     return (
         <Dialog open={open} onOpenChange={handleClose}>
-            <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-[95vw] w-full h-[95vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Sparkles className="h-5 w-5 text-amber-500" />
                         Review Questions
                     </DialogTitle>
                     <DialogDescription>
-                        AI-powered analysis to improve text phrasing and fix audience targeting.
+                        AI-powered analysis to improve phrasing, identify props, fix targeting, and suggest deletions.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -258,7 +435,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                             <div className="space-y-2">
                                 <h3 className="text-lg font-medium">Ready to analyze {questions.length} questions</h3>
                                 <p className="text-muted-foreground max-w-lg mx-auto">
-                                    The AI will analyze all questions and suggest improvements for:
+                                    The AI will analyze all questions and suggest improvements or removals for:
                                 </p>
                             </div>
                             <div className="flex gap-4">
@@ -269,6 +446,18 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                 <div className="flex items-center gap-2 bg-indigo-500/20 px-4 py-2 rounded-lg">
                                     <ShieldCheck className="h-5 w-5 text-indigo-400" />
                                     <span className="text-sm font-medium text-indigo-300">Audience Targeting</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-cyan-500/20 px-4 py-2 rounded-lg">
+                                    <Package className="h-5 w-5 text-cyan-400" />
+                                    <span className="text-sm font-medium text-cyan-300">Required Props</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-amber-500/20 px-4 py-2 rounded-lg">
+                                    <Gauge className="h-5 w-5 text-amber-400" />
+                                    <span className="text-sm font-medium text-amber-300">Intensity Level</span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-rose-500/20 px-4 py-2 rounded-lg">
+                                    <Trash2 className="h-5 w-5 text-rose-400" />
+                                    <span className="text-sm font-medium text-rose-300">Deletion Suggestions</span>
                                 </div>
                             </div>
                             <Button onClick={handleAnalyze} disabled={analyzing} size="lg" className="bg-amber-600 hover:bg-amber-700">
@@ -284,7 +473,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {suggestions.length === 0 ? (
+                            {!hasSuggestions ? (
                                 <div className="text-center py-8 text-muted-foreground">
                                     <Check className="h-8 w-8 mx-auto mb-2 text-green-500" />
                                     All questions look great! No improvements needed.
@@ -302,6 +491,18 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                 <ShieldCheck className="h-4 w-4 text-indigo-500" />
                                                 {targetSuggestionCount} target fixes
                                             </span>
+                                            <span className="flex items-center gap-1">
+                                                <Package className="h-4 w-4 text-cyan-500" />
+                                                {propsSuggestionCount} props fixes
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Gauge className="h-4 w-4 text-amber-500" />
+                                                {intensitySuggestionCount} intensity fixes
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                                <Trash2 className="h-4 w-4 text-rose-500" />
+                                                {deleteSuggestionCount} delete suggestions
+                                            </span>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Button variant="ghost" size="sm" onClick={selectAll}>
@@ -313,12 +514,12 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                         </div>
                                     </div>
 
-                                    <div className="border rounded-md">
+                                    <div className="border rounded-md overflow-hidden">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead className="w-[300px]">Question</TableHead>
-                                                    <TableHead>
+                                                    <TableHead className="w-[18%] min-w-[180px]">Question</TableHead>
+                                                    <TableHead className="w-[26%]">
                                                         <div className="flex items-center gap-2">
                                                             <Wand2 className="h-4 w-4 text-purple-500" />
                                                             Text Fix
@@ -332,7 +533,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                             </Button>
                                                         </div>
                                                     </TableHead>
-                                                    <TableHead>
+                                                    <TableHead className="w-[18%]">
                                                         <div className="flex items-center gap-2">
                                                             <ShieldCheck className="h-4 w-4 text-indigo-500" />
                                                             Target Fix
@@ -346,32 +547,78 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                             </Button>
                                                         </div>
                                                     </TableHead>
+                                                    <TableHead className="w-[18%]">
+                                                        <div className="flex items-center gap-2">
+                                                            <Package className="h-4 w-4 text-cyan-500" />
+                                                            Props
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="h-6 px-2 text-xs"
+                                                                onClick={() => selectedPropsIds.size === propsSuggestionCount ? selectNoneProps() : selectAllProps()}
+                                                            >
+                                                                {selectedPropsIds.size === propsSuggestionCount ? 'None' : 'All'}
+                                                            </Button>
+                                                        </div>
+                                                    </TableHead>
+                                                    <TableHead className="w-[10%]">
+                                                        <div className="flex items-center gap-2">
+                                                            <Gauge className="h-4 w-4 text-amber-500" />
+                                                            Intensity
+                                                            {intensitySuggestionCount > 0 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 px-2 text-xs"
+                                                                    onClick={() => selectedIntensityIds.size === intensitySuggestionCount ? selectNoneIntensity() : selectAllIntensity()}
+                                                                >
+                                                                    {selectedIntensityIds.size === intensitySuggestionCount ? 'None' : 'All'}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableHead>
+                                                    <TableHead className="w-[10%]">
+                                                        <div className="flex items-center gap-2">
+                                                            <Trash2 className="h-4 w-4 text-rose-500" />
+                                                            Delete
+                                                            {deleteSuggestionCount > 0 && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 px-2 text-xs"
+                                                                    onClick={() => selectedDeleteIds.size === deleteSuggestionCount ? selectNoneDeletes() : selectAllDeletes()}
+                                                                >
+                                                                    {selectedDeleteIds.size === deleteSuggestionCount ? 'None' : 'All'}
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {suggestions.map((suggestion) => (
                                                     <TableRow key={suggestion.questionId}>
                                                         {/* Question Column */}
-                                                        <TableCell className="align-top">
-                                                            <div className="text-sm font-medium line-clamp-2">{suggestion.question.text}</div>
+                                                        <TableCell className="align-top py-3">
+                                                            <div className="text-sm font-medium">{suggestion.question.text}</div>
                                                             {suggestion.question.partner_text && (
-                                                                <div className="text-xs text-muted-foreground mt-1 italic line-clamp-1">
+                                                                <div className="text-xs text-muted-foreground mt-1.5 italic">
                                                                     Partner: {suggestion.question.partner_text}
                                                                 </div>
                                                             )}
                                                         </TableCell>
 
                                                         {/* Text Fix Column */}
-                                                        <TableCell className="align-top">
+                                                        <TableCell className="align-top py-3">
                                                             {suggestion.textSuggestion ? (
                                                                 <div
-                                                                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedTextIds.has(suggestion.questionId)
+                                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedTextIds.has(suggestion.questionId)
                                                                             ? 'bg-purple-500/20 border-purple-500/50'
                                                                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                                                                         }`}
                                                                     onClick={() => toggleTextSelection(suggestion.questionId)}
                                                                 >
-                                                                    <div className="flex items-start gap-2">
+                                                                    <div className="flex items-start gap-3">
                                                                         <Checkbox
                                                                             checked={selectedTextIds.has(suggestion.questionId)}
                                                                             onCheckedChange={() => toggleTextSelection(suggestion.questionId)}
@@ -382,11 +629,11 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                                 {suggestion.textSuggestion.suggested_text}
                                                                             </div>
                                                                             {suggestion.textSuggestion.suggested_partner_text && (
-                                                                                <div className="text-xs text-purple-400 mt-1 italic">
+                                                                                <div className="text-xs text-purple-400 mt-1.5 italic">
                                                                                     Partner: {suggestion.textSuggestion.suggested_partner_text}
                                                                                 </div>
                                                                             )}
-                                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                            <div className="text-xs text-muted-foreground mt-2">
                                                                                 {suggestion.textSuggestion.reason}
                                                                             </div>
                                                                         </div>
@@ -401,16 +648,16 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                         </TableCell>
 
                                                         {/* Target Fix Column */}
-                                                        <TableCell className="align-top">
+                                                        <TableCell className="align-top py-3">
                                                             {suggestion.targetSuggestion ? (
                                                                 <div
-                                                                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedTargetIds.has(suggestion.questionId)
+                                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedTargetIds.has(suggestion.questionId)
                                                                             ? 'bg-indigo-500/20 border-indigo-500/50'
                                                                             : 'bg-muted/30 border-transparent hover:bg-muted/50'
                                                                         }`}
                                                                     onClick={() => toggleTargetSelection(suggestion.questionId)}
                                                                 >
-                                                                    <div className="flex items-start gap-2">
+                                                                    <div className="flex items-start gap-3">
                                                                         <Checkbox
                                                                             checked={selectedTargetIds.has(suggestion.questionId)}
                                                                             onCheckedChange={() => toggleTargetSelection(suggestion.questionId)}
@@ -418,26 +665,28 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                         />
                                                                         <div className="flex-1 min-w-0 space-y-2">
                                                                             {/* Couple targets */}
-                                                                            <div className="flex items-center gap-1 flex-wrap">
-                                                                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <span className="text-xs text-muted-foreground">Couples:</span>
+                                                                                <Badge variant="outline" className="text-xs text-muted-foreground">
                                                                                     {formatTargets(suggestion.question.allowed_couple_genders)}
                                                                                 </Badge>
                                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                                <Badge className="text-[10px] bg-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30">
+                                                                                <Badge className="text-xs bg-indigo-500/30 text-indigo-300 hover:bg-indigo-500/30">
                                                                                     {formatTargets(suggestion.targetSuggestion.suggested_targets)}
                                                                                 </Badge>
                                                                             </div>
                                                                             {/* Initiator */}
-                                                                            <div className="flex items-center gap-1 flex-wrap">
-                                                                                <Badge variant="outline" className="text-[10px] text-muted-foreground border-orange-500/50">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <span className="text-xs text-muted-foreground">Initiator:</span>
+                                                                                <Badge variant="outline" className="text-xs text-muted-foreground border-orange-500/50">
                                                                                     {formatInitiator(suggestion.question.target_user_genders)}
                                                                                 </Badge>
                                                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                                <Badge className="text-[10px] bg-orange-500/30 text-orange-300 hover:bg-orange-500/30">
+                                                                                <Badge className="text-xs bg-orange-500/30 text-orange-300 hover:bg-orange-500/30">
                                                                                     {formatInitiator(suggestion.targetSuggestion.suggested_initiator)}
                                                                                 </Badge>
                                                                             </div>
-                                                                            <div className="text-xs text-muted-foreground">
+                                                                            <div className="text-xs text-muted-foreground mt-2">
                                                                                 {suggestion.targetSuggestion.reason}
                                                                             </div>
                                                                         </div>
@@ -447,6 +696,130 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                 <div className="text-xs text-muted-foreground p-2">
                                                                     <Check className="h-4 w-4 text-green-500 inline mr-1" />
                                                                     No changes needed
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+
+                                                        {/* Props Column */}
+                                                        <TableCell className="align-top py-3">
+                                                            {suggestion.propsSuggestion ? (
+                                                                <div
+                                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedPropsIds.has(suggestion.questionId)
+                                                                            ? 'bg-cyan-500/20 border-cyan-500/50'
+                                                                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                                                                        }`}
+                                                                    onClick={() => togglePropsSelection(suggestion.questionId)}
+                                                                >
+                                                                    <div className="flex items-start gap-3">
+                                                                        <Checkbox
+                                                                            checked={selectedPropsIds.has(suggestion.questionId)}
+                                                                            onCheckedChange={() => togglePropsSelection(suggestion.questionId)}
+                                                                            className="mt-0.5"
+                                                                        />
+                                                                        <div className="flex-1 min-w-0 space-y-2">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <span className="text-xs text-muted-foreground">Current:</span>
+                                                                                <Badge variant="outline" className="text-xs text-muted-foreground">
+                                                                                    {formatProps(suggestion.question.required_props)}
+                                                                                </Badge>
+                                                                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                                                                <Badge className="text-xs bg-cyan-500/30 text-cyan-300 hover:bg-cyan-500/30">
+                                                                                    {formatProps(suggestion.propsSuggestion.suggested_required_props)}
+                                                                                </Badge>
+                                                                            </div>
+                                                                            <div className="text-xs text-muted-foreground mt-2">
+                                                                                {suggestion.propsSuggestion.reason}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-muted-foreground p-2">
+                                                                    <Check className="h-4 w-4 text-green-500 inline mr-1" />
+                                                                    No changes needed
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+
+                                                        {/* Intensity Column */}
+                                                        <TableCell className="align-top py-3">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    Current: {suggestion.question.intensity}
+                                                                </Badge>
+                                                            </div>
+                                                            {suggestion.textSuggestion?.suggested_intensity != null ? (
+                                                                <div
+                                                                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedIntensityIds.has(suggestion.questionId)
+                                                                            ? 'bg-amber-500/20 border-amber-500/50'
+                                                                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                                                                        }`}
+                                                                    onClick={() => toggleIntensitySelection(suggestion.questionId)}
+                                                                >
+                                                                    <div className="flex items-start gap-2">
+                                                                        <Checkbox
+                                                                            checked={selectedIntensityIds.has(suggestion.questionId)}
+                                                                            onCheckedChange={() => toggleIntensitySelection(suggestion.questionId)}
+                                                                            className="mt-0.5"
+                                                                        />
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                                                                <Badge className="text-xs bg-amber-500/30 text-amber-300 hover:bg-amber-500/30">
+                                                                                    {suggestion.textSuggestion.suggested_intensity}
+                                                                                </Badge>
+                                                                            </div>
+                                                                            {suggestion.textSuggestion.intensity_reason && (
+                                                                                <div className="text-xs text-muted-foreground mt-1">
+                                                                                    {suggestion.textSuggestion.intensity_reason}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    <Check className="h-4 w-4 text-green-500 inline mr-1" />
+                                                                    Correct
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
+
+                                                        {/* Delete Column */}
+                                                        <TableCell className="align-top py-3">
+                                                            {suggestion.deleteSuggestion ? (
+                                                                <div
+                                                                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedDeleteIds.has(suggestion.questionId)
+                                                                            ? 'bg-rose-500/20 border-rose-500/50'
+                                                                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
+                                                                        }`}
+                                                                    onClick={() => toggleDeleteSelection(suggestion.questionId)}
+                                                                >
+                                                                    <div className="flex items-start gap-3">
+                                                                        <Checkbox
+                                                                            checked={selectedDeleteIds.has(suggestion.questionId)}
+                                                                            onCheckedChange={() => toggleDeleteSelection(suggestion.questionId)}
+                                                                            className="mt-0.5"
+                                                                        />
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="text-sm text-rose-300 font-medium">
+                                                                                {formatDeleteCategory(suggestion.deleteSuggestion.category)} recommended
+                                                                            </div>
+                                                                            {suggestion.deleteSuggestion.duplicate_of_id && (
+                                                                                <div className="text-xs text-rose-400 mt-1">
+                                                                                    Duplicate of: {getQuestionTextById(suggestion.deleteSuggestion.duplicate_of_id) || 'Another question'}
+                                                                                </div>
+                                                                            )}
+                                                                            <div className="text-xs text-muted-foreground mt-2">
+                                                                                {suggestion.deleteSuggestion.reason}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-xs text-muted-foreground p-2">
+                                                                    <Check className="h-4 w-4 text-green-500 inline mr-1" />
+                                                                    Keep
                                                                 </div>
                                                             )}
                                                         </TableCell>
@@ -478,7 +851,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                         Applying...
                                     </>
                                 ) : (
-                                    `Apply ${totalSelectedCount} Changes`
+                                    `Apply ${totalSelectedCount} Actions`
                                 )}
                             </Button>
                         </>

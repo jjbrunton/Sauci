@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { useEntityForm } from '@/hooks/useEntityForm';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { IconPicker, IconPreview } from '@/components/ui/icon-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination';
@@ -36,6 +38,7 @@ interface Category {
     icon: string | null;
     sort_order: number | null;
     created_at: string | null;
+    is_public: boolean;
     pack_count?: number;
 }
 
@@ -43,6 +46,7 @@ interface CategoryFormData {
     name: string;
     description: string;
     icon: string;
+    is_public: boolean;
 }
 
 // =============================================================================
@@ -60,11 +64,12 @@ export function CategoriesPage() {
 
     // Form state using the new hook
     const form = useEntityForm<CategoryFormData, Category>(
-        { name: '', description: '', icon: 'bookmark-outline' },
+        { name: '', description: '', icon: 'bookmark-outline', is_public: true },
         (category) => ({
             name: category.name,
             description: category.description || '',
             icon: category.icon || 'bookmark-outline',
+            is_public: category.is_public ?? true,
         })
     );
 
@@ -139,6 +144,7 @@ export function CategoriesPage() {
             name: idea.name,
             description: idea.description || '',
             icon: idea.icon || 'bookmark-outline',
+            is_public: true,
         });
     };
 
@@ -154,6 +160,7 @@ export function CategoriesPage() {
                 name: form.formData.name,
                 description: form.formData.description || null,
                 icon: form.formData.icon || null,
+                is_public: form.formData.is_public,
             };
 
             if (form.editingItem) {
@@ -207,19 +214,45 @@ export function CategoriesPage() {
             const currentOrder = category.sort_order ?? currentIndex;
             const targetOrder = targetCategory.sort_order ?? targetIndex;
 
-            await Promise.all([
+            const [currentUpdate, targetUpdate] = await Promise.all([
                 auditedSupabase.update('categories', category.id, { sort_order: targetOrder }),
                 auditedSupabase.update('categories', targetCategory.id, { sort_order: currentOrder }),
             ]);
 
+            if (currentUpdate.error || targetUpdate.error) {
+                throw currentUpdate.error ?? targetUpdate.error ?? new Error('Failed to update category order');
+            }
+
             // Optimistic update
             const newCategories = [...categories];
-            [newCategories[currentIndex], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[currentIndex]];
+            newCategories[currentIndex] = { ...targetCategory, sort_order: currentOrder };
+            newCategories[targetIndex] = { ...category, sort_order: targetOrder };
             setCategories(newCategories);
         } catch (error) {
             toast.error('Failed to reorder categories');
             console.error(error);
             fetchCategories();
+        }
+    };
+
+    const handleToggleVisibility = async (category: Category) => {
+        try {
+            // Optimistic update
+            setCategories(categories.map(c =>
+                c.id === category.id ? { ...c, is_public: !c.is_public } : c
+            ));
+
+            const { error } = await auditedSupabase.update('categories', category.id, {
+                is_public: !category.is_public
+            });
+
+            if (error) throw error;
+            
+            toast.success(category.is_public ? 'Category hidden' : 'Category made public');
+        } catch (error) {
+            toast.error('Failed to update visibility');
+            console.error(error);
+            fetchCategories(); // Revert
         }
     };
 
@@ -321,6 +354,19 @@ export function CategoriesPage() {
                                         rows={3}
                                     />
                                 </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="space-y-0.5">
+                                        <Label>Public</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Visible to users in the app
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={form.formData.is_public}
+                                        onCheckedChange={(checked) => form.setField('is_public', checked)}
+                                    />
+                                </div>
                             </div>
 
                             <DialogFooter>
@@ -359,38 +405,60 @@ export function CategoriesPage() {
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {categories.map((category, index) => (
-                        <Card key={category.id} className="group hover:shadow-md transition-shadow">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Card key={category.id} className="group flex flex-col hover:border-primary/50 transition-colors">
+                            <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
+                                <div className="rounded-lg bg-primary/10 p-2.5">
+                                    <IconPreview value={category.icon} className="h-6 w-6 text-primary" />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+                                        {category.is_public ? 'Public' : 'Hidden'}
+                                    </span>
+                                    <Switch
+                                        checked={category.is_public}
+                                        onCheckedChange={() => handleToggleVisibility(category)}
+                                        className="scale-75 origin-right"
+                                    />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-1 flex flex-col gap-4">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-lg">{category.name}</CardTitle>
+                                    <CardDescription className="line-clamp-2 h-10">
+                                        {category.description || 'No description'}
+                                    </CardDescription>
+                                </div>
+
+                                <div className="flex items-center justify-between mt-auto">
+                                    <Badge variant="secondary" className="font-normal">
+                                        {category.pack_count} pack{category.pack_count !== 1 ? 's' : ''}
+                                    </Badge>
+
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex flex-col gap-0.5 mr-1">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-6 w-6"
+                                                className="h-5 w-5 rounded-full"
                                                 onClick={() => handleMove(category, 'up')}
                                                 disabled={index === 0}
                                             >
-                                                <ChevronUp className="h-4 w-4" />
+                                                <ChevronUp className="h-3 w-3" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-6 w-6"
+                                                className="h-5 w-5 rounded-full"
                                                 onClick={() => handleMove(category, 'down')}
                                                 disabled={index === categories.length - 1}
                                             >
-                                                <ChevronDown className="h-4 w-4" />
+                                                <ChevronDown className="h-3 w-3" />
                                             </Button>
                                         </div>
-                                        <div className="text-4xl mb-2">
-                                            <IconPreview value={category.icon} fallback="bookmark-outline" className="text-4xl" />
-                                        </div>
-                                    </div>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                             onClick={() => form.openEdit(category)}
                                         >
                                             <Pencil className="h-4 w-4" />
@@ -398,28 +466,19 @@ export function CategoriesPage() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
                                             onClick={() => handleDelete(category)}
                                         >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                            <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </div>
                                 </div>
-                                <CardTitle>{category.name}</CardTitle>
-                                <CardDescription className="line-clamp-2">
-                                    {category.description || 'No description'}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">
-                                        {category.pack_count} pack{category.pack_count !== 1 ? 's' : ''}
-                                    </span>
-                                    <Link to={`/categories/${category.id}/packs`}>
-                                        <Button variant="outline" size="sm">
-                                            View Packs
-                                        </Button>
-                                    </Link>
-                                </div>
+
+                                <Link to={`/categories/${category.id}/packs`}>
+                                    <Button variant="outline" className="w-full">
+                                        View Packs
+                                    </Button>
+                                </Link>
                             </CardContent>
                         </Card>
                     ))}

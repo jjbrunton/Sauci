@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +13,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Plus, Loader2, X } from 'lucide-react';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
 
@@ -26,6 +32,11 @@ interface Topic {
     name: string;
 }
 
+interface Category {
+    id: string;
+    name: string;
+}
+
 export interface PackFormData {
     name: string;
     description: string;
@@ -33,6 +44,7 @@ export interface PackFormData {
     is_premium: boolean;
     is_public: boolean;
     is_explicit: boolean;
+    category_id: string;
 }
 
 export interface PackFormDialogProps {
@@ -43,6 +55,7 @@ export interface PackFormDialogProps {
     onSave: () => void;
     saving: boolean;
     isEditing: boolean;
+    categories: Category[];
     allTopics: Topic[];
     selectedTopicIds: Set<string>;
     onTopicsChange: (topicIds: Set<string>) => void;
@@ -60,6 +73,7 @@ export function PackFormDialog({
     onSave,
     saving,
     isEditing,
+    categories,
     allTopics,
     selectedTopicIds,
     onTopicsChange,
@@ -139,6 +153,27 @@ export function PackFormDialog({
                             placeholder="Describe this pack..."
                             rows={3}
                         />
+                    </div>
+
+                    {/* Category */}
+                    <div className="space-y-2">
+                        <Label>Category (optional)</Label>
+                        <Select
+                            value={formData.category_id || '__none__'}
+                            onValueChange={(value) => setField('category_id', value === '__none__' ? '' : value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__none__">No category</SelectItem>
+                                {categories.map((category) => (
+                                    <SelectItem key={category.id} value={category.id}>
+                                        {category.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Premium Toggle */}

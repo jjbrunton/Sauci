@@ -22,7 +22,7 @@ import { IconPreview } from '@/components/ui/icon-picker';
 interface Category {
     id: string;
     name: string;
-    icon: string | null;
+    icon?: string | null;
 }
 
 interface Topic {
@@ -54,6 +54,7 @@ export function PacksPage() {
 
     // Data state
     const [category, setCategory] = useState<Category | null>(null);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [packs, setPacks] = useState<QuestionPack[]>([]);
     const [loading, setLoading] = useState(true);
     const [aiDialogOpen, setAiDialogOpen] = useState(false);
@@ -74,6 +75,7 @@ export function PacksPage() {
             is_premium: false,
             is_public: false,
             is_explicit: false,
+            category_id: categoryId ?? '',
         },
         (pack) => ({
             name: pack.name,
@@ -82,6 +84,7 @@ export function PacksPage() {
             is_premium: pack.is_premium,
             is_public: pack.is_public,
             is_explicit: pack.is_explicit,
+            category_id: pack.category_id || '',
         })
     );
 
@@ -101,6 +104,12 @@ export function PacksPage() {
                     .single();
                 setCategory(cat);
             }
+
+            const { data: categoriesData } = await supabase
+                .from('categories')
+                .select('id, name')
+                .order('name');
+            setCategories(categoriesData || []);
 
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
@@ -221,6 +230,7 @@ export function PacksPage() {
                     is_premium: form.formData.is_premium,
                     is_public: form.formData.is_public,
                     is_explicit: form.formData.is_explicit,
+                    category_id: form.formData.category_id || null,
                 });
                 if (error) throw error;
                 packId = form.editingItem.id;
@@ -234,7 +244,7 @@ export function PacksPage() {
                         is_premium: form.formData.is_premium,
                         is_public: form.formData.is_public,
                         is_explicit: form.formData.is_explicit,
-                        category_id: categoryId || null,
+                        category_id: form.formData.category_id || null,
                         sort_order: totalCount,
                     })
                     .select('id')
@@ -294,6 +304,7 @@ export function PacksPage() {
                 is_premium: false,
                 is_public: false,
                 is_explicit: false,
+                category_id: categoryId ?? '',
             });
             setAiDialogOpen(false);
             setSelectedTopicIds(new Set());
@@ -312,14 +323,19 @@ export function PacksPage() {
             const currentOrder = pack.sort_order ?? currentIndex;
             const targetOrder = targetPack.sort_order ?? targetIndex;
 
-            await Promise.all([
+            const [currentUpdate, targetUpdate] = await Promise.all([
                 auditedSupabase.update('question_packs', pack.id, { sort_order: targetOrder }),
                 auditedSupabase.update('question_packs', targetPack.id, { sort_order: currentOrder }),
             ]);
 
+            if (currentUpdate.error || targetUpdate.error) {
+                throw currentUpdate.error ?? targetUpdate.error ?? new Error('Failed to update pack order');
+            }
+
             // Optimistic update
             const newPacks = [...packs];
-            [newPacks[currentIndex], newPacks[targetIndex]] = [newPacks[targetIndex], newPacks[currentIndex]];
+            newPacks[currentIndex] = { ...targetPack, sort_order: currentOrder };
+            newPacks[targetIndex] = { ...pack, sort_order: targetOrder };
             setPacks(newPacks);
         } catch (error) {
             toast.error('Failed to reorder packs');
@@ -391,6 +407,7 @@ export function PacksPage() {
                 onSave={handleSave}
                 saving={form.saving}
                 isEditing={form.isEditing}
+                categories={categories}
                 allTopics={allTopics}
                 selectedTopicIds={selectedTopicIds}
                 onTopicsChange={setSelectedTopicIds}

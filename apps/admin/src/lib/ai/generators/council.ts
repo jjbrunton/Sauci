@@ -143,7 +143,8 @@ export async function generateQuestionsWithCouncil(
                 packDescription,
                 existingQuestions,
                 crudeLang,
-                inspiration
+                inspiration,
+                gen.temperature
             );
             const result = {
                 generatorIndex: index,

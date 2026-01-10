@@ -3,7 +3,7 @@
 // Polish and improve content text
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
+import { getOpenAI, getModel, getTemperature } from '../client';
 
 type PolishType = 'question' | 'partner_text' | 'pack_name' | 'pack_description' | 'category_name';
 
@@ -64,20 +64,32 @@ export async function polishContent(
   `;
     }
 
-    const prompt = `Please polish, improve, and tidy up the following text, which is used as ${contextMap[type] || 'text in the app'}.
+    const prompt = `<task>
+Polish, improve, and tidy up the following text used as ${contextMap[type] || 'text in the app'}.
+</task>
 
-  Original text: "${text}"
+<original_text>
+"${text}"
+</original_text>
 
-  ${explicitInstruction}
+<content_type>
+${explicitInstruction}
+</content_type>
 
-  ${additionalRules}
-  ${fewShotExamples}
+<rules>
+${additionalRules}
+- Make it concise, engaging, and grammatically correct
+- Maintain the original intent and meaning
+- Do NOT change the core action - only improve phrasing
+</rules>
 
-  Make it concise, engaging, and grammatically correct.
-  Maintain the original intent and meaning.
+${fewShotExamples}
 
-  Return a JSON object with:
-  - polished: The improved text string`;
+<output_format>
+{
+  "polished": string  // The improved text
+}
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('polish'),
@@ -89,7 +101,7 @@ export async function polishContent(
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.7,
+        temperature: getTemperature('polish', 0.7),
     });
 
     const content = response.choices[0].message.content;

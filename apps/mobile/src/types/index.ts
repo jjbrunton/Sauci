@@ -35,7 +35,9 @@ export interface Category {
     icon: string | null;
     sort_order: number;
     created_at: string;
+    is_public: boolean;
 }
+
 
 // Question pack
 export interface QuestionPack {

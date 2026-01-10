@@ -40,6 +40,7 @@ export interface Question {
     intensity: 1 | 2 | 3 | 4 | 5;
     allowed_couple_genders?: string[] | null;
     target_user_genders?: string[] | null;
+    required_props?: string[] | null;
     created_at: string;
 }
 

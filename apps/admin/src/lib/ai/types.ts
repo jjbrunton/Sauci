@@ -12,6 +12,7 @@ export type ModelPurpose = 'generate' | 'fix' | 'polish' | 'describe_image';
 
 export interface CouncilGenerator {
     model: string;
+    temperature?: number;
 }
 
 export type CouncilSelectionMode = 'whole_set' | 'cherry_pick';
@@ -20,6 +21,7 @@ export interface CouncilConfig {
     enabled: boolean;
     generators: CouncilGenerator[];
     reviewerModel: string;
+    reviewerTemperature?: number;
     selectionMode: CouncilSelectionMode;
     cherryPickEnsureIntensityDistribution: boolean;
 }
@@ -62,16 +64,29 @@ export interface GeneratedPackIdea {
 // REVIEW TYPES
 // =============================================================================
 
+export interface QuestionReviewScores {
+    guidelineCompliance: number;
+    creativity: number;
+    clarity: number;
+    intensityAccuracy: number;
+    anatomicalConsistency: number;
+    partnerTextQuality: number;
+    coupleTargeting: number;
+    initiatorTargeting: number;
+}
+
 export interface QuestionReview {
     index: number;
     verdict: 'pass' | 'flag' | 'reject';
     issues: string[];
     suggestions?: string;
-    scores: {
-        guidelineCompliance: number;
-        creativity: number;
-        clarity: number;
-        intensityAccuracy: number;
+    scores: QuestionReviewScores;
+    // Additional detailed feedback
+    intensitySuggestion?: number | null; // Suggested intensity if current seems wrong
+    targetingSuggestions?: {
+        suggestedCoupleTargets?: string[] | null;
+        suggestedInitiator?: string[] | null;
+        reason?: string;
     };
 }
 
@@ -188,6 +203,22 @@ export interface TextAnalysis {
     suggested_text: string;
     suggested_partner_text: string | null;
     reason: string;
+    // Intensity suggestion (only if AI thinks current is wrong)
+    suggested_intensity?: number | null;
+    intensity_reason?: string | null;
+}
+
+export interface DeletionAnalysis {
+    id: string;
+    category: 'duplicate' | 'redundant' | 'off-tone' | 'unsafe' | 'too-vague' | 'broken' | 'off-topic';
+    reason: string;
+    duplicate_of_id?: string | null;
+}
+
+export interface PropsAnalysis {
+    id: string;
+    suggested_required_props: string[] | null;
+    reason: string;
 }
 
 export interface ExtractedTopic {
@@ -216,4 +247,4 @@ export interface SelectionResult {
 // TONE LEVEL TYPE
 // =============================================================================
 
-export type ToneLevel = 0 | 1 | 2 | 3 | 4 | 5;
+export type ToneLevel = 1 | 2 | 3 | 4 | 5;

@@ -3,7 +3,7 @@
 // Generate category names and category ideas
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
+import { getOpenAI, getModel, getTemperature } from '../client';
 import type { GeneratedCategoryIdea } from '../types';
 
 /**
@@ -11,19 +11,30 @@ import type { GeneratedCategoryIdea } from '../types';
  */
 export async function generateCategory(): Promise<{ name: string; description: string; icon: string }> {
     const openai = getOpenAI();
-    const prompt = `Generate a unique category for organizing activity packs in a couples' intimacy/connection app.
+    const prompt = `<task>
+Generate a unique category for organizing activity packs in a couples' intimacy/connection app.
+</task>
 
+<app_context>
 This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
 Each partner independently swipes Like/Dislike/Maybe, and when both swipe positively they "match".
 Categories organize collections of activity packs (date ideas, intimate experiences, adventures, challenges, etc.).
 This is NOT a Q&A app - it's about discovering shared interests in activities.
+</app_context>
 
-Return a JSON object with:
-- name: Category name (1-3 words, e.g., "Romance", "Adventure", "Date Nights")
-- description: Brief description of what activity packs in this category contain (1 sentence)
-- icon: A single emoji that represents this category
+<examples>
+Good category names: "Romance", "Adventure", "Date Nights", "Intimacy", "Bonding", "Exploration"
+</examples>
 
-Be creative and think of categories that help couples explore different types of activities together.`;
+<output_format>
+{
+  "name": string,        // 1-3 words (e.g., "Romance", "Adventure", "Date Nights")
+  "description": string, // 1 sentence describing what activity packs contain
+  "icon": string         // Single emoji representing this category
+}
+
+Be creative and think of categories that help couples explore different types of activities together.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
@@ -35,7 +46,7 @@ Be creative and think of categories that help couples explore different types of
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.9,
+        temperature: getTemperature('generate', 0.9),
     });
 
     const content = response.choices[0].message.content;
@@ -67,32 +78,62 @@ export async function suggestCategories(
         ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the names and descriptions.'
         : '';
 
-    const inspirationInstruction = inspiration
-        ? `\n\nINSPIRATION/GUIDANCE FROM ADMIN:\n${inspiration}\n\nUse the above inspiration to guide your category suggestions.`
+    // Sanitize inspiration to prevent prompt injection
+    const sanitizedInspiration = inspiration
+        ? inspiration
+            .replace(/<[^>]*>/g, '')
+            .replace(/\b(CRITICAL|PRIORITY|INSTRUCTION|OVERRIDE|IGNORE|SYSTEM|ASSISTANT)\b:?/gi, '')
+            .trim()
         : '';
 
-    const avoidInstruction = previousSuggestions && previousSuggestions.length > 0
-        ? `\n\nIMPORTANT - DO NOT suggest any of these category names (already suggested): ${previousSuggestions.join(', ')}\nGenerate completely different and fresh ideas.`
+    const inspirationSection = sanitizedInspiration
+        ? `\n<user_guidance>\n${sanitizedInspiration}\n</user_guidance>`
         : '';
 
-    const prompt = `Here are the current categories in our couples' activity/intimacy app: ${existingList}.
+    const avoidSection = previousSuggestions && previousSuggestions.length > 0
+        ? `\n<avoid_names>\n${previousSuggestions.join(', ')}\n</avoid_names>`
+        : '';
 
-IMPORTANT - HOW THE APP WORKS:
-- This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals
+    const prompt = `<task>
+Suggest 5 NEW, UNIQUE category ideas for organizing activity packs in a couples' activity/intimacy app.
+</task>
+
+<existing_categories>
+Current categories: ${existingList}
+</existing_categories>
+
+<app_context>
+This is an ACTIVITY-FOCUSED app where couples swipe on activity proposals.
 - Each partner independently swipes Like/Dislike/Maybe on activities
 - When BOTH partners swipe positively, they "match" and can discuss the activity
 - Categories organize collections of activity packs (date ideas, intimate experiences, adventures, etc.)
-- This is NOT a Q&A app - it's about discovering shared interests in activities to do together
+- This is NOT a Q&A app - it's about discovering shared interests in activities
+</app_context>
+${inspirationSection}
 
-Suggest 5 NEW, UNIQUE category ideas that differ from the existing ones.
-${explicitInstruction}${crudeLangInstruction}${inspirationInstruction}${avoidInstruction}
+<content_guidelines>
+${explicitInstruction}
+${crudeLangInstruction}
+</content_guidelines>
+${avoidSection}
 
-Return a JSON object with an "ideas" array containing 5 objects, where each object has:
-- name: Category name (1-3 words)
-- description: Brief description of what activity packs in this category contain (1 sentence)
-- icon: A single descriptive emoji
+<category_themes>
+Focus on diverse themes: date ideas, adventures, intimate experiences, bonding activities, challenges, travel, home activities, etc.
+</category_themes>
 
-Focus on diverse activity themes like: date ideas, adventures, intimate experiences, bonding activities, challenges, travel, home activities, etc.`;
+<output_format>
+{
+  "ideas": [
+    {
+      "name": string,        // 1-3 words
+      "description": string, // 1 sentence, what activity packs contain
+      "icon": string         // Single descriptive emoji
+    }
+  ]
+}
+
+Generate 5 unique categories that differ from existing ones.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('generate'),
@@ -104,7 +145,7 @@ Focus on diverse activity themes like: date ideas, adventures, intimate experien
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.9,
+        temperature: getTemperature('generate', 0.9),
     });
 
     const content = response.choices[0].message.content;

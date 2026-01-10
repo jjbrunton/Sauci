@@ -12,6 +12,7 @@ export interface Category {
     icon: string | null;
     sort_order: number | null;
     created_at: string | null;
+    is_public: boolean;
     pack_count?: number;
 }
 
@@ -19,6 +20,7 @@ export interface CategoryFormData {
     name: string;
     description: string;
     icon: string;
+    is_public: boolean;
 }
 
 // =============================================================================
@@ -85,10 +87,12 @@ export async function createCategory(
         description: data.description || null,
         icon: data.icon || null,
         sort_order: sortOrder,
+        is_public: data.is_public ?? true,
     });
 
     if (error) throw error;
-    return created as Category;
+    if (!created || created.length === 0) throw new Error('Failed to create category');
+    return created[0] as Category;
 }
 
 /**
@@ -102,6 +106,7 @@ export async function updateCategory(
         name: data.name,
         description: data.description || null,
         icon: data.icon || null,
+        is_public: data.is_public,
     });
 
     if (error) throw error;

@@ -47,49 +47,106 @@ export type Database = {
       ai_config: {
         Row: {
           cherry_pick_ensure_intensity_distribution: boolean | null
+          classifier_enabled: boolean | null
+          classifier_model: string | null
+          classifier_prompt: string | null
+          classifier_temperature: number | null
           council_enabled: boolean | null
           council_generator_model: string | null
           council_generators: Json | null
           council_reviewer_model: string | null
+          council_reviewer_temperature: number | null
           council_selection_mode: string | null
           default_model: string | null
+          default_temperature: number | null
+          heuristic_keyword_triggers: string | null
+          heuristic_min_text_length: number
+          heuristic_record_reason: boolean
+          heuristic_skip_if_no_alnum: boolean
+          heuristic_skip_media_without_text: boolean
+          heuristic_use_default_keywords: boolean
+          heuristic_use_default_whitelist: boolean
+          heuristic_whitelist: string | null
+          heuristic_whitelist_max_length: number
+          heuristics_enabled: boolean
           id: string
           model_fix: string | null
           model_generate: string | null
           model_polish: string | null
           openrouter_api_key: string | null
+          temperature_fix: number | null
+          temperature_generate: number | null
+          temperature_polish: number | null
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
           cherry_pick_ensure_intensity_distribution?: boolean | null
+          classifier_enabled?: boolean | null
+          classifier_model?: string | null
+          classifier_prompt?: string | null
+          classifier_temperature?: number | null
           council_enabled?: boolean | null
           council_generator_model?: string | null
           council_generators?: Json | null
           council_reviewer_model?: string | null
+          council_reviewer_temperature?: number | null
           council_selection_mode?: string | null
           default_model?: string | null
+          default_temperature?: number | null
+          heuristic_keyword_triggers?: string | null
+          heuristic_min_text_length?: number
+          heuristic_record_reason?: boolean
+          heuristic_skip_if_no_alnum?: boolean
+          heuristic_skip_media_without_text?: boolean
+          heuristic_use_default_keywords?: boolean
+          heuristic_use_default_whitelist?: boolean
+          heuristic_whitelist?: string | null
+          heuristic_whitelist_max_length?: number
+          heuristics_enabled?: boolean
           id?: string
           model_fix?: string | null
           model_generate?: string | null
           model_polish?: string | null
           openrouter_api_key?: string | null
+          temperature_fix?: number | null
+          temperature_generate?: number | null
+          temperature_polish?: number | null
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
           cherry_pick_ensure_intensity_distribution?: boolean | null
+          classifier_enabled?: boolean | null
+          classifier_model?: string | null
+          classifier_prompt?: string | null
+          classifier_temperature?: number | null
           council_enabled?: boolean | null
           council_generator_model?: string | null
           council_generators?: Json | null
           council_reviewer_model?: string | null
+          council_reviewer_temperature?: number | null
           council_selection_mode?: string | null
           default_model?: string | null
+          default_temperature?: number | null
+          heuristic_keyword_triggers?: string | null
+          heuristic_min_text_length?: number
+          heuristic_record_reason?: boolean
+          heuristic_skip_if_no_alnum?: boolean
+          heuristic_skip_media_without_text?: boolean
+          heuristic_use_default_keywords?: boolean
+          heuristic_use_default_whitelist?: boolean
+          heuristic_whitelist?: string | null
+          heuristic_whitelist_max_length?: number
+          heuristics_enabled?: boolean
           id?: string
           model_fix?: string | null
           model_generate?: string | null
           model_polish?: string | null
           openrouter_api_key?: string | null
+          temperature_fix?: number | null
+          temperature_generate?: number | null
+          temperature_polish?: number | null
           updated_at?: string | null
           updated_by?: string | null
         }
@@ -124,6 +181,7 @@ export type Database = {
           action: Database["public"]["Enums"]["audit_action"]
           admin_role: Database["public"]["Enums"]["admin_role"]
           admin_user_id: string
+          admin_username: string | null
           changed_fields: string[] | null
           created_at: string | null
           id: string
@@ -136,6 +194,7 @@ export type Database = {
           action: Database["public"]["Enums"]["audit_action"]
           admin_role: Database["public"]["Enums"]["admin_role"]
           admin_user_id: string
+          admin_username?: string | null
           changed_fields?: string[] | null
           created_at?: string | null
           id?: string
@@ -148,6 +207,7 @@ export type Database = {
           action?: Database["public"]["Enums"]["audit_action"]
           admin_role?: Database["public"]["Enums"]["admin_role"]
           admin_user_id?: string
+          admin_username?: string | null
           changed_fields?: string[] | null
           created_at?: string | null
           id?: string
@@ -164,6 +224,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          is_public: boolean
           name: string
           sort_order: number | null
         }
@@ -172,6 +233,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_public?: boolean
           name: string
           sort_order?: number | null
         }
@@ -180,6 +242,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_public?: boolean
           name?: string
           sort_order?: number | null
         }
@@ -267,6 +330,139 @@ export type Database = {
           invite_code?: string | null
         }
         Relationships: []
+      }
+      dare_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+          sent_dare_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+          sent_dare_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+          sent_dare_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dare_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dare_messages_sent_dare_id_fkey"
+            columns: ["sent_dare_id"]
+            isOneToOne: false
+            referencedRelation: "sent_dares"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dare_packs: {
+        Row: {
+          avg_intensity: number | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_explicit: boolean
+          is_premium: boolean
+          is_public: boolean
+          max_intensity: number | null
+          min_intensity: number | null
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          avg_intensity?: number | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_explicit?: boolean
+          is_premium?: boolean
+          is_public?: boolean
+          max_intensity?: number | null
+          min_intensity?: number | null
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          avg_intensity?: number | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_explicit?: boolean
+          is_premium?: boolean
+          is_public?: boolean
+          max_intensity?: number | null
+          min_intensity?: number | null
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dare_packs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dares: {
+        Row: {
+          created_at: string
+          id: string
+          intensity: number
+          pack_id: string
+          suggested_duration_hours: number | null
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          intensity?: number
+          pack_id: string
+          suggested_duration_hours?: number | null
+          text: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          intensity?: number
+          pack_id?: string
+          suggested_duration_hours?: number | null
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dares_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "dare_packs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feature_interests: {
         Row: {
@@ -378,22 +574,22 @@ export type Database = {
       }
       match_archives: {
         Row: {
+          archived_at: string | null
           id: string
           match_id: string
           user_id: string
-          archived_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           id?: string
           match_id: string
           user_id: string
-          archived_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           id?: string
           match_id?: string
           user_id?: string
-          archived_at?: string | null
         }
         Relationships: [
           {
@@ -401,13 +597,6 @@ export type Database = {
             columns: ["match_id"]
             isOneToOne: false
             referencedRelation: "matches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "match_archives_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -456,22 +645,22 @@ export type Database = {
       }
       message_deletions: {
         Row: {
+          deleted_at: string | null
           id: string
           message_id: string
           user_id: string
-          deleted_at: string | null
         }
         Insert: {
+          deleted_at?: string | null
           id?: string
           message_id: string
           user_id: string
-          deleted_at?: string | null
         }
         Update: {
+          deleted_at?: string | null
           id?: string
           message_id?: string
           user_id?: string
-          deleted_at?: string | null
         }
         Relationships: [
           {
@@ -481,23 +670,66 @@ export type Database = {
             referencedRelation: "messages"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      message_reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          message_id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          message_id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          message_id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "message_deletions_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "message_reports_message_id_fkey"
+            columns: ["message_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_profile_fk"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
       }
       messages: {
         Row: {
+          category: string | null
           content: string | null
           created_at: string | null
           deleted_at: string | null
           delivered_at: string | null
           encrypted_content: string | null
           encryption_iv: string | null
+          flag_reason: string | null
           id: string
           keys_metadata: Json | null
           match_id: string
@@ -506,17 +738,20 @@ export type Database = {
           media_path: string | null
           media_type: string | null
           media_viewed_at: string | null
+          moderation_status: string | null
           read_at: string | null
           user_id: string
           version: number | null
         }
         Insert: {
+          category?: string | null
           content?: string | null
           created_at?: string | null
           deleted_at?: string | null
           delivered_at?: string | null
           encrypted_content?: string | null
           encryption_iv?: string | null
+          flag_reason?: string | null
           id?: string
           keys_metadata?: Json | null
           match_id: string
@@ -525,17 +760,20 @@ export type Database = {
           media_path?: string | null
           media_type?: string | null
           media_viewed_at?: string | null
+          moderation_status?: string | null
           read_at?: string | null
           user_id: string
           version?: number | null
         }
         Update: {
+          category?: string | null
           content?: string | null
           created_at?: string | null
           deleted_at?: string | null
           delivered_at?: string | null
           encrypted_content?: string | null
           encryption_iv?: string | null
+          flag_reason?: string | null
           id?: string
           keys_metadata?: Json | null
           match_id?: string
@@ -544,6 +782,7 @@ export type Database = {
           media_path?: string | null
           media_type?: string | null
           media_viewed_at?: string | null
+          moderation_status?: string | null
           read_at?: string | null
           user_id?: string
           version?: number | null
@@ -597,6 +836,7 @@ export type Database = {
           gender: string | null
           id: string
           is_premium: boolean | null
+          max_intensity: number | null
           name: string | null
           onboarding_completed: boolean | null
           public_key_jwk: Json | null
@@ -613,6 +853,7 @@ export type Database = {
           gender?: string | null
           id: string
           is_premium?: boolean | null
+          max_intensity?: number | null
           name?: string | null
           onboarding_completed?: boolean | null
           public_key_jwk?: Json | null
@@ -629,6 +870,7 @@ export type Database = {
           gender?: string | null
           id?: string
           is_premium?: boolean | null
+          max_intensity?: number | null
           name?: string | null
           onboarding_completed?: boolean | null
           public_key_jwk?: Json | null
@@ -649,6 +891,7 @@ export type Database = {
       }
       question_packs: {
         Row: {
+          avg_intensity: number | null
           category_id: string | null
           created_at: string | null
           description: string | null
@@ -657,10 +900,13 @@ export type Database = {
           is_explicit: boolean
           is_premium: boolean | null
           is_public: boolean | null
+          max_intensity: number | null
+          min_intensity: number | null
           name: string
           sort_order: number | null
         }
         Insert: {
+          avg_intensity?: number | null
           category_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -669,10 +915,13 @@ export type Database = {
           is_explicit?: boolean
           is_premium?: boolean | null
           is_public?: boolean | null
+          max_intensity?: number | null
+          min_intensity?: number | null
           name: string
           sort_order?: number | null
         }
         Update: {
+          avg_intensity?: number | null
           category_id?: string | null
           created_at?: string | null
           description?: string | null
@@ -681,6 +930,8 @@ export type Database = {
           is_explicit?: boolean
           is_premium?: boolean | null
           is_public?: boolean | null
+          max_intensity?: number | null
+          min_intensity?: number | null
           name?: string
           sort_order?: number | null
         }
@@ -850,6 +1101,86 @@ export type Database = {
         }
         Relationships: []
       }
+      sent_dares: {
+        Row: {
+          accepted_at: string | null
+          completed_at: string | null
+          couple_id: string
+          created_at: string
+          custom_dare_intensity: number | null
+          custom_dare_text: string | null
+          dare_id: string | null
+          expires_at: string | null
+          id: string
+          recipient_id: string
+          sender_id: string
+          sender_notes: string | null
+          sent_at: string
+          status: Database["public"]["Enums"]["dare_status"]
+        }
+        Insert: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          couple_id: string
+          created_at?: string
+          custom_dare_intensity?: number | null
+          custom_dare_text?: string | null
+          dare_id?: string | null
+          expires_at?: string | null
+          id?: string
+          recipient_id: string
+          sender_id: string
+          sender_notes?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["dare_status"]
+        }
+        Update: {
+          accepted_at?: string | null
+          completed_at?: string | null
+          couple_id?: string
+          created_at?: string
+          custom_dare_intensity?: number | null
+          custom_dare_text?: string | null
+          dare_id?: string | null
+          expires_at?: string | null
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          sender_notes?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["dare_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_dares_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_dares_dare_id_fkey"
+            columns: ["dare_id"]
+            isOneToOne: false
+            referencedRelation: "dares"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_dares_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_dares_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           cancel_reason: string | null
@@ -964,6 +1295,14 @@ export type Database = {
         }[]
       }
       get_auth_user_couple_id: { Args: never; Returns: string }
+      get_couple_dare_stats: {
+        Args: { p_couple_id: string }
+        Returns: {
+          total_dares_active: number
+          total_dares_completed: number
+          total_dares_sent: number
+        }[]
+      }
       get_daily_response_limit_status: {
         Args: never
         Returns: {
@@ -1018,6 +1357,15 @@ export type Database = {
           text: string
         }[]
       }
+      get_user_dare_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          dares_completed_as_recipient: number
+          dares_completed_as_sender: number
+          dares_received_count: number
+          dares_sent_count: number
+        }[]
+      }
       get_user_media_files: {
         Args: { user_id: string }
         Returns: {
@@ -1053,11 +1401,22 @@ export type Database = {
         Args: { p_code: string; p_email: string }
         Returns: Json
       }
+      update_question_pack_intensity_stats: {
+        Args: { target_pack_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       admin_role: "pack_creator" | "super_admin"
       answer_type: "yes" | "no" | "maybe"
       audit_action: "INSERT" | "UPDATE" | "DELETE"
+      dare_status:
+        | "pending"
+        | "active"
+        | "completed"
+        | "expired"
+        | "declined"
+        | "cancelled"
       feedback_status:
         | "new"
         | "reviewed"
@@ -1066,6 +1425,7 @@ export type Database = {
         | "closed"
       feedback_type: "bug" | "feature_request" | "general" | "question"
       match_type: "yes_yes" | "yes_maybe" | "maybe_maybe"
+      report_reason: "harassment" | "spam" | "inappropriate_content" | "other"
       subscription_status:
         | "active"
         | "cancelled"
@@ -1202,9 +1562,18 @@ export const Constants = {
       admin_role: ["pack_creator", "super_admin"],
       answer_type: ["yes", "no", "maybe"],
       audit_action: ["INSERT", "UPDATE", "DELETE"],
+      dare_status: [
+        "pending",
+        "active",
+        "completed",
+        "expired",
+        "declined",
+        "cancelled",
+      ],
       feedback_status: ["new", "reviewed", "in_progress", "resolved", "closed"],
       feedback_type: ["bug", "feature_request", "general", "question"],
       match_type: ["yes_yes", "yes_maybe", "maybe_maybe"],
+      report_reason: ["harassment", "spam", "inappropriate_content", "other"],
       subscription_status: [
         "active",
         "cancelled",

@@ -6,6 +6,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,6 +52,7 @@ interface Question {
     intensity: number;
     allowed_couple_genders: string[] | null;
     target_user_genders: string[] | null;
+    required_props?: string[] | null;
     created_at: string | null;
 }
 
@@ -67,6 +69,8 @@ export function QuestionsPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [aiDialogOpen, setAiDialogOpen] = useState(false);
     const [reviewOpen, setReviewOpen] = useState(false);
+    const [reviewQuestions, setReviewQuestions] = useState<Question[]>([]);
+    const [reviewLoading, setReviewLoading] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [saving, setSaving] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -82,12 +86,14 @@ export function QuestionsPage() {
         intensity: number;
         allowed_couple_genders: string[];
         target_user_genders: string[];
+        required_props: string;
     }>({
         text: '',
         partner_text: '',
         intensity: 1,
         allowed_couple_genders: [],
         target_user_genders: [],
+        required_props: '',
     });
 
     const fetchData = useCallback(async () => {
@@ -161,6 +167,8 @@ export function QuestionsPage() {
     useEffect(() => {
         setPage(1);
         setSelectedIds(new Set());
+        setReviewQuestions([]);
+        setReviewOpen(false);
     }, [packId]);
 
     useEffect(() => {
@@ -169,7 +177,14 @@ export function QuestionsPage() {
 
     const openCreateDialog = () => {
         setEditingQuestion(null);
-        setFormData({ text: '', partner_text: '', intensity: 1, allowed_couple_genders: [], target_user_genders: [] });
+        setFormData({
+            text: '',
+            partner_text: '',
+            intensity: 1,
+            allowed_couple_genders: [],
+            target_user_genders: [],
+            required_props: '',
+        });
         setDialogOpen(true);
     };
 
@@ -181,6 +196,7 @@ export function QuestionsPage() {
             intensity: question.intensity,
             allowed_couple_genders: question.allowed_couple_genders || [],
             target_user_genders: question.target_user_genders || [],
+            required_props: question.required_props?.join(', ') ?? '',
         });
         setDialogOpen(true);
     };
@@ -191,6 +207,12 @@ export function QuestionsPage() {
             return;
         }
 
+        const requiredProps = formData.required_props
+            .split(/[,;\n]/)
+            .map(value => value.trim())
+            .filter(Boolean);
+        const requiredPropsValue = requiredProps.length > 0 ? requiredProps : null;
+
         setSaving(true);
         try {
             if (editingQuestion) {
@@ -200,6 +222,7 @@ export function QuestionsPage() {
                     intensity: formData.intensity,
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
+                    required_props: requiredPropsValue,
                 });
 
                 if (error) throw error;
@@ -212,6 +235,7 @@ export function QuestionsPage() {
                     intensity: formData.intensity,
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
+                    required_props: requiredPropsValue,
                 });
 
                 if (error) throw error;
@@ -270,6 +294,28 @@ export function QuestionsPage() {
 
         insertQuestions();
         setAiDialogOpen(false);
+    };
+
+    const handleReviewOpen = async () => {
+        if (!packId) return;
+
+        setReviewLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('questions')
+                .select('id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, created_at')
+                .eq('pack_id', packId)
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+            setReviewQuestions(data || []);
+            setReviewOpen(true);
+        } catch (error) {
+            toast.error('Failed to load questions for review');
+            console.error(error);
+        } finally {
+            setReviewLoading(false);
+        }
     };
 
     // Selection handlers
@@ -348,8 +394,12 @@ export function QuestionsPage() {
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setReviewOpen(true)}>
-                        <Sparkles className="mr-2 h-4 w-4" />
+                    <Button variant="outline" onClick={handleReviewOpen} disabled={reviewLoading}>
+                        {reviewLoading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Sparkles className="mr-2 h-4 w-4" />
+                        )}
                         Review Questions
                     </Button>
                     <Button variant="outline" onClick={() => setAiDialogOpen(true)}>
@@ -442,6 +492,18 @@ export function QuestionsPage() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label htmlFor="required_props">Required Props (optional)</Label>
+                                    <Input
+                                        id="required_props"
+                                        value={formData.required_props}
+                                        onChange={(e) => setFormData(d => ({ ...d, required_props: e.target.value }))}
+                                        placeholder="e.g., vibrator, restraints"
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Comma-separated list of props/accessories needed for this question.
+                                    </p>
+                                </div>
 
                                 <div className="space-y-2">
                                     <Label>Target Couples (optional)</Label>
@@ -580,7 +642,7 @@ export function QuestionsPage() {
             <ReviewQuestionsDialog
                 open={reviewOpen}
                 onOpenChange={setReviewOpen}
-                questions={questions}
+                questions={reviewQuestions}
                 isExplicit={pack?.is_explicit ?? false}
                 onUpdated={fetchData}
             />

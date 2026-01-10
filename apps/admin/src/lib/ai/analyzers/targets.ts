@@ -3,7 +3,7 @@
 // Analyze questions for gender targeting and couple compatibility
 // =============================================================================
 
-import { getOpenAI, getModel } from '../client';
+import { getOpenAI, getModel, getTemperature } from '../client';
 import type { TargetAnalysis } from '../types';
 
 /**
@@ -28,59 +28,67 @@ export async function analyzeQuestionTargets(
         current_initiator: q.target_user_genders
     }));
 
-    const prompt = `Analyze the following questions for a couples app and suggest:
-1. "allowed_couple_genders" (which couple types can see this question)
-2. "target_user_genders" (who should see this question FIRST as initiator - only relevant for two-part questions with partner_text)
+    const prompt = `<task>
+Analyze questions for couple targeting and initiator targeting.
+Only include questions where you have a recommendation to change current settings.
+</task>
 
-COUPLE TARGET OPTIONS: 'male+male', 'female+male', 'female+female'
-INITIATOR OPTIONS: 'male', 'female', 'non-binary'
+<targeting_options>
+Couple targets (allowed_couple_genders): 'male+male', 'female+male', 'female+female'
+Initiator targets (target_user_genders): 'male', 'female', 'non-binary'
+</targeting_options>
 
-RULES FOR COUPLE TARGETS (allowed_couple_genders):
-- Default to ALL (null) if the action is gender-neutral/universal (e.g. kissing, massage, generic sex, anal).
-- Limit ONLY if there is a clear, explicit anatomical requirement (e.g. genitalia-specific terms).
-- SEX TOYS ARE GENDER-NEUTRAL: Vibrators, dildos, plugs, etc. can be used by ANYONE. Do NOT restrict based on toys.
-  - "Control your partner's vibrator" -> ALL couples, ANY initiator (vibrators work on any body)
-  - "Use a butt plug" -> ALL couples (everyone has a butt)
+<couple_targeting_rules>
+DEFAULT: null (ALL couples) unless explicit anatomical requirement
 
-Examples of ACTUAL restrictions:
-- "Blowjob" -> Needs penis -> Exclude F+F -> ['male+male', 'female+male']
-- "Lick pussy" -> Needs vagina -> Exclude M+M -> ['female+male', 'female+female']
-- "Vibrator", "dildo", "toy" -> NO restriction, works for everyone
+Restrict ONLY when:
+- Activity requires penis -> ['male+male', 'female+male'] (exclude F+F)
+- Activity requires vagina -> ['female+male', 'female+female'] (exclude M+M)
 
-RULES FOR INITIATOR (target_user_genders):
-- ONLY relevant for TWO-PART questions (those with partner_text set).
-- Analyze the "text" field to determine who should see this card FIRST as the initiator.
-- ONLY set initiator if there is an EXPLICIT anatomical requirement in the text.
-- SEX TOYS DO NOT IMPLY GENDER: "vibrator", "dildo", "toy", "plug" -> initiator: null (anyone can use/control toys)
-- If text is gender-neutral, leave as null. When in doubt, use null.
-
-Key considerations for initiator:
-1. Does the "text" describe receiving something from a penis? -> Female initiator (in M+F context)
-2. Does the "text" describe an action typically done BY someone with a penis (e.g., "my cum", "cum on you")? -> Male initiator
-3. Does the "text" describe receiving penetration? -> Consider who is typically penetrated
-4. Is the action truly symmetric with no gendered context? -> null
+SEX TOYS ARE GENDER-NEUTRAL:
+- Vibrators, dildos, plugs work on ANYONE -> null (no restriction)
+- "Control your partner's vibrator" -> null
+- "Use a butt plug" -> null (everyone has a butt)
 
 Examples:
-- text: "Swallow your partner's cum" -> Receiving cum requires partner has penis, so in M+F this is female-oriented -> initiator: ['female']
-- text: "Lick my cum off your body" -> "my cum" implies initiator produces cum (has penis) -> initiator: ['male']
-- text: "Deep throat your partner" -> Requires partner has penis, so receiver-focused -> initiator: ['female'] for M+F
-- text: "Give your partner a massage" -> Truly gender-neutral -> initiator: null
-- text: "Let her ride you" / partner_text: "Ride your partner" -> "her" implies female partner -> initiator: ['male']
-- text: "Finger your partner" / partner_text: "Be fingered" -> Receiver needs vagina -> suggested_targets: exclude M+M, initiator: null (either can finger)
+- "Blowjob" -> needs penis -> ['male+male', 'female+male']
+- "Lick pussy" -> needs vagina -> ['female+male', 'female+female']
+- "Use a toy" -> gender-neutral -> null
+</couple_targeting_rules>
 
-Return a JSON object with an "analysis" array containing objects for questions where you have a recommendation.
-Include ALL fields even if null. Include a "reason" string explaining your suggestions.
+<initiator_targeting_rules>
+ONLY for asymmetric questions (those with partner_text).
+DEFAULT: null (anyone can initiate)
 
-Structure:
+Set initiator ONLY when "text" field has explicit anatomical requirement:
+- "Swallow your partner's cum" -> partner has penis -> initiator: ['female'] in M+F
+- "Lick my cum off your body" -> "my cum" = initiator has penis -> ['male']
+- "Deep throat your partner" -> partner has penis -> ['female'] in M+F
+- "Give your partner a massage" -> gender-neutral -> null
+- "Let her ride you" -> "her" implies female partner -> ['male']
+- Sex toys -> null (anyone can use/control toys)
+
+When in doubt, use null.
+</initiator_targeting_rules>
+
+<questions_to_analyze>
+${JSON.stringify(simplifiedQuestions)}
+</questions_to_analyze>
+
+<output_format>
 {
-   "analysis": [
-     { "id": "...", "suggested_targets": ["male+male", "female+male"], "suggested_initiator": ["male"], "reason": "Text implies male initiator with female partner" }
-   ]
+  "analysis": [
+    {
+      "id": string,
+      "suggested_targets": string[]|null,    // e.g., ["male+male", "female+male"] or null
+      "suggested_initiator": string[]|null,  // e.g., ["male"] or null
+      "reason": string                       // Explanation of recommendation
+    }
+  ]
 }
 
-Questions:
-${JSON.stringify(simplifiedQuestions)}
-`;
+Only include questions where targeting should change.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: getModel('fix'),
@@ -92,7 +100,7 @@ ${JSON.stringify(simplifiedQuestions)}
             { role: 'user', content: prompt }
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.5,
+        temperature: getTemperature('fix', 0.5),
     });
 
     const content = response.choices[0].message.content;

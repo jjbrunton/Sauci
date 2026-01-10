@@ -7,6 +7,8 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { CategoriesPage } from '@/pages/content/CategoriesPage';
 import { PacksPage } from '@/pages/content/PacksPage';
 import { QuestionsPage } from '@/pages/content/QuestionsPage';
+import { QuestionAnalyticsPage } from '@/pages/content/QuestionAnalyticsPage';
+import { TagsPage } from '@/pages/content/TagsPage';
 import { DarePacksPage } from '@/pages/content/DarePacksPage';
 import { DaresPage } from '@/pages/content/DaresPage';
 import { UsersPage } from '@/pages/users/UsersPage';
@@ -63,6 +65,22 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
                                     <QuestionsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/question-analytics"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
+                                    <QuestionAnalyticsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/tags"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_PACKS}>
+                                    <TagsPage />
                                 </ProtectedRoute>
                             }
                         />

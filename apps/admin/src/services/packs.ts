@@ -132,7 +132,8 @@ export async function createPack(
     });
 
     if (error) throw error;
-    return created as Pack;
+    if (!created || created.length === 0) throw new Error('Failed to create pack');
+    return created[0] as Pack;
 }
 
 /**

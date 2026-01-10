@@ -249,14 +249,19 @@ export function DarePacksPage() {
             const currentOrder = pack.sort_order ?? currentIndex;
             const targetOrder = targetPack.sort_order ?? targetIndex;
 
-            await Promise.all([
+            const [currentUpdate, targetUpdate] = await Promise.all([
                 auditedSupabase.update('dare_packs', pack.id, { sort_order: targetOrder }),
                 auditedSupabase.update('dare_packs', targetPack.id, { sort_order: currentOrder }),
             ]);
 
+            if (currentUpdate.error || targetUpdate.error) {
+                throw currentUpdate.error ?? targetUpdate.error ?? new Error('Failed to update dare pack order');
+            }
+
             // Optimistic update
             const newPacks = [...darePacks];
-            [newPacks[currentIndex], newPacks[targetIndex]] = [newPacks[targetIndex], newPacks[currentIndex]];
+            newPacks[currentIndex] = { ...targetPack, sort_order: currentOrder };
+            newPacks[targetIndex] = { ...pack, sort_order: targetOrder };
             setDarePacks(newPacks);
         } catch (error) {
             toast.error('Failed to reorder dare packs');

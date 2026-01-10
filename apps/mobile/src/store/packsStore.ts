@@ -51,6 +51,10 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             .select("*")
             .order("sort_order");
 
+        // Hide categories explicitly marked non-public, but keep null for compatibility.
+        const visibleCategories = (categories ?? []).filter(category => category.is_public !== false);
+        const visibleCategoryIds = new Set(visibleCategories.map(category => category.id));
+
         // Fetch packs with category info and question count
         let query = supabase
             .from("question_packs")
@@ -63,15 +67,22 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             query = query.or(`max_intensity.is.null,max_intensity.lte.${maxIntensity}`);
         }
 
-
         const { data: packs } = await query;
+
+        const visiblePacks = (packs ?? []).filter(pack => {
+            if (pack.category?.is_public === false) return false;
+            if (pack.category_id && visibleCategoryIds.size > 0 && !visibleCategoryIds.has(pack.category_id)) {
+                return false;
+            }
+            return true;
+        });
 
         // Also fetch enabled packs if logged in
         await get().fetchEnabledPacks();
 
         set({
-            packs: packs ?? [],
-            categories: categories ?? [],
+            packs: visiblePacks,
+            categories: visibleCategories,
             isLoading: false
         });
     },

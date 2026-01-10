@@ -77,7 +77,7 @@ export function useAiGeneration(
     // Config state
     const [config, setConfig] = useState<GenerationConfig>({
         count: 10,
-        tone: context?.isExplicit ? 5 : 3,
+        tone: context?.isExplicit ? 5 : 2,
         crudeLang: false,
         inspiration: '',
     });
@@ -123,7 +123,7 @@ export function useAiGeneration(
         if (type === 'questions') {
             setConfig(prev => ({
                 ...prev,
-                tone: context?.isExplicit ? 5 : 3,
+                tone: context?.isExplicit ? 5 : 2,
             }));
         }
     }, [context?.isExplicit, type]);

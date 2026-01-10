@@ -53,10 +53,10 @@ export function GenerationForm({
                 </div>
             )}
 
-            {/* Wildness Level Selector (questions only) */}
+            {/* Intimacy Level Selector (questions only) */}
             {type === 'questions' && (
                 <div className="space-y-2">
-                    <Label>Wildness Level</Label>
+                    <Label>Intimacy Level</Label>
                     <div className="flex flex-wrap gap-2">
                         {TONE_LEVELS.map((t) => (
                             <Button

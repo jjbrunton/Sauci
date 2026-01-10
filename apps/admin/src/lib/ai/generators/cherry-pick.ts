@@ -38,73 +38,91 @@ export async function evaluateQuestionPool(
         generatorIndex: q.sourceGeneratorIndex,
     }));
 
-    const prompt = `You are evaluating a pool of ${pooledQuestions.length} questions from ${new Set(pooledQuestions.map(q => q.sourceGeneratorIndex)).size} different AI generators.
+    const prompt = `<task>
+Evaluate a pool of ${pooledQuestions.length} questions from ${new Set(pooledQuestions.map(q => q.sourceGeneratorIndex)).size} different AI generators and select the best ones.
+</task>
 
-Your task is to:
+<objectives>
 1. Score each question individually (1-10 on each criterion)
 2. Identify duplicates/semantically similar questions
 3. Assess uniqueness relative to the pool
 4. Consider pack theme fit
+</objectives>
 
-PACK CONTEXT:
+<pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
 - Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
 - Tone Level: ${packContext.tone} (${toneDescription})
 - Requested question count: ${requestedCount}
+</pack_context>
 
+<scoring_criteria>
 ${REVIEW_GUIDELINES}
 
-ADDITIONAL CRITERIA FOR CHERRY-PICK:
-
 5. UNIQUENESS (1-10):
-   - How unique is this question compared to others in the pool?
-   - 10: Completely unique concept
+   - 10: Completely unique concept in the pool
    - 7-9: Somewhat similar theme but distinct execution
    - 4-6: Similar to another question but different enough to keep
    - 1-3: Near-duplicate of another question
+</scoring_criteria>
 
-DUPLICATE DETECTION:
+<scoring_weights>
+Your scores will be weighted as follows for final selection:
+- Guideline Compliance: 25%
+- Creativity: 20%
+- Clarity: 20%
+- Uniqueness: 20%
+- Intensity Accuracy: 15%
+
+Calibrate your scores knowing these weights. A low compliance score has the most impact.
+</scoring_weights>
+
+<duplicate_detection>
 Two questions are duplicates if they:
-- Describe the same core activity/action
-- Differ only in minor phrasing (e.g., "Have sex outdoors" vs "Make love outside")
+- Describe the same core activity/action (e.g., "Have sex outdoors" vs "Make love outside")
+- Differ only in minor phrasing variations
 - Would feel repetitive if both appeared in the same pack
 
-For duplicates, keep the version with:
+For duplicates, mark the WORSE version as duplicate and keep the version with:
 1. Better phrasing/creativity
 2. More appropriate intensity grading
 3. Better partner_text (if applicable)
+</duplicate_detection>
 
-VERDICT RULES:
-- SELECT: High quality (avg score >= 7), no major issues - should be included
-- CONSIDER: Medium quality (avg score 5-7) - include if needed to fill count
-- SKIP: Low quality (avg score < 5) OR is a duplicate of a better question
+<verdict_rules>
+- SELECT: Average score >= 7, no major issues - should be included
+- CONSIDER: Average score 5-7 - include if needed to fill count
+- SKIP: Average score < 5 OR is a duplicate of a better question
+</verdict_rules>
 
-QUESTIONS TO EVALUATE:
+<questions_to_evaluate>
 ${JSON.stringify(questionsForEval, null, 2)}
+</questions_to_evaluate>
 
-Return a JSON object with:
+<output_format>
 {
   "evaluations": [
     {
-      "questionIndex": 0,
-      "overallScore": 82,
+      "questionIndex": number,        // 0-based index in the questions array
+      "overallScore": number,         // Weighted score 0-100
       "scores": {
-        "guidelineCompliance": 8,
-        "creativity": 9,
-        "clarity": 8,
-        "intensityAccuracy": 8,
-        "uniqueness": 9
+        "guidelineCompliance": 1-10,
+        "creativity": 1-10,
+        "clarity": 1-10,
+        "intensityAccuracy": 1-10,
+        "uniqueness": 1-10
       },
-      "isDuplicate": false,
-      "duplicateOf": null,
-      "issues": ["Minor issue 1"],
-      "verdict": "select"
+      "isDuplicate": boolean,
+      "duplicateOf": number|null,     // Index of the better version if duplicate
+      "issues": string[],             // List of issues found
+      "verdict": "select"|"consider"|"skip"
     }
   ]
 }
 
-Evaluate ALL ${pooledQuestions.length} questions.`;
+Evaluate ALL ${pooledQuestions.length} questions.
+</output_format>`;
 
     const response = await openai.chat.completions.create({
         model: config.reviewerModel,
@@ -116,7 +134,7 @@ Evaluate ALL ${pooledQuestions.length} questions.`;
             { role: 'user', content: prompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        temperature: config.reviewerTemperature ?? 0.3,
     });
 
     const content = response.choices[0].message.content;
@@ -280,7 +298,16 @@ export async function performCherryPickSelection(
                 index: i,
                 verdict: 'pass' as const,
                 issues: [],
-                scores: { guidelineCompliance: 7, creativity: 7, clarity: 7, intensityAccuracy: 7 },
+                scores: {
+                    guidelineCompliance: 7,
+                    creativity: 7,
+                    clarity: 7,
+                    intensityAccuracy: 7,
+                    anatomicalConsistency: 10,
+                    partnerTextQuality: 10,
+                    coupleTargeting: 10,
+                    initiatorTargeting: 10,
+                },
             };
         }
 
@@ -298,6 +325,11 @@ export async function performCherryPickSelection(
                 creativity: evaluation.scores.creativity,
                 clarity: evaluation.scores.clarity,
                 intensityAccuracy: evaluation.scores.intensityAccuracy,
+                // Cherry-pick doesn't evaluate these, default to passing
+                anatomicalConsistency: 10,
+                partnerTextQuality: 10,
+                coupleTargeting: 10,
+                initiatorTargeting: 10,
             },
         };
     });

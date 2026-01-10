@@ -26,11 +26,11 @@ export interface IntensitySliderProps {
 }
 
 const INTENSITY_LEVELS: Array<{ level: IntensityLevel; label: string; emoji: string; description: string }> = [
-    { level: 1, label: 'Gentle', emoji: '💭', description: 'Conversations & emotional connection' },
-    { level: 2, label: 'Warm', emoji: '💕', description: 'Cuddling, kisses & flirty moments' },
-    { level: 3, label: 'Playful', emoji: '😏', description: 'Making out & suggestive content' },
-    { level: 4, label: 'Steamy', emoji: '🔥', description: 'Intimate activities & explicit content' },
-    { level: 5, label: 'Intense', emoji: '🌶️', description: 'Advanced intimacy & fantasies' },
+    { level: 1, label: 'Gentle', emoji: '💭', description: 'Pure emotional connection & non-sexual bonding' },
+    { level: 2, label: 'Warm', emoji: '💕', description: 'Romantic atmosphere & affectionate touch' },
+    { level: 3, label: 'Playful', emoji: '😏', description: 'Light sexual exploration & sensual discovery' },
+    { level: 4, label: 'Steamy', emoji: '🔥', description: 'Explicit sexual activities & moderate adventure' },
+    { level: 5, label: 'Intense', emoji: '🌶️', description: 'Advanced/BDSM/Extreme exploration' },
 ];
 
 const HEAT_COLORS = [

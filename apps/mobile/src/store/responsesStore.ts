@@ -93,7 +93,7 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
             if (refresh) {
                 const { count, error: countError } = await supabase
                     .from("responses")
-                    .select("*", { count: "exact", head: true })
+                    .select("*, question:questions!inner(pack:question_packs!inner(id))", { count: "exact", head: true })
                     .eq("user_id", userId);
 
                 if (!countError) {
@@ -109,13 +109,13 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                     question_id,
                     answer,
                     created_at,
-                    question:questions(
+                    question:questions!inner(
                         id,
                         text,
                         partner_text,
                         intensity,
                         pack_id,
-                        pack:question_packs(id, name, icon)
+                        pack:question_packs!inner(id, name, icon)
                     )
                 `)
                 .eq("user_id", userId)

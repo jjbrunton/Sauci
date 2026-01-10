@@ -31,6 +31,7 @@ export function getCouncilConfig(): CouncilConfig {
             enabled: remoteConfig.council_enabled || false,
             generators,
             reviewerModel: remoteConfig.council_reviewer_model || 'google/gemini-pro-1.5',
+            reviewerTemperature: remoteConfig.council_reviewer_temperature ?? 0.3,
             selectionMode: remoteConfig.council_selection_mode || 'whole_set',
             cherryPickEnsureIntensityDistribution: remoteConfig.cherry_pick_ensure_intensity_distribution ?? true,
         };
@@ -41,6 +42,7 @@ export function getCouncilConfig(): CouncilConfig {
         enabled: import.meta.env.VITE_COUNCIL_ENABLED === 'true',
         generators: [{ model: import.meta.env.VITE_COUNCIL_GENERATOR_MODEL || 'anthropic/claude-3.5-sonnet' }],
         reviewerModel: import.meta.env.VITE_COUNCIL_REVIEWER_MODEL || 'google/gemini-pro-1.5',
+        reviewerTemperature: 0.3,
         selectionMode: 'whole_set',
         cherryPickEnsureIntensityDistribution: true,
     };
@@ -60,12 +62,11 @@ export async function initializeAiConfig(): Promise<AiConfig | null> {
 // =============================================================================
 
 export const TONE_LEVELS = [
-    { level: 0, label: 'Everyday', description: 'Non-romantic activities - games, cooking, conversations' },
-    { level: 1, label: 'Sweet', description: 'Romantic but innocent - compliments, date nights, cuddles' },
-    { level: 2, label: 'Flirty', description: 'Playful teasing - flirty texts, light touching, innuendo' },
-    { level: 3, label: 'Intimate', description: 'Sensual but soft - massage, making out, showering together' },
-    { level: 4, label: 'Sexual', description: 'Standard sexual activities - oral, sex, toys' },
-    { level: 5, label: 'Wild', description: 'Extreme/kinky - public sex, creampies, BDSM, exhibitionism' },
+    { level: 1, label: 'Gentle', description: 'Pure emotional connection & non-sexual bonding' },
+    { level: 2, label: 'Warm', description: 'Romantic atmosphere & affectionate touch' },
+    { level: 3, label: 'Playful', description: 'Light sexual exploration & sensual discovery' },
+    { level: 4, label: 'Steamy', description: 'Explicit sexual activities & moderate adventure' },
+    { level: 5, label: 'Intense', description: 'Advanced/BDSM/Extreme exploration' },
 ] as const;
 
 // =============================================================================
@@ -74,11 +75,11 @@ export const TONE_LEVELS = [
 // =============================================================================
 
 export const INTENSITY_LEVELS = [
-    { level: 1, label: 'Light', description: 'Talking, emotional sharing, compliments, non-sexual', color: 'bg-green-500' },
-    { level: 2, label: 'Mild', description: 'Hugging, cuddling, gentle kisses, flirty texts', color: 'bg-lime-500' },
-    { level: 3, label: 'Moderate', description: 'Making out, massage, sexy/suggestive photos', color: 'bg-yellow-500' },
-    { level: 4, label: 'Spicy', description: 'Oral, foreplay, nudes, explicit sexting', color: 'bg-orange-500' },
-    { level: 5, label: 'Intense', description: 'Sex, kinks, BDSM, explicit videos', color: 'bg-red-500' },
+    { level: 1, label: 'Gentle', description: 'Pure emotional connection & non-sexual bonding', color: 'bg-green-500' },
+    { level: 2, label: 'Warm', description: 'Romantic atmosphere & affectionate touch', color: 'bg-lime-500' },
+    { level: 3, label: 'Playful', description: 'Light sexual exploration & sensual discovery', color: 'bg-yellow-500' },
+    { level: 4, label: 'Steamy', description: 'Explicit sexual activities & moderate adventure', color: 'bg-orange-500' },
+    { level: 5, label: 'Intense', description: 'Advanced/BDSM/Extreme exploration', color: 'bg-red-500' },
 ] as const;
 
 // =============================================================================
@@ -89,41 +90,30 @@ export const INTENSITY_LEVELS = [
 export const INTENSITY_GUIDE = `
 INTENSITY GRADING GUIDE - Use this to assign intensity levels consistently:
 
-Level 1 - LIGHT (Emotional/Non-Sexual):
-- Talking, sharing feelings, compliments, emotional vulnerability
-- Non-physical activities: writing letters, planning dates, sharing dreams
-- Clean activities with no sexual undertones
-- Examples: "Share your biggest dream", "Write a love note", "Plan a surprise date"
+Level 1 - GENTLE (Pure emotional connection & non-sexual bonding):
+- Focus: Emotional safety, friendship-based activities, quality time
+- Examples: Cook together, take a walk holding hands, give non-sexual foot massages, watch a movie cuddling
+- Emotional bonding without sexual undertones
 
-Level 2 - MILD (Affectionate/Flirty):
-- Light physical affection: holding hands, hugging, cuddling
-- Gentle kisses, playing with hair, light touches
-- Flirty but non-sexual: dancing together, sleeping in each other's arms
-- Examples: "Give your partner a forehead kiss", "Cuddle while watching a movie", "Send a flirty text"
+Level 2 - WARM (Romantic atmosphere & affectionate touch):
+- Focus: Creating romantic moments, sensual but non-sexual touch, building anticipation
+- Examples: Slow dance in the living room, candlelit bath together (non-sexual), extended kissing sessions, sensual massage with oils
+- Romantic intimacy building up to arousal
 
-Level 3 - MODERATE (Sensual/Suggestive):
-- Making out, passionate kissing, intimate massage
-- Sensual touch over clothes, caressing, teasing
-- Suggestive photos (lingerie, shirtless), sexy selfies, teasing texts
-- Showering together, skinny dipping
-- Examples: "Give a sensual massage", "Send a sexy photo", "Make out somewhere risky"
+Level 3 - PLAYFUL (Light sexual exploration & sensual discovery):
+- Focus: Sexual touch without penetration, playful experimentation, building arousal
+- Examples: Mutual masturbation, oral sex, light roleplay (doctor/patient), using basic toys together
+- Fun and exploratory sexual contact
 
-Level 4 - SPICY (Sexual/Explicit Content):
-- Oral sex, fingering, handjobs, mutual masturbation
-- Foreplay activities, using hands/mouth on private parts
-- Nudes, explicit photos, dirty pics, sexting explicit content
-- Using toys externally, edging, making your partner cum
-- Examples: "Go down on your partner", "Send a nude", "Sext each other something filthy"
+Level 4 - STEAMY (Explicit sexual activities & moderate adventure):
+- Focus: Full sexual intercourse with adventurous elements, moderate BDSM/kink
+- Examples: Sex in different locations/positions, light bondage, anal play with toys, recording consensual intimate moments
+- Passionate and adventurous sexual connection
 
-Level 5 - INTENSE (Penetration/Advanced Kinks):
-- Sex (vaginal or anal), toys inside, fingers inside
-- Kinks: bondage, role-play with power dynamics, BDSM
-- Threesomes, exhibitionism, voyeurism
-- Making/sharing explicit videos, masturbating on video call
-- Examples: "Fuck in a new location", "Try anal", "Record yourselves having sex"
-
-IMPORTANT: Intensity is about SEXUAL CONTENT level, not just physical touch.
-Sending nudes = Level 4, Sexting explicit content = Level 4, Dirty/filthy photos = Level 4.
+Level 5 - INTENSE (Advanced/BDSM/Extreme exploration):
+- Focus: Edge play, power dynamics, intense physical experiences
+- Examples: Heavy impact play, advanced bondage, consensual non-consent scenes, multi-partner activities
+- Very intense, taboo kinks, and extreme exploration
 `;
 
 // =============================================================================
@@ -133,13 +123,11 @@ Sending nudes = Level 4, Sexting explicit content = Level 4, Dirty/filthy photos
 
 export const INTENSITY_GUIDE_SHORT = `
 INTENSITY LEVELS:
-1 (Light): Talking, emotional sharing, compliments, non-sexual activities
-2 (Mild): Holding hands, hugging, cuddling, gentle kisses, flirty texts
-3 (Moderate): Making out, sensual massage, sexy/suggestive photos, teasing
-4 (Spicy): Oral sex, fingering, handjobs, nudes, explicit photos/sexting, foreplay
-5 (Intense): Sex, anal, kinks, BDSM, explicit videos, threesomes
-
-IMPORTANT: "Filthy photo", "nude", "dirty pic" = Level 4. "Sexy photo", "lingerie pic" = Level 3.
+1 (Gentle): Pure emotional connection, non-sexual bonding (cooking, cuddling, foot massages)
+2 (Warm): Romantic atmosphere, affectionate touch (slow dance, sensual massage, kissing)
+3 (Playful): Light sexual exploration, sensual discovery (oral, mutual masturbation, light roleplay)
+4 (Steamy): Explicit sexual activities, moderate adventure (sex positions, light bondage, anal play)
+5 (Intense): Advanced/BDSM/Extreme exploration (impact play, power dynamics, taboo kinks)
 `;
 
 // =============================================================================
@@ -168,11 +156,11 @@ REVIEW CRITERIA - Score each 1-10:
    - No confusing or ambiguous phrasing
 
 4. INTENSITY ACCURACY:
-   Level 1 (Light): Talking, emotional sharing, compliments, non-sexual
-   Level 2 (Mild): Holding hands, hugging, cuddling, gentle kisses, flirty texts
-   Level 3 (Moderate): Making out, sensual massage, sexy/suggestive photos, teasing
-   Level 4 (Spicy): Oral sex, fingering, handjobs, nudes, explicit photos/sexting
-   Level 5 (Intense): Sex, anal, kinks, BDSM, explicit videos, threesomes
+   Level 1 (Gentle): Pure emotional connection, non-sexual bonding
+   Level 2 (Warm): Romantic atmosphere, affectionate touch
+   Level 3 (Playful): Light sexual exploration, sensual discovery (oral, toys)
+   Level 4 (Steamy): Explicit sexual activities, moderate adventure (intercourse, light bondage)
+   Level 5 (Intense): Advanced/BDSM/Extreme exploration (impact play, power dynamics)
 
 5. ANATOMICAL CONSISTENCY:
    - No mixed male/female anatomy in alternatives
@@ -184,6 +172,20 @@ REVIEW CRITERIA - Score each 1-10:
    - BAD: "Receive oral from your partner"
    - GOOD: "Let your partner pleasure you with their mouth"
    - When initiator causes a response, frame as allowing: "Let your partner make you moan"
+
+7. COUPLE TARGETING (flag if incorrect):
+   - Default: ALL couples (null) unless explicit anatomical requirement
+   - Restrict to ['male+male', 'female+male'] ONLY if activity requires penis
+   - Restrict to ['female+male', 'female+female'] ONLY if activity requires vagina
+   - Sex toys are GENDER-NEUTRAL (vibrators, dildos, plugs work for anyone)
+   - Flag if targeting seems too restrictive or missing needed restrictions
+
+8. INITIATOR TARGETING (for asymmetric questions only):
+   - Default: null (anyone can initiate) unless explicit anatomical requirement
+   - Set initiator based on WHO DOES the action in "text" field
+   - "Swallow your partner's cum" -> initiator: female (in M+F, receiver of cum)
+   - "Give your partner a massage" -> initiator: null (anyone can give)
+   - Flag if initiator seems incorrectly assigned
 `;
 
 // =============================================================================
@@ -192,13 +194,28 @@ REVIEW CRITERIA - Score each 1-10:
 // =============================================================================
 
 export const TONE_INSTRUCTIONS: Record<ToneLevel, string> = {
-    0: 'WILDNESS LEVEL: EVERYDAY. Generate non-romantic activities only. Focus on communication, teamwork, fun, personal growth, and bonding WITHOUT any romantic or sexual undertones. Examples: "Cook a new recipe together", "Play a board game", "Send your partner a compliment while they\'re at work", "Plan a weekend adventure". NO flirting, NO romance, NO intimacy.',
-    1: 'WILDNESS LEVEL: SWEET. Generate romantic but innocent activities. Focus on emotional connection, love, and tenderness. Examples: "Write your partner a love letter", "Plan a surprise date night", "Cuddle and watch the sunset", "Give your partner a back massage". NO sexual content.',
-    2: 'WILDNESS LEVEL: FLIRTY. Generate playful, teasing activities with light innuendo. Examples: "Send a flirty text during the day", "Whisper something suggestive in your partner\'s ear", "Give your partner a lingering kiss goodbye". Suggestive but NOT explicitly sexual.',
-    3: 'WILDNESS LEVEL: INTIMATE. Generate sensual activities that imply intimacy without being graphic. Examples: "Give your partner a full-body massage", "Shower together", "Make out somewhere unexpected", "Sleep naked together". Passionate but soft - no explicit sex acts.',
-    4: 'WILDNESS LEVEL: SEXUAL. Generate standard sexual activities. Examples: "Go down on your partner", "Have sex in a new position", "Use a vibrator together", "Wake your partner up with oral". Direct language, avoid clinical terms. This is vanilla sex - adventurous but not extreme.',
-    5: 'WILDNESS LEVEL: WILD. Generate extreme, kinky, or taboo activities. Think: public sex, exhibitionism, BDSM, risky situations, intense kinks. Examples: "Get creampied by your partner and go to dinner", "Have sex somewhere you might get caught", "Let your partner tie you up and use you", "Edge each other for an hour before allowing release". Push boundaries. Use crude terms when they ARE the activity (cum, cock ring) but tasteful phrasing for general acts (have sex, not fuck). NEVER sanitize "cum" to "come".',
+    1: 'INTIMACY LEVEL: GENTLE. Focus on emotional safety, friendship-based activities, and quality time. Examples: "Cook a new recipe together", "Take a walk holding hands", "Give non-sexual foot massages", "Watch a movie cuddling". Pure emotional connection & non-sexual bonding.',
+    2: 'INTIMACY LEVEL: WARM. Focus on creating romantic moments, sensual but non-sexual touch, and building anticipation. Examples: "Slow dance in the living room", "Candlelit bath together (non-sexual)", "Extended kissing sessions", "Sensual massage with oils". Romantic atmosphere & affectionate touch.',
+    3: 'INTIMACY LEVEL: PLAYFUL. Focus on sexual touch without penetration, playful experimentation, and building arousal. Examples: "Mutual masturbation", "Oral sex", "Light roleplay (doctor/patient)", "Using basic toys together". Light sexual exploration & sensual discovery.',
+    4: 'INTIMACY LEVEL: STEAMY. Focus on full sexual intercourse with adventurous elements and moderate BDSM/kink. Examples: "Sex in different locations/positions", "Light bondage", "Anal play with toys", "Recording consensual intimate moments". Explicit sexual activities & moderate adventure.',
+    5: 'INTIMACY LEVEL: INTENSE. Focus on edge play, power dynamics, and intense physical experiences. Examples: "Heavy impact play", "Advanced bondage", "Consensual non-consent scenes", "Multi-partner activities". Advanced/BDSM/Extreme exploration.',
 };
+
+// =============================================================================
+// CORE LANGUAGE RULES
+// Consolidated rules used across all generators
+// =============================================================================
+
+export const CORE_LANGUAGE_RULES = `
+<language_rules>
+1. ALWAYS use "your partner" - NEVER use "me", "I", "you" (as the receiver), "him", "her", or gendered pronouns
+2. Cards are PROPOSALS/ACTIVITIES, NOT interview questions - "Give your partner a massage" not "Would you like to give a massage?"
+3. Avoid wishy-washy language - NO "Would you...", "Have you ever...", "Do you think...", "Maybe we could..."
+4. No time-specific words - NO "tonight", "now", "today", "right now" - activities should be timeless
+5. Maintain anatomical consistency - NEVER combine male-specific and female-specific acts as alternatives
+6. Keep concise - ideal length is 5-12 words per question
+</language_rules>
+`;
 
 // =============================================================================
 // SYSTEM MESSAGES
@@ -206,10 +223,43 @@ export const TONE_INSTRUCTIONS: Record<ToneLevel, string> = {
 // =============================================================================
 
 export const SYSTEM_MESSAGES: Record<ToneLevel, string> = {
-    0: 'You are a content writer for a couples app. Generate everyday activities focused on bonding, communication, and fun. No romance or intimacy. Always respond with valid JSON only.',
-    1: 'You are a content writer for a couples app. Generate sweet, romantic activities that help couples connect emotionally. Keep it innocent and wholesome. Always respond with valid JSON only.',
-    2: 'You are a content writer for a couples app. Generate flirty, playful activities with light teasing and innuendo. Suggestive but not sexual. Always respond with valid JSON only.',
-    3: 'You are a content writer for a couples app. Generate intimate, sensual activities that imply passion without being explicit. Always respond with valid JSON only.',
-    4: 'You are a content writer for an adult couples app. Generate sexual activities with direct, natural language. Write like a sex-positive friend - not clinical. Always respond with valid JSON only.',
-    5: 'You are a content writer for an adult couples app. Generate wild, extreme, kinky activities that push boundaries. Use crude terms when they ARE the act but tasteful phrasing for general sex/oral. Never use clinical terms. Always respond with valid JSON only.',
+    1: `You are an expert content writer for Sauci, a couples intimacy app where partners swipe on activity proposals.
+
+<role>Generate gentle, emotionally focused activities for bonding.</role>
+<constraint>NO sexual content whatsoever. Focus on emotional connection, quality time, and non-sexual touch.</constraint>
+<style>Warm, caring, romantic. Activities should feel safe and nurturing.</style>
+<format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
+<audience>Adults aged 25-45 in committed relationships.</audience>`,
+
+    2: `You are an expert content writer for Sauci, a couples intimacy app where partners swipe on activity proposals.
+
+<role>Generate warm, romantic activities with affectionate touch.</role>
+<constraint>Sensual but NOT explicit sex. Building anticipation without crossing into explicit territory.</constraint>
+<style>Romantic, intimate, sensual. Create atmosphere and connection.</style>
+<format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
+<audience>Adults aged 25-45 in committed relationships.</audience>`,
+
+    3: `You are an expert content writer for Sauci, a couples intimacy app where partners swipe on activity proposals.
+
+<role>Generate playful, sexually exploratory activities.</role>
+<constraint>Focus on foreplay, oral, toys, and light exploration. Avoid extreme kinks.</constraint>
+<style>Playful, sexy, adventurous. Encourage exploration in a fun way.</style>
+<format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
+<audience>Adults aged 25-45 in committed relationships.</audience>`,
+
+    4: `You are an expert content writer for Sauci, an adult couples intimacy app where partners swipe on activity proposals.
+
+<role>Generate steamy, explicit sexual activities with moderate adventure.</role>
+<constraint>Full sexual content allowed including intercourse, light bondage, and moderate kinks.</constraint>
+<style>Passionate, explicit, adventurous. Bold but not extreme.</style>
+<format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
+<audience>Adults aged 25-45 in committed relationships.</audience>`,
+
+    5: `You are an expert content writer for Sauci, an adult couples intimacy app where partners swipe on activity proposals.
+
+<role>Generate intense, advanced sexual activities including BDSM and kinks.</role>
+<constraint>Edge play, power dynamics, and intense physical experiences allowed. All content is consensual adult activity.</constraint>
+<style>Intense, commanding, unapologetic. Push boundaries while maintaining consent.</style>
+<format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
+<audience>Adults aged 25-45 in committed relationships seeking adventurous experiences.</audience>`,
 };

@@ -42,15 +42,15 @@ const getIntensityDisplay = (pack: QuestionPack) => {
     const min = isValidIntensity(pack.min_intensity) ? pack.min_intensity : null;
     const max = isValidIntensity(pack.max_intensity) ? pack.max_intensity : null;
     const avg = typeof pack.avg_intensity === "number" ? clampIntensity(pack.avg_intensity) : null;
+    const fallback = avg ?? (pack.is_explicit ? 5 : 2);
 
-    const flameCount = max ?? avg ?? (pack.is_explicit ? 5 : 2);
-    const label = min && max
-        ? min === max
-            ? INTENSITY_LABELS[min]
-            : `${INTENSITY_LABELS[min]} - ${INTENSITY_LABELS[max]}`
-        : INTENSITY_LABELS[flameCount];
+    const minCount = min ?? max ?? fallback;
+    const maxCount = max ?? min ?? fallback;
+    const label = minCount === maxCount
+        ? INTENSITY_LABELS[minCount]
+        : `${INTENSITY_LABELS[minCount]} - ${INTENSITY_LABELS[maxCount]}`;
 
-    return { flameCount, label };
+    return { minCount, maxCount, label };
 };
 
 
@@ -100,14 +100,19 @@ function PackRow({ pack, isEnabled, isPremiumLocked, isExpanded, onToggle, onPre
                     </Text>
                     <View style={styles.packIntensityRow}>
                         <View style={styles.packIntensityFlames}>
-                            {Array.from({ length: 5 }).map((_, index) => (
-                                <Ionicons
-                                    key={`intensity-${pack.id}-${index}`}
-                                    name={index < intensityDisplay.flameCount ? "flame" : "flame-outline"}
-                                    size={12}
-                                    color={index < intensityDisplay.flameCount ? colors.primary : colors.textTertiary}
-                                />
-                            ))}
+                            {Array.from({ length: 5 }).map((_, index) => {
+                                const level = index + 1;
+                                const isInRange = level >= intensityDisplay.minCount && level <= intensityDisplay.maxCount;
+
+                                return (
+                                    <Ionicons
+                                        key={`intensity-${pack.id}-${index}`}
+                                        name={isInRange ? "flame" : "flame-outline"}
+                                        size={12}
+                                        color={isInRange ? colors.primary : colors.textTertiary}
+                                    />
+                                );
+                            })}
                         </View>
                         <Text style={styles.packIntensityText}>{intensityDisplay.label}</Text>
                     </View>
@@ -462,7 +467,15 @@ export default function QuestionPacksScreen() {
 
                         {(packsByCategory.get("uncategorized")?.length || 0) > 0 && (
                             <CategorySection
-                                category={{ id: "uncategorized", name: "Other", description: null, icon: "📁", sort_order: 999, created_at: "" }}
+                                category={{
+                                    id: "uncategorized",
+                                    name: "Other",
+                                    description: null,
+                                    icon: "📁",
+                                    sort_order: 999,
+                                    created_at: "",
+                                    is_public: true
+                                }}
                                 packs={packsByCategory.get("uncategorized") || []}
                                 enabledPackIds={enabledPackIds}
                                 hasPremiumAccess={hasPremiumAccess}
@@ -727,6 +740,7 @@ const styles = StyleSheet.create({
     },
     packIntensityFlames: {
         flexDirection: "row",
+        alignItems: "center",
         gap: 2,
     },
     packIntensityText: {

@@ -49,6 +49,7 @@ erDiagram
         int intensity "1-5"
         text[] allowed_couple_genders "couple composition filter"
         text[] target_user_genders "individual user filter"
+        text[] required_props "props/accessories required"
         timestamptz created_at
     }
 

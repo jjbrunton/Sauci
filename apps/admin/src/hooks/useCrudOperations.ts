@@ -3,7 +3,8 @@ import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { toast } from 'sonner';
 
-type SupabaseFilterFn<T> = (query: ReturnType<typeof supabase.from>) => ReturnType<typeof supabase.from>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseFilterFn = (query: any) => any;
 
 interface UseCrudOperationsOptions<T> {
     /**
@@ -89,15 +90,16 @@ export function useCrudOperations<T extends { id: string }>({
      * @param filter Optional filter function to modify the query
      */
     const fetchAll = useCallback(async (
-        filter?: SupabaseFilterFn<T>
+        filter?: SupabaseFilterFn
     ): Promise<T[]> => {
         setLoading(true);
         setError(null);
         try {
-            let query = supabase.from(table).select(select);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let query: any = supabase.from(table).select(select);
 
             if (filter) {
-                query = filter(query) as typeof query;
+                query = filter(query);
             }
 
             if (orderBy) {
@@ -155,7 +157,8 @@ export function useCrudOperations<T extends { id: string }>({
     ): Promise<T | null> => {
         const { refetch = true, silent = false } = options;
         try {
-            const { data: created, error: createError } = await auditedSupabase.insert(table, data);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: created, error: createError } = await auditedSupabase.insert(table, data as any);
 
             if (createError) throw createError;
 
@@ -167,7 +170,8 @@ export function useCrudOperations<T extends { id: string }>({
                 await fetchAll();
             }
 
-            return created as T;
+            // auditedSupabase.insert returns T[] | null, get first element
+            return created && created.length > 0 ? (created[0] as T) : null;
         } catch (err) {
             if (!silent) {
                 toast.error(defaultMessages.createError);
