@@ -16,7 +16,12 @@ const mcpServer = createMcpServer();
 
 // Mount MCP server
 app.all('/mcp', async (c) => {
-  return mcpServer.handleRequest(c);
+  // Add headers to prevent Nginx/proxy buffering for SSE
+  c.header('X-Accel-Buffering', 'no');
+  c.header('Cache-Control', 'no-cache');
+  c.header('Connection', 'keep-alive');
+  
+  return mcpServer.handleRequest(c.req.raw);
 });
 
 const port = Number(process.env.PORT) || 3000;
