@@ -21,7 +21,7 @@ app.all('/mcp', async (c) => {
   c.header('Cache-Control', 'no-cache');
   c.header('Connection', 'keep-alive');
   
-  return mcpServer.handleRequest(c.req.raw);
+  return mcpServer.handleRequest(c);
 });
 
 const port = Number(process.env.PORT) || 3000;
