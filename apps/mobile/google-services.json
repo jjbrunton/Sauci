@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "764866133492-03k7q0mq6nqrv0phunncqjn85cgj6sep.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sauci.app",
+            "certificate_hash": "f06026c754b046f280feac438a6910bd9a62b459"
+          }
+        },
+        {
           "client_id": "764866133492-4g566mrb8tm5uti4ejub6oogcvnln7kc.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

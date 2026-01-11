@@ -14,7 +14,9 @@
     "test:watch": "jest --watch",
     "test:ci": "jest --runInBand --ci",
     "release:ios": "dotenv -e .env -- npx expo prebuild --platform ios && dotenv -e .env -- eas build --platform ios --profile production --local",
-    "release:android": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile production --local"
+    "release:ios:preview": "dotenv -e .env -- npx expo prebuild --platform ios && dotenv -e .env -- eas build --platform ios --profile preview --local",
+    "release:android": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile production --local",
+    "release:android:preview": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile preview --local"
   },
   "dependencies": {
     "@expo/ngrok": "^4.1.0",
@@ -58,7 +60,6 @@
     "react-native-compressor": "^1.13.0",
     "react-native-gesture-handler": "~2.20.0",
     "react-native-purchases": "^9.6.12",
-    "react-native-quick-crypto": "^0.7.11",
     "react-native-reanimated": "~3.16.0",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",

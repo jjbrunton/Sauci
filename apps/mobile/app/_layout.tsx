@@ -1,6 +1,5 @@
 // Polyfills must be imported FIRST before any other React Native imports
 import "../src/polyfills/web";
-import "../src/polyfills/crypto";
 
 // Initialize Sentry early to capture all errors
 import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry";

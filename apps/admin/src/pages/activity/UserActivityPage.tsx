@@ -49,6 +49,7 @@ interface ResponseActivity {
         id: string;
         text: string;
         pack: {
+            id: string;
             name: string;
         } | null;
     } | null;
@@ -155,7 +156,7 @@ export function UserActivityPage() {
                     profile:profiles!responses_user_id_fkey(id, name, email),
                     question:questions(
                         id, text,
-                        pack:question_packs(name)
+                        pack:question_packs(id, name)
                     )
                 `, { count: 'exact' })
                 .order('created_at', { ascending: false })
@@ -317,18 +318,22 @@ export function UserActivityPage() {
     const fetchSignups = useCallback(async () => {
         setLoading(prev => ({ ...prev, signups: true }));
         try {
-            const from = (signupsPage - 1) * signupsPageSize;
-            const to = from + signupsPageSize - 1;
-
-            const { data, error, count } = await supabase
-                .from('profiles')
-                .select('id, name, email, avatar_url, created_at, onboarding_completed, couple_id', { count: 'exact' })
-                .order('created_at', { ascending: false })
-                .range(from, to);
+            // Use RPC to get profiles with auth info (includes email from auth.users)
+            const { data: allData, error } = await supabase
+                .rpc('get_profiles_with_auth_info');
 
             if (error) throw error;
-            setSignups(data || []);
-            setSignupsTotal(count || 0);
+
+            // Sort by created_at descending and apply pagination
+            const sorted = (allData || []).sort((a: SignupActivity, b: SignupActivity) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+
+            const from = (signupsPage - 1) * signupsPageSize;
+            const to = from + signupsPageSize;
+
+            setSignups(sorted.slice(from, to));
+            setSignupsTotal(sorted.length);
         } catch (error) {
             console.error('Failed to load signups:', error);
             toast.error("Failed to load signups");
@@ -502,14 +507,31 @@ export function UserActivityPage() {
                                         <TableRow key={item.id}>
                                             <TableCell>{renderUserLink(item.profile)}</TableCell>
                                             <TableCell className="max-w-[300px]">
-                                                <span className="truncate block">
-                                                    {item.question?.text || 'Unknown question'}
-                                                </span>
+                                                {item.question?.pack?.id ? (
+                                                    <Link
+                                                        to={`/packs/${item.question.pack.id}/questions`}
+                                                        className="truncate block text-primary hover:underline"
+                                                    >
+                                                        {item.question?.text || 'Unknown question'}
+                                                    </Link>
+                                                ) : (
+                                                    <span className="truncate block">
+                                                        {item.question?.text || 'Unknown question'}
+                                                    </span>
+                                                )}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline">
-                                                    {item.question?.pack?.name || 'Unknown'}
-                                                </Badge>
+                                                {item.question?.pack?.id ? (
+                                                    <Link to={`/packs/${item.question.pack.id}/questions`}>
+                                                        <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
+                                                            {item.question.pack.name}
+                                                        </Badge>
+                                                    </Link>
+                                                ) : (
+                                                    <Badge variant="outline">
+                                                        {item.question?.pack?.name || 'Unknown'}
+                                                    </Badge>
+                                                )}
                                             </TableCell>
                                             <TableCell>{renderAnswerBadge(item.answer)}</TableCell>
                                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">

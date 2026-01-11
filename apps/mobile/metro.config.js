@@ -25,11 +25,9 @@ config.resolver.nodeModulesPaths = [
 //    of the workspace root, unless they are installed in the project root.
 config.resolver.disableHierarchicalLookup = true;
 
-// 4. E2EE crypto polyfill: resolve 'crypto' to react-native-quick-crypto
-// This enables Web Crypto API for encryption operations
+// 4. Keep extraNodeModules in case we need to add monorepo overrides later
 config.resolver.extraNodeModules = {
     ...config.resolver.extraNodeModules,
-    crypto: require.resolve('react-native-quick-crypto'),
 };
 
 module.exports = config;

@@ -6,3 +6,6 @@ expo-env.d.ts
 # @end expo-cli
 *.aab
 *.ipa
+*.apk
+*.jks
+*.keystore
