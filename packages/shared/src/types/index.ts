@@ -41,6 +41,8 @@ export interface Question {
     allowed_couple_genders?: string[] | null;
     target_user_genders?: string[] | null;
     required_props?: string[] | null;
+    /** References the primary question that this is an inverse of (e.g., give vs receive). NULL means this is a primary/standalone question. */
+    inverse_of?: string | null;
     created_at: string;
     deleted_at?: string | null;
 }

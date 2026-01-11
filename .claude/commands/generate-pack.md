@@ -91,21 +91,33 @@ Follow these rules strictly:
 - BAD: "Receive oral from your partner" (clinical)
 - GOOD: "Let your partner pleasure you with their mouth" (enticing)
 
-#### 3.4 Critical: Inverse Questions
+#### 3.4 Critical: Inverse Questions and Database Linking
 
-For EVERY asymmetric question, create its inverse:
+For EVERY asymmetric question, create its inverse AND link them using the `inverse_of` column:
 
 ```
-Original:
+Original (PRIMARY - inverse_of = NULL):
+  id: <generated_uuid_1>
   text: "Spank your partner"
   partner_text: "Be spanked by your partner"
+  inverse_of: NULL
 
-Inverse (MUST CREATE):
+Inverse (SECONDARY - points to primary):
+  id: <generated_uuid_2>
   text: "Be spanked by your partner"
   partner_text: "Spank your partner"
+  inverse_of: <generated_uuid_1>
 ```
 
-This ensures both partners are asked about both roles.
+This ensures:
+1. Both partners are asked about both roles
+2. The database tracks which questions are inverses of each other
+3. Accurate unique question counts (200 questions = 100 unique concepts with inverses)
+
+**Database Schema:**
+- `inverse_of` column: UUID referencing the primary question's ID
+- Primary questions have `inverse_of = NULL`
+- Inverse questions have `inverse_of = <primary_question_id>`
 
 #### 3.5 Intensity Guidelines
 
@@ -195,15 +207,38 @@ VALUES (
 )
 RETURNING id;
 
--- Then insert questions (use returned pack_id)
-INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props) VALUES
-('[pack_id]', 'Question text', 'Partner text or NULL', intensity, NULL, NULL, NULL),
-('[pack_id]', 'Blowjob question', 'Partner text', 3, ARRAY['male+male', 'female+male'], ARRAY['female'], NULL),
-('[pack_id]', 'Toy question', 'Partner text', 4, NULL, NULL, ARRAY['remote vibrator']),
--- ... all questions
+-- Then insert questions with inverse_of linking
+-- For inverse pairs: insert primary first (inverse_of = NULL), then inverse pointing to primary
+
+-- Generate UUIDs for inverse pairs upfront
+-- Pair 1: Primary and its inverse
+WITH pair1_primary AS (
+  INSERT INTO questions (pack_id, text, partner_text, intensity, inverse_of)
+  VALUES ('[pack_id]', 'Spank your partner', 'Be spanked by your partner', 3, NULL)
+  RETURNING id
+)
+INSERT INTO questions (pack_id, text, partner_text, intensity, inverse_of)
+SELECT '[pack_id]', 'Be spanked by your partner', 'Spank your partner', 3, id
+FROM pair1_primary;
+
+-- Symmetric questions (no inverse_of needed)
+INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, inverse_of) VALUES
+('[pack_id]', 'Symmetric question text', NULL, 2, NULL, NULL, NULL, NULL);
+
+-- Or bulk insert with explicit UUIDs for pairs:
+INSERT INTO questions (id, pack_id, text, partner_text, intensity, inverse_of) VALUES
+-- Pair 1
+('uuid-primary-1', '[pack_id]', 'Give your partner a massage', 'Receive a massage from your partner', 2, NULL),
+('uuid-inverse-1', '[pack_id]', 'Receive a massage from your partner', 'Give your partner a massage', 2, 'uuid-primary-1'),
+-- Pair 2
+('uuid-primary-2', '[pack_id]', 'Blindfold your partner', 'Be blindfolded by your partner', 3, NULL),
+('uuid-inverse-2', '[pack_id]', 'Be blindfolded by your partner', 'Blindfold your partner', 3, 'uuid-primary-2'),
+-- Symmetric (no pair)
+(gen_random_uuid(), '[pack_id]', 'Cook dinner together', NULL, 1, NULL);
 ```
 
 **Field notes:**
+- `inverse_of`: NULL for primary/symmetric questions, UUID of primary question for inverses
 - `allowed_couple_genders`: NULL for all couples, or array like `ARRAY['male+male', 'female+male']`
 - `target_user_genders`: NULL for any initiator, or array like `ARRAY['female']`
 - `required_props`: NULL if no props needed, or array like `ARRAY['blindfold', 'ice cubes']`
@@ -213,13 +248,14 @@ Also provide a summary table:
 | Metric | Value |
 |--------|-------|
 | Total questions | X |
+| Unique question concepts | X (total - inverse count) |
 | Intensity 1 | X |
 | Intensity 2 | X |
 | Intensity 3 | X |
 | Intensity 4 | X |
 | Intensity 5 | X |
 | Symmetric (null partner_text) | X |
-| Asymmetric (with inverses) | X pairs |
+| Asymmetric pairs (with inverse_of links) | X pairs (X questions) |
 | With couple targeting | X |
 | With initiator targeting | X |
 | With required props | X |
@@ -236,10 +272,12 @@ Also provide a summary table:
 
 - DO ask clarifying questions if the pack concept is unclear
 - DO check existing packs in the category first
-- DO create inverse questions for ALL asymmetric content
+- DO create inverse questions for ALL asymmetric content AND link them with inverse_of
 - DO vary sentence structure and openers
+- DO use the inverse_of column to link inverse pairs (inverse points to primary's UUID)
 - DON'T use cheesy or cliche language
 - DON'T assume heterosexual couples
 - DON'T skip the inverse question requirement
+- DON'T forget to set inverse_of - this is how we track unique question concepts
 - DON'T use interview-style questions ("Would you like to...")
 - DON'T treat inverse pairs as duplicates - they are REQUIRED (one's `text` = other's `partner_text`)

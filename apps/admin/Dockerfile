@@ -1,15 +1,20 @@
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
+
+# Enable pnpm via corepack (allow non-matching packageManager)
+ENV COREPACK_ENABLE_STRICT=0
+ENV PNPM_CONFIG_LINK_WORKSPACE_PACKAGES=true
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
 # Copy everything first (workspaces need full structure)
 COPY . .
 
 # Install all dependencies
-RUN npm install
+RUN pnpm install --no-frozen-lockfile
 
 # Build shared package first
-RUN npx turbo run build --filter=@sauci/shared
+RUN pnpm exec turbo run build --filter=@sauci/shared
 
 # Build admin app with env vars
 ARG VITE_SUPABASE_URL
@@ -36,7 +41,7 @@ ENV VITE_COUNCIL_ENABLED=$VITE_COUNCIL_ENABLED
 ENV VITE_COUNCIL_GENERATOR_MODEL=$VITE_COUNCIL_GENERATOR_MODEL
 ENV VITE_COUNCIL_REVIEWER_MODEL=$VITE_COUNCIL_REVIEWER_MODEL
 
-RUN npx turbo run build --filter=@sauci/admin
+RUN pnpm exec turbo run build --filter=@sauci/admin
 
 FROM nginx:alpine
 COPY --from=builder /app/apps/admin/dist /usr/share/nginx/html

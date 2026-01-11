@@ -108,16 +108,37 @@ The card reader is the DOER. Their partner is "your partner".
 </examples>
 
 <question_types>
-1. SYMMETRIC Activities (partner_text = null):
+1. SYMMETRIC Activities (partner_text = null, no inverse_pair_id):
    - Both partners do the same thing together
    - ${symmetricExamples}
 
-2. ASYMMETRIC Actions (requires partner_text):
+2. ASYMMETRIC Actions (requires partner_text AND inverse pair):
    - One partner does something TO/FOR the other, or roles differ
    - text = what the INITIATOR does
    - partner_text = what the RECEIVER does/experiences
    - ${asymmetricExamples}
+   - CRITICAL: Every asymmetric question MUST have its inverse created as a separate question
 </question_types>
+
+<inverse_pairs>
+For EVERY asymmetric question, you MUST create its inverse as a separate question.
+Both questions in a pair should have the SAME inverse_pair_id (a unique string per pair).
+
+Example pair (same inverse_pair_id "pair_1"):
+  Question 1 (primary):
+    text: "Spank your partner"
+    partner_text: "Be spanked by your partner"
+    inverse_pair_id: "pair_1"
+
+  Question 2 (inverse):
+    text: "Be spanked by your partner"
+    partner_text: "Spank your partner"
+    inverse_pair_id: "pair_1"
+
+The first question in each pair (lower array index) becomes the "primary" and the second gets linked as its inverse.
+Use simple pair IDs like "pair_1", "pair_2", etc.
+Symmetric questions should have inverse_pair_id: null.
+</inverse_pairs>
 
 <output_format>
 Return a JSON object with this exact structure:
@@ -128,6 +149,7 @@ Return a JSON object with this exact structure:
       "partner_text": string|null, // REQUIRED for asymmetric, null for symmetric
       "intensity": 1-5,            // REQUIRED: must match the intensity level guidelines
       "requires_props": string[]|null,  // Optional: items needed (e.g., ["blindfold", "massage oil"])
+      "inverse_pair_id": string|null,   // REQUIRED for asymmetric pairs, null for symmetric
       "location_type": "home"|"public"|"outdoors"|"travel"|"anywhere",  // Optional
       "effort_level": "spontaneous"|"low"|"medium"|"planned"            // Optional
     }

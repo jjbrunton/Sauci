@@ -67,6 +67,8 @@ export interface Question {
     intensity: 1 | 2 | 3 | 4 | 5;
     allowed_couple_genders?: string[] | null;
     target_user_genders?: string[] | null;
+    /** References the primary question that this is an inverse of (e.g., give vs receive). NULL means this is a primary/standalone question. */
+    inverse_of?: string | null;
     created_at: string;
 }
 

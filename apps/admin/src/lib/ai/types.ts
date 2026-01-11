@@ -43,6 +43,9 @@ export interface GeneratedQuestion {
     requires_props?: string[] | null;
     location_type?: 'home' | 'public' | 'outdoors' | 'travel' | 'anywhere';
     effort_level?: 'spontaneous' | 'low' | 'medium' | 'planned';
+    // Inverse pair tracking - questions with the same inverse_pair_id are inverses of each other
+    // First question in pair (lower array index) is primary, second gets inverse_of set
+    inverse_pair_id?: string | null;
     // Cherry-pick provenance (only set in cherry-pick mode)
     sourceGeneratorIndex?: number;
     sourceGeneratorModel?: string;

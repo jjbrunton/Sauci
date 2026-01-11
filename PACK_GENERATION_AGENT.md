@@ -42,6 +42,7 @@ Each question has:
 - `allowed_couple_genders` - Which couple types see this (NULL = all)
 - `target_user_genders` - Which gender initiates (NULL = any)
 - `required_props` - Physical items needed (NULL = none)
+- `inverse_of` - UUID of primary question if this is an inverse (NULL for primary/symmetric)
 
 ### When to use partner_text
 
@@ -57,28 +58,36 @@ text: "Give your partner a massage"
 partner_text: "Receive a massage from your partner"
 ```
 
-### Critical: Inverse Questions for Asymmetric Activities
+### Critical: Inverse Questions and Database Linking
 
-For any asymmetric question, you MUST create TWO questions to cover both perspectives:
+For any asymmetric question, you MUST create TWO questions AND link them using the `inverse_of` column:
 
-**Question 1:**
+**Question 1 (PRIMARY - inverse_of = NULL):**
 ```
+id: uuid-1
 text: "Spank your partner"
 partner_text: "Be spanked by your partner"
+inverse_of: NULL
 ```
 
-**Question 2 (inverse):**
+**Question 2 (INVERSE - inverse_of = primary's UUID):**
 ```
+id: uuid-2
 text: "Be spanked by your partner"
 partner_text: "Spank your partner"
+inverse_of: uuid-1
 ```
 
 This ensures:
 - Partner A gets asked if they want to give AND receive
 - Partner B gets asked if they want to give AND receive
 - All four combinations can be discovered through matching
+- The database tracks which questions are pairs (for accurate unique counts)
 
-**IMPORTANT: Inverse pairs are NOT duplicates.** When one question's `text` matches another's `partner_text`, they form a valid inverse pair. This is intentional and required - do not flag or remove these as duplicates.
+**IMPORTANT:**
+- Inverse pairs are NOT duplicates. When one question's `text` matches another's `partner_text`, they form a valid inverse pair. This is intentional and required - do not flag or remove these as duplicates.
+- The `inverse_of` column links the pair: the inverse question points to the primary question's UUID
+- This allows the app to display accurate unique question counts (100 concepts, not 200 questions)
 
 ---
 
@@ -277,7 +286,7 @@ When asked to create a pack:
 
 ## Output Format
 
-When generating packs, output in this format:
+When generating packs, output in this format (with inverse_of linking for pairs):
 
 ```sql
 -- Pack: [Pack Name]
@@ -285,20 +294,25 @@ When generating packs, output in this format:
 -- Description: [Pack description]
 -- Intensity range: [X-Y]
 
-INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props) VALUES
-('[pack_id]', 'Question text here', 'Partner text or NULL', intensity, NULL, NULL, NULL),
-('[pack_id]', 'Blowjob question', 'Partner text', 3, ARRAY['male+male', 'female+male'], ARRAY['female'], NULL),
-('[pack_id]', 'Toy question', 'Partner text', 4, NULL, NULL, ARRAY['remote vibrator']),
--- ... etc
+-- For inverse pairs, insert primary first (inverse_of = NULL), then inverse pointing to primary
+INSERT INTO questions (id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, inverse_of) VALUES
+-- Pair 1
+('uuid-primary-1', '[pack_id]', 'Spank your partner', 'Be spanked by your partner', 3, NULL, NULL, NULL, NULL),
+('uuid-inverse-1', '[pack_id]', 'Be spanked by your partner', 'Spank your partner', 3, NULL, NULL, NULL, 'uuid-primary-1'),
+-- Pair 2 (with targeting)
+('uuid-primary-2', '[pack_id]', 'Give your partner a blowjob', 'Receive a blowjob from your partner', 3, ARRAY['male+male', 'female+male'], NULL, NULL, NULL),
+('uuid-inverse-2', '[pack_id]', 'Receive a blowjob from your partner', 'Give your partner a blowjob', 3, ARRAY['male+male', 'female+male'], NULL, NULL, 'uuid-primary-2'),
+-- Symmetric (no inverse needed)
+(gen_random_uuid(), '[pack_id]', 'Cook dinner together', NULL, 1, NULL, NULL, NULL, NULL);
 ```
 
-Or as a table:
+Or as a table (include inverse_of column):
 
-| Text | Partner Text | Intensity | Couple Targets | Initiator | Props |
-|------|--------------|-----------|----------------|-----------|-------|
-| Question here | Partner perspective or null | 4 | NULL | NULL | NULL |
-| Blowjob | Partner text | 3 | M+M, F+M | female | NULL |
-| Toy play | Partner text | 4 | NULL | NULL | remote vibrator |
+| ID | Text | Partner Text | Intensity | Couple Targets | Initiator | Props | inverse_of |
+|----|------|--------------|-----------|----------------|-----------|-------|------------|
+| uuid-1 | Spank your partner | Be spanked | 3 | NULL | NULL | NULL | NULL |
+| uuid-2 | Be spanked by partner | Spank your partner | 3 | NULL | NULL | NULL | uuid-1 |
+| uuid-3 | Cook together | null | 1 | NULL | NULL | NULL | NULL |
 
 ---
 
@@ -324,23 +338,27 @@ target_user_genders: NULL
 required_props: NULL
 ```
 
-### Playful (Intensity 3) - With Props
+### Playful (Intensity 3) - With Props and Inverse Linking
 ```
+id: uuid-blindfold-primary
 text: "Blindfold your partner and tease them with different sensations"
 partner_text: "Be blindfolded while your partner teases you"
 intensity: 3
 allowed_couple_genders: NULL
 target_user_genders: NULL
 required_props: ["blindfold"]
+inverse_of: NULL
 ```
-AND its inverse:
+AND its inverse (linked via inverse_of):
 ```
+id: uuid-blindfold-inverse
 text: "Be blindfolded while your partner teases you"
 partner_text: "Blindfold your partner and tease them with different sensations"
 intensity: 3
 allowed_couple_genders: NULL
 target_user_genders: NULL
 required_props: ["blindfold"]
+inverse_of: uuid-blindfold-primary
 ```
 
 ### Steamy (Intensity 4) - With Props and Targeting
@@ -417,9 +435,15 @@ required_props: NULL
 
 **Structure:**
 - [ ] All asymmetric questions have their inverse created (these are NOT duplicates - they're required pairs)
+- [ ] All inverse pairs are linked via `inverse_of` column (inverse points to primary's UUID)
 - [ ] Partner text is appealing (not clinical)
 - [ ] Partner text frames responses as "allowing" not forced
 - [ ] No actual duplicates (same `text` appearing twice)
+
+**Database Linking:**
+- [ ] Primary questions have `inverse_of = NULL`
+- [ ] Inverse questions have `inverse_of = <primary_question_uuid>`
+- [ ] Symmetric questions have `inverse_of = NULL`
 
 **Accuracy:**
 - [ ] Intensity levels match the activities

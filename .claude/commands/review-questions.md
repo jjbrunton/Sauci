@@ -10,12 +10,13 @@ Review and validate questions: $ARGUMENTS
 
 ## Task Overview
 
-Analyze questions for issues and suggest fixes across 5 dimensions:
+Analyze questions for issues and suggest fixes across 6 dimensions:
 1. **Text Phrasing** - Improve wording, remove wishy-washy language
 2. **Audience Targeting** - Fix couple/initiator gender targeting
 3. **Intensity Levels** - Correct misassigned intensity ratings
 4. **Required Props** - Identify missing physical props/accessories
-5. **Deletions** - Flag duplicates, redundant, or broken questions
+5. **Inverse Linking** - Detect and link inverse question pairs using inverse_of column
+6. **Deletions** - Flag duplicates, redundant, or broken questions
 
 ## Step 1: Parse Arguments
 
@@ -29,18 +30,18 @@ Extract from $ARGUMENTS:
 Query the database:
 
 ```sql
--- If pack name provided:
-SELECT q.id, q.text, q.partner_text, q.intensity, q.allowed_couple_genders, q.target_user_genders, q.required_props
+-- If pack name provided (include inverse_of for pair detection):
+SELECT q.id, q.text, q.partner_text, q.intensity, q.allowed_couple_genders, q.target_user_genders, q.required_props, q.inverse_of
 FROM questions q
 JOIN question_packs p ON q.pack_id = p.id
-WHERE p.name ILIKE '%<pack_name>%'
+WHERE p.name ILIKE '%<pack_name>%' AND q.deleted_at IS NULL
 ORDER BY q.created_at
 LIMIT <limit>;
 
 -- If pack ID provided:
-SELECT id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props
+SELECT id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, inverse_of
 FROM questions
-WHERE pack_id = '<pack_id>'
+WHERE pack_id = '<pack_id>' AND deleted_at IS NULL
 ORDER BY created_at
 LIMIT <limit>;
 ```
@@ -138,7 +139,20 @@ Check if current intensity matches the activity:
 - Reuse existing prop names from the catalog when possible
 - If no props are required, set to null
 
-### 4.5 Deletion Analysis
+### 4.5 Inverse Linking Analysis
+
+**Purpose:** Detect inverse question pairs and link them using the `inverse_of` database column.
+
+**Detection:**
+1. For each asymmetric question (has partner_text), look for its inverse:
+   - Inverse exists if another question has: `text` = this question's `partner_text` AND `partner_text` = this question's `text`
+2. Check if the `inverse_of` column is correctly set
+
+**Fixes:**
+- If pair exists but not linked: set inverse_of on the second question to point to the first
+- Symmetric questions should have inverse_of = NULL
+
+### 4.6 Deletion Analysis
 
 **Deletion Categories:**
 - `duplicate`: Same core action as another question
@@ -184,6 +198,7 @@ Present findings in a structured format:
 | Intensity fixes | X |
 | Targeting fixes | X |
 | Props fixes | X |
+| Inverse linking fixes | X |
 | Deletions suggested | X |
 | No changes needed | X |
 
@@ -196,12 +211,14 @@ For each question needing changes:
 **Current Text:** <text>
 **Current Partner Text:** <partner_text or null>
 **Current Intensity:** <intensity>
+**Current inverse_of:** <uuid or null>
 
 Issues Found:
 - [ ] Text: <description of issue>
 - [ ] Intensity: <current> -> <suggested> (<reason>)
 - [ ] Targeting: <description>
 - [ ] Props: <current> -> <suggested>
+- [ ] Inverse Link: <missing/broken> - <inverse question id if found>
 - [ ] DELETE: <category> - <reason>
 
 Suggested Fix:
@@ -211,6 +228,7 @@ Suggested Fix:
 - Couple Targets: <new allowed_couple_genders or null>
 - Initiator Targets: <new target_user_genders or null>
 - Required Props: <new required_props or null>
+- inverse_of: <uuid or null>
 ```
 
 ### SQL to Apply Fixes
@@ -236,8 +254,11 @@ UPDATE questions SET
   required_props = ARRAY[<new_props>]
 WHERE id = '<question_id>';
 
--- Deletions
-DELETE FROM questions WHERE id IN ('<id1>', '<id2>', ...);
+-- Inverse linking fixes
+UPDATE questions SET inverse_of = '<primary_question_id>' WHERE id = '<inverse_question_id>';
+
+-- Deletions (soft delete)
+UPDATE questions SET deleted_at = NOW() WHERE id IN ('<id1>', '<id2>', ...);
 ```
 
 ## Example Usage
@@ -254,6 +275,9 @@ DELETE FROM questions WHERE id IN ('<id1>', '<id2>', ...);
 - DO group similar issues together for batch fixes
 - DO prioritize safety issues (delete unsafe content first)
 - DO preserve the core intent of questions when suggesting text fixes
+- DO detect and link inverse pairs using the inverse_of column
 - DON'T change questions that are already well-formed
 - DON'T suggest overly restrictive targeting (prefer inclusive by default)
 - DON'T create new prop names when existing ones match
+- DON'T flag inverse pairs as duplicates (one's text = other's partner_text)
+- DON'T forget to set inverse_of for detected inverse pairs

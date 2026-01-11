@@ -145,23 +145,99 @@ export async function restoreQuestion(id: string): Promise<void> {
 
 /**
  * Bulk create questions (for AI generation)
+ * Handles inverse_pair_id by grouping pairs and setting inverse_of links
  */
 export async function bulkCreateQuestions(
     packId: string,
-    questions: Array<{ text: string; partner_text?: string; intensity: number }>
+    questions: Array<{ text: string; partner_text?: string; intensity: number; inverse_pair_id?: string | null }>
 ): Promise<Question[]> {
     const results: Question[] = [];
 
+    // Group questions by inverse_pair_id
+    const pairMap = new Map<string, typeof questions>();
+    const standaloneQuestions: typeof questions = [];
+
     for (const q of questions) {
+        if (q.inverse_pair_id) {
+            const existing = pairMap.get(q.inverse_pair_id) || [];
+            existing.push(q);
+            pairMap.set(q.inverse_pair_id, existing);
+        } else {
+            standaloneQuestions.push(q);
+        }
+    }
+
+    // Insert standalone questions first
+    for (const q of standaloneQuestions) {
         const { data, error } = await auditedSupabase.insert('questions', {
             pack_id: packId,
             text: q.text,
             partner_text: q.partner_text || null,
             intensity: q.intensity,
+            inverse_of: null,
         });
 
         if (error) throw error;
         if (data && data.length > 0) results.push(data[0] as Question);
+    }
+
+    // Insert paired questions: primary first, then inverse with inverse_of link
+    for (const [, pair] of pairMap) {
+        if (pair.length >= 2) {
+            // First question is primary
+            const primary = pair[0];
+            const { data: primaryData, error: primaryError } = await auditedSupabase.insert('questions', {
+                pack_id: packId,
+                text: primary.text,
+                partner_text: primary.partner_text || null,
+                intensity: primary.intensity,
+                inverse_of: null,
+            });
+
+            if (primaryError) throw primaryError;
+            if (primaryData && primaryData.length > 0) {
+                results.push(primaryData[0] as Question);
+                const primaryId = primaryData[0].id;
+
+                // Second question is inverse
+                const inverse = pair[1];
+                const { data: inverseData, error: inverseError } = await auditedSupabase.insert('questions', {
+                    pack_id: packId,
+                    text: inverse.text,
+                    partner_text: inverse.partner_text || null,
+                    intensity: inverse.intensity,
+                    inverse_of: primaryId,
+                });
+
+                if (inverseError) throw inverseError;
+                if (inverseData && inverseData.length > 0) results.push(inverseData[0] as Question);
+            }
+
+            // Handle any additional questions in the pair
+            for (let i = 2; i < pair.length; i++) {
+                const extra = pair[i];
+                const { data, error } = await auditedSupabase.insert('questions', {
+                    pack_id: packId,
+                    text: extra.text,
+                    partner_text: extra.partner_text || null,
+                    intensity: extra.intensity,
+                    inverse_of: null,
+                });
+                if (error) throw error;
+                if (data && data.length > 0) results.push(data[0] as Question);
+            }
+        } else if (pair.length === 1) {
+            // Single question with pair_id but no pair
+            const { data, error } = await auditedSupabase.insert('questions', {
+                pack_id: packId,
+                text: pair[0].text,
+                partner_text: pair[0].partner_text || null,
+                intensity: pair[0].intensity,
+                inverse_of: null,
+            });
+            if (error) throw error;
+            if (data && data.length > 0) results.push(data[0] as Question);
+        }
     }
 
     return results;

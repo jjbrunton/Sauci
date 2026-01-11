@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
@@ -29,7 +29,14 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Sparkles, Loader2, Users } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Plus, Pencil, Trash2, Sparkles, Loader2, Users, Link2, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
@@ -53,6 +60,7 @@ interface Question {
     allowed_couple_genders: string[] | null;
     target_user_genders: string[] | null;
     required_props?: string[] | null;
+    inverse_of?: string | null;
     created_at: string | null;
 }
 
@@ -75,6 +83,9 @@ export function QuestionsPage() {
     const [saving, setSaving] = useState(false);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [peekOpen, setPeekOpen] = useState(false);
+    const [peekPrimary, setPeekPrimary] = useState<Question | null>(null);
+    const [peekInverse, setPeekInverse] = useState<Question | null>(null);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [totalCount, setTotalCount] = useState(0);
@@ -87,6 +98,7 @@ export function QuestionsPage() {
         allowed_couple_genders: string[];
         target_user_genders: string[];
         required_props: string;
+        inverse_of: string;
     }>({
         text: '',
         partner_text: '',
@@ -94,36 +106,55 @@ export function QuestionsPage() {
         allowed_couple_genders: [],
         target_user_genders: [],
         required_props: '',
+        inverse_of: '',
     });
+
+    // All questions in pack for inverse_of dropdown (loaded once)
+    const [allPackQuestions, setAllPackQuestions] = useState<Question[]>([]);
 
     const fetchData = useCallback(async () => {
         if (!packId) return;
 
         setLoading(true);
         try {
-            // Fetch pack info
-            const { data: packData } = await supabase
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const packPromise = supabase
                 .from('question_packs')
                 .select('id, name, description, icon, is_explicit')
                 .eq('id', packId)
                 .single();
-
-            setPack(packData);
-
-            const from = (page - 1) * pageSize;
-            const to = from + pageSize - 1;
-
-            // Fetch questions
-            const { data: questionData, error, count } = await supabase
+            const questionsPromise = supabase
                 .from('questions')
                 .select('*', { count: 'exact' })
                 .eq('pack_id', packId)
                 .order('created_at', { ascending: true })
                 .range(from, to);
+            const allPackPromise = supabase
+                .from('questions')
+                .select('id, text, inverse_of')
+                .eq('pack_id', packId)
+                .is('deleted_at', null)
+                .order('created_at', { ascending: true });
 
+            const [
+                { data: packData, error: packError },
+                { data: questionData, error, count },
+                { data: allPackData, error: allPackError },
+            ] = await Promise.all([packPromise, questionsPromise, allPackPromise]);
+
+            if (packError) throw packError;
             if (error) throw error;
             setTotalCount(count || 0);
             setQuestions(questionData || []);
+            setPack(packData);
+            if (allPackError) {
+                toast.error('Failed to load inverse peek data');
+                console.error(allPackError);
+            } else {
+                setAllPackQuestions((allPackData as Question[]) || []);
+            }
         } catch (error) {
             toast.error('Failed to load questions');
             console.error(error);
@@ -175,7 +206,23 @@ export function QuestionsPage() {
         setSelectedIds(new Set());
     }, [page, pageSize]);
 
-    const openCreateDialog = () => {
+    // Fetch all questions in pack for inverse_of dropdown
+    const fetchAllPackQuestions = useCallback(async () => {
+        if (!packId) return;
+        const { data } = await supabase
+            .from('questions')
+            .select('id, text, inverse_of')
+            .eq('pack_id', packId)
+            .is('deleted_at', null)
+            .order('created_at', { ascending: true });
+        setAllPackQuestions((data as Question[]) || []);
+    }, [packId]);
+
+    const primaryQuestionById = useMemo(() => {
+        return new Map(allPackQuestions.map(question => [question.id, question]));
+    }, [allPackQuestions]);
+
+    const openCreateDialog = async () => {
         setEditingQuestion(null);
         setFormData({
             text: '',
@@ -184,11 +231,13 @@ export function QuestionsPage() {
             allowed_couple_genders: [],
             target_user_genders: [],
             required_props: '',
+            inverse_of: '',
         });
+        await fetchAllPackQuestions();
         setDialogOpen(true);
     };
 
-    const openEditDialog = (question: Question) => {
+    const openEditDialog = async (question: Question) => {
         setEditingQuestion(question);
         setFormData({
             text: question.text,
@@ -197,7 +246,9 @@ export function QuestionsPage() {
             allowed_couple_genders: question.allowed_couple_genders || [],
             target_user_genders: question.target_user_genders || [],
             required_props: question.required_props?.join(', ') ?? '',
+            inverse_of: question.inverse_of || '',
         });
+        await fetchAllPackQuestions();
         setDialogOpen(true);
     };
 
@@ -223,6 +274,7 @@ export function QuestionsPage() {
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
+                    inverse_of: formData.inverse_of || null,
                 });
 
                 if (error) throw error;
@@ -236,6 +288,7 @@ export function QuestionsPage() {
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
+                    inverse_of: formData.inverse_of || null,
                 });
 
                 if (error) throw error;
@@ -269,21 +322,104 @@ export function QuestionsPage() {
         }
     };
 
-    const handleAiGenerated = (generatedQuestions: Array<{ text: string; partner_text?: string; intensity: number }>) => {
-        // Bulk insert AI-generated questions
+    const handleAiGenerated = (generatedQuestions: Array<{ text: string; partner_text?: string; intensity: number; inverse_pair_id?: string | null }>) => {
+        // Bulk insert AI-generated questions with inverse_of linking
         const insertQuestions = async () => {
             try {
-                const { error } = await auditedSupabase.insert(
-                    'questions',
-                    generatedQuestions.map(q => ({
-                        pack_id: packId,
-                        text: q.text,
-                        partner_text: q.partner_text || null,
-                        intensity: q.intensity,
-                    }))
-                );
+                // Group questions by inverse_pair_id
+                const pairMap = new Map<string, typeof generatedQuestions>();
+                const standaloneQuestions: typeof generatedQuestions = [];
 
-                if (error) throw error;
+                for (const q of generatedQuestions) {
+                    if (q.inverse_pair_id) {
+                        const existing = pairMap.get(q.inverse_pair_id) || [];
+                        existing.push(q);
+                        pairMap.set(q.inverse_pair_id, existing);
+                    } else {
+                        standaloneQuestions.push(q);
+                    }
+                }
+
+                // Insert standalone questions first (no inverse_of)
+                if (standaloneQuestions.length > 0) {
+                    const { error: standaloneError } = await auditedSupabase.insert(
+                        'questions',
+                        standaloneQuestions.map(q => ({
+                            pack_id: packId,
+                            text: q.text,
+                            partner_text: q.partner_text || null,
+                            intensity: q.intensity,
+                            inverse_of: null,
+                        }))
+                    );
+                    if (standaloneError) throw standaloneError;
+                }
+
+                // Insert paired questions: primary first, then inverse with inverse_of link
+                for (const [, pair] of pairMap) {
+                    if (pair.length >= 2) {
+                        // First question is primary (inverse_of = NULL)
+                        const primary = pair[0];
+                        const { data: primaryData, error: primaryError } = await auditedSupabase.insert(
+                            'questions',
+                            [{
+                                pack_id: packId,
+                                text: primary.text,
+                                partner_text: primary.partner_text || null,
+                                intensity: primary.intensity,
+                                inverse_of: null,
+                            }]
+                        );
+                        if (primaryError) throw primaryError;
+
+                        // Second question is inverse (inverse_of = primary's id)
+                        const primaryId = primaryData?.[0]?.id;
+                        if (primaryId) {
+                            const inverse = pair[1];
+                            const { error: inverseError } = await auditedSupabase.insert(
+                                'questions',
+                                [{
+                                    pack_id: packId,
+                                    text: inverse.text,
+                                    partner_text: inverse.partner_text || null,
+                                    intensity: inverse.intensity,
+                                    inverse_of: primaryId,
+                                }]
+                            );
+                            if (inverseError) throw inverseError;
+                        }
+
+                        // Handle any additional questions in the pair (shouldn't happen, but just in case)
+                        for (let i = 2; i < pair.length; i++) {
+                            const extra = pair[i];
+                            const { error: extraError } = await auditedSupabase.insert(
+                                'questions',
+                                [{
+                                    pack_id: packId,
+                                    text: extra.text,
+                                    partner_text: extra.partner_text || null,
+                                    intensity: extra.intensity,
+                                    inverse_of: null,
+                                }]
+                            );
+                            if (extraError) throw extraError;
+                        }
+                    } else if (pair.length === 1) {
+                        // Single question with pair_id but no pair - treat as standalone
+                        const { error } = await auditedSupabase.insert(
+                            'questions',
+                            [{
+                                pack_id: packId,
+                                text: pair[0].text,
+                                partner_text: pair[0].partner_text || null,
+                                intensity: pair[0].intensity,
+                                inverse_of: null,
+                            }]
+                        );
+                        if (error) throw error;
+                    }
+                }
+
                 toast.success(`${generatedQuestions.length} questions added`);
                 fetchData();
             } catch (error) {
@@ -359,6 +495,13 @@ export function QuestionsPage() {
         } finally {
             setBulkDeleting(false);
         }
+    };
+
+    const handlePeekPrimary = (question: Question) => {
+        if (!question.inverse_of) return;
+        setPeekPrimary(primaryQuestionById.get(question.inverse_of) ?? null);
+        setPeekInverse(question);
+        setPeekOpen(true);
     };
 
     if (loading) {
@@ -506,6 +649,40 @@ export function QuestionsPage() {
                                 </div>
 
                                 <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <Label htmlFor="inverse_of">Inverse Of (optional)</Label>
+                                        <Badge variant="outline" className="text-xs">
+                                            <Link2 className="h-3 w-3 mr-1" />
+                                            Paired
+                                        </Badge>
+                                    </div>
+                                    <Select
+                                        value={formData.inverse_of || 'none'}
+                                        onValueChange={(value) => setFormData(d => ({ ...d, inverse_of: value === 'none' ? '' : value }))}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select primary question..." />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-60">
+                                            <SelectItem value="none">
+                                                <span className="text-muted-foreground">None (this is a standalone question)</span>
+                                            </SelectItem>
+                                            {allPackQuestions
+                                                .filter(q => q.id !== editingQuestion?.id && !q.inverse_of)
+                                                .map(q => (
+                                                    <SelectItem key={q.id} value={q.id}>
+                                                        <span className="line-clamp-1">{q.text}</span>
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        Link this question to its inverse (e.g., "give X" → "receive X"). The selected question is the primary; this one becomes its inverse.
+                                        Only standalone questions can be selected as primaries.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
                                     <Label>Target Couples (optional)</Label>
                                     <div className="flex flex-wrap gap-2">
                                         {[
@@ -647,6 +824,33 @@ export function QuestionsPage() {
                 onUpdated={fetchData}
             />
 
+            <Dialog open={peekOpen} onOpenChange={setPeekOpen}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Primary Question</DialogTitle>
+                        <DialogDescription>
+                            Quick peek for the inverse question link.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium">Primary</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                {peekPrimary?.text || 'Primary question not found.'}
+                            </p>
+                        </div>
+                        {peekInverse && (
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium">Inverse</p>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                    {peekInverse.text}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {/* Questions Table */}
             {
                 questions.length === 0 ? (
@@ -681,6 +885,7 @@ export function QuestionsPage() {
                                     </TableHead>
                                     <TableHead className="w-12">#</TableHead>
                                     <TableHead>Question</TableHead>
+                                    <TableHead className="w-20">Inverse</TableHead>
                                     <TableHead className="w-32">Partner Text</TableHead>
                                     <TableHead className="w-24">Couples</TableHead>
                                     <TableHead className="w-24">Initiator</TableHead>
@@ -706,6 +911,33 @@ export function QuestionsPage() {
                                         </TableCell>
                                         <TableCell>
                                             <span className="line-clamp-2">{question.text}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            {question.inverse_of ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline" className="text-xs border-blue-500 text-blue-500" title="This is an inverse of another question">
+                                                        <Link2 className="h-3 w-3 mr-1" />
+                                                        Inverse
+                                                    </Badge>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                        onClick={() => handlePeekPrimary(question)}
+                                                        aria-label="Peek primary question"
+                                                        title="Peek primary question"
+                                                    >
+                                                        <Eye className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
+                                            ) : questions.some(q => q.inverse_of === question.id) ? (
+                                                <Badge variant="outline" className="text-xs border-green-500 text-green-500" title="This question has an inverse">
+                                                    <Link2 className="h-3 w-3 mr-1" />
+                                                    Primary
+                                                </Badge>
+                                            ) : (
+                                                <span className="text-muted-foreground text-xs">—</span>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {question.partner_text ? (

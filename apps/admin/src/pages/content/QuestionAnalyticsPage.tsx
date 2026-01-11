@@ -12,6 +12,7 @@ interface QuestionRow {
     pack_id: string;
     intensity: number | null;
     partner_text: string | null;
+    inverse_of?: string | null;
 }
 
 interface PackRow {
@@ -124,7 +125,7 @@ export function QuestionAnalyticsPage() {
                 const to = from + pageSize - 1;
                 const { data, error } = await supabase
                     .from('questions')
-                    .select('id, pack_id, intensity, partner_text')
+                    .select('id, pack_id, intensity, partner_text, inverse_of')
                     .range(from, to);
 
                 if (error) throw error;
@@ -224,7 +225,9 @@ export function QuestionAnalyticsPage() {
                 let freeCount = 0;
                 let taggedCount = 0;
 
-                questions.forEach((question) => {
+                const primaryQuestions = questions.filter((question) => question.inverse_of == null);
+
+                primaryQuestions.forEach((question) => {
                     const pack = packById.get(question.pack_id);
                     const isPremium = pack?.is_premium ?? false;
                     const segmentKey: SegmentKey = isPremium ? 'premium' : 'free';
@@ -294,7 +297,7 @@ export function QuestionAnalyticsPage() {
                     }
                 });
 
-                const totalQuestions = questions.length;
+                const totalQuestions = primaryQuestions.length;
                 const premiumData: ChartDatum[] = [
                     { name: 'Premium', value: premiumCount, color: '#f59e0b' },
                     { name: 'Free', value: freeCount, color: '#22c55e' },

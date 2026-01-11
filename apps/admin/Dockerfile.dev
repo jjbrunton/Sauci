@@ -1,9 +1,15 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
+# Enable pnpm via corepack (allow non-matching packageManager)
+ENV COREPACK_ENABLE_STRICT=0
+ENV PNPM_CONFIG_LINK_WORKSPACE_PACKAGES=true
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
 # Copy root package files and workspace configs
 COPY package*.json ./
+COPY pnpm-workspace.yaml ./
 COPY turbo.json ./
 
 # Copy all workspace package.json files
@@ -14,16 +20,16 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 
 # Install all dependencies at root level (workspaces)
-RUN npm install
+RUN pnpm install --no-frozen-lockfile
 
 # Copy all source code
 COPY . .
 
 # Build shared package
-RUN npx turbo run build --filter=@sauci/shared
+RUN pnpm exec turbo run build --filter=@sauci/shared
 
 WORKDIR /app/apps/admin
 
 EXPOSE 3001
 
-CMD ["npm", "run", "dev"]
+CMD ["pnpm", "run", "dev"]
