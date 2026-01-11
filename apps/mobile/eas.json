@@ -5,13 +5,16 @@
   },
   "build": {
     "development": {
+      "node": "20.10.0",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "node": "20.10.0",
       "distribution": "internal"
     },
     "production": {
+      "node": "20.10.0",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://ckjcrkjpmhqhiucifukx.supabase.co",

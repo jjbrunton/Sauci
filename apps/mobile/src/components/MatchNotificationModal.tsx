@@ -14,6 +14,7 @@ import {
     StyleSheet,
     Pressable,
     Animated,
+    Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -106,6 +107,9 @@ export const MatchNotificationModal: React.FC<Props> = ({
 
     useEffect(() => {
         if (visible) {
+            // Dismiss keyboard so it doesn't block the modal buttons
+            Keyboard.dismiss();
+
             // Reset animations
             modalScale.setValue(0.8);
             modalOpacity.setValue(0);

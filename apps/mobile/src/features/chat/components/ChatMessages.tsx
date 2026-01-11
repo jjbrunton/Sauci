@@ -139,6 +139,7 @@ const ChatMessagesComponent: React.FC<ChatMessagesProps> = ({
             style={styles.messageList}
             contentContainerStyle={styles.listContent}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             // Performance optimizations
             removeClippedSubviews={true}
