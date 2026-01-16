@@ -120,16 +120,15 @@ jest.mock('base64-arraybuffer', () => ({
     decode: jest.fn(() => new ArrayBuffer(0)),
 }));
 
-jest.mock('posthog-react-native', () => {
-    return class PostHog {
-        capture = jest.fn();
-        identify = jest.fn();
-        reset = jest.fn();
-        screen = jest.fn();
-        flush = jest.fn();
+jest.mock('@react-native-firebase/app', () => ({
+    getApp: jest.fn(() => ({})),
+}));
 
-        constructor() {
-            // no-op
-        }
-    };
-});
+jest.mock('@react-native-firebase/analytics', () => ({
+    getAnalytics: jest.fn(() => ({})),
+    logEvent: jest.fn(),
+    setUserId: jest.fn(),
+    setUserProperty: jest.fn(),
+    setAnalyticsCollectionEnabled: jest.fn(() => Promise.resolve()),
+    resetAnalyticsData: jest.fn(),
+}));

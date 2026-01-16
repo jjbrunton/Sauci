@@ -1,7 +1,31 @@
-import PostHog from "posthog-react-native";
+import { getApp } from "@react-native-firebase/app";
+import {
+  getAnalytics,
+  logEvent as firebaseLogEvent,
+  setUserId as firebaseSetUserId,
+  setUserProperty,
+  setAnalyticsCollectionEnabled,
+  resetAnalyticsData,
+  FirebaseAnalyticsTypes,
+} from "@react-native-firebase/analytics";
 
-let posthog: PostHog | null = null;
 let isInitialized = false;
+let analyticsInstance: FirebaseAnalyticsTypes.Module | null = null;
+
+function getAnalyticsInstance(): FirebaseAnalyticsTypes.Module | null {
+  if (analyticsInstance) {
+    return analyticsInstance;
+  }
+
+  try {
+    const app = getApp();
+    analyticsInstance = getAnalytics(app);
+    return analyticsInstance;
+  } catch (error) {
+    console.warn("[Analytics] Failed to get analytics instance:", error);
+    return null;
+  }
+}
 
 export async function initAnalytics() {
   if (isInitialized) {
@@ -9,30 +33,19 @@ export async function initAnalytics() {
   }
 
   // Skip initialization in non-RN environments (e.g., during tsc/Node.js)
-  // AsyncStorage requires window to be defined
   if (typeof window === "undefined" && typeof global !== "undefined" && !("__BUNDLE_START_TIME__" in global)) {
     return;
   }
 
-  const apiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
-  const host = process.env.EXPO_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com";
-
-  if (!apiKey) {
-    console.warn("[Analytics] PostHog API key not configured");
-    return;
-  }
-
   try {
-    posthog = new PostHog(apiKey, {
-      host,
-      // Disable automatic capture in production for privacy
-      captureAppLifecycleEvents: true,
-    });
-
-    isInitialized = true;
-    console.log("[Analytics] PostHog initialized");
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      await setAnalyticsCollectionEnabled(analytics, true);
+      isInitialized = true;
+      console.log("[Analytics] Firebase Analytics initialized");
+    }
   } catch (error) {
-    console.warn("[Analytics] Failed to initialize PostHog:", error);
+    console.warn("[Analytics] Failed to initialize Firebase Analytics:", error);
   }
 }
 
@@ -43,7 +56,10 @@ export function logEvent(
 ) {
   try {
     if (__DEV__) console.log("[Analytics] Event:", name, params);
-    posthog?.capture(name, params);
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      firebaseLogEvent(analytics, name, params);
+    }
   } catch (error) {
     console.warn("[Analytics] Failed to log event:", error);
   }
@@ -53,7 +69,10 @@ export function logEvent(
 export function setUserId(userId: string) {
   try {
     if (__DEV__) console.log("[Analytics] Set user ID:", userId);
-    posthog?.identify(userId);
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      firebaseSetUserId(analytics, userId);
+    }
   } catch (error) {
     console.warn("[Analytics] Failed to set user ID:", error);
   }
@@ -63,7 +82,11 @@ export function setUserId(userId: string) {
 export function clearUserId() {
   try {
     if (__DEV__) console.log("[Analytics] Cleared user ID");
-    posthog?.reset();
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      firebaseSetUserId(analytics, null);
+      resetAnalyticsData(analytics);
+    }
   } catch (error) {
     console.warn("[Analytics] Failed to clear user ID:", error);
   }
@@ -75,14 +98,13 @@ export function setUserProperties(
 ) {
   try {
     if (__DEV__) console.log("[Analytics] Set user properties:", properties);
-    // Filter out null values for PostHog
-    const filteredProps: Record<string, string> = {};
-    for (const [key, value] of Object.entries(properties)) {
-      if (value !== null) {
-        filteredProps[key] = value;
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      // Firebase Analytics requires setting user properties one at a time
+      for (const [key, value] of Object.entries(properties)) {
+        setUserProperty(analytics, key, value);
       }
     }
-    posthog?.capture("$set", { $set: filteredProps });
   } catch (error) {
     console.warn("[Analytics] Failed to set user properties:", error);
   }
@@ -92,7 +114,13 @@ export function setUserProperties(
 export function logScreenView(screenName: string, screenClass?: string) {
   try {
     if (__DEV__) console.log("[Analytics] Screen view:", screenName);
-    posthog?.screen(screenName, { screen_class: screenClass ?? screenName });
+    const analytics = getAnalyticsInstance();
+    if (analytics) {
+      firebaseLogEvent(analytics, "screen_view", {
+        screen_name: screenName,
+        screen_class: screenClass ?? screenName,
+      });
+    }
   } catch (error) {
     console.warn("[Analytics] Failed to log screen view:", error);
   }
@@ -100,11 +128,9 @@ export function logScreenView(screenName: string, screenClass?: string) {
 
 // Flush events (useful before app backgrounding)
 export function flush() {
-  try {
-    posthog?.flush();
-  } catch (error) {
-    console.warn("[Analytics] Failed to flush:", error);
-  }
+  // Firebase Analytics batches and sends events automatically
+  // No manual flush needed, but we keep the function for API compatibility
+  if (__DEV__) console.log("[Analytics] Flush called (no-op for Firebase)");
 }
 
 // Pre-defined event helpers for common actions
