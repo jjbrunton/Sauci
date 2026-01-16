@@ -321,14 +321,10 @@ export function UserDetailPage() {
                 }
                 expiresAt = date.toISOString();
             }
-            const { error } = await auditedSupabase.insert('subscriptions', {
-                user_id: userId,
-                revenuecat_app_user_id: 'admin_grant',
-                product_id: 'admin_premium',
-                status: 'active',
-                store: 'manual',
-                purchased_at: new Date().toISOString(),
-                expires_at: expiresAt,
+            // Use RPC function which handles permissions internally
+            const { error } = await supabase.rpc('admin_gift_premium', {
+                target_user_id: userId,
+                expires_at_param: expiresAt,
             });
             if (error) throw error;
             const { data: updatedProfile } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single();
