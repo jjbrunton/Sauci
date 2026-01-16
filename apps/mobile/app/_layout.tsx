@@ -5,12 +5,8 @@ import "../src/polyfills/web";
 import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry";
 initSentry();
 
-// Initialize Analytics
+// Analytics imports (initialization deferred until app mounts)
 import { initAnalytics, setUserId, clearUserId, logScreenView, Events } from "../src/lib/analytics";
-initAnalytics();
-
-// Track cold start immediately
-Events.appOpened("cold");
 
 // Import push notification utilities
 import {
@@ -54,6 +50,16 @@ export default function RootLayout() {
     const { fetchUser, setUser } = useAuthStore();
     const pathname = usePathname();
     const appState = useRef(AppState.currentState);
+    const analyticsInitialized = useRef(false);
+
+    // Initialize analytics after native modules are ready
+    useEffect(() => {
+        if (!analyticsInitialized.current) {
+            analyticsInitialized.current = true;
+            initAnalytics();
+            Events.appOpened("cold");
+        }
+    }, []);
 
     // Track screen views
     useEffect(() => {

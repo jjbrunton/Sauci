@@ -23,7 +23,8 @@
     "node": ">=20"
   },
   "overrides": {
-    "rollup": "4.54.0"
+    "rollup": "4.54.0",
+    "react-native": "0.76.9"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-musl": "4.54.0",

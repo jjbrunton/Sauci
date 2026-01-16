@@ -1,5 +1,7 @@
-import { getApp } from "@react-native-firebase/app";
-import {
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+// Import default export to ensure namespace registration runs
+import analytics, {
   getAnalytics,
   logEvent as firebaseLogEvent,
   setUserId as firebaseSetUserId,
@@ -9,19 +11,63 @@ import {
   FirebaseAnalyticsTypes,
 } from "@react-native-firebase/analytics";
 
+// Force the analytics module to be retained (prevents tree-shaking)
+const _analyticsModule = analytics;
+
 let isInitialized = false;
 let analyticsInstance: FirebaseAnalyticsTypes.Module | null = null;
+let analyticsUnavailable = false;
+let analyticsUnavailableLogged = false;
+
+function getErrorMessage(error: unknown): string {
+  if (!error) return "";
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  if (typeof (error as { message?: unknown }).message === "string") {
+    return (error as { message?: string }).message || "";
+  }
+  return "";
+}
+
+function isAnalyticsSupported(): boolean {
+  if (Platform.OS === "web") return false;
+  if (Constants.appOwnership === "expo") return false;
+  return true;
+}
+
+function logAnalyticsUnavailableOnce(reason: string) {
+  if (analyticsUnavailableLogged) return;
+  analyticsUnavailableLogged = true;
+  if (__DEV__) console.log("[Analytics] " + reason);
+}
 
 function getAnalyticsInstance(): FirebaseAnalyticsTypes.Module | null {
+  if (analyticsUnavailable) {
+    return null;
+  }
+
+  if (!isAnalyticsSupported()) {
+    analyticsUnavailable = true;
+    logAnalyticsUnavailableOnce("Skipping Firebase Analytics on Expo Go or web.");
+    return null;
+  }
+
   if (analyticsInstance) {
     return analyticsInstance;
   }
 
   try {
-    const app = getApp();
-    analyticsInstance = getAnalytics(app);
+    analyticsInstance = getAnalytics();
     return analyticsInstance;
   } catch (error) {
+    const message = getErrorMessage(error);
+    if (message.includes("module could not be found")) {
+      analyticsUnavailable = true;
+      logAnalyticsUnavailableOnce(
+        "Firebase Analytics native module missing. Rebuild with a dev client or native app."
+      );
+      return null;
+    }
     console.warn("[Analytics] Failed to get analytics instance:", error);
     return null;
   }
