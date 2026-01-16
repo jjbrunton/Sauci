@@ -20,6 +20,7 @@ export const PERMISSION_KEYS = {
     VIEW_RESPONSES: 'view_responses',
     VIEW_ACTIVITY: 'view_activity',
     MANAGE_FEEDBACK: 'manage_feedback',
+    GIFT_PREMIUM: 'gift_premium',
     // System permissions
     MANAGE_CODES: 'manage_codes',
     MANAGE_ADMINS: 'manage_admins',
@@ -42,6 +43,7 @@ export const PERMISSION_METADATA: Record<PermissionKey, { label: string; descrip
     [PERMISSION_KEYS.VIEW_RESPONSES]: { label: 'Can view responses', description: 'View user question responses', group: 'users' },
     [PERMISSION_KEYS.VIEW_ACTIVITY]: { label: 'Can view activity', description: 'View user activity feed (responses, matches, messages, signups)', group: 'users' },
     [PERMISSION_KEYS.MANAGE_FEEDBACK]: { label: 'Can manage feedback', description: 'View and respond to user feedback', group: 'users' },
+    [PERMISSION_KEYS.GIFT_PREMIUM]: { label: 'Can gift premium', description: 'Manually upgrade users to premium status', group: 'users' },
     [PERMISSION_KEYS.MANAGE_CODES]: { label: 'Can manage redemption codes', description: 'Create and view redemption codes', group: 'system' },
     [PERMISSION_KEYS.MANAGE_ADMINS]: { label: 'Can manage admins', description: 'Add/remove admin users and change permissions', group: 'system' },
     [PERMISSION_KEYS.MANAGE_AI_CONFIG]: { label: 'Can manage AI settings', description: 'Configure AI models, API keys, and council mode', group: 'system' },
