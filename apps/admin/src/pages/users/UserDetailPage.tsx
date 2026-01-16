@@ -331,7 +331,7 @@ export function UserDetailPage() {
                 expires_at: expiresAt,
             });
             if (error) throw error;
-            const { data: updatedProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            const { data: updatedProfile } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single();
             if (updatedProfile) setProfile(updatedProfile);
             setUpgradeOpen(false);
             alert('User upgraded to premium successfully!');
@@ -347,7 +347,7 @@ export function UserDetailPage() {
         if (!userId) return;
         setLoading(true);
         try {
-            const { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            const { data: profileData } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single();
             setProfile(profileData);
 
             // Fetch feature interests for the user
