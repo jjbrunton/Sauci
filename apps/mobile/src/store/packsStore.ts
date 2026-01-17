@@ -25,10 +25,12 @@ interface PacksState {
     categories: Category[];
     enabledPackIds: string[];
     isLoading: boolean;
+    showAllIntensities: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
     ensureEnabledPacksLoaded: () => Promise<void>;
     togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
+    setShowAllIntensities: (value: boolean) => void;
     clearPacks: () => void;
 }
 
@@ -37,12 +39,14 @@ export const usePacksStore = create<PacksState>((set, get) => ({
     categories: [],
     enabledPackIds: [],
     isLoading: false,
+    showAllIntensities: false,
 
     fetchPacks: async () => {
         set({ isLoading: true });
 
         // Get user's max intensity preference
         const maxIntensity = getUserMaxIntensity();
+        const showAllIntensities = get().showAllIntensities;
 
 
         // Fetch categories
@@ -62,8 +66,8 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             .eq("is_public", true)
             .order("sort_order");
 
-        // Filter out packs above user's intensity preference
-        if (maxIntensity < 5) {
+        // Filter out packs above user's intensity preference (unless showing all)
+        if (maxIntensity < 5 && !showAllIntensities) {
             query = query.or(`max_intensity.is.null,max_intensity.lte.${maxIntensity}`);
         }
 
@@ -153,6 +157,12 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         }
 
         return { success: true };
+    },
+
+    setShowAllIntensities: (value: boolean) => {
+        set({ showAllIntensities: value });
+        // Refetch packs with new filter setting
+        get().fetchPacks();
     },
 
     clearPacks: () => {

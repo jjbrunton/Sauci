@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, RefreshControl, Platform, Alert, Pressable } from "react-native";
+import { View, Text, StyleSheet, RefreshControl, Platform, Alert, Pressable, Switch } from "react-native";
 import { usePacksStore, useAuthStore, useSubscriptionStore } from "../../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -258,7 +258,7 @@ function CategorySection({
 }
 
 export default function QuestionPacksScreen() {
-    const { packs, categories, enabledPackIds, togglePack, isLoading, fetchPacks } = usePacksStore();
+    const { packs, categories, enabledPackIds, togglePack, isLoading, fetchPacks, showAllIntensities, setShowAllIntensities } = usePacksStore();
     const { user, partner } = useAuthStore();
     const { subscription } = useSubscriptionStore();
 
@@ -334,6 +334,10 @@ export default function QuestionPacksScreen() {
         setShowTeaser(false);
         setTeaserPack(null);
     }, []);
+
+    const handleToggleComfortZone = useCallback((value: boolean) => {
+        setShowAllIntensities(value);
+    }, [setShowAllIntensities]);
 
     const enabledPackCount = enabledPackIds.length;
     const totalQuestions = packs
@@ -442,6 +446,32 @@ export default function QuestionPacksScreen() {
                                 {totalQuestions} {totalQuestions === 1 ? "question" : "questions"} from {enabledPackCount} {enabledPackCount === 1 ? "pack" : "packs"}
                             </Text>
                         </View>
+
+                        <Pressable
+                            style={styles.comfortZoneToggle}
+                            onPress={() => handleToggleComfortZone(!showAllIntensities)}
+                        >
+                            <View style={styles.comfortZoneToggleLeft}>
+                                <Ionicons
+                                    name={showAllIntensities ? "flame" : "flame-outline"}
+                                    size={16}
+                                    color={showAllIntensities ? colors.primary : colors.textSecondary}
+                                />
+                                <Text style={styles.comfortZoneToggleText}>
+                                    Show all intensities
+                                </Text>
+                            </View>
+                            <Switch
+                                value={showAllIntensities}
+                                onValueChange={handleToggleComfortZone}
+                                trackColor={{
+                                    false: "rgba(255, 255, 255, 0.1)",
+                                    true: "rgba(233, 69, 96, 0.4)"
+                                }}
+                                thumbColor={showAllIntensities ? colors.primary : colors.textTertiary}
+                                ios_backgroundColor="rgba(255, 255, 255, 0.1)"
+                            />
+                        </Pressable>
                     </Animated.View>
 
                     {/* Categories */}
@@ -607,6 +637,30 @@ const styles = StyleSheet.create({
     },
     statsBadgeText: {
         ...typography.caption1,
+        color: colors.textSecondary,
+        fontWeight: "500",
+    },
+    comfortZoneToggle: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: "rgba(255, 255, 255, 0.05)",
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        marginTop: spacing.md,
+        width: "100%",
+        maxWidth: 280,
+    },
+    comfortZoneToggleLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    comfortZoneToggleText: {
+        ...typography.subhead,
         color: colors.textSecondary,
         fontWeight: "500",
     },
