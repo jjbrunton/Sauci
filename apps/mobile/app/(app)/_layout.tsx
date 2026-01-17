@@ -392,7 +392,7 @@ export default function AppLayout() {
                         .eq("id", payload.new.id)
                         .single();
 
-                    if (matchWithQuestion) {
+                    if (matchWithQuestion && matchWithQuestion.question) {
                         // Track milestone events before adding (so count is accurate)
                         const currentMatchCount = matches.length;
                         if (currentMatchCount === 0) {

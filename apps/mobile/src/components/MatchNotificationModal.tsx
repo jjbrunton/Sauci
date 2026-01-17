@@ -177,7 +177,7 @@ export const MatchNotificationModal: React.FC<Props> = ({
         ]).start(() => onChat());
     };
 
-    if (!visible || !match) return null;
+    if (!visible || !match || !match.question) return null;
 
     // Determine responses based on match_type if not explicitly provided
     const getUserResponse = (): AnswerType => {
@@ -266,13 +266,15 @@ export const MatchNotificationModal: React.FC<Props> = ({
                         {/* Question text and responses */}
                         {match.question.partner_text ? (
                             // Two-part question - show what each person saw
+                            // The current user triggered the match (answered second), so they saw partner_text
+                            // The partner answered first, so they saw text
                             <View style={styles.twoPartContainer}>
                                 <View style={styles.responseSection}>
                                     <View style={styles.responseLabelRow}>
                                         <Text style={styles.responsePersonLabel}>You said</Text>
                                         <ResponseBadge response={userResponse} />
                                     </View>
-                                    <Text style={styles.questionTextSmall}>"{match.question.text}"</Text>
+                                    <Text style={styles.questionTextSmall}>"{match.question.partner_text}"</Text>
                                 </View>
 
                                 <View style={styles.matchConnector}>
@@ -288,7 +290,7 @@ export const MatchNotificationModal: React.FC<Props> = ({
                                         <Text style={styles.responsePersonLabel}>{partnerDisplayName} said</Text>
                                         <ResponseBadge response={partnerResponse} isPartner />
                                     </View>
-                                    <Text style={styles.questionTextSmall}>"{match.question.partner_text}"</Text>
+                                    <Text style={styles.questionTextSmall}>"{match.question.text}"</Text>
                                 </View>
                             </View>
                         ) : (
