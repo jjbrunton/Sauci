@@ -1,9 +1,14 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Check, Crown, Heart, Sparkles, Infinity } from 'lucide-react'
 
+const APP_STORE_URL = 'https://apps.apple.com/app/sauci'
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.sauci.app'
+
 const features = [
+
   'Unlock all question packs',
   'Access exclusive premium content',
   'New packs added regularly',
@@ -12,7 +17,17 @@ const features = [
 ]
 
 export default function Pricing() {
+  const [downloadUrl, setDownloadUrl] = useState(APP_STORE_URL)
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent || ''
+    if (/Android/i.test(userAgent)) {
+      setDownloadUrl(PLAY_STORE_URL)
+    }
+  }, [])
+
   return (
+
     <section id="pricing" className="relative py-24 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background-light to-background" />
@@ -114,7 +129,7 @@ export default function Pricing() {
             {/* CTA */}
             <div className="text-center">
               <a
-                href="https://apps.apple.com/app/sauci"
+                href={downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary inline-flex items-center gap-2"
@@ -122,6 +137,7 @@ export default function Pricing() {
                 <Crown className="w-5 h-5" />
                 Get Sauci Pro
               </a>
+
               <p className="text-sm text-white/40 mt-3">
                 Upgrade anytime from within the app
               </p>

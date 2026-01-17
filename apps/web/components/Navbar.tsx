@@ -6,9 +6,15 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 
+const APP_STORE_URL = 'https://apps.apple.com/app/sauci'
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.sauci.app'
+
 export default function Navbar() {
+
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [downloadUrl, setDownloadUrl] = useState(APP_STORE_URL)
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +23,14 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  useEffect(() => {
+    const userAgent = navigator.userAgent || ''
+    if (/Android/i.test(userAgent)) {
+      setDownloadUrl(PLAY_STORE_URL)
+    }
+  }, [])
+
 
   return (
     <motion.nav
@@ -53,13 +67,14 @@ export default function Navbar() {
             FAQ
           </a>
           <a
-            href="https://apps.apple.com/app/sauci"
+            href={downloadUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary text-sm py-3 px-6"
           >
             Download App
           </a>
+
         </div>
 
         {/* Mobile Menu Button */}
@@ -111,13 +126,14 @@ export default function Navbar() {
                 FAQ
               </a>
               <a
-                href="https://apps.apple.com/app/sauci"
+                href={downloadUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary text-sm py-3 px-6 text-center"
               >
                 Download App
               </a>
+
             </div>
           </motion.div>
         )}

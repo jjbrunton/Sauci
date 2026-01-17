@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import { motion } from 'framer-motion'
+import { Play } from 'lucide-react'
+
 
 export default function CTA() {
   return (
@@ -51,8 +53,18 @@ export default function CTA() {
               </svg>
               Download for iOS
             </a>
-            <span className="text-white/40">Coming soon to Android</span>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.sauci.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Play className="w-5 h-5" />
+              Download for Android
+            </a>
           </div>
+
         </motion.div>
       </div>
     </section>

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, Play } from 'lucide-react'
+
 
 export default function Hero() {
   const [hasScrolled, setHasScrolled] = useState(false)
@@ -53,7 +54,8 @@ export default function Hero() {
             it&apos;s a match. Start conversations you&apos;ve always wanted to have.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+          <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4">
+
             {/* Official App Store Badge */}
             <a
               href="https://apps.apple.com/app/sauci"
@@ -88,9 +90,25 @@ export default function Hero() {
                 />
               </svg>
             </a>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.sauci.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-[50px] inline-flex items-center gap-3 rounded-xl bg-black/80 border border-white/10 px-5 transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              aria-label="Get it on Google Play"
+            >
+              <Play className="w-6 h-6 text-white" />
+              <span className="flex flex-col leading-none">
+                <span className="text-[10px] tracking-wide text-white/60">GET IT ON</span>
+                <span className="text-sm font-semibold text-white">Google Play</span>
+              </span>
+            </a>
+
             <a href="#how-it-works" className="btn-secondary flex items-center gap-2 w-full sm:w-auto justify-center">
               See How It Works
             </a>
+
           </div>
         </motion.div>
 
