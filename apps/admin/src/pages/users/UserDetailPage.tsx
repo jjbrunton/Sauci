@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, supabaseConfig } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
@@ -339,7 +338,7 @@ export function UserDetailPage() {
                 expires_at_param: expiresAt,
             });
             if (error) throw error;
-            const { data: updatedProfile } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single();
+            const { data: updatedProfile } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single<Profile>();
             if (updatedProfile) setProfile(updatedProfile);
             setUpgradeOpen(false);
             alert('User upgraded to premium successfully!');
@@ -355,7 +354,7 @@ export function UserDetailPage() {
         if (!userId) return;
         setLoading(true);
         try {
-            const { data: profileData } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single();
+            const { data: profileData } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single<Profile>();
             setProfile(profileData);
 
             // Fetch feature interests for the user

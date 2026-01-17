@@ -5,6 +5,7 @@ export interface AppConfig {
     id: string;
     answer_gap_threshold: number;
     daily_response_limit: number;
+    couple_intensity_gate_enabled: boolean | null;
     updated_at: string | null;
     updated_by: string | null;
 }

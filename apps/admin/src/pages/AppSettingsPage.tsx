@@ -4,6 +4,7 @@ import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,6 +30,7 @@ export function AppSettingsPage() {
             setFormData({
                 answer_gap_threshold: config.answer_gap_threshold ?? 10,
                 daily_response_limit: config.daily_response_limit ?? 0,
+                couple_intensity_gate_enabled: config.couple_intensity_gate_enabled ?? false,
             });
             setHasChanges(false);
         }
@@ -61,6 +63,7 @@ export function AppSettingsPage() {
             setFormData({
                 answer_gap_threshold: config.answer_gap_threshold ?? 10,
                 daily_response_limit: config.daily_response_limit ?? 0,
+                couple_intensity_gate_enabled: config.couple_intensity_gate_enabled ?? false,
             });
             setHasChanges(false);
         }
@@ -157,6 +160,19 @@ export function AppSettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <Label>Couple Comfort Zone Gate</Label>
+                            <p className="text-sm text-muted-foreground">
+                                When enabled, both recommended questions and answer-gap blocking use the lower of the two partners' comfort zones.
+                            </p>
+                        </div>
+                        <Switch
+                            checked={Boolean(formData.couple_intensity_gate_enabled)}
+                            onCheckedChange={(checked) => handleChange('couple_intensity_gate_enabled', checked)}
+                        />
+                    </div>
+
                     <div className="space-y-2">
                         <Label htmlFor="threshold">Answer Gap Threshold</Label>
                         <Input
