@@ -18,10 +18,12 @@ Notifications.setNotificationHandler({
 
 // Types
 export interface NotificationData {
-  type: "match" | "message";
+  type: "match" | "message" | "match_digest";
   match_id?: string;
   message_id?: string;
+  count?: number;
 }
+
 
 /**
  * Request notification permissions and get Expo push token.
@@ -224,13 +226,23 @@ export function handleNotificationResponse(
 ): void {
   const data = response.notification.request.content.data as NotificationData;
 
-  if (!data?.match_id) {
+  if (!data) {
+    return;
+  }
+
+  if (data.type === "match_digest") {
+    router.push("/(app)/matches");
+    return;
+  }
+
+  if (!data.match_id) {
     return;
   }
 
   // Both match and message notifications navigate to chat
   router.push(`/(app)/chat/${data.match_id}`);
 }
+
 
 /**
  * Set up listener for notification taps (when app is running).

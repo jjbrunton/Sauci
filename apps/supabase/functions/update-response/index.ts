@@ -218,14 +218,9 @@ Deno.serve(async (req) => {
                 if (!matchError && newMatch) {
                     result.new_match = newMatch;
 
-                    // Trigger push notification for new match
-                    try {
-                        await supabase.functions.invoke("send-notification", {
-                            body: { couple_id: profile.couple_id, match_id: newMatch.id },
-                        });
-                    } catch (notifyError) {
-                        console.error("Failed to send notification:", notifyError);
-                    }
+                    // Match push notifications are queued via a Postgres trigger
+                    // (pending_match_notifications) to allow short digesting.
+
                 }
             }
         }
