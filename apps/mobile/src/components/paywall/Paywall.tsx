@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSubscriptionStore } from "../../store";
+import { router } from "expo-router";
+import { useAuthStore, useSubscriptionStore } from "../../store";
 import { colors, gradients, spacing, radius, typography } from "../../theme";
 import type { PurchasesPackage } from "../../lib/revenuecat";
 import { Events } from "../../lib/analytics";
@@ -43,6 +44,8 @@ const FEATURES = [
 ];
 
 export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
+    const { isAnonymous } = useAuthStore();
+
     const handleClose = (reason: "dismiss" | "success" | "restore" | "system") => {
         Events.paywallClosed("paywall", reason);
         onClose();
@@ -60,6 +63,8 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
     const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(
         null
     );
+    const [showGuestConfirm, setShowGuestConfirm] = useState(false);
+    const [guestConfirmed, setGuestConfirmed] = useState(false);
 
     useEffect(() => {
         if (visible && !offerings) {
@@ -67,6 +72,8 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         }
         if (visible) {
             Events.paywallShown("paywall");
+            setGuestConfirmed(false);
+            setShowGuestConfirm(false);
         }
     }, [visible, offerings, fetchOfferings]);
 
@@ -80,7 +87,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         }
     }, [offerings]);
 
-    const handlePurchase = async () => {
+    const doPurchase = async () => {
         if (!selectedPackage) return;
 
         const packageType = selectedPackage.packageType || "unknown";
@@ -100,6 +107,17 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         }
 
         Events.purchaseFailed(packageType, result.errorCode, result.errorMessage);
+    };
+
+    const handlePurchase = async () => {
+        if (!selectedPackage) return;
+
+        if (isAnonymous && !guestConfirmed) {
+            setShowGuestConfirm(true);
+            return;
+        }
+
+        await doPurchase();
     };
 
     const handleRestore = async () => {
@@ -398,6 +416,59 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                             </View>
                         </View>
                     </ScrollView>
+
+                    {showGuestConfirm && (
+                        <View style={styles.guestConfirmOverlay}>
+                            <Pressable
+                                style={StyleSheet.absoluteFill}
+                                onPress={() => setShowGuestConfirm(false)}
+                            />
+                            <View style={styles.guestConfirmCard}>
+                                <View style={styles.guestConfirmHeader}>
+                                    <View style={styles.guestConfirmIcon}>
+                                        <Ionicons name="shield-checkmark" size={22} color={colors.premium.gold} />
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => setShowGuestConfirm(false)}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        style={styles.guestConfirmClose}
+                                    >
+                                        <Ionicons name="close" size={18} color={colors.textSecondary} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Text style={styles.guestConfirmTitle}>Save your account first?</Text>
+                                <Text style={styles.guestConfirmBody}>
+                                    Unsaved accounts can't be recovered if you delete the app or switch devices.
+                                    Saving your account protects your access to Pro.
+                                </Text>
+
+                                <View style={styles.guestConfirmActions}>
+                                    <Pressable
+                                        style={styles.guestConfirmPrimary}
+                                        onPress={async () => {
+                                            setShowGuestConfirm(false);
+                                            handleClose("dismiss");
+                                            router.push("/(app)/settings/save-account" as any);
+                                        }}
+                                    >
+                                        <Text style={styles.guestConfirmPrimaryText}>Save account</Text>
+                                    </Pressable>
+
+                                    <Pressable
+                                        style={styles.guestConfirmSecondary}
+                                        onPress={async () => {
+                                            setGuestConfirmed(true);
+                                            setShowGuestConfirm(false);
+                                            await doPurchase();
+                                        }}
+                                    >
+                                        <Text style={styles.guestConfirmSecondaryText}>Continue purchase</Text>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </View>
+                    )}
                 </View>
             </View>
         </Modal>
@@ -759,6 +830,86 @@ const styles = StyleSheet.create({
     legalSeparator: {
         ...typography.caption1,
         color: colors.textTertiary,
+    },
+
+    guestConfirmOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: spacing.lg,
+    },
+    guestConfirmCard: {
+        width: "100%",
+        maxWidth: 420,
+        backgroundColor: "rgba(22, 33, 62, 0.98)",
+        borderRadius: radius.xl,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: "rgba(212, 175, 55, 0.2)",
+    },
+    guestConfirmHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: spacing.md,
+    },
+    guestConfirmIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "rgba(212, 175, 55, 0.12)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    guestConfirmClose: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.1)",
+    },
+    guestConfirmTitle: {
+        ...typography.title3,
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    guestConfirmBody: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        lineHeight: 20,
+        marginBottom: spacing.lg,
+        textAlign: "left",
+    },
+    guestConfirmActions: {
+        gap: spacing.sm,
+    },
+    guestConfirmPrimary: {
+        backgroundColor: colors.premium.gold,
+        paddingVertical: spacing.md,
+        borderRadius: radius.lg,
+        alignItems: "center",
+    },
+    guestConfirmPrimaryText: {
+        ...typography.headline,
+        color: colors.background,
+        fontWeight: "700",
+    },
+    guestConfirmSecondary: {
+        backgroundColor: "rgba(255, 255, 255, 0.06)",
+        paddingVertical: spacing.md,
+        borderRadius: radius.lg,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.12)",
+    },
+    guestConfirmSecondaryText: {
+        ...typography.subhead,
+        color: colors.text,
+        fontWeight: "600",
     },
 });
 

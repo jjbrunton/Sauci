@@ -61,6 +61,7 @@ export default function LoginScreen() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    const [isGuestLoading, setIsGuestLoading] = useState(false);
     const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
     const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
     const [isCheckingVerification, setIsCheckingVerification] = useState(false);
@@ -364,6 +365,20 @@ export default function LoginScreen() {
         }
     };
 
+    const handleGuestSignIn = async () => {
+        clearError();
+        setIsGuestLoading(true);
+        const { error: authError } = await supabase.auth.signInAnonymously();
+        setIsGuestLoading(false);
+
+        if (authError) {
+            showError(getAuthError(authError));
+            return;
+        }
+
+        Events.signIn("guest");
+    };
+ 
     if (isMagicLinkSent) {
         return (
             <GradientBackground showAccent>
@@ -663,6 +678,23 @@ export default function LoginScreen() {
                                 </View>
                             </Animated.View>
                         )}
+
+                        <Animated.View
+                            entering={FadeInDown.delay(400).duration(600).springify()}
+                            style={styles.guestContainer}
+                        >
+                            <GlassButton
+                                variant="ghost"
+                                onPress={handleGuestSignIn}
+                                loading={isGuestLoading}
+                                disabled={isGuestLoading}
+                                icon={<Ionicons name="person-outline" size={20} color={colors.primary} />}
+                                fullWidth
+                            >
+                                Continue without Login
+                            </GlassButton>
+                            <Text style={styles.guestHint}>Save your account anytime in Settings.</Text>
+                        </Animated.View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -820,5 +852,15 @@ const styles = StyleSheet.create({
     appleButton: {
         flex: 1,
         height: 48,
+    },
+    guestContainer: {
+        marginTop: spacing.lg,
+        alignItems: "center",
+        gap: spacing.sm,
+    },
+    guestHint: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        textAlign: "center",
     },
 });

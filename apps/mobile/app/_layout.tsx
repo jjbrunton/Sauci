@@ -16,8 +16,8 @@ import {
     handleNotificationResponse,
 } from "../src/lib/notifications";
 
-import React, { useEffect, useRef } from "react";
-import { Platform, View, AppState, AppStateStatus } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Platform, View, AppState, AppStateStatus, Modal, Text, StyleSheet, Pressable, TouchableOpacity } from "react-native";
 
 // Suppress useLayoutEffect warning on server-side rendering
 if (Platform.OS === "web" && typeof globalThis.window === "undefined") {
@@ -34,6 +34,7 @@ if (Platform.OS === "web" && typeof globalThis.window === "undefined") {
 
 import { Stack, router, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 // GestureHandlerRootView is only needed on native platforms
 // On web, we use a simple View to avoid findNodeHandle errors
 const GestureHandlerRootView = Platform.OS === "web"
@@ -43,14 +44,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { useAuthStore } from "../src/store";
 import { supabase } from "../src/lib/supabase";
+import { colors, spacing, radius, typography } from "../src/theme";
+import { hasSeenGuestAccountWarning, markGuestAccountWarningSeen } from "../src/lib/guestAccountWarningSeen";
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-    const { fetchUser, setUser } = useAuthStore();
+    const { fetchUser, setUser, isAuthenticated, isAnonymous } = useAuthStore();
     const pathname = usePathname();
     const appState = useRef(AppState.currentState);
     const analyticsInitialized = useRef(false);
+
+    const [showGuestWarning, setShowGuestWarning] = useState(false);
+    const [checkingGuestWarning, setCheckingGuestWarning] = useState(false);
+
+    const dismissGuestWarning = async () => {
+        await markGuestAccountWarningSeen();
+        setShowGuestWarning(false);
+    };
+
 
     // Initialize analytics after native modules are ready
     useEffect(() => {
@@ -67,6 +79,22 @@ export default function RootLayout() {
             logScreenView(pathname);
         }
     }, [pathname]);
+
+    // Warn guest users (first time only) that accounts are not recoverable
+    useEffect(() => {
+        if (!isAuthenticated || !isAnonymous) return;
+        if (checkingGuestWarning) return;
+        if (pathname?.startsWith("/(auth)")) return;
+
+        setCheckingGuestWarning(true);
+        hasSeenGuestAccountWarning()
+            .then((seen) => {
+                if (!seen) {
+                    setShowGuestWarning(true);
+                }
+            })
+            .finally(() => setCheckingGuestWarning(false));
+    }, [isAuthenticated, isAnonymous, pathname, checkingGuestWarning]);
 
     // Track warm starts when app comes back from background
     useEffect(() => {
@@ -181,7 +209,7 @@ export default function RootLayout() {
         const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!session, 'userId:', session?.user?.id);
-                if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+                if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
                     console.log('[Auth] Calling fetchUser...');
                     fetchUser();
                     // Set Sentry user context for error tracking
@@ -223,7 +251,144 @@ export default function RootLayout() {
                         contentStyle: { backgroundColor: "#1a1a2e" },
                     }}
                 />
+
+                <Modal
+                    visible={showGuestWarning}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={dismissGuestWarning}
+                >
+                    <Pressable
+                        style={styles.guestWarningOverlay}
+                        onPress={dismissGuestWarning}
+                    >
+                        <Pressable style={styles.guestWarningCard} onPress={() => { }}>
+                            <View style={styles.guestWarningHeader}>
+                                <View style={styles.guestWarningIcon}>
+                                    <Ionicons name="warning" size={22} color={colors.primary} />
+                                </View>
+                                <TouchableOpacity
+                                    onPress={dismissGuestWarning}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    style={styles.guestWarningClose}
+                                >
+                                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={styles.guestWarningTitle}>Your account isn't saved</Text>
+                            <Text style={styles.guestWarningBody}>
+                                If you delete the app or switch devices, you won't be able to recover this account.
+                                Save your account now to protect your couple, matches, and purchases.
+                            </Text>
+
+                            <View style={styles.guestWarningActions}>
+                                <TouchableOpacity
+                                    style={styles.guestWarningPrimary}
+                                    onPress={async () => {
+                                        await markGuestAccountWarningSeen();
+                                        setShowGuestWarning(false);
+                                        router.push("/(app)/settings/save-account" as any);
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.guestWarningPrimaryText}>Save account</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.guestWarningSecondary}
+                                    onPress={async () => {
+                                        await markGuestAccountWarningSeen();
+                                        setShowGuestWarning(false);
+                                    }}
+                                    activeOpacity={0.8}
+                                >
+                                    <Text style={styles.guestWarningSecondaryText}>Not now</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </Pressable>
+                    </Pressable>
+                </Modal>
             </GestureHandlerRootView>
         </QueryClientProvider>
     );
 }
+
+const styles = StyleSheet.create({
+    guestWarningOverlay: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: spacing.lg,
+        backgroundColor: "rgba(0, 0, 0, 0.75)",
+    },
+    guestWarningCard: {
+        width: "100%",
+        maxWidth: 420,
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.xl,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+    },
+    guestWarningHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: spacing.md,
+    },
+    guestWarningIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.primaryLight,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    guestWarningClose: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.glass.background,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    guestWarningTitle: {
+        ...typography.headline,
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    guestWarningBody: {
+        ...typography.body,
+        color: colors.textSecondary,
+        lineHeight: 22,
+        marginBottom: spacing.lg,
+    },
+    guestWarningActions: {
+        gap: spacing.sm,
+    },
+    guestWarningPrimary: {
+        backgroundColor: colors.primary,
+        paddingVertical: 14,
+        borderRadius: radius.md,
+        alignItems: "center",
+    },
+    guestWarningPrimaryText: {
+        ...typography.subhead,
+        color: colors.text,
+        fontWeight: "600",
+    },
+    guestWarningSecondary: {
+        backgroundColor: colors.glass.background,
+        paddingVertical: 14,
+        borderRadius: radius.md,
+        alignItems: "center",
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+    },
+    guestWarningSecondaryText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        fontWeight: "600",
+    },
+});
+

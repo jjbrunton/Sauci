@@ -29,7 +29,7 @@ export function ProfileScreen() {
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
 
-    const { user, partner, fetchUser } = useAuthStore();
+    const { user, partner, fetchUser, isAnonymous } = useAuthStore();
     const { subscription } = useSubscriptionStore();
     const settings = useProfileSettings();
 
@@ -116,7 +116,9 @@ export function ProfileScreen() {
                         </LinearGradient>
                         <View style={styles.profileInfo}>
                             <Text style={styles.userName}>{user?.name || "User"}</Text>
-                            <Text style={styles.userEmail}>{user?.email}</Text>
+                            <Text style={styles.userEmail}>
+                                {isAnonymous ? "Unsaved account" : (user?.email || "")}
+                            </Text>
                         </View>
                         <View style={styles.profileChevron}>
                             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
@@ -172,6 +174,17 @@ export function ProfileScreen() {
 
                 {/* Other Section */}
                 <SettingsSection title="Other" delay={350}>
+                    {isAnonymous && (
+                        <>
+                            <MenuItem
+                                icon="shield-checkmark-outline"
+                                label="Save Account"
+                                description="Protect access across devices"
+                                onPress={() => router.push('/(app)/settings/save-account' as any)}
+                            />
+                            <View style={styles.divider} />
+                        </>
+                    )}
                     <MenuItem
                         icon="help-circle-outline"
                         label="Help & Support"

@@ -10,6 +10,8 @@ interface AuthState {
     partner: Profile | null;
     isLoading: boolean;
     isAuthenticated: boolean;
+    isAnonymous: boolean;
+
 
     // Actions
     fetchUser: () => Promise<void>;
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     partner: null,
     isLoading: true,
     isAuthenticated: false,
+    isAnonymous: false,
 
     fetchUser: async () => {
         try {
@@ -45,7 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session?.user) {
-                set({ user: null, isAuthenticated: false, isLoading: false });
+                set({ user: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
                 return;
             }
 
@@ -57,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 console.log("[Auth] Session invalid, signing out:", authError?.message);
 
                 // Session is invalid - clear everything
-                set({ user: null, couple: null, partner: null, isAuthenticated: false, isLoading: false });
+                set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
                 // Clear other stores
                 const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
@@ -77,9 +80,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 .eq("id", authUser.id)
                 .maybeSingle();
 
+            const isAnonymous = !!(authUser as any).is_anonymous;
+
             set({
                 user: profile,
                 isAuthenticated: true,
+                isAnonymous,
             });
 
             // If user has a couple, fetch couple data; otherwise clear couple/partner
@@ -142,13 +148,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         Events.signOut();
 
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
-        set({
-            user: null,
-            couple: null,
-            partner: null,
-            isAuthenticated: false,
-            isLoading: false,
-        });
+         set({
+             user: null,
+             couple: null,
+             partner: null,
+             isAuthenticated: false,
+             isAnonymous: false,
+             isLoading: false,
+         });
         // Clear other stores
         const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
         useMatchStore.getState().clearMatches();
@@ -174,6 +181,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
             user,
             isAuthenticated: !!user,
+            ...(user === null && { isAnonymous: false }),
             isLoading: false,
             // Clear couple/partner when user is null (signed out)
             ...(user === null && { couple: null, partner: null })

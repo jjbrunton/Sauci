@@ -17,7 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Search, Crown, Users, ChevronRight, HardDrive, MailWarning } from 'lucide-react';
+import { Search, Crown, Users, ChevronRight, HardDrive, MailWarning, Hourglass } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Profile {
@@ -32,6 +32,7 @@ interface Profile {
     email_confirmed_at: string | null;
     storage_bytes?: number;
     partner_is_premium?: boolean;
+    partner_count?: number;
 }
 
 function formatBytes(bytes: number): string {
@@ -87,11 +88,13 @@ export function UsersPage() {
                 }
             });
 
-            // Merge storage data and partner premium status with profiles
+            // Merge storage data, partner premium status, and partner count with profiles
             const profilesWithExtras = profilesData.map(profile => {
-                // Check if partner has premium
+                // Check if partner has premium and count partners in couple
                 let partnerIsPremium = false;
+                let partnerCount = 0;
                 if (profile.couple_id && couplePartners[profile.couple_id]) {
+                    partnerCount = couplePartners[profile.couple_id].length;
                     const partner = couplePartners[profile.couple_id].find(p => p.id !== profile.id);
                     partnerIsPremium = partner?.is_premium || false;
                 }
@@ -99,6 +102,7 @@ export function UsersPage() {
                     ...profile,
                     storage_bytes: storageMap[profile.id] || 0,
                     partner_is_premium: partnerIsPremium,
+                    partner_count: partnerCount,
                 };
             });
 
@@ -126,9 +130,12 @@ export function UsersPage() {
             setProfiles(prev => prev.filter(p => p.id !== deleted.id));
             setFilteredProfiles(prev => prev.filter(p => p.id !== deleted.id));
         }, []),
-        insertToast: {
+            insertToast: {
             enabled: true,
-            message: (payload) => `New user registered: ${payload.name || payload.email || 'Unknown'}`,
+            message: (payload) => {
+                const label = payload.name || payload.email || 'Guest';
+                return payload.email ? `New user registered: ${label}` : `New guest user: ${label}`;
+            },
             type: 'success',
         },
         debounceMs: 1000, // Debounce to avoid excessive refetches
@@ -191,7 +198,15 @@ export function UsersPage() {
                         <RealtimeStatusIndicator status={realtimeStatus} showLabel />
                     </div>
                     <p className="text-muted-foreground text-sm">
-                        {profiles.length} registered user{profiles.length !== 1 ? 's' : ''}
+                        {profiles.length} account{profiles.length !== 1 ? 's' : ''}
+                        {(() => {
+                            const guestCount = profiles.filter(p => !p.email).length;
+                            const savedCount = profiles.length - guestCount;
+                            if (guestCount === 0) return null;
+                            return (
+                                <span> • {savedCount} saved • {guestCount} guest</span>
+                            );
+                        })()}
                     </p>
                 </div>
                 <div className="relative w-full sm:w-64">
@@ -245,11 +260,19 @@ export function UsersPage() {
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
                                         <div className="flex items-center gap-1.5">
-                                            {profile.email || '—'}
-                                            {profile.email && !profile.email_confirmed_at && (
-                                                <span title="Email not verified">
-                                                    <MailWarning className="h-3.5 w-3.5 text-amber-500" />
-                                                </span>
+                                            {profile.email ? (
+                                                <>
+                                                    {profile.email}
+                                                    {!profile.email_confirmed_at && (
+                                                        <span title="Email not verified">
+                                                            <MailWarning className="h-3.5 w-3.5 text-amber-500" />
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">
+                                                    Guest
+                                                </Badge>
                                             )}
                                         </div>
                                     </TableCell>
@@ -272,10 +295,17 @@ export function UsersPage() {
                                     </TableCell>
                                     <TableCell>
                                         {profile.couple_id ? (
-                                            <Badge variant="secondary">
-                                                <Users className="h-3 w-3 mr-1" />
-                                                Paired
-                                            </Badge>
+                                            profile.partner_count && profile.partner_count >= 2 ? (
+                                                <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
+                                                    <Users className="h-3 w-3 mr-1" />
+                                                    Paired
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-200">
+                                                    <Hourglass className="h-3 w-3 mr-1" />
+                                                    Pairing
+                                                </Badge>
+                                            )
                                         ) : (
                                             <span className="text-muted-foreground text-sm">—</span>
                                         )}

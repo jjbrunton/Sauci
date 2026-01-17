@@ -14,6 +14,8 @@ const AUTH_ERROR_MAPPINGS: ErrorMapping[] = [
     { pattern: /invalid login credentials/i, message: "Incorrect email or password. Please try again." },
     { pattern: /email not confirmed/i, message: "Please verify your email before signing in." },
     { pattern: /user already registered/i, message: "An account with this email already exists." },
+    { pattern: /email.*already.*(registered|exists|in use|used)/i, message: "This email is already in use. Please use a different one." },
+    { pattern: /duplicate key value violates unique constraint.*users_email_key/i, message: "This email is already in use. Please use a different one." },
     { pattern: /invalid email/i, message: "Please enter a valid email address." },
     { pattern: /password.*too short/i, message: "Password must be at least 8 characters." },
     { pattern: /password.*too weak/i, message: "Please choose a stronger password." },
@@ -26,6 +28,8 @@ const AUTH_ERROR_MAPPINGS: ErrorMapping[] = [
     { pattern: /signups.*disabled/i, message: "Sign ups are currently disabled. Please try again later." },
     { pattern: /user not found/i, message: "No account found with this email." },
     { pattern: /provider.*disabled/i, message: "This sign-in method is currently unavailable." },
+    { pattern: /manual.*link/i, message: "Saving accounts is temporarily unavailable. Please try again later." },
+    { pattern: /identity.*link/i, message: "Saving accounts is temporarily unavailable. Please try again later." },
 ];
 
 const PAIRING_ERROR_MAPPINGS: ErrorMapping[] = [

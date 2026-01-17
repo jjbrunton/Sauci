@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { GradientBackground } from '../../../components/ui';
 import { colors, spacing } from '../../../theme';
@@ -11,7 +12,8 @@ import { ScreenHeader, SettingsSection, MenuItem, DangerZone } from '../componen
  * Account settings sub-screen (sign out, delete account).
  */
 export function AccountScreen() {
-    const { couple } = useAuthStore();
+    const router = useRouter();
+    const { couple, isAnonymous } = useAuthStore();
     const { handleSignOut, handleDeleteAccount } = useCoupleManagement();
 
     return (
@@ -23,13 +25,23 @@ export function AccountScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <SettingsSection title="Account" delay={0}>
-                    <MenuItem
-                        icon="log-out-outline"
-                        label="Sign Out"
-                        onPress={handleSignOut}
-                        variant="danger"
-                        showChevron={false}
-                    />
+                    {isAnonymous ? (
+                        <MenuItem
+                            icon="shield-checkmark-outline"
+                            label="Save Account"
+                            description="Protect access across devices"
+                            onPress={() => router.push("/(app)/settings/save-account" as any)}
+                            showChevron={false}
+                        />
+                    ) : (
+                        <MenuItem
+                            icon="log-out-outline"
+                            label="Sign Out"
+                            onPress={handleSignOut}
+                            variant="danger"
+                            showChevron={false}
+                        />
+                    )}
                 </SettingsSection>
 
                 <View style={styles.spacer} />

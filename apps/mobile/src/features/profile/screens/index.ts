@@ -6,3 +6,4 @@ export { SubscriptionScreen } from './SubscriptionScreen';
 export { PartnerScreen } from './PartnerScreen';
 export { SupportScreen } from './SupportScreen';
 export { AccountScreen } from './AccountScreen';
+export { SaveAccountScreen } from './SaveAccountScreen';

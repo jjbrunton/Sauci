@@ -539,10 +539,19 @@ export function UserDetailPage() {
                         {profile.is_premium && <Badge className="bg-amber-500"><Crown className="h-3 w-3 mr-1" />Premium</Badge>}
                         {!profile.is_premium && hasPermission(PERMISSION_KEYS.GIFT_PREMIUM) && <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}><DialogTrigger asChild><Button size="sm" variant="outline" className="ml-2 gap-1 h-7"><Gift className="h-3.5 w-3.5" />Gift Premium</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Gift Premium Access</DialogTitle><DialogDescription>Manually upgrade this user to premium status.</DialogDescription></DialogHeader><div className="grid gap-4 py-4"><div className="grid gap-2"><Label htmlFor="expiry-type">Duration</Label><Select value={expiryType} onValueChange={setExpiryType}><SelectTrigger id="expiry-type"><SelectValue placeholder="Select duration" /></SelectTrigger><SelectContent><SelectItem value="forever">Lifetime (No Expiry)</SelectItem><SelectItem value="1_month">1 Month</SelectItem><SelectItem value="1_year">1 Year</SelectItem><SelectItem value="custom">Custom Date</SelectItem></SelectContent></Select></div>{expiryType === 'custom' && (<div className="grid gap-2"><Label htmlFor="custom-date">Expiry Date</Label><Input id="custom-date" type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} /></div>)}</div><DialogFooter><Button variant="outline" onClick={() => setUpgradeOpen(false)}>Cancel</Button><Button onClick={handleUpgrade} disabled={upgrading}>{upgrading ? 'Upgrading...' : 'Confirm Upgrade'}</Button></DialogFooter></DialogContent></Dialog>}
                     </div>
-                    <p className="text-muted-foreground mb-4">{profile.email || 'No email'}</p>
+                    <div className="text-muted-foreground mb-4 flex items-center gap-2">
+                        {profile.email ? (
+                            <span>{profile.email}</span>
+                        ) : (
+                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">Guest</Badge>
+                        )}
+                        {!profile.email && (
+                            <span className="text-xs">Not recoverable unless saved in-app</span>
+                        )}
+                    </div>
                     <div className="flex gap-6 text-sm">
                         <div><span className="text-muted-foreground">Joined: </span><span>{profile.created_at ? format(new Date(profile.created_at), 'MMMM d, yyyy') : '—'}</span></div>
-                        {partner ? <div className="flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-muted-foreground">Paired with: </span><Link to={`/users/${partner.id}`} className="text-primary hover:underline">{partner.name || 'Unnamed Partner'}</Link></div> : <div className="text-muted-foreground">Not paired</div>}
+                        {partner ? <div className="flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-muted-foreground">Paired with: </span><Link to={`/users/${partner.id}`} className="text-primary hover:underline">{partner.name || 'Unnamed Partner'}</Link></div> : profile.couple_id ? <div className="text-amber-600 dark:text-amber-400 flex items-center gap-1"><Users className="h-4 w-4" />Waiting for partner</div> : <div className="text-muted-foreground">Not paired</div>}
                     </div>
                 </div>
             </div></CardContent></Card>
