@@ -3,19 +3,14 @@
 
 -- Add media type to distinguish images from videos
 ALTER TABLE messages ADD COLUMN media_type TEXT CHECK (media_type IN ('image', 'video'));
-
 -- Track when media expires (set when video is viewed: media_viewed_at + 30 days)
 ALTER TABLE messages ADD COLUMN media_expires_at TIMESTAMPTZ;
-
 -- Track if media was deleted due to expiration
 ALTER TABLE messages ADD COLUMN media_expired BOOLEAN DEFAULT false;
-
 -- Backfill existing media as images
 UPDATE messages SET media_type = 'image' WHERE media_path IS NOT NULL;
-
 -- Enable pg_cron extension for scheduled cleanup
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
-
 -- Create cleanup function that handles both DB updates and storage deletion tracking
 CREATE OR REPLACE FUNCTION cleanup_expired_videos()
 RETURNS TABLE(deleted_count int, deleted_paths text[]) AS $$
@@ -49,7 +44,6 @@ BEGIN
     RETURN QUERY SELECT count, COALESCE(expired_paths, ARRAY[]::text[]);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- Schedule daily cleanup at 3 AM UTC
 -- The database function marks videos as expired, edge function handles storage deletion
 SELECT cron.schedule(

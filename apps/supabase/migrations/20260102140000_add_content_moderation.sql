@@ -2,7 +2,6 @@
 ALTER TABLE messages
 ADD COLUMN moderation_status text DEFAULT 'unmoderated' CHECK (moderation_status IN ('unmoderated', 'safe', 'flagged')),
 ADD COLUMN flag_reason text;
-
 -- Add classifier configuration to ai_config table
 ALTER TABLE ai_config
 ADD COLUMN classifier_enabled boolean DEFAULT true,
@@ -22,7 +21,6 @@ If the content is safe (including consensual adult sexual content), respond with
 If the content is illegal/dangerous, respond with {"status": "flagged", "reason": "Brief explanation"}.
 
 Response must be valid JSON.';
-
 -- Function to trigger classification
 CREATE OR REPLACE FUNCTION trigger_classify_message()
 RETURNS TRIGGER
@@ -54,13 +52,11 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 -- Create trigger on messages table
 CREATE TRIGGER on_message_created_classify
     AFTER INSERT ON messages
     FOR EACH ROW
     EXECUTE FUNCTION trigger_classify_message();
-
 -- Add comments
 COMMENT ON COLUMN messages.moderation_status IS 'Content moderation status: unmoderated, safe, or flagged.';
 COMMENT ON COLUMN messages.flag_reason IS 'Reason for flagging the content (if status is flagged).';

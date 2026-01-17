@@ -7,6 +7,13 @@ import revenueCatService, {
 } from "../lib/revenuecat";
 import { useAuthStore } from "./authStore";
 
+export type PurchaseResult = {
+    success: boolean;
+    cancelled?: boolean;
+    errorCode?: unknown;
+    errorMessage?: unknown;
+};
+
 interface SubscriptionStoreState {
     subscription: SubscriptionState;
     offerings: PurchasesOffering | null;
@@ -17,7 +24,7 @@ interface SubscriptionStoreState {
     // Actions
     initializeRevenueCat: (userId: string) => Promise<void>;
     fetchOfferings: () => Promise<void>;
-    purchasePackage: (pkg: PurchasesPackage) => Promise<boolean>;
+    purchasePackage: (pkg: PurchasesPackage) => Promise<PurchaseResult>;
     restorePurchases: () => Promise<boolean>;
     refreshSubscriptionStatus: () => Promise<void>;
     clearSubscription: () => void;
@@ -131,14 +138,24 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
             // Refresh user profile to get updated is_premium
             await useAuthStore.getState().fetchUser();
 
-            return true;
+            return { success: true };
         } catch (error: any) {
-            const message =
-                error.message === "Purchase cancelled"
-                    ? "Purchase was cancelled"
-                    : "Purchase failed. Please try again.";
+            const isCancelled =
+                error?.userCancelled === true ||
+                error?.message === "Purchase cancelled" ||
+                error?.code === "PURCHASE_CANCELLED";
+
+            const message = isCancelled
+                ? "Purchase was cancelled"
+                : "Purchase failed. Please try again.";
+
             set({ error: message, isPurchasing: false });
-            return false;
+            return {
+                success: false,
+                cancelled: isCancelled,
+                errorCode: error?.code,
+                errorMessage: error?.message,
+            };
         }
     },
 

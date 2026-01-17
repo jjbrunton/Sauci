@@ -1,13 +1,11 @@
 -- Add visibility toggle for categories
 ALTER TABLE public.categories
   ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT true;
-
 -- Categories: hide non-public categories from non-admins
 DROP POLICY IF EXISTS "Categories are viewable by everyone" ON public.categories;
 CREATE POLICY "Categories are viewable by everyone"
   ON public.categories FOR SELECT
   USING (is_public = true);
-
 -- Question packs: require public categories for visibility
 DROP POLICY IF EXISTS "Anyone can view public packs" ON public.question_packs;
 CREATE POLICY "Anyone can view public packs"
@@ -24,7 +22,6 @@ CREATE POLICY "Anyone can view public packs"
       )
     )
   );
-
 DROP POLICY IF EXISTS "Premium users can view premium packs" ON public.question_packs;
 CREATE POLICY "Premium users can view premium packs"
   ON public.question_packs FOR SELECT
@@ -44,7 +41,6 @@ CREATE POLICY "Premium users can view premium packs"
       )
     )
   );
-
 -- Questions: require visible packs and public categories
 DROP POLICY IF EXISTS "Anyone can view questions in visible packs" ON public.questions;
 CREATE POLICY "Anyone can view questions in visible packs"
@@ -71,7 +67,6 @@ CREATE POLICY "Anyone can view questions in visible packs"
       )
     )
   );
-
 -- Ensure recommendation queries honor category visibility
 CREATE OR REPLACE FUNCTION get_recommended_questions(target_pack_id UUID DEFAULT NULL)
 RETURNS TABLE(
@@ -223,7 +218,6 @@ BEGIN
   );
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION get_pack_teaser_questions(target_pack_id UUID)
 RETURNS TABLE(id UUID, text TEXT, intensity INTEGER)
 LANGUAGE plpgsql

@@ -25,5 +25,4 @@ BEGIN
   ORDER BY opt_in_count DESC, fi.feature_name ASC;
 END;
 $$;
-
 GRANT EXECUTE ON FUNCTION public.get_feature_interest_counts() TO authenticated;

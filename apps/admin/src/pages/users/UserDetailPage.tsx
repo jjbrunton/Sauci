@@ -38,7 +38,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Heart, Sparkles } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Heart, Sparkles, Flame, Trophy, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { IconPreview } from '@/components/ui/icon-picker';
 
@@ -140,6 +140,17 @@ interface FeatureInterest {
     id: string;
     feature_name: string;
     created_at: string;
+}
+
+interface CoupleStreak {
+    id: string;
+    couple_id: string;
+    current_streak: number;
+    longest_streak: number;
+    last_active_date: string | null;
+    last_milestone_celebrated: number | null;
+    created_at: string;
+    updated_at: string;
 }
 
 const answerIcons = {
@@ -277,6 +288,7 @@ export function UserDetailPage() {
     const [mediaMessages, setMediaMessages] = useState<any[]>([]);
     const [enabledPacks, setEnabledPacks] = useState<EnabledPack[]>([]);
     const [featureInterests, setFeatureInterests] = useState<FeatureInterest[]>([]);
+    const [streak, setStreak] = useState<CoupleStreak | null>(null);
     const [responsesPage, setResponsesPage] = useState(1);
     const [responsesPageSize, setResponsesPageSize] = useState(10);
     const [responsesTotal, setResponsesTotal] = useState(0);
@@ -357,8 +369,17 @@ export function UserDetailPage() {
             if (profileData?.couple_id) {
                 const { data: partnerData } = await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).single();
                 setPartner(partnerData);
+
+                // Fetch streak data
+                const { data: streakData } = await supabase
+                    .from('couple_streaks')
+                    .select('*')
+                    .eq('couple_id', profileData.couple_id)
+                    .maybeSingle();
+                setStreak(streakData);
             } else {
                 setPartner(null);
+                setStreak(null);
             }
 
             const responsesFrom = (responsesPage - 1) * responsesPageSize;
@@ -534,6 +555,58 @@ export function UserDetailPage() {
                 <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.show_explicit_content ? 'bg-amber-100 dark:bg-amber-900' : 'bg-gray-100 dark:bg-gray-800'}`}>{profile.show_explicit_content ? <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" /> : <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />}</div><div><p className="text-sm font-medium text-muted-foreground">Explicit Content</p><p className="font-medium">{profile.show_explicit_content === null ? 'Not set' : profile.show_explicit_content ? 'Enabled' : 'Disabled'}</p></div></div>
                 <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}><CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} /></div><div><p className="text-sm font-medium text-muted-foreground">Onboarding</p><p className="font-medium">{profile.onboarding_completed ? 'Completed' : 'Not completed'}</p></div></div>
             </div></CardContent></Card>
+            {/* Streak Info */}
+            {profile.couple_id && streak && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Flame className="h-5 w-5 text-orange-500" />
+                            Couple Streak
+                        </CardTitle>
+                        <CardDescription>Activity streak for this couple</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900">
+                                    <Flame className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Current Streak</p>
+                                    <p className="font-medium text-xl">{streak.current_streak} day{streak.current_streak !== 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900">
+                                    <Trophy className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Longest Streak</p>
+                                    <p className="font-medium text-xl">{streak.longest_streak} day{streak.longest_streak !== 1 ? 's' : ''}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                    <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Last Active</p>
+                                    <p className="font-medium">{streak.last_active_date ? format(new Date(streak.last_active_date), 'MMM d, yyyy') : 'Never'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
+                                    <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Last Milestone</p>
+                                    <p className="font-medium">{streak.last_milestone_celebrated ? `${streak.last_milestone_celebrated} days` : 'None yet'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
             {/* Feature Opt-Ins */}
             {featureInterests.length > 0 && (
                 <Card>

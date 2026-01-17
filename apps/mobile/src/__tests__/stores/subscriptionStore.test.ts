@@ -162,8 +162,8 @@ describe('subscriptionStore', () => {
             });
 
             const result = await useSubscriptionStore.getState().purchasePackage(mockPackage as any);
-
-            expect(result).toBe(true);
+ 
+            expect(result.success).toBe(true);
             const state = useSubscriptionStore.getState();
             expect(state.subscription.isProUser).toBe(true);
             expect(state.isPurchasing).toBe(false);
@@ -178,7 +178,8 @@ describe('subscriptionStore', () => {
 
             const result = await useSubscriptionStore.getState().purchasePackage(mockPackage as any);
 
-            expect(result).toBe(false);
+            expect(result.success).toBe(false);
+            expect(result.cancelled).toBe(true);
             const state = useSubscriptionStore.getState();
             expect(state.error).toBe('Purchase was cancelled');
             expect(state.isPurchasing).toBe(false);
@@ -192,7 +193,8 @@ describe('subscriptionStore', () => {
 
             const result = await useSubscriptionStore.getState().purchasePackage(mockPackage as any);
 
-            expect(result).toBe(false);
+            expect(result.success).toBe(false);
+            expect(result.cancelled).toBe(false);
             const state = useSubscriptionStore.getState();
             expect(state.error).toBe('Purchase failed. Please try again.');
         });

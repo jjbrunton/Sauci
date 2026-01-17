@@ -179,6 +179,18 @@ export function flush() {
   if (__DEV__) console.log("[Analytics] Flush called (no-op for Firebase)");
 }
 
+function truncateParam(value: string, maxLength = 100) {
+  if (value.length <= maxLength) return value;
+  return value.slice(0, maxLength - 1) + "…";
+}
+
+function safeParam(value: unknown, maxLength = 100): string {
+  if (typeof value === "string") return truncateParam(value, maxLength);
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Error) return truncateParam(value.message, maxLength);
+  return value == null ? "" : truncateParam(String(value), maxLength);
+}
+
 // Pre-defined event helpers for common actions
 export const Events = {
   // Auth events
@@ -212,8 +224,21 @@ export const Events = {
 
   // Subscription events
   paywallShown: (source: string) => logEvent("paywall_shown", { source }),
+  paywallClosed: (source: string, reason: string) =>
+    logEvent("paywall_closed", { source, reason }),
   purchaseInitiated: (packageType: string) =>
     logEvent("purchase_initiated", { package_type: packageType }),
+  purchaseCancelled: (packageType: string, errorCode?: unknown) =>
+    logEvent("purchase_cancelled", {
+      package_type: packageType,
+      error_code: safeParam(errorCode) || "unknown",
+    }),
+  purchaseFailed: (packageType: string, errorCode?: unknown, errorMessage?: unknown) =>
+    logEvent("purchase_failed", {
+      package_type: packageType,
+      error_code: safeParam(errorCode) || "unknown",
+      error_message: safeParam(errorMessage),
+    }),
   purchaseCompleted: (packageType: string) =>
     logEvent("purchase", { package_type: packageType }),
   purchaseRestored: () => logEvent("purchase_restored"),

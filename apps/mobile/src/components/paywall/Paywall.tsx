@@ -43,6 +43,10 @@ const FEATURES = [
 ];
 
 export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
+    const handleClose = (reason: "dismiss" | "success" | "restore" | "system") => {
+        Events.paywallClosed("paywall", reason);
+        onClose();
+    };
     const {
         offerings,
         isLoadingOfferings,
@@ -79,13 +83,23 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
     const handlePurchase = async () => {
         if (!selectedPackage) return;
 
-        Events.purchaseInitiated(selectedPackage.packageType || "unknown");
-        const success = await purchasePackage(selectedPackage);
-        if (success) {
-            Events.purchaseCompleted(selectedPackage.packageType || "unknown");
+        const packageType = selectedPackage.packageType || "unknown";
+        Events.purchaseInitiated(packageType);
+
+        const result = await purchasePackage(selectedPackage);
+        if (result.success) {
+            Events.purchaseCompleted(packageType);
             onSuccess?.();
-            onClose();
+            handleClose("success");
+            return;
         }
+
+        if (result.cancelled) {
+            Events.purchaseCancelled(packageType, result.errorCode);
+            return;
+        }
+
+        Events.purchaseFailed(packageType, result.errorCode, result.errorMessage);
     };
 
     const handleRestore = async () => {
@@ -93,7 +107,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         if (restored) {
             Events.purchaseRestored();
             onSuccess?.();
-            onClose();
+            handleClose("restore");
         }
     };
 
@@ -133,7 +147,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
             visible={visible}
             transparent
             animationType="slide"
-            onRequestClose={onClose}
+            onRequestClose={() => handleClose("system")}
         >
             <View style={styles.overlay}>
                 <View style={styles.content}>
@@ -157,7 +171,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                         {/* Close Button */}
                         <TouchableOpacity
                             style={styles.closeButton}
-                            onPress={onClose}
+                            onPress={() => handleClose("dismiss")}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
                             <Ionicons name="close" size={24} color={colors.textSecondary} />

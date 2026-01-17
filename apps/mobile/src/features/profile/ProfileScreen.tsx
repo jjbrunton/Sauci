@@ -1,62 +1,42 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Alert, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Alert, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import Animated, {
-    FadeInDown,
-    useSharedValue,
-    useAnimatedScrollHandler,
-    useAnimatedStyle,
-    interpolate,
-    Extrapolation
-} from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { GradientBackground } from '../../components/ui';
-import { FeedbackModal } from '../../components/feedback';
 import { Paywall } from '../../components/paywall';
 import { colors, featureColors, spacing, typography, radius } from '../../theme';
 import { useAuthStore, useSubscriptionStore } from '../../store';
 import { resetSwipeTutorial } from '../../lib/swipeTutorialSeen';
 import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
-import { supabase } from '../../lib/supabase'; // Needed for debug reset
-
-// Hooks
-import { useProfileSettings, useCoupleManagement } from './hooks';
+import { supabase } from '../../lib/supabase';
 
 // Components
-import { AppearanceSettings, CoupleStatus, NotificationSettings, PrivacySettings, DangerZone, SettingsSection, MenuItem, SubscriptionCard } from './components';
+import { SettingsSection, MenuItem, SubscriptionCard } from './components';
+
+// Hooks
+import { useProfileSettings } from './hooks';
 
 const MAX_CONTENT_WIDTH = 500;
-const NAV_BAR_HEIGHT = 44;
-const STATUS_BAR_HEIGHT = 60;
-const HEADER_SCROLL_DISTANCE = 100;
-
-const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 
 export function ProfileScreen() {
+    const router = useRouter();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
 
-    const { user, partner, couple, fetchUser } = useAuthStore();
+    const { user, partner, fetchUser } = useAuthStore();
     const { subscription } = useSubscriptionStore();
-
-    // Hooks
     const settings = useProfileSettings();
-    const {
-        handleUnpair,
-        handleDeleteRelationship,
-        handleResetProgress,
-        handleSignOut,
-        handleDeleteAccount,
-        navigateToPairing
-    } = useCoupleManagement();
 
-    const [showFeedbackModal, setShowFeedbackModal] = React.useState(false);
+    // Paywall state
+    const [showPaywall, setShowPaywall] = useState(false);
 
-    // Derived formatting
-    // Use OR: if RevenueCat says they're subscribed OR database says premium, it's their own
-    // This handles the race condition after purchase (RevenueCat updates before webhook syncs DB)
+    // Derived state
     const isOwnSubscription = subscription.isProUser || user?.is_premium;
     const hasPremiumAccess = user?.is_premium || partner?.is_premium || subscription.isProUser;
 
@@ -79,81 +59,20 @@ export function ProfileScreen() {
     });
     const versionString = buildNumber ? `v${version} (${buildNumber})` : `v${version}`;
 
-    // Scroll animation
-    const scrollY = useSharedValue(0);
-    const scrollHandler = useAnimatedScrollHandler({
-        onScroll: (event) => {
-            scrollY.value = event.contentOffset.y;
-        },
-    });
-
-    const heroStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            scrollY.value,
-            [0, HEADER_SCROLL_DISTANCE * 0.7],
-            [1, 0],
-            Extrapolation.CLAMP
-        );
-        const scale = interpolate(
-            scrollY.value,
-            [0, HEADER_SCROLL_DISTANCE],
-            [1, 0.95],
-            Extrapolation.CLAMP
-        );
-        return { opacity, transform: [{ scale }] };
-    });
-
-    const compactHeaderStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            scrollY.value,
-            [HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
-            [0, 1],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
-    const navBarBackgroundStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            scrollY.value,
-            [0, HEADER_SCROLL_DISTANCE * 0.8],
-            [0, 1],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
     return (
         <GradientBackground>
-            {/* Fixed Nav Bar */}
-            <View style={styles.navBar}>
-                <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
-                    {Platform.OS === "ios" ? (
-                        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-                    ) : (
-                        <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
-                    )}
-                </Animated.View>
-                
-                <Animated.Text style={[styles.navBarTitle, compactHeaderStyle]} numberOfLines={1}>
-                    Settings
-                </Animated.Text>
-            </View>
-
-            <AnimatedScrollView
+            <ScrollView
                 style={styles.container}
                 contentContainerStyle={[
                     styles.contentContainer,
                     isWideScreen && styles.contentContainerWide,
                 ]}
                 showsVerticalScrollIndicator={false}
-                onScroll={scrollHandler}
-                scrollEventThrottle={16}
             >
-                {/* Header title */}
+                {/* Header with user info (compact) */}
                 <Animated.View
                     entering={FadeInDown.delay(100).duration(500)}
-                    style={[styles.header, heroStyle]}
+                    style={styles.header}
                 >
                     <Text style={styles.headerLabel}>YOUR SAUCI</Text>
                     <Text style={styles.title}>Settings</Text>
@@ -164,98 +83,111 @@ export function ProfileScreen() {
                     </View>
                 </Animated.View>
 
-                {/* Profile Header */}
-                <AppearanceSettings
-                    user={user}
-                    isUploadingAvatar={settings.isUploadingAvatar}
-                    isEditingName={settings.isEditingName}
-                    newName={settings.newName}
-                    isUpdatingName={settings.isUpdatingName}
-                    onAvatarPress={settings.handleAvatarPress}
-                    onNewNameChange={settings.setNewName}
-                    onUpdateName={settings.handleUpdateName}
-                    onCancelEditName={settings.handleCancelEditName}
-                    onStartEditingName={() => settings.setIsEditingName(true)}
-                />
+                {/* Compact Profile Preview */}
+                <Animated.View
+                    entering={FadeInDown.delay(150).duration(500)}
+                    style={styles.profilePreview}
+                >
+                    <TouchableOpacity
+                        style={styles.profilePreviewContent}
+                        onPress={() => router.push('/(app)/settings/profile')}
+                        activeOpacity={0.7}
+                    >
+                        <LinearGradient
+                            colors={ACCENT_GRADIENT}
+                            style={styles.avatarGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        >
+                            {user?.avatar_url ? (
+                                <Image
+                                    source={{ uri: user.avatar_url }}
+                                    style={styles.avatar}
+                                    cachePolicy="disk"
+                                    transition={200}
+                                />
+                            ) : (
+                                <View style={styles.avatarInner}>
+                                    <Text style={styles.avatarText}>
+                                        {user?.name?.[0]?.toUpperCase() || "U"}
+                                    </Text>
+                                </View>
+                            )}
+                        </LinearGradient>
+                        <View style={styles.profileInfo}>
+                            <Text style={styles.userName}>{user?.name || "User"}</Text>
+                            <Text style={styles.userEmail}>{user?.email}</Text>
+                        </View>
+                        <View style={styles.profileChevron}>
+                            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+                        </View>
+                    </TouchableOpacity>
+                </Animated.View>
 
-                {/* Partner */}
-                <CoupleStatus
-                    partner={partner}
-                    couple={couple}
-                    onUnpair={handleUnpair}
-                    onPairingPress={navigateToPairing}
-                />
-
-                {/* Subscription Section */}
+                {/* Subscription CTA - prominent upsell */}
                 <SubscriptionCard
                     hasPremiumAccess={hasPremiumAccess}
                     isOwnSubscription={!!isOwnSubscription}
                     expirationDate={formatExpirationDate(subscription.expirationDate)}
-                    onUpgradePress={() => settings.setShowPaywall(true)}
+                    onUpgradePress={() => setShowPaywall(true)}
                     onManagePress={settings.handleManageSubscription}
                     onRestorePress={settings.handleRestorePurchases}
                     isRestoring={settings.isPurchasing}
-                    delay={350}
+                    delay={200}
                 />
 
-                {/* Notifications */}
-                <NotificationSettings
-                    pushEnabled={settings.pushEnabled}
-                    isUpdatingPush={settings.isUpdatingPush}
-                    onPushToggle={settings.handlePushToggle}
-                />
-
-                {/* Preferences */}
-                <PrivacySettings
-                    maxIntensity={settings.maxIntensity}
-                    isUpdatingIntensity={settings.isUpdatingIntensity}
-                    onIntensityChange={settings.handleIntensityChange}
-                    biometricAvailable={settings.biometricAvailable}
-                    biometricEnabled={settings.biometricEnabled}
-                    biometricType={settings.biometricType}
-                    isUpdatingBiometric={settings.isUpdatingBiometric}
-                    onBiometricToggle={settings.handleBiometricToggle}
-                    partnerIntensity={settings.partnerIntensity}
-                    partnerName={settings.partnerName}
-                    partnerAvatar={settings.partnerAvatar}
-                />
-
-                {/* Account */}
-                <SettingsSection title="Account" delay={425}>
+                {/* Settings Navigation */}
+                <SettingsSection title="Settings" delay={250}>
                     <MenuItem
-                        icon="log-out-outline"
-                        label="Sign Out"
-                        onPress={handleSignOut}
-                        variant="danger"
-                        showChevron={true}
+                        icon="person-circle-outline"
+                        label="Profile"
+                        description="Avatar and display name"
+                        onPress={() => router.push('/(app)/settings/profile')}
+                    />
+                    <View style={styles.divider} />
+                    <MenuItem
+                        icon="notifications-outline"
+                        label="Notifications"
+                        description="Push notification preferences"
+                        onPress={() => router.push('/(app)/settings/notifications')}
+                    />
+                    <View style={styles.divider} />
+                    <MenuItem
+                        icon="options-outline"
+                        label="Preferences"
+                        description="Comfort zone and security"
+                        onPress={() => router.push('/(app)/settings/preferences')}
                     />
                 </SettingsSection>
 
-                {/* Support */}
-                <SettingsSection title="Support" delay={475}>
+                {/* Relationship Section */}
+                <SettingsSection title="Relationship" delay={300}>
                     <MenuItem
-                        icon="chatbubble-ellipses-outline"
-                        label="Send Feedback"
-                        description="Report bugs or request features"
-                        onPress={() => setShowFeedbackModal(true)}
-                    />
-                    <View style={styles.preferencesDivider} />
-                    <MenuItem
-                        icon="shield-checkmark-outline"
-                        label="Privacy Policy"
-                        onPress={() => Linking.openURL('https://sauci.app/privacy')}
-                    />
-                    <View style={styles.preferencesDivider} />
-                    <MenuItem
-                        icon="document-text-outline"
-                        label="Terms of Service"
-                        onPress={() => Linking.openURL('https://sauci.app/terms')}
+                        icon="heart-outline"
+                        label="Partner"
+                        rightText={partner?.name || (user?.couple_id ? 'Waiting...' : undefined)}
+                        onPress={() => router.push('/(app)/settings/partner')}
                     />
                 </SettingsSection>
 
-                {/* Debug Section */}
+                {/* Other Section */}
+                <SettingsSection title="Other" delay={350}>
+                    <MenuItem
+                        icon="help-circle-outline"
+                        label="Help & Support"
+                        onPress={() => router.push('/(app)/settings/support')}
+                    />
+                    <View style={styles.divider} />
+                    <MenuItem
+                        icon="settings-outline"
+                        label="Account"
+                        onPress={() => router.push('/(app)/settings/account')}
+                    />
+                </SettingsSection>
+
+                {/* Debug Section - Dev only */}
                 {__DEV__ && (
-                    <SettingsSection title="Debug" delay={550}>
+                    <SettingsSection title="Debug" delay={400}>
                         <MenuItem
                             icon="refresh-outline"
                             label="Reset Swipe Tutorial"
@@ -265,7 +197,7 @@ export function ProfileScreen() {
                                 Alert.alert("Success", "Swipe tutorial has been reset.");
                             }}
                         />
-                        <View style={styles.preferencesDivider} />
+                        <View style={styles.divider} />
                         <MenuItem
                             icon="heart-outline"
                             label="Reset Matches Tutorial"
@@ -275,7 +207,7 @@ export function ProfileScreen() {
                                 Alert.alert("Success", "Matches tutorial has been reset.");
                             }}
                         />
-                        <View style={styles.preferencesDivider} />
+                        <View style={styles.divider} />
                         <MenuItem
                             icon="school-outline"
                             label="Reset Onboarding"
@@ -298,17 +230,9 @@ export function ProfileScreen() {
                     </SettingsSection>
                 )}
 
-                {/* Danger Zone */}
-                <DangerZone
-                    onResetProgress={couple ? handleResetProgress : undefined}
-                    onDeleteRelationship={couple ? handleDeleteRelationship : undefined}
-                    onDeleteAccount={handleDeleteAccount}
-                    hasRelationship={!!couple}
-                />
-
                 {/* Version */}
                 <Animated.View
-                    entering={FadeInDown.delay(couple ? 650 : 525).duration(500)}
+                    entering={FadeInDown.delay(__DEV__ ? 450 : 400).duration(500)}
                     style={styles.versionContainer}
                 >
                     <View style={styles.versionBadge}>
@@ -318,16 +242,11 @@ export function ProfileScreen() {
                 </Animated.View>
 
                 <View style={styles.bottomSpacer} />
-            </AnimatedScrollView>
+            </ScrollView>
 
-            {/* Modals */}
-            <FeedbackModal
-                visible={showFeedbackModal}
-                onClose={() => setShowFeedbackModal(false)}
-            />
             <Paywall
-                visible={settings.showPaywall}
-                onClose={() => settings.setShowPaywall(false)}
+                visible={showPaywall}
+                onClose={() => setShowPaywall(false)}
             />
         </GradientBackground>
     );
@@ -337,33 +256,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    // Fixed Nav Bar
-    navBar: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: STATUS_BAR_HEIGHT - 10,
-        paddingHorizontal: spacing.md,
-        zIndex: 100,
-    },
-    navBarBackground: {
-        ...StyleSheet.absoluteFillObject,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(155, 89, 182, 0.15)', // Purple tint for profile
-        overflow: "hidden",
-    },
-    navBarTitle: {
-        ...typography.headline,
-        color: colors.text,
-        textAlign: "center",
-    },
     contentContainer: {
-        // Remove top padding here as the header adds it
         paddingBottom: Platform.OS === 'ios' ? 100 : 80,
     },
     contentContainerWide: {
@@ -372,7 +265,7 @@ const styles = StyleSheet.create({
         maxWidth: MAX_CONTENT_WIDTH,
     },
     header: {
-        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.md,
         alignItems: 'center',
@@ -409,7 +302,65 @@ const styles = StyleSheet.create({
         marginHorizontal: spacing.sm,
         opacity: 0.6,
     },
-    preferencesDivider: {
+    // Profile Preview
+    profilePreview: {
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+        backgroundColor: colors.glass.background,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: colors.glass.border,
+        overflow: 'hidden',
+    },
+    profilePreviewContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: spacing.md,
+    },
+    avatarGradient: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        padding: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 28,
+        backgroundColor: colors.background,
+    },
+    avatarInner: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 28,
+        backgroundColor: colors.background,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    avatarText: {
+        ...typography.title2,
+        fontSize: 24,
+        color: colors.text,
+    },
+    profileInfo: {
+        flex: 1,
+        marginLeft: spacing.md,
+    },
+    userName: {
+        ...typography.headline,
+        color: colors.text,
+    },
+    userEmail: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    profileChevron: {
+        padding: spacing.xs,
+    },
+    divider: {
         height: 1,
         backgroundColor: colors.glass.border,
         marginVertical: spacing.md,

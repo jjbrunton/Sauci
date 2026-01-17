@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination';
-import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Flame, Heart, Tags, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Flame, Heart, Tags, ChevronUp, ChevronDown, Clock, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
@@ -41,6 +41,8 @@ interface QuestionPack {
     sort_order: number | null;
     category_id: string | null;
     created_at: string | null;
+    scheduled_release_at?: string | null;  // Optional for backwards compatibility
+    release_notified?: boolean;  // True if notifications have been sent or should be skipped
     question_count?: number;
     topics?: Topic[];
 }
@@ -76,6 +78,8 @@ export function PacksPage() {
             is_public: false,
             is_explicit: false,
             category_id: categoryId ?? '',
+            scheduled_release_at: null,
+            skip_notification: false,
         },
         (pack) => ({
             name: pack.name,
@@ -85,6 +89,8 @@ export function PacksPage() {
             is_public: pack.is_public,
             is_explicit: pack.is_explicit,
             category_id: pack.category_id || '',
+            scheduled_release_at: pack.scheduled_release_at,
+            skip_notification: false,  // Always start unchecked when editing
         })
     );
 
@@ -223,6 +229,13 @@ export function PacksPage() {
             let packId: string;
 
             if (form.editingItem) {
+                // Determine release_notified value
+                // If skip_notification is checked, set release_notified=true to prevent notifications
+                // Otherwise, reset to false when scheduling a new release
+                const releaseNotifiedValue = form.formData.skip_notification
+                    ? true
+                    : (form.formData.scheduled_release_at ? false : undefined);
+
                 const { error } = await auditedSupabase.update('question_packs', form.editingItem.id, {
                     name: form.formData.name,
                     description: form.formData.description || null,
@@ -231,6 +244,12 @@ export function PacksPage() {
                     is_public: form.formData.is_public,
                     is_explicit: form.formData.is_explicit,
                     category_id: form.formData.category_id || null,
+                    // Only include scheduled_release_at if the field exists in form data (backwards compatible)
+                    ...('scheduled_release_at' in form.formData && {
+                        scheduled_release_at: form.formData.scheduled_release_at,
+                        // Set release_notified based on skip_notification toggle
+                        ...(releaseNotifiedValue !== undefined && { release_notified: releaseNotifiedValue }),
+                    }),
                 });
                 if (error) throw error;
                 packId = form.editingItem.id;
@@ -246,6 +265,12 @@ export function PacksPage() {
                         is_explicit: form.formData.is_explicit,
                         category_id: form.formData.category_id || null,
                         sort_order: totalCount,
+                        // Only include scheduled_release_at if the field exists in form data (backwards compatible)
+                        ...('scheduled_release_at' in form.formData && {
+                            scheduled_release_at: form.formData.scheduled_release_at,
+                            // If skip_notification is checked, set release_notified=true
+                            ...(form.formData.skip_notification && { release_notified: true }),
+                        }),
                     })
                     .select('id')
                     .single();
@@ -305,6 +330,8 @@ export function PacksPage() {
                 is_public: false,
                 is_explicit: false,
                 category_id: categoryId ?? '',
+                scheduled_release_at: null,
+                skip_notification: false,
             });
             setAiDialogOpen(false);
             setSelectedTopicIds(new Set());
@@ -497,6 +524,18 @@ export function PacksPage() {
                                                 <Eye className="h-3 w-3 mr-1" />
                                                 Published
                                             </Badge>
+                                        ) : pack.scheduled_release_at ? (
+                                            <>
+                                                <Badge variant="outline" className="border-blue-500 text-blue-400" title={`Releases: ${new Date(pack.scheduled_release_at).toLocaleString()}`}>
+                                                    <Clock className="h-3 w-3 mr-1" />
+                                                    Scheduled
+                                                </Badge>
+                                                {pack.release_notified && (
+                                                    <Badge variant="outline" className="border-gray-500 text-gray-400" title="Notifications skipped">
+                                                        <BellOff className="h-3 w-3" />
+                                                    </Badge>
+                                                )}
+                                            </>
                                         ) : (
                                             <Badge variant="secondary">
                                                 <EyeOff className="h-3 w-3 mr-1" />

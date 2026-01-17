@@ -9,14 +9,11 @@ CREATE TABLE IF NOT EXISTS master_keys (
     rotated_at TIMESTAMPTZ,
     is_active BOOLEAN DEFAULT true
 );
-
 -- Add table comment
 COMMENT ON TABLE master_keys IS 
   'Stores admin RSA public keys for E2EE moderation access. Private key stored securely in environment variables.';
-
 -- Enable RLS
 ALTER TABLE master_keys ENABLE ROW LEVEL SECURITY;
-
 -- Super admins can view master keys
 DO $$
 BEGIN
@@ -29,7 +26,6 @@ BEGIN
       USING (is_super_admin(auth.uid()));
   END IF;
 END $$;
-
 -- Super admins can insert master keys  
 DO $$
 BEGIN
@@ -42,7 +38,6 @@ BEGIN
       WITH CHECK (is_super_admin(auth.uid()));
   END IF;
 END $$;
-
 -- Super admins can update master keys
 DO $$
 BEGIN
@@ -55,7 +50,6 @@ BEGIN
       USING (is_super_admin(auth.uid()));
   END IF;
 END $$;
-
 -- Allow all authenticated users to read active master key public keys (needed for encryption)
 DO $$
 BEGIN

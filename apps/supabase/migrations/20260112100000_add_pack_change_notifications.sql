@@ -11,28 +11,22 @@ CREATE TABLE pending_pack_notifications (
     updated_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE(couple_id)  -- Only one pending notification per couple (enables UPSERT for timer reset)
 );
-
 -- Index for efficient cron queries
 CREATE INDEX idx_pending_pack_notifications_notify_at
     ON pending_pack_notifications(notify_at);
-
 -- Enable RLS
 ALTER TABLE pending_pack_notifications ENABLE ROW LEVEL SECURITY;
-
 -- RLS policies
 CREATE POLICY "Users can view their couple's pending notifications"
     ON pending_pack_notifications FOR SELECT
     USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Super admins can view all pending notifications"
     ON pending_pack_notifications FOR SELECT
     USING (is_super_admin());
-
 -- Updated_at trigger
 CREATE TRIGGER update_pending_pack_notifications_updated_at
     BEFORE UPDATE ON pending_pack_notifications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- Function to queue pack change notifications
 CREATE OR REPLACE FUNCTION queue_pack_change_notification()
 RETURNS TRIGGER
@@ -80,13 +74,11 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 -- Create trigger on couple_packs
 CREATE TRIGGER on_couple_pack_enabled
     AFTER INSERT OR UPDATE OF enabled ON couple_packs
     FOR EACH ROW
     EXECUTE FUNCTION queue_pack_change_notification();
-
 -- Schedule cron job (runs every 5 minutes)
 SELECT cron.schedule(
     'send-pack-change-notifications',

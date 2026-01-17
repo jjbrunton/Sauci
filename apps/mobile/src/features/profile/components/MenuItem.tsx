@@ -15,6 +15,10 @@ export interface MenuItemProps {
     onPress: () => void;
     /** Optional element to show on the right */
     rightElement?: React.ReactNode;
+    /** Text to display on the right side (e.g., partner name) */
+    rightText?: string;
+    /** Badge label to display (e.g., "Premium") */
+    badge?: string;
     /** Whether to show chevron arrow */
     showChevron?: boolean;
     /** Visual variant */
@@ -34,6 +38,8 @@ export function MenuItem({
     description,
     onPress,
     rightElement,
+    rightText,
+    badge,
     showChevron = true,
     variant = 'default',
     disabled = false,
@@ -65,17 +71,29 @@ export function MenuItem({
                     </LinearGradient>
                 )}
                 <View style={styles.textContainer}>
-                    <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+                    <View style={styles.labelRow}>
+                        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
+                        {badge && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{badge}</Text>
+                            </View>
+                        )}
+                    </View>
                     {description && (
                         <Text style={styles.description}>{description}</Text>
                     )}
                 </View>
             </View>
-            {rightElement || (showChevron && (
-                <View style={styles.chevron}>
-                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </View>
-            ))}
+            <View style={styles.rightSection}>
+                {rightText && (
+                    <Text style={styles.rightText} numberOfLines={1}>{rightText}</Text>
+                )}
+                {rightElement || (showChevron && (
+                    <View style={styles.chevron}>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                    </View>
+                ))}
+            </View>
         </TouchableOpacity>
     );
 }
@@ -113,14 +131,42 @@ const styles = StyleSheet.create({
     textContainer: {
         flex: 1,
     },
+    labelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
     label: {
         ...typography.body,
         fontWeight: '500',
+    },
+    badge: {
+        backgroundColor: colors.premium.goldLight,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: radius.full,
+    },
+    badgeText: {
+        ...typography.caption2,
+        color: colors.premium.gold,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     description: {
         ...typography.caption1,
         color: colors.textSecondary,
         marginTop: 2,
+    },
+    rightSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
+    rightText: {
+        ...typography.subhead,
+        color: colors.textSecondary,
+        maxWidth: 120,
     },
     chevron: {
         padding: spacing.xs,

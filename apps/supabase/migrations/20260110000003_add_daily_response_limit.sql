@@ -4,9 +4,7 @@
 -- Add daily_response_limit column to app_config
 ALTER TABLE app_config
 ADD COLUMN daily_response_limit INTEGER DEFAULT 0;
-
 COMMENT ON COLUMN app_config.daily_response_limit IS 'Maximum number of questions a non-premium user can answer per UTC day. Set to 0 to disable daily limits.';
-
 -- ============================================================================
 -- RPC FUNCTION: get_daily_response_limit_status
 -- Returns the current daily response limit status for the authenticated user
@@ -73,5 +71,4 @@ BEGIN
         (v_count >= v_limit);
 END;
 $$;
-
 COMMENT ON FUNCTION get_daily_response_limit_status() IS 'Returns daily response limit status for the current user. Premium users and disabled limits return is_blocked=false.';

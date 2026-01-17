@@ -4,11 +4,12 @@ import { View, ActivityIndicator, StyleSheet, Platform, Text, Pressable, Animate
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore } from "../../src/store";
+import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore, useStreakStore } from "../../src/store";
 import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
+import { syncBadgeCount } from "../../src/lib/badge";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
 import { MatchNotificationModal, MatchNotificationData } from "../../src/components/MatchNotificationModal";
 import { Events } from "../../src/lib/analytics";
@@ -139,11 +140,12 @@ function PlayTabButton({ accessibilityState }: PlayTabButtonProps) {
 export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
-    const { isAuthenticated, isLoading, user, signOut } = useAuthStore();
+    const { isAuthenticated, isLoading, user, signOut, updateLastActive } = useAuthStore();
     const { matches, newMatchesCount, addMatch, updateMatchUnreadCount } = useMatchStore();
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
+    const { fetchStreak } = useStreakStore();
     const [matchNotification, setMatchNotification] = useState<MatchNotificationData | null>(null);
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -208,7 +210,8 @@ export default function AppLayout() {
     const isOnOnboarding = segmentStrings.includes("onboarding");
     const isOnPairing = segmentStrings.includes("pairing");
     const isOnChat = segmentStrings.includes("chat");
-    const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat;
+    const isOnSettingsSubscreen = segmentStrings.includes("settings") && segmentStrings.length > 2;
+    const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat || isOnSettingsSubscreen;
 
     // Redirect to login when not authenticated, or to onboarding if not completed
     useEffect(() => {
@@ -232,17 +235,22 @@ export default function AppLayout() {
         // Check immediately
         checkSession();
 
+        // Update last active timestamp on mount
+        updateLastActive();
+
         // Check when app comes to foreground
         const subscription = AppState.addEventListener('change', (nextAppState) => {
             if (nextAppState === 'active') {
                 checkSession();
+                // Update last active timestamp when app comes to foreground
+                updateLastActive();
             }
         });
 
         return () => {
             subscription.remove();
         };
-    }, [signOut]);
+    }, [signOut, updateLastActive]);
 
     // Handle biometric lock when app goes to background/foreground
     useEffect(() => {
@@ -300,6 +308,18 @@ export default function AppLayout() {
             fetchUnreadCount();
         }
     }, [user?.id, fetchUnreadCount]);
+
+    // Fetch streak data when user is in a couple
+    useEffect(() => {
+        if (user?.couple_id) {
+            fetchStreak();
+        }
+    }, [user?.couple_id, fetchStreak]);
+
+    // Sync app icon badge count whenever matches or messages change
+    useEffect(() => {
+        syncBadgeCount(newMatchesCount, unreadCount);
+    }, [newMatchesCount, unreadCount]);
 
     // Initialize RevenueCat for subscription management (iOS and Android only)
     useEffect(() => {
@@ -688,6 +708,12 @@ export default function AppLayout() {
                 />
                 <Tabs.Screen
                     name="my-answers"
+                    options={{
+                        href: null, // Hide from tab bar
+                    }}
+                />
+                <Tabs.Screen
+                    name="settings"
                     options={{
                         href: null, // Hide from tab bar
                     }}

@@ -1,9 +1,7 @@
 -- Add category column to messages table
 ALTER TABLE messages
 ADD COLUMN category text;
-
 COMMENT ON COLUMN messages.category IS 'Content category: Neutral, Romantic, Playful, Explicit, etc.';
-
 -- Update the default classifier prompt in ai_config
 UPDATE ai_config
 SET classifier_prompt = 'You are a content moderator for a couples app. Your task is to analyze the following message (text and/or image) and determine if it contains ILLEGAL or DANGEROUS content, and also categorize the tone/nature of the message.

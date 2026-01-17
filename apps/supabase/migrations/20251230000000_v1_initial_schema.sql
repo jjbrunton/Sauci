@@ -5,7 +5,6 @@
 -- EXTENSIONS
 -- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA extensions;
-
 -- ============================================================================
 -- CUSTOM TYPES
 -- ============================================================================
@@ -16,7 +15,6 @@ CREATE TYPE feedback_status AS ENUM ('new', 'reviewed', 'in_progress', 'resolved
 CREATE TYPE subscription_status AS ENUM ('active', 'cancelled', 'expired', 'billing_issue', 'paused');
 CREATE TYPE admin_role AS ENUM ('pack_creator', 'super_admin');
 CREATE TYPE audit_action AS ENUM ('INSERT', 'UPDATE', 'DELETE');
-
 -- ============================================================================
 -- TABLES
 -- ============================================================================
@@ -27,7 +25,6 @@ CREATE TABLE couples (
   invite_code TEXT UNIQUE DEFAULT substr(md5(random()::text), 1, 8),
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- Profiles table (extends auth.users)
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -40,11 +37,11 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT now(),
   email TEXT,
   gender TEXT,
-  show_explicit_content BOOLEAN DEFAULT false,
+  show_explicit_content BOOLEAN DEFAULT true,
   onboarding_completed BOOLEAN DEFAULT false,
+  usage_reason TEXT,
   CONSTRAINT valid_gender CHECK (gender IS NULL OR gender = ANY(ARRAY['male', 'female', 'non-binary', 'prefer-not-to-say']))
 );
-
 -- Categories table
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -54,7 +51,6 @@ CREATE TABLE categories (
   sort_order INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- Question packs table
 CREATE TABLE question_packs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -68,7 +64,6 @@ CREATE TABLE question_packs (
   category_id UUID REFERENCES categories(id),
   is_explicit BOOLEAN NOT NULL DEFAULT false
 );
-
 -- Questions table
 CREATE TABLE questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,10 +75,8 @@ CREATE TABLE questions (
   allowed_couple_genders TEXT[],
   target_user_genders TEXT[]
 );
-
 COMMENT ON COLUMN questions.allowed_couple_genders IS 'Array of allowed couple gender pairings (e.g., ["female+male", "female+female"]). Null means all couple types allowed.';
 COMMENT ON COLUMN questions.target_user_genders IS 'Array of genders that can see this question first (as initiator). NULL = all genders. Partners still see it via partner_text after their partner answers.';
-
 -- Responses table
 CREATE TABLE responses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -94,7 +87,6 @@ CREATE TABLE responses (
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id, question_id)
 );
-
 -- Matches table
 CREATE TABLE matches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -105,7 +97,6 @@ CREATE TABLE matches (
   created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(couple_id, question_id)
 );
-
 -- Messages table
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
@@ -119,7 +110,6 @@ CREATE TABLE messages (
   delivered_at TIMESTAMPTZ,
   CONSTRAINT content_or_media CHECK (content IS NOT NULL OR media_path IS NOT NULL)
 );
-
 -- Couple packs table (which packs a couple has enabled)
 CREATE TABLE couple_packs (
   couple_id UUID NOT NULL REFERENCES couples(id) ON DELETE CASCADE,
@@ -128,7 +118,6 @@ CREATE TABLE couple_packs (
   created_at TIMESTAMPTZ DEFAULT now(),
   PRIMARY KEY (couple_id, pack_id)
 );
-
 -- Feedback table
 CREATE TABLE feedback (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -144,7 +133,6 @@ CREATE TABLE feedback (
   updated_at TIMESTAMPTZ DEFAULT now(),
   question_id UUID REFERENCES questions(id) ON DELETE SET NULL
 );
-
 -- Subscriptions table
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -164,7 +152,6 @@ CREATE TABLE subscriptions (
   updated_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(user_id, original_transaction_id)
 );
-
 -- RevenueCat webhook events table (for idempotency)
 CREATE TABLE revenuecat_webhook_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -174,7 +161,6 @@ CREATE TABLE revenuecat_webhook_events (
   processed_at TIMESTAMPTZ DEFAULT now(),
   payload JSONB
 );
-
 -- Admin users table
 CREATE TABLE admin_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -184,7 +170,6 @@ CREATE TABLE admin_users (
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- Audit logs table
 CREATE TABLE audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -198,7 +183,6 @@ CREATE TABLE audit_logs (
   admin_role admin_role NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- ============================================================================
 -- INDEXES
 -- ============================================================================
@@ -225,7 +209,6 @@ CREATE INDEX idx_audit_logs_record_id ON audit_logs(record_id);
 CREATE INDEX idx_audit_logs_admin_user_id ON audit_logs(admin_user_id);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
-
 -- ============================================================================
 -- FUNCTIONS
 -- ============================================================================
@@ -240,7 +223,6 @@ SET search_path = ''
 AS $$
   SELECT couple_id FROM public.profiles WHERE id = auth.uid();
 $$;
-
 -- Check if user is any admin
 CREATE OR REPLACE FUNCTION is_admin(check_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN
@@ -255,7 +237,6 @@ BEGIN
     );
 END;
 $$;
-
 -- Check if user is super admin
 CREATE OR REPLACE FUNCTION is_super_admin(check_user_id UUID DEFAULT auth.uid())
 RETURNS BOOLEAN
@@ -271,7 +252,6 @@ BEGIN
     );
 END;
 $$;
-
 -- Get admin role for user
 CREATE OR REPLACE FUNCTION get_admin_role(check_user_id UUID DEFAULT auth.uid())
 RETURNS admin_role
@@ -287,7 +267,6 @@ BEGIN
     RETURN user_role;
 END;
 $$;
-
 -- Check if user or partner has premium access
 CREATE OR REPLACE FUNCTION has_premium_access(check_user_id UUID)
 RETURNS BOOLEAN
@@ -322,7 +301,6 @@ BEGIN
   RETURN COALESCE(partner_premium, FALSE);
 END;
 $$;
-
 -- Get recommended questions for a user
 CREATE OR REPLACE FUNCTION get_recommended_questions(target_pack_id UUID DEFAULT NULL)
 RETURNS TABLE(
@@ -447,7 +425,6 @@ BEGIN
   );
 END;
 $$;
-
 -- Get pack teaser questions (bypasses premium for preview)
 CREATE OR REPLACE FUNCTION get_pack_teaser_questions(target_pack_id UUID)
 RETURNS TABLE(id UUID, text TEXT, intensity INTEGER)
@@ -469,7 +446,6 @@ BEGIN
   LIMIT 3;
 END;
 $$;
-
 -- Handle new user signup (create profile)
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
@@ -488,7 +464,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER
@@ -500,7 +475,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Check couple size (max 2 members)
 CREATE OR REPLACE FUNCTION check_couple_size()
 RETURNS TRIGGER
@@ -516,7 +490,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Sync premium status from subscriptions
 CREATE OR REPLACE FUNCTION sync_premium_status()
 RETURNS TRIGGER
@@ -537,7 +510,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Disable premium packs when subscription is lost
 CREATE OR REPLACE FUNCTION disable_premium_packs_on_subscription_loss()
 RETURNS TRIGGER
@@ -566,7 +538,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 -- Log admin actions
 CREATE OR REPLACE FUNCTION log_admin_action(
   p_table_name TEXT,
@@ -611,7 +582,6 @@ BEGIN
     RETURN log_id;
 END;
 $$;
-
 -- Notify on new message (calls edge function)
 CREATE OR REPLACE FUNCTION notify_new_message()
 RETURNS TRIGGER
@@ -634,7 +604,6 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 -- ============================================================================
 -- TRIGGERS
 -- ============================================================================
@@ -643,41 +612,33 @@ $$;
 CREATE TRIGGER update_profiles_updated_at
   BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 CREATE TRIGGER enforce_couple_size
   BEFORE INSERT OR UPDATE OF couple_id ON profiles
   FOR EACH ROW EXECUTE FUNCTION check_couple_size();
-
 CREATE TRIGGER disable_premium_packs_on_sub_loss
   AFTER UPDATE OF is_premium ON profiles
   FOR EACH ROW
   WHEN (OLD.is_premium IS DISTINCT FROM NEW.is_premium)
   EXECUTE FUNCTION disable_premium_packs_on_subscription_loss();
-
 -- Subscription triggers
 CREATE TRIGGER update_subscriptions_updated_at
   BEFORE UPDATE ON subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 CREATE TRIGGER sync_premium_on_subscription_change
   AFTER INSERT OR UPDATE ON subscriptions
   FOR EACH ROW EXECUTE FUNCTION sync_premium_status();
-
 -- Admin users trigger
 CREATE TRIGGER update_admin_users_updated_at
   BEFORE UPDATE ON admin_users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- Message notification trigger
 CREATE TRIGGER on_new_message
   AFTER INSERT ON messages
   FOR EACH ROW EXECUTE FUNCTION notify_new_message();
-
 -- Auth trigger to create profile on signup
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
-
 -- ============================================================================
 -- ENABLE ROW LEVEL SECURITY
 -- ============================================================================
@@ -695,102 +656,81 @@ ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE revenuecat_webhook_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
-
 -- ============================================================================
 -- RLS POLICIES: COUPLES
 -- ============================================================================
 CREATE POLICY "Authenticated users can create couples"
   ON couples FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
-
 CREATE POLICY "Users can view own couple"
   ON couples FOR SELECT
   USING (id = get_auth_user_couple_id());
-
 CREATE POLICY "Users can lookup couple by exact invite code"
   ON couples FOR SELECT
   USING (id = get_auth_user_couple_id());
-
 CREATE POLICY "Super admins can view all couples"
   ON couples FOR SELECT
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: PROFILES
 -- ============================================================================
 CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = id);
-
 CREATE POLICY "Users can view partner profile"
   ON profiles FOR SELECT
   USING (couple_id IS NOT NULL AND couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
-
 CREATE POLICY "Super admins can view all profiles"
   ON profiles FOR SELECT
   USING (is_super_admin());
-
 CREATE POLICY "Super admins can update all profiles"
   ON profiles FOR UPDATE
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: CATEGORIES
 -- ============================================================================
 CREATE POLICY "Categories are viewable by everyone"
   ON categories FOR SELECT
   USING (true);
-
 CREATE POLICY "Admins can view all categories"
   ON categories FOR SELECT
   USING (is_admin());
-
 CREATE POLICY "Admins can insert categories"
   ON categories FOR INSERT
   WITH CHECK (is_admin());
-
 CREATE POLICY "Admins can update categories"
   ON categories FOR UPDATE
   USING (is_admin())
   WITH CHECK (is_admin());
-
 CREATE POLICY "Admins can delete categories"
   ON categories FOR DELETE
   USING (is_admin());
-
 -- ============================================================================
 -- RLS POLICIES: QUESTION PACKS
 -- ============================================================================
 CREATE POLICY "Anyone can view public packs"
   ON question_packs FOR SELECT
   USING (is_public = true);
-
 CREATE POLICY "Premium users can view premium packs"
   ON question_packs FOR SELECT
   USING (is_premium = false OR EXISTS (
     SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_premium = true
   ));
-
 CREATE POLICY "Admins can view all question packs"
   ON question_packs FOR SELECT
   USING (is_admin());
-
 CREATE POLICY "Admins can insert question packs"
   ON question_packs FOR INSERT
   WITH CHECK (is_admin());
-
 CREATE POLICY "Admins can update question packs"
   ON question_packs FOR UPDATE
   USING (is_admin());
-
 CREATE POLICY "Admins can delete question packs"
   ON question_packs FOR DELETE
   USING (is_admin());
-
 -- ============================================================================
 -- RLS POLICIES: QUESTIONS
 -- ============================================================================
@@ -802,23 +742,18 @@ CREATE POLICY "Anyone can view questions in visible packs"
       SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_premium = true
     ))
   ));
-
 CREATE POLICY "Admins can view all questions"
   ON questions FOR SELECT
   USING (is_admin());
-
 CREATE POLICY "Admins can insert questions"
   ON questions FOR INSERT
   WITH CHECK (is_admin());
-
 CREATE POLICY "Admins can update questions"
   ON questions FOR UPDATE
   USING (is_admin());
-
 CREATE POLICY "Admins can delete questions"
   ON questions FOR DELETE
   USING (is_admin());
-
 -- ============================================================================
 -- RLS POLICIES: RESPONSES
 -- ============================================================================
@@ -827,42 +762,33 @@ CREATE POLICY "Users can view couple responses"
   USING (user_id = auth.uid() OR couple_id IN (
     SELECT couple_id FROM profiles WHERE id = auth.uid()
   ));
-
 CREATE POLICY "Users can insert own responses"
   ON responses FOR INSERT
   WITH CHECK (user_id = auth.uid() AND couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Users can update own responses"
   ON responses FOR UPDATE
   USING (user_id = auth.uid());
-
 CREATE POLICY "Users can delete own responses"
   ON responses FOR DELETE
   USING (user_id = auth.uid());
-
 CREATE POLICY "Super admins can view all responses"
   ON responses FOR SELECT
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: MATCHES
 -- ============================================================================
 CREATE POLICY "Users can view couple matches"
   ON matches FOR SELECT
   USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Users can update match seen status"
   ON matches FOR UPDATE
   USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Users can delete own couple matches"
   ON matches FOR DELETE
   USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Super admins can view all matches"
   ON matches FOR SELECT
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: MESSAGES
 -- ============================================================================
@@ -873,7 +799,6 @@ CREATE POLICY "Users can view messages in their matches"
     WHERE m.id = messages.match_id
     AND m.couple_id IN (SELECT couple_id FROM profiles WHERE id = auth.uid())
   ));
-
 CREATE POLICY "Users can insert messages in their matches"
   ON messages FOR INSERT
   WITH CHECK (auth.uid() = user_id AND EXISTS (
@@ -881,7 +806,6 @@ CREATE POLICY "Users can insert messages in their matches"
     WHERE m.id = messages.match_id
     AND m.couple_id IN (SELECT couple_id FROM profiles WHERE id = auth.uid())
   ));
-
 CREATE POLICY "Users can mark messages as read"
   ON messages FOR UPDATE
   USING (auth.uid() <> user_id AND EXISTS (
@@ -890,15 +814,12 @@ CREATE POLICY "Users can mark messages as read"
     AND m.couple_id IN (SELECT couple_id FROM profiles WHERE id = auth.uid())
   ))
   WITH CHECK (auth.uid() <> user_id);
-
 CREATE POLICY "Users can delete own messages"
   ON messages FOR DELETE
   USING (user_id = auth.uid());
-
 CREATE POLICY "Super admins can view all messages"
   ON messages FOR SELECT
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: COUPLE PACKS
 -- ============================================================================
@@ -908,67 +829,54 @@ CREATE POLICY "Couples can view their own pack settings"
     SELECT 1 FROM profiles
     WHERE profiles.id = auth.uid() AND profiles.couple_id = couple_packs.couple_id
   ));
-
 CREATE POLICY "Couples can modify their own pack settings"
   ON couple_packs FOR ALL
   USING (EXISTS (
     SELECT 1 FROM profiles
     WHERE profiles.id = auth.uid() AND profiles.couple_id = couple_packs.couple_id
   ));
-
 CREATE POLICY "Users can delete own couple pack settings"
   ON couple_packs FOR DELETE
   USING (EXISTS (
     SELECT 1 FROM profiles
     WHERE profiles.id = auth.uid() AND profiles.couple_id = couple_packs.couple_id
   ));
-
 -- ============================================================================
 -- RLS POLICIES: FEEDBACK
 -- ============================================================================
 CREATE POLICY "Users can create feedback"
   ON feedback FOR INSERT
   WITH CHECK (auth.uid() = user_id);
-
 CREATE POLICY "Users can view own feedback"
   ON feedback FOR SELECT
   USING (auth.uid() = user_id);
-
 CREATE POLICY "Users can update own pending feedback"
   ON feedback FOR UPDATE
   USING (auth.uid() = user_id AND status = 'new');
-
 CREATE POLICY "Super admins can view all feedback"
   ON feedback FOR SELECT
   USING (is_super_admin());
-
 CREATE POLICY "Super admins can update all feedback"
   ON feedback FOR UPDATE
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: SUBSCRIPTIONS
 -- ============================================================================
 CREATE POLICY "Users can view own subscriptions"
   ON subscriptions FOR SELECT
   USING (auth.uid() = user_id);
-
 CREATE POLICY "Super admins can view all subscriptions"
   ON subscriptions FOR SELECT
   USING (is_super_admin());
-
 CREATE POLICY "Super admins can insert subscriptions"
   ON subscriptions FOR INSERT
   WITH CHECK (is_super_admin());
-
 CREATE POLICY "Super admins can update subscriptions"
   ON subscriptions FOR UPDATE
   USING (is_super_admin());
-
 CREATE POLICY "Super admins can delete subscriptions"
   ON subscriptions FOR DELETE
   USING (is_super_admin());
-
 -- ============================================================================
 -- RLS POLICIES: REVENUECAT WEBHOOK EVENTS
 -- ============================================================================
@@ -981,14 +889,12 @@ CREATE POLICY "Super admins can delete subscriptions"
 CREATE POLICY "Admin users can read own record"
   ON admin_users FOR SELECT
   USING (auth.uid() = user_id);
-
 -- ============================================================================
 -- RLS POLICIES: AUDIT LOGS
 -- ============================================================================
 CREATE POLICY "Super admins can view audit logs"
   ON audit_logs FOR SELECT
   USING (is_super_admin());
-
 -- ============================================================================
 -- REALTIME SUBSCRIPTIONS
 -- ============================================================================
@@ -996,18 +902,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
 ALTER PUBLICATION supabase_realtime ADD TABLE matches;
 ALTER PUBLICATION supabase_realtime ADD TABLE messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE couple_packs;
-
 -- ============================================================================
 -- STORAGE BUCKETS
 -- ============================================================================
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('feedback-screenshots', 'feedback-screenshots', false)
 ON CONFLICT (id) DO NOTHING;
-
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('chat-media', 'chat-media', false)
 ON CONFLICT (id) DO NOTHING;
-
 -- ============================================================================
 -- STORAGE POLICIES
 -- ============================================================================
@@ -1019,14 +922,12 @@ CREATE POLICY "Users can upload feedback screenshots"
     bucket_id = 'feedback-screenshots'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
-
 CREATE POLICY "Users can view own feedback screenshots"
   ON storage.objects FOR SELECT TO authenticated
   USING (
     bucket_id = 'feedback-screenshots'
     AND (storage.foldername(name))[1] = auth.uid()::text
   );
-
 -- Chat media policies
 -- IMPORTANT: Use storage.objects.name (not just "name") to avoid ambiguity with profiles.name
 CREATE POLICY "Users can view chat media in their matches"
@@ -1040,7 +941,6 @@ CREATE POLICY "Users can view chat media in their matches"
       AND p.id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can upload chat media to their matches"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (
@@ -1052,7 +952,6 @@ CREATE POLICY "Users can upload chat media to their matches"
       AND p.id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can delete their own chat media"
   ON storage.objects FOR DELETE TO authenticated
   USING (
@@ -1064,7 +963,6 @@ CREATE POLICY "Users can delete their own chat media"
       AND p.id = auth.uid()
     )
   );
-
 CREATE POLICY "Admins can view all chat media"
   ON storage.objects FOR SELECT TO authenticated
   USING (

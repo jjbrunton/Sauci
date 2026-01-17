@@ -3,19 +3,16 @@
 ALTER TABLE profiles
 ADD COLUMN IF NOT EXISTS max_intensity INTEGER DEFAULT 2
 CHECK (max_intensity >= 1 AND max_intensity <= 5);
-
 UPDATE profiles
 SET max_intensity = CASE
   WHEN show_explicit_content IS TRUE THEN 5
   ELSE 2
 END
 WHERE max_intensity IS NULL;
-
 ALTER TABLE question_packs
 ADD COLUMN IF NOT EXISTS min_intensity INTEGER,
 ADD COLUMN IF NOT EXISTS max_intensity INTEGER,
 ADD COLUMN IF NOT EXISTS avg_intensity NUMERIC(3,2);
-
 CREATE OR REPLACE FUNCTION update_question_pack_intensity_stats(target_pack_id UUID)
 RETURNS void
 LANGUAGE plpgsql
@@ -46,7 +43,6 @@ BEGIN
   END IF;
 END;
 $$;
-
 CREATE OR REPLACE FUNCTION handle_question_intensity_change()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -66,13 +62,10 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
 DROP TRIGGER IF EXISTS question_pack_intensity_stats ON questions;
-
 CREATE TRIGGER question_pack_intensity_stats
 AFTER INSERT OR UPDATE OR DELETE ON questions
 FOR EACH ROW EXECUTE FUNCTION handle_question_intensity_change();
-
 UPDATE question_packs qp
 SET min_intensity = stats.min_intensity,
     max_intensity = stats.max_intensity,

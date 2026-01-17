@@ -45,6 +45,8 @@ export interface PackFormData {
     is_public: boolean;
     is_explicit: boolean;
     category_id: string;
+    scheduled_release_at?: string | null;  // Optional for backwards compatibility
+    skip_notification?: boolean;  // If true, sets release_notified=true to skip notifications
 }
 
 export interface PackFormDialogProps {
@@ -200,9 +202,62 @@ export function PackFormDialog({
                         </div>
                         <Switch
                             checked={formData.is_public}
-                            onCheckedChange={(checked) => setField('is_public', checked)}
+                            onCheckedChange={(checked) => {
+                                setField('is_public', checked);
+                                // Clear scheduled release if making public immediately
+                                if (checked) {
+                                    setField('scheduled_release_at', null);
+                                }
+                            }}
                         />
                     </div>
+
+                    {/* Scheduled Release - only show when not public */}
+                    {!formData.is_public && (
+                        <div className="space-y-4 p-3 rounded-md bg-muted/50 border border-dashed">
+                            <div className="space-y-2">
+                                <Label htmlFor="scheduled_release_at">Scheduled Release</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Automatically make this pack public at a specific time. Users will be notified when it becomes available.
+                                </p>
+                                <Input
+                                    id="scheduled_release_at"
+                                    type="datetime-local"
+                                    value={formData.scheduled_release_at ? new Date(formData.scheduled_release_at).toISOString().slice(0, 16) : ''}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setField('scheduled_release_at', value ? new Date(value).toISOString() : null);
+                                    }}
+                                    className="w-full"
+                                />
+                                {formData.scheduled_release_at && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setField('scheduled_release_at', null)}
+                                        className="mt-1"
+                                    >
+                                        Clear scheduled release
+                                    </Button>
+                                )}
+                            </div>
+
+                            {/* Skip Notification Toggle */}
+                            <div className="flex items-center justify-between pt-2 border-t">
+                                <div className="space-y-0.5">
+                                    <Label>Skip release notification</Label>
+                                    <p className="text-sm text-muted-foreground">
+                                        Release without notifying users
+                                    </p>
+                                </div>
+                                <Switch
+                                    checked={formData.skip_notification ?? false}
+                                    onCheckedChange={(checked) => setField('skip_notification', checked)}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* Explicit Toggle */}
                     <div className="flex items-center justify-between">

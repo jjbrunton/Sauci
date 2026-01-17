@@ -224,5 +224,4 @@ BEGIN
     RANDOM();
 END;
 $$;
-
 COMMENT ON FUNCTION get_recommended_questions(UUID) IS 'Returns recommended questions with partner-answered first, then randomized for variety. Uses NET gap calculation for blocking.';

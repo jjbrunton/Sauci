@@ -15,7 +15,6 @@ CREATE INDEX IF NOT EXISTS idx_messages_user_id ON public.messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_redemption_codes_created_by ON public.redemption_codes(created_by);
 CREATE INDEX IF NOT EXISTS idx_responses_question_id ON public.responses(question_id);
 CREATE INDEX IF NOT EXISTS idx_sent_dares_dare_id ON public.sent_dares(dare_id);
-
 -- Drop unused indexes (identified by Supabase advisor as never used)
 -- These are just consuming storage with no benefit
 

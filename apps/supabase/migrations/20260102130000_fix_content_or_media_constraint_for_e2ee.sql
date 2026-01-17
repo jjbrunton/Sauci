@@ -2,7 +2,6 @@
 -- E2EE messages have encrypted_content instead of content
 
 ALTER TABLE public.messages DROP CONSTRAINT IF EXISTS content_or_media;
-
 ALTER TABLE public.messages ADD CONSTRAINT content_or_media CHECK (
     -- v1 (plaintext): must have content or media_path
     (version = 1 AND (content IS NOT NULL OR media_path IS NOT NULL))

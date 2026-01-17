@@ -169,5 +169,4 @@ BEGIN
   );
 END;
 $$;
-
 COMMENT ON FUNCTION get_recommended_questions(UUID) IS 'Returns recommended questions for user filtered by their intensity preference. When user is too far ahead of partner (answer gap threshold exceeded), returns empty.';

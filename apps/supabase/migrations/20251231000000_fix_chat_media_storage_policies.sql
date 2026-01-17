@@ -7,7 +7,6 @@
 DROP POLICY IF EXISTS "Users can upload chat media to their matches" ON storage.objects;
 DROP POLICY IF EXISTS "Users can view chat media in their matches" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete their own chat media" ON storage.objects;
-
 -- Recreate with explicit table qualification to avoid column name ambiguity
 CREATE POLICY "Users can upload chat media to their matches"
   ON storage.objects FOR INSERT TO authenticated
@@ -20,7 +19,6 @@ CREATE POLICY "Users can upload chat media to their matches"
       AND p.id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can view chat media in their matches"
   ON storage.objects FOR SELECT TO authenticated
   USING (
@@ -32,7 +30,6 @@ CREATE POLICY "Users can view chat media in their matches"
       AND p.id = auth.uid()
     )
   );
-
 CREATE POLICY "Users can delete their own chat media"
   ON storage.objects FOR DELETE TO authenticated
   USING (

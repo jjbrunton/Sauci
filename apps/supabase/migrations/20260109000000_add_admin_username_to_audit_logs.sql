@@ -1,14 +1,12 @@
 -- Add admin_username column to audit_logs table
 ALTER TABLE audit_logs 
 ADD COLUMN admin_username TEXT;
-
 -- Backfill existing audit logs with admin names from profiles
 UPDATE audit_logs
 SET admin_username = COALESCE(p.name, p.email, 'Unknown')
 FROM profiles p
 WHERE audit_logs.admin_user_id = p.id
   AND audit_logs.admin_username IS NULL;
-
 -- Update the log_admin_action function to populate admin_username from profiles
 CREATE OR REPLACE FUNCTION log_admin_action(
   p_table_name TEXT,

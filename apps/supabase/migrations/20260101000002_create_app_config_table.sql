@@ -12,37 +12,29 @@ CREATE TABLE IF NOT EXISTS app_config (
     updated_at timestamptz DEFAULT now(),
     updated_by uuid REFERENCES auth.users(id)
 );
-
 -- Only allow one row in this table (singleton pattern)
 CREATE UNIQUE INDEX IF NOT EXISTS app_config_singleton ON app_config ((true));
-
 -- Insert default config row
 INSERT INTO app_config (id) VALUES (gen_random_uuid())
 ON CONFLICT DO NOTHING;
-
 -- Enable RLS
 ALTER TABLE app_config ENABLE ROW LEVEL SECURITY;
-
 -- All authenticated users can read (needed for mobile app)
 CREATE POLICY "Authenticated users can read app_config"
     ON app_config FOR SELECT
     USING (auth.role() = 'authenticated');
-
 -- Only super admins can update
 CREATE POLICY "Super admins can update app_config"
     ON app_config FOR UPDATE
     USING (is_super_admin());
-
 -- Create trigger to auto-update timestamp (reuses existing function)
 CREATE TRIGGER app_config_updated_at
     BEFORE UPDATE ON app_config
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
-
 -- Add comment for documentation
 COMMENT ON TABLE app_config IS 'Singleton table storing mobile app configuration. Readable by all authenticated users, writable by super admins only.';
 COMMENT ON COLUMN app_config.answer_gap_threshold IS 'Maximum number of questions a user can answer ahead of their partner. Set to 0 to disable answer spam prevention.';
-
 -- ============================================================================
 -- RPC FUNCTION: get_answer_gap_status
 -- Returns the number of questions user has answered that partner hasn't,
@@ -131,5 +123,4 @@ BEGIN
     RETURN QUERY SELECT v_gap_count, v_threshold, (v_gap_count >= v_threshold);
 END;
 $$;
-
 COMMENT ON FUNCTION get_answer_gap_status() IS 'Returns answer gap status for the current user. Used by mobile app to prevent answer spam.';

@@ -17,6 +17,7 @@ interface AuthState {
     refreshPartner: () => Promise<Profile | null>;
     signOut: () => Promise<void>;
     setUser: (user: Profile | null) => void;
+    updateLastActive: () => Promise<void>;
 }
 
 // Import other stores lazily to avoid circular dependency issues
@@ -25,7 +26,9 @@ const getOtherStores = () => {
     const { usePacksStore } = require("./packsStore");
     const { useMessageStore } = require("./messageStore");
     const { useSubscriptionStore } = require("./subscriptionStore");
-    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore };
+    const { useNotificationPreferencesStore } = require("./notificationPreferencesStore");
+    const { useStreakStore } = require("./streakStore");
+    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore };
 };
 
 
@@ -56,11 +59,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 // Session is invalid - clear everything
                 set({ user: null, couple: null, partner: null, isAuthenticated: false, isLoading: false });
                 // Clear other stores
-                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore } = getOtherStores();
+                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
                 useMessageStore.getState().clearMessages();
                 useSubscriptionStore.getState().clearSubscription();
+                useNotificationPreferencesStore.getState().clearPreferences();
+                useStreakStore.getState().clearStreak();
                 // Sign out from Supabase (clears storage)
                 await supabase.auth.signOut();
                 return;
@@ -145,11 +150,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isLoading: false,
         });
         // Clear other stores
-        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore } = getOtherStores();
+        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
         useMatchStore.getState().clearMatches();
         usePacksStore.getState().clearPacks();
         useMessageStore.getState().clearMessages();
         useSubscriptionStore.getState().clearSubscription();
+        useNotificationPreferencesStore.getState().clearPreferences();
+        useStreakStore.getState().clearStreak();
+
+        // Clear badge on sign out
+        const { clearBadge } = require("../lib/badge");
+        await clearBadge();
 
         // Then try to sign out from Supabase (don't block on this)
         try {
@@ -169,11 +180,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
-            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore } = getOtherStores();
+            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
             useMatchStore.getState().clearMatches();
             usePacksStore.getState().clearPacks();
             useMessageStore.getState().clearMessages();
             useSubscriptionStore.getState().clearSubscription();
+            useNotificationPreferencesStore.getState().clearPreferences();
+            useStreakStore.getState().clearStreak();
+            // Clear badge on sign out
+            const { clearBadge } = require("../lib/badge");
+            clearBadge();
+        }
+    },
+
+    /**
+     * Update the user's last_active_at timestamp.
+     * Called when the app comes to the foreground to track user activity.
+     * This helps prevent sending notifications to users who are already in the app.
+     */
+    updateLastActive: async () => {
+        const userId = get().user?.id;
+        if (!userId) return;
+
+        try {
+            await supabase
+                .from("profiles")
+                .update({ last_active_at: new Date().toISOString() })
+                .eq("id", userId);
+        } catch (error) {
+            // Silently fail - this is not critical
+            console.error("Failed to update last_active_at:", error);
         }
     },
 }));

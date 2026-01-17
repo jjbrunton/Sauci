@@ -1,6 +1,5 @@
 -- Create enum for report reasons
 CREATE TYPE report_reason AS ENUM ('harassment', 'spam', 'inappropriate_content', 'other');
-
 -- Create message_reports table
 CREATE TABLE message_reports (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,22 +14,18 @@ CREATE TABLE message_reports (
     -- Prevent duplicate reports from same user
     UNIQUE(message_id, reporter_id)
 );
-
 -- Indexes for efficient queries
 CREATE INDEX idx_message_reports_status ON message_reports(status);
 CREATE INDEX idx_message_reports_created ON message_reports(created_at DESC);
 CREATE INDEX idx_message_reports_message ON message_reports(message_id);
-
 -- Enable RLS
 ALTER TABLE message_reports ENABLE ROW LEVEL SECURITY;
-
 -- RLS Policies
 
 -- Users can view their own reports
 CREATE POLICY "Users can view own reports"
     ON message_reports FOR SELECT
     USING (reporter_id = auth.uid());
-
 -- Users can create reports for messages in their couple's matches (but NOT their own messages)
 CREATE POLICY "Users can report partner messages"
     ON message_reports FOR INSERT
@@ -45,20 +40,16 @@ CREATE POLICY "Users can report partner messages"
             AND m.user_id != auth.uid()  -- Cannot report own messages
         )
     );
-
 -- Admins can view all reports
 CREATE POLICY "Admins can view all reports"
     ON message_reports FOR SELECT
     USING (is_admin());
-
 -- Admins can update reports (for review status)
 CREATE POLICY "Admins can update reports"
     ON message_reports FOR UPDATE
     USING (is_admin());
-
 -- Add to realtime for live updates in admin
 ALTER PUBLICATION supabase_realtime ADD TABLE message_reports;
-
 -- Comments
 COMMENT ON TABLE message_reports IS 'User-submitted reports for messages. Separate from AI moderation (moderation_status on messages table).';
 COMMENT ON COLUMN message_reports.status IS 'Report status: pending (new), reviewed (action taken), dismissed (no action needed).';

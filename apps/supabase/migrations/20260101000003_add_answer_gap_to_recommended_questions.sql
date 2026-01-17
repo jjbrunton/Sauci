@@ -163,5 +163,4 @@ BEGIN
   );
 END;
 $$;
-
 COMMENT ON FUNCTION get_recommended_questions(UUID) IS 'Returns recommended questions for user. When user is too far ahead of partner (answer gap threshold exceeded), returns empty. Old apps see "All caught up!", new apps can call get_answer_gap_status to determine blocking reason.';

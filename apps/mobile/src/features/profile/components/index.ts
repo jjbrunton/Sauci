@@ -8,6 +8,7 @@ export type { NotificationSettingsProps } from './NotificationSettings';
 export { CoupleStatus } from './CoupleStatus';
 export { PrivacySettings } from './PrivacySettings';
 export { DangerZone } from './DangerZone';
+export { RelationshipDangerZone } from './RelationshipDangerZone';
 export { ResetProgress } from './ResetProgress';
 
 export { SettingsSection } from './SettingsSection';
@@ -18,3 +19,5 @@ export { MenuItem } from './MenuItem';
 export type { MenuItemProps } from './MenuItem';
 export { SubscriptionCard } from './SubscriptionCard';
 export type { SubscriptionCardProps } from './SubscriptionCard';
+export { ScreenHeader } from './ScreenHeader';
+export type { ScreenHeaderProps } from './ScreenHeader';

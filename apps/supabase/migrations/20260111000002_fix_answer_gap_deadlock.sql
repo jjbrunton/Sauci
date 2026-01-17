@@ -104,9 +104,7 @@ BEGIN
     RETURN QUERY SELECT v_net_gap, v_threshold, (v_net_gap >= v_threshold);
 END;
 $$;
-
 COMMENT ON FUNCTION get_answer_gap_status() IS 'Returns answer gap status using NET gap calculation. Prevents deadlocks when both partners answer different questions.';
-
 -- ============================================================================
 -- Part 2: Update get_recommended_questions() to prioritize partner-answered questions
 -- ============================================================================
@@ -337,5 +335,4 @@ BEGIN
     q.intensity ASC;
 END;
 $$;
-
 COMMENT ON FUNCTION get_recommended_questions(UUID) IS 'Returns recommended questions prioritizing partner-answered questions first to prevent deadlocks. Uses NET gap calculation for blocking.';

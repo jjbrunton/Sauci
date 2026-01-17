@@ -201,5 +201,4 @@ BEGIN
   );
 END;
 $$;
-
 COMMENT ON FUNCTION get_recommended_questions(UUID) IS 'Returns recommended questions for user filtered by their intensity preference. When daily limit or answer gap threshold is exceeded for non-premium users, returns empty.';

@@ -30,29 +30,24 @@ BEGIN
     RETURN v_permissions @> jsonb_build_array(check_permission);
 END;
 $$;
-
 -- Update RLS policies to use permissions
 
 -- Profiles
 CREATE POLICY "Admins with view_users permission can view all profiles"
   ON profiles FOR SELECT
   USING (has_permission('view_users'));
-
 -- Messages
 CREATE POLICY "Admins with view_chats permission can view all messages"
   ON messages FOR SELECT
   USING (has_permission('view_chats'));
-
 -- Responses
 CREATE POLICY "Admins with view_responses permission can view all responses"
   ON responses FOR SELECT
   USING (has_permission('view_responses'));
-
 -- Matches
 CREATE POLICY "Admins with view_matches permission can view all matches"
   ON matches FOR SELECT
   USING (has_permission('view_matches'));
-
 -- Audit Logs
 CREATE POLICY "Admins with view_audit_logs permission can view audit logs"
   ON audit_logs FOR SELECT
