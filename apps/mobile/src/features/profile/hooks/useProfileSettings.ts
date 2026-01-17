@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert, Platform, ActionSheetIOS, Linking } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
+import { Alert, Linking, Platform } from 'react-native';
 import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
+import { useAvatarPicker } from '../../../hooks/useAvatarPicker';
 import type { IntensityLevel } from '../../../types';
 import {
     registerForPushNotificationsAsync,
@@ -45,8 +43,42 @@ export function useProfileSettings() {
     const [newName, setNewName] = useState(user?.name || "");
     const [isUpdatingName, setIsUpdatingName] = useState(false);
 
-    // Avatar
-    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    // Avatar - using shared hook with immediate upload on select
+    const handleAvatarUploadComplete = useCallback(async (publicUrl: string) => {
+        if (!user?.id) return;
+
+        try {
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    avatar_url: publicUrl,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
+
+            await fetchUser();
+            Events.avatarUploaded();
+        } catch (error) {
+            console.error('Error updating profile with avatar:', error);
+            Alert.alert('Error', 'Failed to save photo. Please try again.');
+        }
+    }, [user?.id, fetchUser]);
+
+    const handleAvatarUploadError = useCallback(() => {
+        Alert.alert('Error', 'Failed to upload photo. Please try again.');
+    }, []);
+
+    const {
+        isUploading: isUploadingAvatar,
+        showPicker: handleAvatarPress,
+    } = useAvatarPicker({
+        userId: user?.id,
+        autoUpload: true,
+        onUploadComplete: handleAvatarUploadComplete,
+        onUploadError: handleAvatarUploadError,
+    });
 
     // Preferences
     const [maxIntensity, setMaxIntensity] = useState<IntensityLevel>(() => getProfileMaxIntensity(user));
@@ -135,140 +167,6 @@ export function useProfileSettings() {
         setNewName(user?.name || "");
         setIsEditingName(false);
     }, [user?.name]);
-
-    // Avatar Actions
-    const handleAvatarPress = () => {
-        if (Platform.OS === 'ios') {
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                    options: ['Cancel', 'Take Photo', 'Choose from Library'],
-                    cancelButtonIndex: 0,
-                },
-                (buttonIndex) => {
-                    if (buttonIndex === 1) {
-                        pickAvatar('camera');
-                    } else if (buttonIndex === 2) {
-                        pickAvatar('library');
-                    }
-                }
-            );
-        } else {
-            Alert.alert(
-                'Change Profile Photo',
-                'Choose an option',
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Take Photo', onPress: () => pickAvatar('camera') },
-                    { text: 'Choose from Library', onPress: () => pickAvatar('library') },
-                ]
-            );
-        }
-    };
-
-    const pickAvatar = async (source: 'camera' | 'library') => {
-        try {
-            let result: ImagePicker.ImagePickerResult;
-
-            if (source === 'camera') {
-                const { status } = await ImagePicker.requestCameraPermissionsAsync();
-                if (status !== 'granted') {
-                    Alert.alert('Permission Denied', 'Camera access is required to take a photo.');
-                    return;
-                }
-                result = await ImagePicker.launchCameraAsync({
-                    mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.8,
-                });
-            } else {
-                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (status !== 'granted') {
-                    Alert.alert('Permission Denied', 'Photo library access is required to choose a photo.');
-                    return;
-                }
-                result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.8,
-                });
-            }
-
-            if (!result.canceled && result.assets[0]) {
-                await uploadAvatar(result.assets[0].uri);
-            }
-        } catch (error) {
-            console.error('Error picking avatar:', error);
-            Alert.alert('Error', 'Failed to pick image. Please try again.');
-        }
-    };
-
-    const uploadAvatar = async (uri: string) => {
-        if (!user?.id) return;
-
-        setIsUploadingAvatar(true);
-
-        try {
-            let fileBody;
-            let ext = 'jpg';
-
-            if (Platform.OS === 'web') {
-                const response = await fetch(uri);
-                const blob = await response.blob();
-                fileBody = blob;
-
-                if (blob.type === 'image/png') ext = 'png';
-                else if (blob.type === 'image/webp') ext = 'webp';
-            } else {
-                const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-                fileBody = decode(base64);
-
-                const uriExt = uri.split('.').pop()?.toLowerCase();
-                if (uriExt && ['jpg', 'jpeg', 'png', 'webp'].includes(uriExt)) {
-                    ext = uriExt === 'jpeg' ? 'jpg' : uriExt;
-                }
-            }
-
-            const fileName = `${user.id}/${Date.now()}.${ext}`;
-            const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-
-            // Upload to storage
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(fileName, fileBody, {
-                    contentType,
-                    upsert: true,
-                });
-
-            if (uploadError) throw uploadError;
-
-            // Get public URL
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(fileName);
-
-            // Update profile with avatar URL
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    avatar_url: publicUrl,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (updateError) throw updateError;
-
-            // Refresh user data
-            await fetchUser();
-            Events.avatarUploaded();
-        } catch (error) {
-            console.error('Error uploading avatar:', error);
-            Alert.alert('Error', 'Failed to upload photo. Please try again.');
-        } finally {
-            setIsUploadingAvatar(false);
-        }
-    };
 
     // Preference Actions
     const handleIntensityChange = async (value: IntensityLevel) => {

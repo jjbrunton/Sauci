@@ -10,5 +10,6 @@ export { LoadingOverlay } from './LoadingOverlay';
 export type { LoadingOverlayProps, LoadingVariant } from './LoadingOverlay';
 export { ReadReceipt, getReceiptStatus } from './ReadReceipt';
 export type { ReadReceiptProps, ReceiptStatus } from './ReadReceipt';
+export { GlassToggle } from './GlassToggle';
 export { AmbientOrbs } from './AmbientOrbs';
 export type { AmbientOrbsProps, OrbVariant, OrbPosition } from './AmbientOrbs';

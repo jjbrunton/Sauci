@@ -9,6 +9,7 @@ import {
     Platform,
     Keyboard,
     ScrollView,
+    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +18,8 @@ import Animated, {
     FadeIn,
     FadeInUp,
     FadeOut,
-    FadeOutLeft,
     SlideInRight,
     SlideOutLeft,
-    Layout,
 } from 'react-native-reanimated';
 import { GradientBackground } from '../../src/components/ui/GradientBackground';
 import { GlassCard } from '../../src/components/ui/GlassCard';
@@ -32,6 +31,7 @@ import { supabase } from '../../src/lib/supabase';
 import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
+import { useAvatarPicker } from '../../src/hooks/useAvatarPicker';
 import type { Gender, IntensityLevel } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
@@ -64,12 +64,12 @@ const getInitialIntensity = (profile?: { max_intensity?: number | null; show_exp
     return profile?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
 };
 
-type Stage = 'name' | 'gender' | 'purpose' | 'explicit' | 'notifications';
+type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'explicit' | 'notifications';
 
 export default function OnboardingScreen() {
     const router = useRouter();
     const { user, fetchUser } = useAuthStore();
-    const [stage, setStage] = useState<Stage>('name');
+    const [stage, setStage] = useState<Stage>('avatar');
     const [name, setName] = useState(user?.name || '');
     const [gender, setGender] = useState<Gender | null>(user?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
@@ -78,9 +78,24 @@ export default function OnboardingScreen() {
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);
 
+    const {
+        avatarUri,
+        isUploading: isUploadingAvatar,
+        showPicker: handleAvatarPress,
+        uploadAvatar,
+    } = useAvatarPicker({
+        userId: user?.id,
+        onSelect: () => setError(null),
+    });
+
     useEffect(() => {
         Events.onboardingStart();
     }, []);
+
+    const handleAvatarContinue = () => {
+        setStage('name');
+        Events.onboardingStageComplete('avatar');
+    };
 
     const handleNameSubmit = () => {
         if (!name.trim()) {
@@ -153,19 +168,36 @@ export default function OnboardingScreen() {
         setError(null);
 
         try {
+            // Upload avatar if one was selected
+            let avatarUrl: string | null = null;
+            if (avatarUri) {
+                avatarUrl = await uploadAvatar();
+                if (avatarUrl) {
+                    Events.avatarUploaded();
+                }
+            }
+
             const showExplicitContent = maxIntensity >= 3;
+            const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content"];
+
+            const updateData: Record<string, any> = {
+                name: name.trim(),
+                gender,
+                usage_reason: usageReason,
+                max_intensity: maxIntensity,
+                show_explicit_content: showExplicitContent,
+                onboarding_completed: true,
+                updated_at: new Date().toISOString(),
+            };
+
+            if (avatarUrl) {
+                updateData.avatar_url = avatarUrl;
+                updatedFields.push("avatar_url");
+            }
 
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({
-                    name: name.trim(),
-                    gender,
-                    usage_reason: usageReason,
-                    max_intensity: maxIntensity,
-                    show_explicit_content: showExplicitContent,
-                    onboarding_completed: true,
-                    updated_at: new Date().toISOString(),
-                })
+                .update(updateData)
                 .eq('id', user.id);
 
             if (updateError) {
@@ -176,7 +208,7 @@ export default function OnboardingScreen() {
             console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
             console.log('[Onboarding] User fetched, navigating to home...');
-            Events.profileUpdated(["name", "gender", "usage_reason", "max_intensity", "show_explicit_content"]);
+            Events.profileUpdated(updatedFields);
             Events.onboardingComplete();
             router.replace('/');
         } catch (err: any) {
@@ -189,10 +221,10 @@ export default function OnboardingScreen() {
 
     const renderStage = () => {
         switch (stage) {
-            case 'name':
+            case 'avatar':
                 return (
                     <Animated.View
-                        key="name"
+                        key="avatar"
                         entering={FadeInUp.duration(500)}
                         exiting={SlideOutLeft.duration(300)}
                         style={styles.stageContainer}
@@ -206,12 +238,73 @@ export default function OnboardingScreen() {
                             </LinearGradient>
                             <Text style={styles.title}>Welcome to Sauci</Text>
                             <Text style={styles.subtitle}>
-                                Let's get to know you
+                                Add a profile photo so your partner knows it's you
                             </Text>
                         </View>
 
                         <GlassCard style={styles.card}>
-                            <Text style={styles.label}>What's your name?</Text>
+                            <View style={styles.avatarSection}>
+                                <Pressable onPress={handleAvatarPress} style={styles.avatarTouchable}>
+                                    {avatarUri ? (
+                                        <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                                    ) : (
+                                        <LinearGradient
+                                            colors={[colors.glass.background, colors.glass.backgroundLight]}
+                                            style={styles.avatarPlaceholder}
+                                        >
+                                            <Ionicons name="camera" size={40} color={colors.textSecondary} />
+                                        </LinearGradient>
+                                    )}
+                                    <View style={styles.avatarBadge}>
+                                        <Ionicons name={avatarUri ? "pencil" : "add"} size={16} color={colors.text} />
+                                    </View>
+                                </Pressable>
+                                <Text style={styles.avatarHint}>
+                                    {avatarUri ? 'Tap to change photo' : 'Tap to add a photo'}
+                                </Text>
+                            </View>
+                            {error && (
+                                <View style={styles.errorContainer}>
+                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
+                                    <Text style={styles.errorText}>{error}</Text>
+                                </View>
+                            )}
+                        </GlassCard>
+
+                        <View style={styles.footer}>
+                            <GlassButton onPress={handleAvatarContinue} fullWidth size="lg">
+                                {avatarUri ? 'Continue' : 'Skip for Now'}
+                            </GlassButton>
+                        </View>
+                    </Animated.View>
+                );
+
+            case 'name':
+                return (
+                    <Animated.View
+                        key="name"
+                        entering={SlideInRight.duration(400)}
+                        exiting={SlideOutLeft.duration(300)}
+                        style={styles.stageContainer}
+                    >
+                        <View style={styles.header}>
+                            {avatarUri ? (
+                                <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
+                            ) : (
+                                <LinearGradient
+                                    colors={gradients.primary as [string, string]}
+                                    style={styles.iconContainer}
+                                >
+                                    <Ionicons name="person" size={40} color={colors.text} />
+                                </LinearGradient>
+                            )}
+                            <Text style={styles.title}>What can we call you?</Text>
+                            <Text style={styles.subtitle}>
+                                This is how your partner will see you
+                            </Text>
+                        </View>
+
+                        <GlassCard style={styles.card}>
                             <View style={styles.inputContainer}>
                                 <Ionicons
                                     name="person-outline"
@@ -224,7 +317,7 @@ export default function OnboardingScreen() {
                                     style={styles.input}
                                     value={name}
                                     onChangeText={setName}
-                                    placeholder="Enter your name"
+                                    placeholder="Your name or nickname"
                                     placeholderTextColor={colors.textTertiary}
                                     autoCapitalize="words"
                                     autoCorrect={false}
@@ -515,14 +608,16 @@ export default function OnboardingScreen() {
             >
                 {/* Header with back button and progress dots */}
                 <Animated.View entering={FadeIn.duration(600)} style={styles.headerBar}>
-                    {stage !== 'name' ? (
+                    {stage !== 'avatar' ? (
                         <Pressable
                             style={styles.backButton}
                             onPress={() => {
+                                setError(null);
                                 if (stage === 'notifications') setStage('explicit');
                                 else if (stage === 'explicit') setStage('purpose');
                                 else if (stage === 'purpose') setStage('gender');
-                                else setStage('name');
+                                else if (stage === 'gender') setStage('name');
+                                else if (stage === 'name') setStage('avatar');
                             }}
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -531,6 +626,7 @@ export default function OnboardingScreen() {
                         <View style={styles.backButtonPlaceholder} />
                     )}
                     <View style={styles.progressContainer}>
+                        <View style={[styles.progressDot, stage === 'avatar' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'purpose' && styles.progressDotActive]} />
@@ -610,6 +706,56 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: spacing.lg,
         ...shadows.lg,
+    },
+    headerAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        marginBottom: spacing.lg,
+        borderWidth: 2,
+        borderColor: colors.primary,
+    },
+    avatarSection: {
+        alignItems: 'center',
+        paddingVertical: spacing.lg,
+    },
+    avatarTouchable: {
+        position: 'relative',
+    },
+    avatarImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 3,
+        borderColor: colors.primary,
+    },
+    avatarPlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: colors.glass.border,
+        borderStyle: 'dashed',
+    },
+    avatarBadge: {
+        position: 'absolute',
+        bottom: 4,
+        right: 4,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: colors.background,
+    },
+    avatarHint: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+        marginTop: spacing.md,
     },
     title: {
         ...typography.largeTitle,

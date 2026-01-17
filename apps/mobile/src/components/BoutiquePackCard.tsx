@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Switch, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { ShimmerEffect } from './ui/ShimmerEffect';
+import { GlassToggle } from './ui/GlassToggle';
 import { colors, gradients, spacing, radius, typography, blur, shadows, animations } from '../theme';
 import type { QuestionPack } from '../types';
 
@@ -150,16 +151,10 @@ export function BoutiquePackCard({
             <Text style={styles.questionLabel}>questions</Text>
           </View>
 
-          <Switch
+          <GlassToggle
             value={isEnabled}
             onValueChange={onToggle}
             disabled={isPremiumLocked}
-            trackColor={{
-              false: 'rgba(255, 255, 255, 0.15)',
-              true: pack.is_premium ? colors.premium.gold : colors.primary,
-            }}
-            thumbColor={colors.text}
-            ios_backgroundColor="rgba(255, 255, 255, 0.15)"
             style={isPremiumLocked ? { opacity: 0.4 } : undefined}
           />
         </View>

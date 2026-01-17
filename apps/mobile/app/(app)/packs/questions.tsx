@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, RefreshControl, Platform, Alert, Pressable, Switch } from "react-native";
+import { View, Text, StyleSheet, RefreshControl, Platform, Alert, Pressable } from "react-native";
 import { usePacksStore, useAuthStore, useSubscriptionStore } from "../../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -14,7 +14,7 @@ import Animated, {
     Extrapolation,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-import { GradientBackground } from "../../../src/components/ui";
+import { GradientBackground, GlassToggle } from "../../../src/components/ui";
 import { Paywall } from "../../../src/components/paywall";
 import { PackTeaser } from "../../../src/components/PackTeaser";
 import { colors, spacing, radius, typography } from "../../../src/theme";
@@ -461,15 +461,9 @@ export default function QuestionPacksScreen() {
                                     Show all intensities
                                 </Text>
                             </View>
-                            <Switch
+                            <GlassToggle
                                 value={showAllIntensities}
                                 onValueChange={handleToggleComfortZone}
-                                trackColor={{
-                                    false: "rgba(255, 255, 255, 0.1)",
-                                    true: "rgba(233, 69, 96, 0.4)"
-                                }}
-                                thumbColor={showAllIntensities ? colors.primary : colors.textTertiary}
-                                ios_backgroundColor="rgba(255, 255, 255, 0.1)"
                             />
                         </Pressable>
                     </Animated.View>

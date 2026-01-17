@@ -9,6 +9,18 @@ export default defineConfig({
             '@': path.resolve(__dirname, './src'),
         },
     },
+    optimizeDeps: {
+        include: ['react-icons/io5'],
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'react-icons': ['react-icons/io5'],
+                },
+            },
+        },
+    },
     server: {
         host: true,
         port: 3001,

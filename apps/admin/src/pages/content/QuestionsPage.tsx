@@ -42,6 +42,7 @@ import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
 import { ReviewQuestionsDialog } from '@/components/content/ReviewQuestionsDialog';
+import { IconPreview } from '@/components/ui/icon-picker';
 
 interface QuestionPack {
     id: string;
@@ -525,7 +526,7 @@ export function QuestionsPage() {
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
                             {pack && (
                                 <>
-                                    <span className="text-3xl">{pack.icon}</span>
+                                    <IconPreview value={pack.icon} fallback="heart-outline" className="text-3xl" />
                                     {pack.name}
                                 </>
                             )}

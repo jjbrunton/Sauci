@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Switch, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, typography, featureColors } from '../../../theme';
+import { GlassToggle } from '../../../components/ui';
 
 export interface SwitchItemProps {
     /** Icon name (Ionicons) */
@@ -20,7 +21,6 @@ export interface SwitchItemProps {
 }
 
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
-const ACCENT_COLOR = featureColors.profile.accent;
 
 /**
  * Reusable toggle switch row for settings screens.
@@ -49,13 +49,10 @@ export function SwitchItem({
                     <Text style={styles.description}>{description}</Text>
                 </View>
             </View>
-            <Switch
+            <GlassToggle
                 value={value}
                 onValueChange={onValueChange}
                 disabled={disabled}
-                trackColor={{ false: colors.glass.border, true: colors.secondaryLight }}
-                thumbColor={value ? ACCENT_COLOR : colors.textTertiary}
-                ios_backgroundColor={colors.glass.border}
             />
         </View>
     );
