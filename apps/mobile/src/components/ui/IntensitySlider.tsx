@@ -249,7 +249,7 @@ export function IntensitySlider({
                                 )}
                                 <Text style={styles.modalTitle}>
                                     {levelsDiffer
-                                        ? (userIsHigher ? "Different Comfort Zones" : "You're in Sync")
+                                        ? (userIsHigher ? "Different Comfort Zones" : "Room to Explore")
                                         : "You're Perfectly Matched"
                                     }
                                 </Text>
@@ -306,29 +306,27 @@ export function IntensitySlider({
                                 ) : userIsHigher ? (
                                     <>
                                         <Text style={styles.modalText}>
-                                            Your comfort zone is set higher than {displayPartnerName}'s.
-                                            This means some questions you see won't appear for them.
+                                            You're both seeing questions up to {partnerLevel?.label} level because that's {displayPartnerName}'s comfort zone.
                                         </Text>
                                         <View style={[styles.modalTip, styles.modalTipWarning]}>
                                             <Ionicons name="information-circle" size={16} color={colors.warning} />
                                             <Text style={[styles.modalTipText, styles.modalTipTextWarning]}>
-                                                Swipes on {current.label} content won't match since {displayPartnerName} is at {partnerLevel?.label}
+                                                You won't see {current.label} content until {displayPartnerName} raises their level
                                             </Text>
                                         </View>
                                         <Text style={styles.modalSubtext}>
-                                            Consider aligning your levels, or enjoy different paces — it's your choice!
+                                            The lower setting between you determines what you both see.
                                         </Text>
                                     </>
                                 ) : (
                                     <>
                                         <Text style={styles.modalText}>
-                                            {displayPartnerName}'s comfort zone is higher than yours.
-                                            They might swipe on questions you don't see.
+                                            You're both seeing questions up to {current.label} level based on your comfort zone.
                                         </Text>
                                         <View style={styles.modalTip}>
-                                            <Ionicons name="shield-checkmark" size={16} color={colors.secondary} />
+                                            <Ionicons name="arrow-up-circle" size={16} color={colors.secondary} />
                                             <Text style={styles.modalTipText}>
-                                                You'll only see content within your comfort zone
+                                                {displayPartnerName} is at {partnerLevel?.label} — raise yours to unlock more content together
                                             </Text>
                                         </View>
                                     </>

@@ -153,9 +153,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
                                 <View style={styles.helpItem}>
                                     <Ionicons name="people-outline" size={20} color={colors.primary} style={styles.helpIcon} />
                                     <View style={styles.helpTextContainer}>
-                                        <Text style={styles.helpItemTitle}>Partner Sync</Text>
+                                        <Text style={styles.helpItemTitle}>Comfort Zone Gate</Text>
                                         <Text style={styles.helpItemDescription}>
-                                            Questions only appear when both of you are comfortable. The lower setting between you and your partner determines what you both see.
+                                            You both see the same questions based on the lower comfort zone between you. If you're at 5 and your partner is at 3, you'll both only see questions up to level 3.
                                         </Text>
                                     </View>
                                 </View>
