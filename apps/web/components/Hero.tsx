@@ -58,7 +58,7 @@ export default function Hero() {
 
             {/* Official App Store Badge */}
             <a
-              href="https://apps.apple.com/app/sauci"
+              href="https://apps.apple.com/gb/app/sauci-couple-games-romance/id6757159885"
               target="_blank"
               rel="noopener noreferrer"
               className="transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-xl"

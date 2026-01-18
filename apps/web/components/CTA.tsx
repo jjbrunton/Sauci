@@ -43,7 +43,7 @@ export default function CTA() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="https://apps.apple.com/app/sauci"
+              href="https://apps.apple.com/gb/app/sauci-couple-games-romance/id6757159885"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary flex items-center gap-2"

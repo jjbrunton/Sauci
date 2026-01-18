@@ -6,7 +6,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 
-const APP_STORE_URL = 'https://apps.apple.com/app/sauci'
+const APP_STORE_URL = 'https://apps.apple.com/gb/app/sauci-couple-games-romance/id6757159885'
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.sauci.app'
 
 export default function Navbar() {
