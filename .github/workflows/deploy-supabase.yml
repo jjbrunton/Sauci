@@ -28,8 +28,12 @@ jobs:
         with:
           version: latest
 
+      - name: Link to Production Project
+        run: supabase link --project-ref $SUPABASE_PROJECT_REF
+        working-directory: apps/supabase
+
       - name: Apply Database Migrations
-        run: supabase db push --project-ref $SUPABASE_PROJECT_REF
+        run: supabase db push
         working-directory: apps/supabase
 
       - name: Sync Edge Function Secrets
