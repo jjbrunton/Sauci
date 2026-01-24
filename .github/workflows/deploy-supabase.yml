@@ -1,12 +1,14 @@
 name: Deploy Supabase to Production
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
     paths:
       - 'apps/supabase/**'
       - 'terraform/**'
+      - '.github/workflows/deploy-supabase.yml'
 
 jobs:
   deploy-database:
