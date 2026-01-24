@@ -1,6 +1,6 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0?target=deno";
 import { unwrapWithAdminKey, base64ToUint8Array, KeysMetadata } from "../_shared/encryption.ts";
 
 const corsHeaders = {

@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0?target=deno";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -44,6 +44,15 @@ Deno.serve(async (req) => {
         console.log(`Checking subscription for user: ${user.id}`);
         console.log(`Using entitlement ID: ${ENTITLEMENT_ID}`);
         console.log(`API key present: ${!!REVENUECAT_API_KEY}`);
+        console.log(`API key length: ${REVENUECAT_API_KEY?.length || 0}`);
+
+        if (!REVENUECAT_API_KEY) {
+            console.error("REVENUECAT_API_KEY is not set!");
+            return new Response(
+                JSON.stringify({ error: "Server configuration error: missing API key" }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
 
         // Fetch subscription status from RevenueCat API (server-side verification)
         const rcResponse = await fetch(
@@ -60,9 +69,14 @@ Deno.serve(async (req) => {
 
         if (!rcResponse.ok) {
             const errorText = await rcResponse.text();
-            console.error("RevenueCat API error:", errorText);
+            console.error(`RevenueCat API error (${rcResponse.status}):`, errorText);
+            // Return the actual error details for debugging
             return new Response(
-                JSON.stringify({ error: "Failed to verify subscription", details: errorText }),
+                JSON.stringify({
+                    error: "Failed to verify subscription",
+                    status: rcResponse.status,
+                    details: errorText
+                }),
                 { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
@@ -79,8 +93,11 @@ Deno.serve(async (req) => {
         }
 
         // Check if entitlement is active
-        const isActive = entitlement &&
-            new Date(entitlement.expires_date) > new Date();
+        // Note: expires_date can be null for lifetime subscriptions
+        const isActive = entitlement && (
+            entitlement.expires_date === null ||
+            new Date(entitlement.expires_date) > new Date()
+        );
 
         console.log(`User ${user.id} subscription status: ${isActive ? "active" : "inactive"}`);
 
