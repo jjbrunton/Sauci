@@ -17,6 +17,9 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+apps/mobile/.env.prod
+.secrets
+
 
 # Supabase
 .supabase/

@@ -8,36 +8,29 @@ CREATE TABLE feature_interests (
     -- Ensure a user can only express interest in a feature once
     UNIQUE(user_id, feature_name)
 );
-
 -- Index for querying by feature
 CREATE INDEX idx_feature_interests_feature_name ON feature_interests(feature_name);
-
 -- Index for querying by user
 CREATE INDEX idx_feature_interests_user_id ON feature_interests(user_id);
-
 -- Enable RLS
 ALTER TABLE feature_interests ENABLE ROW LEVEL SECURITY;
-
 -- Users can insert their own interest
 CREATE POLICY "Users can express interest in features"
 ON feature_interests
 FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = user_id);
-
 -- Users can view their own interests
 CREATE POLICY "Users can view their own interests"
 ON feature_interests
 FOR SELECT
 TO authenticated
 USING (auth.uid() = user_id);
-
 -- Users can delete their own interests
 CREATE POLICY "Users can remove their interest"
 ON feature_interests
 FOR DELETE
 TO authenticated
 USING (auth.uid() = user_id);
-
 -- Grant service role full access for admin queries
-GRANT ALL ON feature_interests TO service_role;;
+GRANT ALL ON feature_interests TO service_role;

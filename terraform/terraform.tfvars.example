@@ -1,0 +1,10 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git!
+
+supabase_access_token = "sbp_xxxxxxxxxxxxxxxxxxxx"
+
+# OAuth provider credentials (optional - can also be set in Supabase dashboard)
+# google_client_id     = ""
+# google_client_secret = ""
+# apple_client_id      = ""
+# apple_client_secret  = ""

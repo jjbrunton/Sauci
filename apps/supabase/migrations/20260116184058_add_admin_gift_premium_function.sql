@@ -1,4 +1,3 @@
-
 -- Create a function that admins with gift_premium permission can use to gift premium
 -- This bypasses RLS issues by using SECURITY DEFINER and checking permissions internally
 CREATE OR REPLACE FUNCTION admin_gift_premium(
@@ -52,7 +51,5 @@ BEGIN
     RETURN v_subscription_id;
 END;
 $$;
-
 -- Grant execute permission to authenticated users (the function checks permissions internally)
 GRANT EXECUTE ON FUNCTION admin_gift_premium(UUID, TIMESTAMPTZ) TO authenticated;
-;

@@ -38,4 +38,4 @@ AS $$
     FROM profiles p
     LEFT JOIN auth.users au ON au.id = p.id
     WHERE p.id = user_id;
-$$;;
+$$;

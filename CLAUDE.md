@@ -65,7 +65,38 @@ There are two Supabase projects configured via MCP servers:
 When using Claude Code with MCP tools:
 - Use `mcp__sauci-prod__*` tools for production database operations
 - Use `mcp__sauci-non-prod__*` tools for development/staging database operations
-- **Always verify which environment you're targeting before running migrations or destructive operations**
+- **Always verify which environment you're targeting before running destructive operations**
+
+### Database Migrations - IMPORTANT
+
+**NEVER use MCP tools (`apply_migration`) for database migrations.** Always use the Supabase CLI instead.
+
+**Why:** MCP migrations are tracked in the database but do NOT create local migration files. This means:
+- Migration history is not committed to git
+- Other developers won't get the schema changes
+- `supabase db reset` won't include MCP-applied migrations
+- Changes cannot be reproduced from scratch
+
+**Correct workflow for schema changes:**
+```bash
+# 1. Create migration file locally
+supabase migration new <descriptive_name>
+
+# 2. Edit the migration file in apps/supabase/migrations/
+
+# 3. Test locally
+supabase db reset
+
+# 4. Deploy to remote (link to correct project first)
+supabase link --project-ref <project_ref>
+supabase db push
+```
+
+**MCP tools ARE appropriate for:**
+- Reading data (`execute_sql` for SELECT queries)
+- Exploring schema (`list_tables`, `list_migrations`)
+- Deploying edge functions (`deploy_edge_function`)
+- Generating types (`generate_typescript_types`)
 
 ## Architecture
 
@@ -179,3 +210,87 @@ backgroundColor: 'rgba(18, 18, 18, 0.85)',
 The `BlurView` in `tabBarBackground` is unreliable and can fail during re-renders/transitions, causing a fully transparent tab bar. The solid rgba background acts as a fallback while still allowing the blur effect on top.
 
 **Location:** `apps/mobile/app/(app)/_layout.tsx` - `tabBarStyle`
+
+## Infrastructure as Code (Terraform)
+
+Supabase project configuration is managed via Terraform in the `terraform/` directory. This includes auth settings, OAuth providers, email templates, SMTP config, rate limits, and more.
+
+**Directory structure:**
+```
+terraform/
+├── modules/
+│   └── supabase/           # Shared configuration module
+│       ├── main.tf
+│       ├── variables.tf
+│       ├── outputs.tf
+│       └── templates/      # Email templates
+└── environments/
+    ├── prod/               # Production (ckjcrkjpmhqhiucifukx)
+    └── non-prod/           # Non-production (itbzhrvlgvdmzbnhzhyx)
+```
+
+**When to update Terraform:**
+- Changing auth settings (OAuth providers, JWT expiry, MFA settings)
+- Modifying email templates or subjects
+- Updating rate limits or security settings
+- Changing SMTP configuration
+- Modifying storage or API settings
+
+**Workflow (always test in non-prod first):**
+```bash
+# 1. Apply to non-prod first
+cd terraform/environments/non-prod
+export TF_VAR_supabase_access_token=sbp_xxxxx
+terraform plan
+terraform apply
+
+# 2. Verify changes work in non-prod
+
+# 3. Apply to prod
+cd terraform/environments/prod
+terraform plan
+terraform apply
+```
+
+**Important:** After making Terraform changes, remind the user to:
+1. Commit the updated `terraform/` files
+2. The GitHub Action will auto-apply on merge to master (non-prod first, then prod)
+
+**Do NOT use Terraform for:**
+- Database schema changes (use migrations)
+- Edge function deployment (use CLI or MCP)
+- Storage bucket creation (use migrations)
+
+## Edge Function Secrets
+
+Edge functions use secrets stored in Supabase. These are synced from GitHub Secrets during CI/CD deployment.
+
+**Current secrets:**
+| Secret | Used By | Description |
+|--------|---------|-------------|
+| `REVENUECAT_WEBHOOK_SECRET` | revenuecat-webhook | Webhook signature validation |
+| `REVENUECAT_API_KEY` | sync-subscription | RevenueCat API access |
+| `REVENUECAT_ENTITLEMENT_ID` | sync-subscription | Entitlement identifier |
+| `OPENROUTER_API_KEY` | classify-message | AI classification API |
+| `ADMIN_PRIVATE_KEY_JWK` | admin-decrypt-* | E2EE admin decryption |
+| `ADMIN_KEYS_JSON` | admin-decrypt-*, migrate-e2ee | Multiple admin keys |
+| `DISCORD_WEBHOOK_URL` | send-discord-notification | Discord notifications |
+
+**Auto-provided by Supabase (don't set):**
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+**When adding a new edge function that needs secrets:**
+1. Add the secret to the edge function code: `Deno.env.get("SECRET_NAME")`
+2. Update `.github/workflows/deploy-supabase.yml` to include the new secret in the sync step
+3. Update `apps/supabase/functions/.secrets.example` with the new secret
+4. **Remind the user** to add the secret to GitHub Secrets (Settings → Secrets → Actions)
+5. Update this table in CLAUDE.md
+
+**Local development:**
+```bash
+cp apps/supabase/functions/.secrets.example apps/supabase/functions/.secrets
+# Fill in values
+supabase functions serve --env-file apps/supabase/functions/.secrets
+```

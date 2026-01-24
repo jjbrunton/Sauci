@@ -11,7 +11,6 @@ CREATE TABLE redemption_codes (
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- Code redemptions table
 CREATE TABLE code_redemptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -20,10 +19,8 @@ CREATE TABLE code_redemptions (
   redeemed_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(code_id, user_id)
 );
-
 ALTER TABLE redemption_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE code_redemptions ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Admins with manage_codes permission can view redemption codes"
   ON redemption_codes FOR SELECT
   USING (has_permission('manage_codes'::text));
@@ -46,7 +43,6 @@ CREATE POLICY "Super admins can manage redemption codes"
         AND admin_users.role = 'super_admin'::admin_role
     )
   );
-
 CREATE POLICY "Users can view own redemptions"
   ON code_redemptions FOR SELECT
   USING (auth.uid() = user_id);
@@ -60,7 +56,6 @@ CREATE POLICY "Super admins can view all redemptions"
         AND admin_users.role = 'super_admin'::admin_role
     )
   );
-
 CREATE OR REPLACE FUNCTION public.redeem_code_by_email(p_email text, p_code text)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -133,6 +128,5 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'message', 'Code redeemed successfully! You now have premium access.');
 END;
 $function$;
-
 GRANT EXECUTE ON FUNCTION public.redeem_code_by_email(text, text) TO PUBLIC;
 GRANT EXECUTE ON FUNCTION public.redeem_code_by_email(text, text) TO anon, authenticated, service_role;

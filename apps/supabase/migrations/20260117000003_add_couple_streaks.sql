@@ -14,24 +14,19 @@ CREATE TABLE couple_streaks (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
-
 -- Enable RLS
 ALTER TABLE couple_streaks ENABLE ROW LEVEL SECURITY;
-
 -- RLS policies
 CREATE POLICY "Users can view their couple's streaks"
     ON couple_streaks FOR SELECT
     USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Super admins can view all streaks"
     ON couple_streaks FOR SELECT
     USING (is_super_admin());
-
 -- Updated_at trigger
 CREATE TRIGGER update_couple_streaks_updated_at
     BEFORE UPDATE ON couple_streaks
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- Function to update streak when a response is submitted
 CREATE OR REPLACE FUNCTION update_couple_streak()
 RETURNS TRIGGER
@@ -151,13 +146,11 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 -- Create trigger on responses table
 CREATE TRIGGER on_response_update_streak
     AFTER INSERT OR UPDATE OF answer ON responses
     FOR EACH ROW
     EXECUTE FUNCTION update_couple_streak();
-
 -- Function to reset daily flags (called by cron at UTC midnight)
 CREATE OR REPLACE FUNCTION reset_daily_streak_flags()
 RETURNS void
@@ -173,7 +166,6 @@ BEGIN
     WHERE last_active_date < CURRENT_DATE;
 END;
 $$;
-
 -- Schedule cron job for daily flag reset (runs at 00:00 UTC)
 SELECT cron.schedule(
     'reset-daily-streak-flags',
@@ -182,7 +174,6 @@ SELECT cron.schedule(
     SELECT reset_daily_streak_flags();
     $$
 );
-
 -- Schedule cron job for checking streak milestones (runs at 00:05 UTC)
 SELECT cron.schedule(
     'check-streak-milestones',

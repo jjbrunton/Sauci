@@ -202,6 +202,18 @@ export function ProfileScreen() {
                 {__DEV__ && (
                     <SettingsSection title="Debug" delay={400}>
                         <MenuItem
+                            icon="server-outline"
+                            label="Supabase Environment"
+                            rightText={
+                                process.env.EXPO_PUBLIC_SUPABASE_URL?.includes('ckjcrkjpmhqhiucifukx')
+                                    ? 'Production'
+                                    : 'Non-Production'
+                            }
+                            onPress={() => {}}
+                            showChevron={false}
+                        />
+                        <View style={styles.divider} />
+                        <MenuItem
                             icon="refresh-outline"
                             label="Reset Swipe Tutorial"
                             description="Show the tutorial again"

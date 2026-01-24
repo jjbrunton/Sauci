@@ -3,7 +3,6 @@
 
 -- Add last_active_at to profiles for "is user in app" check
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ;
-
 -- Create pending activity notifications table
 CREATE TABLE pending_activity_notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,28 +14,22 @@ CREATE TABLE pending_activity_notifications (
     updated_at TIMESTAMPTZ DEFAULT now(),
     UNIQUE(couple_id)  -- Only one pending notification per couple (enables UPSERT for timer reset)
 );
-
 -- Index for efficient cron queries
 CREATE INDEX idx_pending_activity_notifications_notify_at
     ON pending_activity_notifications(notify_at);
-
 -- Enable RLS
 ALTER TABLE pending_activity_notifications ENABLE ROW LEVEL SECURITY;
-
 -- RLS policies
 CREATE POLICY "Users can view their couple's pending activity notifications"
     ON pending_activity_notifications FOR SELECT
     USING (couple_id = get_auth_user_couple_id());
-
 CREATE POLICY "Super admins can view all pending activity notifications"
     ON pending_activity_notifications FOR SELECT
     USING (is_super_admin());
-
 -- Updated_at trigger
 CREATE TRIGGER update_pending_activity_notifications_updated_at
     BEFORE UPDATE ON pending_activity_notifications
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- Function to queue partner activity notifications
 -- Called via trigger when a response is inserted or updated
 CREATE OR REPLACE FUNCTION queue_partner_activity_notification()
@@ -89,13 +82,11 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
 -- Create trigger on responses table
 CREATE TRIGGER on_response_submitted
     AFTER INSERT OR UPDATE OF answer ON responses
     FOR EACH ROW
     EXECUTE FUNCTION queue_partner_activity_notification();
-
 -- Schedule cron job (runs every 5 minutes)
 SELECT cron.schedule(
     'send-partner-activity-notifications',

@@ -1,0 +1,149 @@
+name: Deploy Supabase to Production
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'apps/supabase/**'
+      - 'terraform/**'
+
+jobs:
+  deploy-database:
+    name: Deploy Migrations & Functions
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ckjcrkjpmhqhiucifukx
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to Production Project
+        run: supabase link --project-ref $SUPABASE_PROJECT_REF
+
+      - name: Apply Database Migrations
+        run: supabase db push
+        working-directory: apps/supabase
+
+      - name: Sync Edge Function Secrets
+        env:
+          # Add secrets from GitHub Secrets
+          REVENUECAT_WEBHOOK_SECRET: ${{ secrets.REVENUECAT_WEBHOOK_SECRET }}
+          REVENUECAT_API_KEY: ${{ secrets.REVENUECAT_API_KEY }}
+          REVENUECAT_ENTITLEMENT_ID: ${{ secrets.REVENUECAT_ENTITLEMENT_ID }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ADMIN_PRIVATE_KEY_JWK: ${{ secrets.ADMIN_PRIVATE_KEY_JWK }}
+          ADMIN_KEYS_JSON: ${{ secrets.ADMIN_KEYS_JSON }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # Sync secrets to Supabase (only if they're set in GitHub)
+          secrets_to_set=""
+
+          [ -n "$REVENUECAT_WEBHOOK_SECRET" ] && secrets_to_set="$secrets_to_set REVENUECAT_WEBHOOK_SECRET=$REVENUECAT_WEBHOOK_SECRET"
+          [ -n "$REVENUECAT_API_KEY" ] && secrets_to_set="$secrets_to_set REVENUECAT_API_KEY=$REVENUECAT_API_KEY"
+          [ -n "$REVENUECAT_ENTITLEMENT_ID" ] && secrets_to_set="$secrets_to_set REVENUECAT_ENTITLEMENT_ID=$REVENUECAT_ENTITLEMENT_ID"
+          [ -n "$OPENROUTER_API_KEY" ] && secrets_to_set="$secrets_to_set OPENROUTER_API_KEY=$OPENROUTER_API_KEY"
+          [ -n "$ADMIN_PRIVATE_KEY_JWK" ] && secrets_to_set="$secrets_to_set ADMIN_PRIVATE_KEY_JWK=$ADMIN_PRIVATE_KEY_JWK"
+          [ -n "$ADMIN_KEYS_JSON" ] && secrets_to_set="$secrets_to_set ADMIN_KEYS_JSON=$ADMIN_KEYS_JSON"
+          [ -n "$DISCORD_WEBHOOK_URL" ] && secrets_to_set="$secrets_to_set DISCORD_WEBHOOK_URL=$DISCORD_WEBHOOK_URL"
+
+          if [ -n "$secrets_to_set" ]; then
+            echo "Syncing secrets to Supabase..."
+            supabase secrets set $secrets_to_set --project-ref $SUPABASE_PROJECT_REF
+          else
+            echo "No secrets to sync"
+          fi
+
+      - name: Deploy Edge Functions
+        run: |
+          # Deploy all edge functions (excluding _shared directory)
+          for dir in apps/supabase/functions/*/; do
+            function_name=$(basename "$dir")
+
+            # Skip _shared directory (it's a shared module, not a function)
+            if [ "$function_name" = "_shared" ]; then
+              echo "Skipping _shared (shared module)"
+              continue
+            fi
+
+            echo "Deploying function: $function_name"
+            supabase functions deploy "$function_name" --no-verify-jwt
+          done
+
+      - name: Remove Deleted Functions
+        run: |
+          # Get list of functions deployed on Supabase
+          deployed=$(supabase functions list --project-ref $SUPABASE_PROJECT_REF | tail -n +2 | awk '{print $1}')
+
+          # Get list of functions in the repo (excluding _shared)
+          local_functions=$(ls -d apps/supabase/functions/*/ 2>/dev/null | xargs -I {} basename {} | grep -v '^_shared$' || true)
+
+          # Delete any deployed functions that no longer exist in the repo
+          for func in $deployed; do
+            if ! echo "$local_functions" | grep -q "^${func}$"; then
+              echo "Deleting removed function: $func"
+              supabase functions delete "$func" --project-ref $SUPABASE_PROJECT_REF
+            fi
+          done
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure (Terraform)
+    runs-on: ubuntu-latest
+
+    env:
+      TF_VAR_supabase_access_token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.6"
+
+      # Non-Production Environment
+      - name: Terraform Init (Non-Prod)
+        working-directory: terraform/environments/non-prod
+        run: terraform init
+
+      - name: Terraform Format Check
+        working-directory: terraform/modules/supabase
+        run: terraform fmt -check
+
+      - name: Terraform Validate (Non-Prod)
+        working-directory: terraform/environments/non-prod
+        run: terraform validate
+
+      - name: Terraform Plan (Non-Prod)
+        working-directory: terraform/environments/non-prod
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply (Non-Prod)
+        working-directory: terraform/environments/non-prod
+        run: terraform apply -auto-approve tfplan
+
+      # Production Environment
+      - name: Terraform Init (Prod)
+        working-directory: terraform/environments/prod
+        run: terraform init
+
+      - name: Terraform Validate (Prod)
+        working-directory: terraform/environments/prod
+        run: terraform validate
+
+      - name: Terraform Plan (Prod)
+        working-directory: terraform/environments/prod
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply (Prod)
+        working-directory: terraform/environments/prod
+        run: terraform apply -auto-approve tfplan
