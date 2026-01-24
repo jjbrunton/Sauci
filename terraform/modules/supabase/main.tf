@@ -3,18 +3,9 @@
 # This module manages Supabase project settings including API, Auth, Network, and Storage.
 # Environment-specific settings (SMTP, rate limits) are controlled via input variables.
 
-resource "supabase_settings" "main" {
-  project_ref = var.project_ref
-
-  # API Settings
-  api = jsonencode({
-    db_schema            = "public,graphql_public"
-    db_extra_search_path = "public, extensions"
-    max_rows             = 1000
-  })
-
-  # Auth Settings
-  auth = jsonencode({
+# Base auth settings (shared across all environments)
+locals {
+  auth_base = {
     # Site URL and redirects
     site_url       = "https://sauci.app"
     uri_allow_list = "app.sauci://**,app.sauci://(auth)/login"
@@ -93,9 +84,8 @@ resource "supabase_settings" "main" {
     password_min_length   = 6
     password_hibp_enabled = false
 
-    # Rate limits (rate_limit_email_sent requires custom SMTP in production)
+    # Rate limits (NOT including rate_limit_email_sent - requires custom SMTP)
     rate_limit_anonymous_users = 30
-    rate_limit_email_sent      = var.is_production ? 25 : 3
     rate_limit_otp             = 30
     rate_limit_sms_sent        = 30
     rate_limit_token_refresh   = 150
@@ -207,14 +197,6 @@ resource "supabase_settings" "main" {
     sms_provider      = "twilio"
     sms_template      = "Your code is {{ .Code }}"
 
-    # SMTP settings (only for production - requires custom SMTP configured)
-    smtp_admin_email   = var.is_production ? "team@send.sauci.app" : null
-    smtp_host          = var.is_production ? "smtp.resend.com" : null
-    smtp_max_frequency = var.is_production ? 1 : null
-    smtp_port          = var.is_production ? "465" : null
-    smtp_sender_name   = var.is_production ? "Sauci App" : null
-    smtp_user          = var.is_production ? "resend" : null
-
     # Hook settings (only include hooks available on current plan)
     hook_after_user_created_enabled  = false
     hook_before_user_created_enabled = false
@@ -223,7 +205,35 @@ resource "supabase_settings" "main" {
     hook_send_sms_enabled            = false
     # Note: hook_mfa_verification_attempt and hook_password_verification_attempt
     # require Team plan or higher - omitted to avoid 402 errors
+  }
+
+  # Production-only SMTP settings (completely omitted for non-prod)
+  auth_smtp = var.is_production ? {
+    smtp_admin_email      = "team@send.sauci.app"
+    smtp_host             = "smtp.resend.com"
+    smtp_max_frequency    = 1
+    smtp_port             = "465"
+    smtp_sender_name      = "Sauci App"
+    smtp_user             = "resend"
+    rate_limit_email_sent = 25
+  } : {}
+
+  # Final merged auth config
+  auth_config = merge(local.auth_base, local.auth_smtp)
+}
+
+resource "supabase_settings" "main" {
+  project_ref = var.project_ref
+
+  # API Settings
+  api = jsonencode({
+    db_schema            = "public,graphql_public"
+    db_extra_search_path = "public, extensions"
+    max_rows             = 1000
   })
+
+  # Auth Settings (merged from base + production SMTP if applicable)
+  auth = jsonencode(local.auth_config)
 
   # Database Settings (empty - managed via migrations)
   database = jsonencode({})
