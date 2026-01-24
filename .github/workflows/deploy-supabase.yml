@@ -78,7 +78,7 @@ jobs:
             fi
 
             echo "Deploying function: $function_name"
-            supabase functions deploy "$function_name" --no-verify-jwt
+            supabase functions deploy "$function_name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_REF
           done
 
       - name: Remove Deleted Functions
