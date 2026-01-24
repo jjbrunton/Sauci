@@ -29,12 +29,10 @@ jobs:
           version: latest
 
       - name: Link to Production Project
-        run: supabase link --project-ref $SUPABASE_PROJECT_REF
-        working-directory: apps/supabase
+        run: supabase link --project-ref $SUPABASE_PROJECT_REF --workdir apps
 
       - name: Apply Database Migrations
-        run: supabase db push
-        working-directory: apps/supabase
+        run: supabase db push --workdir apps
 
       - name: Sync Edge Function Secrets
         env:
@@ -66,10 +64,9 @@ jobs:
           fi
 
       - name: Deploy Edge Functions
-        working-directory: apps/supabase
         run: |
           # Deploy all edge functions (excluding _shared directory)
-          for dir in functions/*/; do
+          for dir in apps/supabase/functions/*/; do
             function_name=$(basename "$dir")
 
             # Skip _shared directory (it's a shared module, not a function)
@@ -79,7 +76,7 @@ jobs:
             fi
 
             echo "Deploying function: $function_name"
-            supabase functions deploy "$function_name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_REF
+            supabase functions deploy "$function_name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_REF --workdir apps
           done
 
       - name: Remove Deleted Functions
