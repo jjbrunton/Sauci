@@ -66,9 +66,10 @@ jobs:
           fi
 
       - name: Deploy Edge Functions
+        working-directory: apps/supabase
         run: |
           # Deploy all edge functions (excluding _shared directory)
-          for dir in apps/supabase/functions/*/; do
+          for dir in functions/*/; do
             function_name=$(basename "$dir")
 
             # Skip _shared directory (it's a shared module, not a function)
