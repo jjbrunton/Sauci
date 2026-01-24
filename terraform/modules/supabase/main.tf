@@ -207,19 +207,23 @@ locals {
     # require Team plan or higher - omitted to avoid 402 errors
   }
 
-  # Production-only SMTP settings (completely omitted for non-prod)
-  auth_smtp = var.is_production ? {
-    smtp_admin_email      = "team@send.sauci.app"
-    smtp_host             = "smtp.resend.com"
+  # Production-only SMTP string settings (completely omitted for non-prod)
+  auth_smtp_strings = var.is_production ? {
+    smtp_admin_email = "team@send.sauci.app"
+    smtp_host        = "smtp.resend.com"
+    smtp_port        = "465"
+    smtp_sender_name = "Sauci App"
+    smtp_user        = "resend"
+  } : {}
+
+  # Production-only numeric settings (separate to preserve int type)
+  auth_smtp_numbers = var.is_production ? {
     smtp_max_frequency    = 1
-    smtp_port             = "465"
-    smtp_sender_name      = "Sauci App"
-    smtp_user             = "resend"
     rate_limit_email_sent = 25
   } : {}
 
   # Final merged auth config
-  auth_config = merge(local.auth_base, local.auth_smtp)
+  auth_config = merge(local.auth_base, local.auth_smtp_strings, local.auth_smtp_numbers)
 }
 
 resource "supabase_settings" "main" {
