@@ -13,6 +13,7 @@ export interface Profile {
     gender: Gender | null;
     show_explicit_content: boolean;
     max_intensity: IntensityLevel;
+    hide_nsfw: boolean;
     onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
@@ -33,6 +34,7 @@ export interface Category {
     name: string;
     description: string | null;
     icon: string | null;
+    color: string | null;
     sort_order: number;
     created_at: string;
     is_public: boolean;

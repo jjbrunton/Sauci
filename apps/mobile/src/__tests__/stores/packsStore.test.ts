@@ -17,23 +17,31 @@ function createThenableQuery(result: any) {
 describe('packsStore', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        usePacksStore.setState({ packs: [], categories: [], enabledPackIds: [], isLoading: false } as any);
-        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', max_intensity: 2, show_explicit_content: false } } as any);
+        usePacksStore.setState({ packs: [], categories: [], enabledPackIds: [], packProgress: new Map(), isLoading: false } as any);
+        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: false } } as any);
     });
 
-    it('fetches categories/packs and filters by max intensity', async () => {
+    it('fetches categories/packs and filters by hide_nsfw', async () => {
+        // Set hide_nsfw to true - should filter intensity to max 2
+        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: true } } as any);
+
         const categoriesQuery = createThenableQuery({ data: [{ id: 'cat1' }] });
         const packsQuery = createThenableQuery({ data: [{ id: 'pack1', is_explicit: false }] });
         const enabledQuery = createThenableQuery({ data: [{ pack_id: 'pack1' }] });
+        const responsesQuery = createThenableQuery({ data: [] });
 
         (supabase.from as jest.Mock)
             .mockReturnValueOnce(categoriesQuery)
             .mockReturnValueOnce(packsQuery)
-            .mockReturnValueOnce(enabledQuery);
+            .mockReturnValueOnce(enabledQuery)
+            .mockReturnValueOnce(responsesQuery);
 
         await usePacksStore.getState().fetchPacks();
 
+        // When hide_nsfw=true, max_intensity=2, so or filter is called
         expect(packsQuery.or).toHaveBeenCalledWith('max_intensity.is.null,max_intensity.lte.2');
+        // When hide_nsfw=true, explicit packs are filtered out
+        expect(packsQuery.eq).toHaveBeenCalledWith('is_explicit', false);
 
         const state = usePacksStore.getState();
         expect(state.categories).toEqual([{ id: 'cat1' }]);

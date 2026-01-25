@@ -94,6 +94,64 @@ export const gradients = {
 
 // Feature-specific color mapping
 // Each feature has a consistent accent color for icons, buttons, and highlights
+// Tile colors for discovery screen - vibrant solid colors
+export const tileColors = {
+  teal: '#14B8A6',
+  purple: '#8B5CF6',
+  orange: '#F97316',
+  coral: '#F87171',
+  emerald: '#10B981',
+  indigo: '#6366F1',
+  rose: '#EC4899',
+  amber: '#F59E0B',
+};
+
+// Map categories to tile colors
+export const categoryColorMap: Record<string, string> = {
+  // Common category names (lowercase for matching)
+  passion: tileColors.coral,
+  connection: tileColors.teal,
+  fantasy: tileColors.purple,
+  adventure: tileColors.orange,
+  starter: tileColors.emerald,
+  romance: tileColors.rose,
+  intimacy: tileColors.indigo,
+  communication: tileColors.amber,
+};
+
+// Get color for a category (with fallback)
+// Accepts either a Category object or just the category name for backwards compatibility
+export const getCategoryColor = (
+  category?: { name?: string | null; color?: string | null } | string | null
+): string => {
+  // Handle string input (backwards compatibility)
+  if (typeof category === 'string') {
+    return getCategoryColorFromName(category);
+  }
+
+  // If category has an explicit color set, use it
+  if (category?.color) {
+    return category.color;
+  }
+
+  // Fall back to name-based logic
+  return getCategoryColorFromName(category?.name);
+};
+
+// Internal helper: derive color from category name
+const getCategoryColorFromName = (categoryName?: string | null): string => {
+  if (!categoryName) return tileColors.teal;
+  const normalizedName = categoryName.toLowerCase();
+  // Check for partial matches
+  for (const [key, color] of Object.entries(categoryColorMap)) {
+    if (normalizedName.includes(key)) return color;
+  }
+  // Fallback: use consistent color based on string hash
+  const hash = normalizedName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colorKeys = Object.keys(tileColors) as (keyof typeof tileColors)[];
+  return tileColors[colorKeys[hash % colorKeys.length]];
+};
+
 export const featureColors = {
   swipe: {
     accent: colors.primary,
@@ -288,6 +346,9 @@ export const theme = {
   colors,
   gradients,
   featureColors,
+  tileColors,
+  categoryColorMap,
+  getCategoryColor,
   spacing,
   radius,
   typography,

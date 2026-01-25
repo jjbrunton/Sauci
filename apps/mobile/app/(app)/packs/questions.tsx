@@ -496,6 +496,7 @@ export default function QuestionPacksScreen() {
                                     name: "Other",
                                     description: null,
                                     icon: "📁",
+                                    color: null,
                                     sort_order: 999,
                                     created_at: "",
                                     is_public: true

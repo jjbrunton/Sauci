@@ -10,6 +10,8 @@ export interface Profile {
     updated_at: string;
     /** RSA public key in JWK format for E2EE */
     public_key_jwk?: Record<string, unknown> | null;
+    /** When true, packs marked as is_explicit will be hidden */
+    hide_nsfw?: boolean;
 }
 
 // Couple pairing

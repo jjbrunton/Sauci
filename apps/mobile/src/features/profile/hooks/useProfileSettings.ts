@@ -4,7 +4,6 @@ import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../stor
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
 import { useAvatarPicker } from '../../../hooks/useAvatarPicker';
-import type { IntensityLevel } from '../../../types';
 import {
     registerForPushNotificationsAsync,
     savePushToken,
@@ -17,26 +16,16 @@ import {
     getBiometricType,
 } from '../../../lib/biometricAuth';
 
-const DEFAULT_MAX_INTENSITY: IntensityLevel = 2;
-
-const normalizeIntensity = (value: number | null | undefined): IntensityLevel | null => {
-    if (value === 1 || value === 2 || value === 3 || value === 4 || value === 5) return value;
-    return null;
-};
-
-const getProfileMaxIntensity = (profile?: { max_intensity?: number | null; show_explicit_content?: boolean | null } | null): IntensityLevel => {
-    const normalized = normalizeIntensity(profile?.max_intensity);
-    if (normalized) return normalized;
-    return profile?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
-};
+// Intensity thresholds for backwards compatibility
+// When hide_nsfw=true, max_intensity=2 (mild content only)
+// When hide_nsfw=false, max_intensity=5 (all content)
+const NSFW_OFF_INTENSITY = 2;
+const NSFW_ON_INTENSITY = 5;
 
 export function useProfileSettings() {
-    const { user, partner, fetchUser } = useAuthStore();
+    const { user, fetchUser } = useAuthStore();
     const { fetchPacks } = usePacksStore();
     const { restorePurchases, isPurchasing } = useSubscriptionStore();
-
-    // Partner's intensity level (for showing on slider)
-    const partnerIntensity = partner ? getProfileMaxIntensity(partner) : null;
 
     // Name Editing
     const [isEditingName, setIsEditingName] = useState(false);
@@ -80,9 +69,9 @@ export function useProfileSettings() {
         onUploadError: handleAvatarUploadError,
     });
 
-    // Preferences
-    const [maxIntensity, setMaxIntensity] = useState<IntensityLevel>(() => getProfileMaxIntensity(user));
-    const [isUpdatingIntensity, setIsUpdatingIntensity] = useState(false);
+    // Hide NSFW
+    const [hideNsfw, setHideNsfw] = useState(!!user?.hide_nsfw);
+    const [isUpdatingHideNsfw, setIsUpdatingHideNsfw] = useState(false);
 
     // Notifications
     const [pushEnabled, setPushEnabled] = useState(!!user?.push_token);
@@ -102,8 +91,8 @@ export function useProfileSettings() {
         if (user?.name) {
             setNewName(user.name);
         }
-        setMaxIntensity(getProfileMaxIntensity(user));
         setPushEnabled(!!user?.push_token);
+        setHideNsfw(!!user?.hide_nsfw);
     }, [user]);
 
     // Check biometric availability
@@ -167,41 +156,6 @@ export function useProfileSettings() {
         setNewName(user?.name || "");
         setIsEditingName(false);
     }, [user?.name]);
-
-    // Preference Actions
-    const handleIntensityChange = async (value: IntensityLevel) => {
-        if (!user?.id) return;
-
-        const previous = maxIntensity;
-        setMaxIntensity(value);
-        setIsUpdatingIntensity(true);
-
-        const showExplicitContent = value >= 3;
-
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    max_intensity: value,
-                    show_explicit_content: showExplicitContent,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (error) throw error;
-
-            // Refresh user data and packs to reflect the change
-            await fetchUser();
-            await fetchPacks();
-            Events.profileUpdated(["max_intensity", "show_explicit_content"]);
-        } catch (error) {
-            // Revert on error
-            setMaxIntensity(previous);
-            Alert.alert("Error", "Failed to update preference. Please try again.");
-        } finally {
-            setIsUpdatingIntensity(false);
-        }
-    };
 
     const handlePushToggle = async (value: boolean) => {
         if (!user?.id) return;
@@ -275,6 +229,43 @@ export function useProfileSettings() {
         }
     };
 
+    const handleHideNsfwToggle = async (value: boolean) => {
+        if (!user?.id) return;
+
+        const previous = hideNsfw;
+        setHideNsfw(value);
+        setIsUpdatingHideNsfw(true);
+
+        // Derive intensity from hide_nsfw for backwards compatibility
+        const maxIntensity = value ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
+        const showExplicitContent = !value;
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    hide_nsfw: value,
+                    max_intensity: maxIntensity,
+                    show_explicit_content: showExplicitContent,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            // Refresh user data and packs to reflect the change
+            await fetchUser();
+            await fetchPacks();
+            Events.profileUpdated(["hide_nsfw", "max_intensity", "show_explicit_content"]);
+        } catch (error) {
+            // Revert on error
+            setHideNsfw(previous);
+            Alert.alert("Error", "Failed to update preference. Please try again.");
+        } finally {
+            setIsUpdatingHideNsfw(false);
+        }
+    };
+
     // Subscription Actions
     const handleRestorePurchases = async () => {
         const restored = await restorePurchases();
@@ -297,30 +288,25 @@ export function useProfileSettings() {
         setNewName,
         isUpdatingName,
         isUploadingAvatar,
-        maxIntensity,
-        isUpdatingIntensity,
         pushEnabled,
         isUpdatingPush,
         biometricAvailable,
         biometricEnabled: biometricEnabledState,
         biometricType,
         isUpdatingBiometric,
+        hideNsfw,
+        isUpdatingHideNsfw,
         showPaywall,
         setShowPaywall,
         isPurchasing,
-
-        // Partner info for comfort zone comparison
-        partnerIntensity,
-        partnerName: partner?.name ?? undefined,
-        partnerAvatar: partner?.avatar_url ?? undefined,
 
         // Actions
         handleUpdateName,
         handleCancelEditName,
         handleAvatarPress,
-        handleIntensityChange,
         handlePushToggle,
         handleBiometricToggle,
+        handleHideNsfwToggle,
         handleRestorePurchases,
         handleManageSubscription,
     };

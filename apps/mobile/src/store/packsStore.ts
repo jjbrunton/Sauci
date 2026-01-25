@@ -4,50 +4,54 @@ import { Events } from "../lib/analytics";
 import type { QuestionPack, Category } from "@/types";
 import { useAuthStore } from "./authStore";
 
-const DEFAULT_MAX_INTENSITY = 2;
+// Intensity thresholds derived from hide_nsfw for backwards compatibility
+// When hide_nsfw=true, max_intensity=2 (mild content only)
+// When hide_nsfw=false, max_intensity=5 (all content)
+const NSFW_OFF_INTENSITY = 2;
+const NSFW_ON_INTENSITY = 5;
 
-const normalizeIntensity = (value?: number | null) => {
-    if (typeof value !== "number" || Number.isNaN(value)) return null;
-    const rounded = Math.round(value);
-    if (rounded < 1 || rounded > 5) return null;
-    return rounded;
+const getMaxIntensityFromHideNsfw = (hideNsfw: boolean) => {
+    return hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
 };
 
-const getUserMaxIntensity = () => {
-    const user = useAuthStore.getState().user;
-    const normalized = normalizeIntensity(user?.max_intensity ?? null);
-    if (normalized) return normalized;
-    return user?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
-};
+// Progress data for a pack
+export interface PackProgressData {
+    totalQuestions: number;
+    answeredQuestions: number;
+}
 
 interface PacksState {
     packs: QuestionPack[];
     categories: Category[];
     enabledPackIds: string[];
+    packProgress: Map<string, PackProgressData>;
     isLoading: boolean;
     showAllIntensities: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
+    fetchPackProgress: () => Promise<void>;
     ensureEnabledPacksLoaded: () => Promise<void>;
     togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
     setShowAllIntensities: (value: boolean) => void;
     clearPacks: () => void;
+    getPackProgress: (packId: string) => PackProgressData | undefined;
 }
 
 export const usePacksStore = create<PacksState>((set, get) => ({
     packs: [],
     categories: [],
     enabledPackIds: [],
+    packProgress: new Map(),
     isLoading: false,
     showAllIntensities: false,
 
     fetchPacks: async () => {
         set({ isLoading: true });
 
-        // Get user's max intensity preference
-        const maxIntensity = getUserMaxIntensity();
+        // Get hide_nsfw preference and derive max_intensity from it
+        const hideNsfw = useAuthStore.getState().user?.hide_nsfw ?? false;
+        const maxIntensity = getMaxIntensityFromHideNsfw(hideNsfw);
         const showAllIntensities = get().showAllIntensities;
-
 
         // Fetch categories
         const { data: categories } = await supabase
@@ -71,6 +75,11 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             query = query.or(`max_intensity.is.null,max_intensity.lte.${maxIntensity}`);
         }
 
+        // Filter out explicit packs when user has hide_nsfw enabled
+        if (hideNsfw) {
+            query = query.eq("is_explicit", false);
+        }
+
         const { data: packs } = await query;
 
         const visiblePacks = (packs ?? []).filter(pack => {
@@ -89,6 +98,9 @@ export const usePacksStore = create<PacksState>((set, get) => ({
             categories: visibleCategories,
             isLoading: false
         });
+
+        // Fetch progress after packs are loaded
+        get().fetchPackProgress();
     },
 
     fetchEnabledPacks: async () => {
@@ -165,7 +177,61 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         get().fetchPacks();
     },
 
+    fetchPackProgress: async () => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) {
+            set({ packProgress: new Map() });
+            return;
+        }
+
+        const packs = get().packs;
+        if (packs.length === 0) return;
+
+        // Fetch user's response counts grouped by pack
+        const { data: responseCounts, error } = await supabase
+            .from("responses")
+            .select("question:questions!inner(pack_id)")
+            .eq("user_id", userId);
+
+        if (error) {
+            console.error("Error fetching pack progress:", error);
+            return;
+        }
+
+        // Debug: log response counts
+        console.log("[PackProgress] userId:", userId);
+        console.log("[PackProgress] total responses:", responseCounts?.length ?? 0);
+
+        // Count responses per pack
+        const responsesByPack = new Map<string, number>();
+        responseCounts?.forEach((r) => {
+            const packId = (r.question as any)?.pack_id;
+            if (packId) {
+                responsesByPack.set(packId, (responsesByPack.get(packId) || 0) + 1);
+            }
+        });
+
+        // Debug: log responses by pack
+        if (responsesByPack.size > 0) {
+            console.log("[PackProgress] responses by pack:", Object.fromEntries(responsesByPack));
+        }
+
+        // Build progress map
+        const progressMap = new Map<string, PackProgressData>();
+        packs.forEach((pack) => {
+            const totalQuestions = pack.questions?.[0]?.count ?? 0;
+            const answeredQuestions = responsesByPack.get(pack.id) || 0;
+            progressMap.set(pack.id, { totalQuestions, answeredQuestions });
+        });
+
+        set({ packProgress: progressMap });
+    },
+
+    getPackProgress: (packId: string) => {
+        return get().packProgress.get(packId);
+    },
+
     clearPacks: () => {
-        set({ enabledPackIds: [] });
+        set({ enabledPackIds: [], packProgress: new Map() });
     },
 }));

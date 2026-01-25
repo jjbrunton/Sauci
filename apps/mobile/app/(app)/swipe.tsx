@@ -40,6 +40,10 @@ export default function SwipeScreen() {
     const params = useLocalSearchParams();
     // Normalize packId - useLocalSearchParams can return string | string[]
     const packId = Array.isArray(params.packId) ? params.packId[0] : params.packId;
+    // Mode can be 'pending' to show only questions partner has answered
+    const mode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+    // Start question ID - when user taps a specific pending question, start there
+    const startQuestionId = Array.isArray(params.startQuestionId) ? params.startQuestionId[0] : params.startQuestionId;
     const [questions, setQuestions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -49,10 +53,12 @@ export default function SwipeScreen() {
     const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
     const [dailyLimitInfo, setDailyLimitInfo] = useState<DailyLimitInfo | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
+    const [packContext, setPackContext] = useState<{ name: string; icon: string } | null>(null);
     const { enabledPackIds, ensureEnabledPacksLoaded } = usePacksStore();
     const { partner, couple } = useAuthStore();
     const hasTrackedExhausted = useRef(false);
     const fetchRequestId = useRef(0);
+    const lastFetchedMode = useRef<string | undefined>(undefined);
 
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
@@ -112,16 +118,42 @@ export default function SwipeScreen() {
     const isFirstMount = useRef(true);
 
     useEffect(() => {
-        // Reset state when pack changes
+        // Reset state when pack or mode changes
         setCurrentIndex(0);
         setIsLoading(true);
         setIsBlocked(false);
         setGapInfo(null);
         hasTrackedExhausted.current = false;
+        lastFetchedMode.current = mode;
 
         // Use lightweight ensureEnabledPacksLoaded instead of full fetchPacks
-        ensureEnabledPacksLoaded().then(() => fetchQuestions());
+        ensureEnabledPacksLoaded().then(() => {
+            if (mode === 'pending') {
+                fetchPendingQuestions();
+            } else {
+                fetchQuestions();
+            }
+        });
         checkTutorial();
+    }, [packId, mode]);
+
+    // Fetch pack context when packId is provided
+    useEffect(() => {
+        if (packId) {
+            const fetchPackContext = async () => {
+                const { data } = await supabase
+                    .from('question_packs')
+                    .select('name, icon')
+                    .eq('id', packId)
+                    .single();
+                if (data) {
+                    setPackContext({ name: data.name, icon: data.icon || 'layers' });
+                }
+            };
+            fetchPackContext();
+        } else {
+            setPackContext(null);
+        }
     }, [packId]);
 
     // Refresh questions when screen gains focus (handles partner answering while away)
@@ -132,9 +164,17 @@ export default function SwipeScreen() {
                 isFirstMount.current = false;
                 return;
             }
-            // Silently refetch to get updated partner_answered status
-            fetchQuestions();
-        }, [packId])
+            // Skip if mode just changed (useEffect handles that)
+            if (lastFetchedMode.current !== mode) {
+                return;
+            }
+            // Silently refetch to get updated status
+            if (mode === 'pending') {
+                fetchPendingQuestions();
+            } else {
+                fetchQuestions();
+            }
+        }, [packId, mode])
     );
 
     // Check if user is too far ahead of partner (called when questions empty or after swipe)
@@ -249,8 +289,9 @@ export default function SwipeScreen() {
     };
 
     // Filter out questions from disabled packs immediately when enabledPackIds changes
+    // Skip this filter in pending mode - user should answer ALL questions partner swiped on
     useEffect(() => {
-        if (!packId && enabledPackIds.length > 0 && questions.length > 0) {
+        if (!packId && mode !== 'pending' && enabledPackIds.length > 0 && questions.length > 0) {
             const enabledSet = new Set(enabledPackIds);
             setQuestions(prev => {
                 const filtered = prev.filter(q => enabledSet.has(q.pack_id));
@@ -261,7 +302,7 @@ export default function SwipeScreen() {
                 return filtered;
             });
         }
-    }, [enabledPackIds]);
+    }, [enabledPackIds, mode]);
 
 
     const fetchQuestions = async () => {
@@ -315,6 +356,119 @@ export default function SwipeScreen() {
         }
     };
 
+    // Fetch pending questions (partner answered, user hasn't) for "Your Turn" mode
+    const fetchPendingQuestions = async () => {
+        const currentRequestId = ++fetchRequestId.current;
+        const userId = useAuthStore.getState().user?.id;
+        const coupleId = useAuthStore.getState().user?.couple_id;
+
+        if (!coupleId || !userId) {
+            if (currentRequestId === fetchRequestId.current) {
+                setQuestions([]);
+                setIsLoading(false);
+            }
+            return;
+        }
+
+        try {
+            // Get partner's user_id
+            const { data: coupleProfiles } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("couple_id", coupleId)
+                .neq("id", userId);
+
+            const partnerId = coupleProfiles?.[0]?.id;
+            if (!partnerId) {
+                if (currentRequestId === fetchRequestId.current) {
+                    setQuestions([]);
+                    setIsLoading(false);
+                }
+                return;
+            }
+
+            // Get questions the current user has already answered
+            const { data: userResponses } = await supabase
+                .from("responses")
+                .select("question_id")
+                .eq("user_id", userId)
+                .eq("couple_id", coupleId);
+
+            const answeredQuestionIds = new Set(userResponses?.map(r => r.question_id) ?? []);
+
+            // Get partner's responses (questions they answered that user hasn't)
+            // Order by oldest first so user burns down the backlog
+            const { data: partnerResponses, error } = await supabase
+                .from("responses")
+                .select(`
+                    id,
+                    question_id,
+                    created_at,
+                    question:questions(
+                        *,
+                        pack:question_packs(id, name, icon)
+                    )
+                `)
+                .eq("user_id", partnerId)
+                .eq("couple_id", coupleId)
+                .order("created_at", { ascending: true }); // Oldest first
+
+            if (currentRequestId !== fetchRequestId.current) return;
+
+            if (error) {
+                console.error("Error fetching pending questions:", error);
+                throw error;
+            }
+
+            // Filter to only questions user hasn't answered, excluding deleted questions
+            const pendingQuestions = (partnerResponses ?? [])
+                .filter(r => {
+                    const question = r.question as any;
+                    return !answeredQuestionIds.has(r.question_id) && question && !question.deleted_at;
+                })
+                .map(r => {
+                    const question = r.question as any;
+                    return {
+                        ...question,
+                        pack_id: question.pack?.id,
+                        pack_name: question.pack?.name,
+                        pack_icon: question.pack?.icon,
+                    };
+                });
+
+            if (currentRequestId === fetchRequestId.current) {
+                // If user tapped a specific question, reorder so it's first
+                let orderedQuestions = pendingQuestions;
+                if (startQuestionId && pendingQuestions.length > 0) {
+                    const startIndex = pendingQuestions.findIndex(q => q.id === startQuestionId);
+                    if (startIndex !== -1) {
+                        // Put tapped question first, then the rest in original order
+                        const tappedQuestion = pendingQuestions[startIndex];
+                        const rest = pendingQuestions.filter((_, i) => i !== startIndex);
+                        orderedQuestions = [tappedQuestion, ...rest];
+                    }
+                }
+
+                setQuestions(orderedQuestions);
+                setCurrentIndex(0); // Always start at 0 now since we reordered
+
+                // Don't check gap/daily limits in pending mode - user is just catching up
+                setIsBlocked(false);
+                setGapInfo(null);
+                setDailyLimitInfo(null);
+            }
+        } catch (error) {
+            if (currentRequestId === fetchRequestId.current) {
+                console.error("Failed to fetch pending questions:", error);
+                setQuestions([]);
+            }
+        } finally {
+            if (currentRequestId === fetchRequestId.current) {
+                setIsLoading(false);
+            }
+        }
+    };
+
     const handleSwipe = async (direction: "left" | "right" | "up" | "down") => {
         const question = questions[currentIndex];
 
@@ -342,18 +496,21 @@ export default function SwipeScreen() {
             } else {
                 Events.questionAnswered(answer, question.pack_id);
                 
-                // Increment local daily count if we have limit info
-                if (dailyLimitInfo && dailyLimitInfo.limit_value > 0) {
-                    setDailyLimitInfo(prev => prev ? {
-                        ...prev,
-                        responses_today: prev.responses_today + 1,
-                        remaining: Math.max(0, prev.remaining - 1),
-                        is_blocked: prev.responses_today + 1 >= prev.limit_value
-                    } : null);
-                }
+                // Skip limit checks in pending mode - user is just catching up
+                if (mode !== 'pending') {
+                    // Increment local daily count if we have limit info
+                    if (dailyLimitInfo && dailyLimitInfo.limit_value > 0) {
+                        setDailyLimitInfo(prev => prev ? {
+                            ...prev,
+                            responses_today: prev.responses_today + 1,
+                            remaining: Math.max(0, prev.remaining - 1),
+                            is_blocked: prev.responses_today + 1 >= prev.limit_value
+                        } : null);
+                    }
 
-                // Check both gap and daily limit
-                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
+                    // Check both gap and daily limit
+                    await Promise.all([checkAnswerGap(), checkDailyLimit()]);
+                }
             }
         } catch (error) {
             console.error("Failed to submit response", error);
@@ -682,6 +839,8 @@ export default function SwipeScreen() {
 
     if (currentIndex >= questions.length) {
         const CAUGHT_UP_ACCENT = colors.premium.rose;
+        const isPackMode = !!packId;
+        const isPendingMode = mode === 'pending';
         return (
             <GradientBackground>
                 <View style={styles.centerContainer}>
@@ -695,8 +854,12 @@ export default function SwipeScreen() {
                         </View>
 
                         {/* Title section */}
-                        <Text style={styles.caughtUpLabel}>COMPLETE</Text>
-                        <Text style={styles.waitingTitle}>All Caught Up</Text>
+                        <Text style={styles.caughtUpLabel}>
+                            {isPendingMode ? 'QUEUE COMPLETE' : isPackMode ? 'PACK COMPLETE' : 'COMPLETE'}
+                        </Text>
+                        <Text style={styles.waitingTitle}>
+                            {isPendingMode ? 'All Caught Up!' : isPackMode ? packContext?.name || 'Pack Complete' : 'All Caught Up'}
+                        </Text>
 
                         <DecorativeSeparator variant="rose" />
 
@@ -705,40 +868,88 @@ export default function SwipeScreen() {
                             entering={FadeIn.delay(300).duration(400)}
                             style={styles.waitingBadge}
                         >
-                            <Text style={styles.waitingBadgeText}>YOU'RE AHEAD</Text>
+                            <Text style={styles.waitingBadgeText}>
+                                {isPendingMode ? 'YOUR TURN COMPLETE' : isPackMode ? 'ALL QUESTIONS ANSWERED' : "YOU'RE AHEAD"}
+                            </Text>
                         </Animated.View>
 
                         {/* Description */}
                         <Text style={styles.waitingDescription}>
-                            You've answered all available questions. New questions are added regularly, or explore different packs.
+                            {isPendingMode
+                                ? "You've answered all the questions your partner swiped on. Nice work! Check back later for more."
+                                : isPackMode
+                                ? "You've answered all questions in this pack. Explore other packs to discover more!"
+                                : "You've answered all available questions. New questions are added regularly, or explore different packs."
+                            }
                         </Text>
 
                         {/* Feature hints */}
                         <View style={styles.waitingFeatures}>
-                            <View style={styles.waitingFeatureItem}>
-                                <Ionicons name="sparkles" size={16} color={CAUGHT_UP_ACCENT} />
-                                <Text style={styles.waitingFeatureText}>New questions weekly</Text>
-                            </View>
-                            <View style={styles.waitingFeatureItem}>
-                                <Ionicons name="layers-outline" size={16} color={CAUGHT_UP_ACCENT} />
-                                <Text style={styles.waitingFeatureText}>Try different packs</Text>
-                            </View>
-                            <View style={styles.waitingFeatureItem}>
-                                <Ionicons name="chatbubbles-outline" size={16} color={CAUGHT_UP_ACCENT} />
-                                <Text style={styles.waitingFeatureText}>Chat about your matches</Text>
-                            </View>
+                            {isPendingMode ? (
+                                <>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="heart" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Check your matches</Text>
+                                    </View>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="chatbubbles-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Chat about discoveries</Text>
+                                    </View>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="sparkles" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Keep exploring together</Text>
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="sparkles" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>New questions weekly</Text>
+                                    </View>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="layers-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Try different packs</Text>
+                                    </View>
+                                    <View style={styles.waitingFeatureItem}>
+                                        <Ionicons name="chatbubbles-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Chat about your matches</Text>
+                                    </View>
+                                </>
+                            )}
                         </View>
 
                         {/* Bottom teaser */}
-                        <Text style={styles.waitingTeaser}>More ways to connect are on the way</Text>
+                        <Text style={styles.waitingTeaser}>
+                            {isPendingMode
+                                ? 'Your partner will love that you caught up'
+                                : isPackMode
+                                ? 'Discover more ways to connect'
+                                : 'More ways to connect are on the way'}
+                        </Text>
 
-                        <GlassButton
-                            variant="secondary"
-                            onPress={fetchQuestions}
-                            style={{ marginTop: spacing.lg }}
-                        >
-                            Refresh Questions
-                        </GlassButton>
+                        {isPendingMode ? (
+                            <GlassButton
+                                onPress={() => router.push("/(app)/matches")}
+                                style={{ marginTop: spacing.lg }}
+                            >
+                                View Matches
+                            </GlassButton>
+                        ) : isPackMode ? (
+                            <GlassButton
+                                onPress={() => router.back()}
+                                style={{ marginTop: spacing.lg }}
+                            >
+                                Explore More Packs
+                            </GlassButton>
+                        ) : (
+                            <GlassButton
+                                variant="secondary"
+                                onPress={fetchQuestions}
+                                style={{ marginTop: spacing.lg }}
+                            >
+                                Refresh Questions
+                            </GlassButton>
+                        )}
                     </Animated.View>
                 </View>
             </GradientBackground>
@@ -771,31 +982,43 @@ export default function SwipeScreen() {
                     entering={FadeIn.duration(400)}
                     style={styles.header}
                 >
-                    <View style={styles.progressContainer}>
-                        {/* Premium label */}
-                        <Text style={styles.progressLabel}>EXPLORE</Text>
-                        <Text style={styles.progressText}>
-                            {currentIndex + 1} of {effectiveTotal || questions.length}
-                        </Text>
-                        <View style={[styles.progressBar, styles.progressBarPremium]}>
-                            <Animated.View
-                                style={[
-                                    styles.progressFill,
-                                    styles.progressFillPremium,
-                                    { width: `${((currentIndex + 1) / (effectiveTotal || questions.length || 1)) * 100}%` }
-                                ]}
-                            >
-                                {/* Shimmer sweep */}
-                                <Animated.View style={[styles.progressShimmer, shimmerStyle]}>
-                                    <LinearGradient
-                                        colors={['transparent', 'rgba(212, 175, 55, 0.5)', 'transparent']}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
-                                        style={StyleSheet.absoluteFill}
-                                    />
+                    <View style={styles.headerRow}>
+                        {/* Back button when playing specific pack or pending mode */}
+                        {(packId || mode === 'pending') && (
+                            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                                <Ionicons name="chevron-back" size={24} color={colors.text} />
+                            </TouchableOpacity>
+                        )}
+                        <View style={styles.progressContainer}>
+                            {/* Premium label */}
+                            <Text style={styles.progressLabel}>
+                                {mode === 'pending' ? 'YOUR TURN' : packContext ? packContext.name.toUpperCase() : 'EXPLORE'}
+                            </Text>
+                            <Text style={styles.progressText}>
+                                {currentIndex + 1} of {effectiveTotal || questions.length}
+                            </Text>
+                            <View style={[styles.progressBar, styles.progressBarPremium]}>
+                                <Animated.View
+                                    style={[
+                                        styles.progressFill,
+                                        styles.progressFillPremium,
+                                        { width: `${((currentIndex + 1) / (effectiveTotal || questions.length || 1)) * 100}%` }
+                                    ]}
+                                >
+                                    {/* Shimmer sweep */}
+                                    <Animated.View style={[styles.progressShimmer, shimmerStyle]}>
+                                        <LinearGradient
+                                            colors={['transparent', 'rgba(212, 175, 55, 0.5)', 'transparent']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={StyleSheet.absoluteFill}
+                                        />
+                                    </Animated.View>
                                 </Animated.View>
-                            </Animated.View>
+                            </View>
                         </View>
+                        {/* Spacer to balance header when back button is shown */}
+                        {(packId || mode === 'pending') && <View style={styles.headerSpacer} />}
                     </View>
                 </Animated.View>
 
@@ -903,6 +1126,18 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.md,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    backButton: {
+        padding: spacing.sm,
+        marginRight: spacing.sm,
+    },
+    headerSpacer: {
+        width: 40, // Match back button width for centering
     },
     progressContainer: {
         alignItems: "center",

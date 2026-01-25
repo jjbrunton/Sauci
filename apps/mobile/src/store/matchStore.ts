@@ -1,9 +1,18 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
-import type { Match } from "@/types";
+import type { Match, Question, QuestionPack, AnswerType } from "@/types";
 import { useAuthStore } from "./authStore";
 
 const BATCH_SIZE = 20;
+
+// Question waiting for user's response (partner has answered)
+export interface PendingQuestion {
+    id: string; // Partner's response ID
+    question: Question & { pack?: Pick<QuestionPack, "id" | "name" | "icon"> };
+    partnerAnsweredAt: string;
+}
+
+type MatchViewType = 'active' | 'archived' | 'pending';
 
 interface MatchState {
     matches: Match[];
@@ -19,6 +28,10 @@ interface MatchState {
     archivedMatchIds: Set<string>;
     showArchived: boolean;
     isLoadingArchived: boolean;
+    // Pending (Your Turn) state
+    pendingQuestions: PendingQuestion[];
+    isLoadingPending: boolean;
+    currentView: MatchViewType;
     // Methods
     fetchMatches: (refresh?: boolean) => Promise<void>;
     markAsSeen: (matchId: string) => Promise<void>;
@@ -32,6 +45,9 @@ interface MatchState {
     fetchArchivedMatches: () => Promise<void>;
     toggleShowArchived: () => void;
     isMatchArchived: (matchId: string) => boolean;
+    // Pending methods
+    fetchPendingQuestions: () => Promise<void>;
+    setCurrentView: (view: MatchViewType) => void;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -48,6 +64,10 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     archivedMatchIds: new Set<string>(),
     showArchived: false,
     isLoadingArchived: false,
+    // Pending (Your Turn) state
+    pendingQuestions: [],
+    isLoadingPending: false,
+    currentView: 'pending' as MatchViewType,
 
     fetchMatches: async (refresh = false) => {
         const userId = useAuthStore.getState().user?.id;
@@ -269,6 +289,9 @@ clearMatches: () => {
             archivedMatchIds: new Set<string>(),
             showArchived: false,
             isLoadingArchived: false,
+            pendingQuestions: [],
+            isLoadingPending: false,
+            currentView: 'pending',
         });
     },
 
@@ -446,5 +469,96 @@ clearMatches: () => {
 
     isMatchArchived: (matchId: string) => {
         return get().archivedMatchIds.has(matchId);
+    },
+
+    // Pending (Your Turn) methods
+    fetchPendingQuestions: async () => {
+        const userId = useAuthStore.getState().user?.id;
+        const coupleId = useAuthStore.getState().user?.couple_id;
+
+        if (!coupleId || !userId) {
+            set({ pendingQuestions: [], isLoadingPending: false });
+            return;
+        }
+
+        const state = get();
+        if (state.isLoadingPending) return;
+
+        set({ isLoadingPending: true });
+
+        try {
+            // Get partner's user_id
+            const { data: coupleProfiles } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("couple_id", coupleId)
+                .neq("id", userId);
+
+            const partnerId = coupleProfiles?.[0]?.id;
+            if (!partnerId) {
+                set({ pendingQuestions: [], isLoadingPending: false });
+                return;
+            }
+
+            // Get questions the current user has already answered
+            const { data: userResponses } = await supabase
+                .from("responses")
+                .select("question_id")
+                .eq("user_id", userId)
+                .eq("couple_id", coupleId);
+
+            const answeredQuestionIds = new Set(userResponses?.map(r => r.question_id) ?? []);
+
+            // Get partner's responses (questions they answered that user hasn't)
+            const { data: partnerResponses, error } = await supabase
+                .from("responses")
+                .select(`
+                    id,
+                    question_id,
+                    created_at,
+                    question:questions(
+                        *,
+                        pack:question_packs(id, name, icon)
+                    )
+                `)
+                .eq("user_id", partnerId)
+                .eq("couple_id", coupleId)
+                .order("created_at", { ascending: false });
+
+            if (error) throw error;
+
+            // Filter to only questions user hasn't answered, excluding deleted questions
+            // Note: Supabase returns single-object relations as arrays in type inference, but they're actually objects at runtime
+            const pendingQuestions: PendingQuestion[] = (partnerResponses ?? [])
+                .filter(r => {
+                    const question = r.question as unknown as PendingQuestion['question'] | null;
+                    return !answeredQuestionIds.has(r.question_id) && question && !(question as any).deleted_at;
+                })
+                .map(r => ({
+                    id: r.id,
+                    question: r.question as unknown as PendingQuestion['question'],
+                    partnerAnsweredAt: r.created_at,
+                }));
+
+            set({ pendingQuestions, isLoadingPending: false });
+        } catch (err) {
+            console.error("Error fetching pending questions:", err);
+            set({ isLoadingPending: false });
+        }
+    },
+
+    setCurrentView: (view: MatchViewType) => {
+        const state = get();
+
+        // Update showArchived for backwards compatibility
+        const showArchived = view === 'archived';
+        set({ currentView: view, showArchived });
+
+        // Fetch data for the selected view if not already loaded
+        if (view === 'archived' && state.archivedMatches.length === 0) {
+            get().fetchArchivedMatches();
+        } else if (view === 'pending' && state.pendingQuestions.length === 0) {
+            get().fetchPendingQuestions();
+        }
     },
 }));

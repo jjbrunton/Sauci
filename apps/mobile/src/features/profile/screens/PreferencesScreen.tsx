@@ -7,7 +7,7 @@ import { useProfileSettings } from '../hooks';
 import { ScreenHeader, PrivacySettings } from '../components';
 
 /**
- * Preferences sub-screen for comfort zone and biometric settings.
+ * Preferences sub-screen for content and biometric settings.
  */
 export function PreferencesScreen() {
     const settings = useProfileSettings();
@@ -21,17 +21,14 @@ export function PreferencesScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 <PrivacySettings
-                    maxIntensity={settings.maxIntensity}
-                    isUpdatingIntensity={settings.isUpdatingIntensity}
-                    onIntensityChange={settings.handleIntensityChange}
                     biometricAvailable={settings.biometricAvailable}
                     biometricEnabled={settings.biometricEnabled}
                     biometricType={settings.biometricType}
                     isUpdatingBiometric={settings.isUpdatingBiometric}
                     onBiometricToggle={settings.handleBiometricToggle}
-                    partnerIntensity={settings.partnerIntensity}
-                    partnerName={settings.partnerName}
-                    partnerAvatar={settings.partnerAvatar}
+                    hideNsfw={settings.hideNsfw}
+                    isUpdatingHideNsfw={settings.isUpdatingHideNsfw}
+                    onHideNsfwToggle={settings.handleHideNsfwToggle}
                 />
             </ScrollView>
         </GradientBackground>

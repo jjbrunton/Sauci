@@ -24,7 +24,7 @@ import Animated, {
 import { GradientBackground } from '../../src/components/ui/GradientBackground';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
-import { IntensitySlider } from '../../src/components/ui/IntensitySlider';
+import { GlassToggle } from '../../src/components/ui/GlassToggle';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { supabase } from '../../src/lib/supabase';
@@ -32,7 +32,7 @@ import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
 import { useAvatarPicker } from '../../src/hooks/useAvatarPicker';
-import type { Gender, IntensityLevel } from '../../src/types';
+import type { Gender } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'male', label: 'Male', icon: 'male' },
@@ -51,20 +51,13 @@ const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
     { value: 'strengthen_relationship', label: 'Strengthen our relationship', icon: 'shield-checkmark' },
 ];
 
-const DEFAULT_MAX_INTENSITY: IntensityLevel = 2;
+// Intensity thresholds for backwards compatibility
+// When hide_nsfw=true, max_intensity=2 (mild content only)
+// When hide_nsfw=false, max_intensity=5 (all content)
+const NSFW_OFF_INTENSITY = 2;
+const NSFW_ON_INTENSITY = 5;
 
-const normalizeIntensity = (value: number | null | undefined): IntensityLevel | null => {
-    if (value === 1 || value === 2 || value === 3 || value === 4 || value === 5) return value;
-    return null;
-};
-
-const getInitialIntensity = (profile?: { max_intensity?: number | null; show_explicit_content?: boolean | null } | null): IntensityLevel => {
-    const normalized = normalizeIntensity(profile?.max_intensity);
-    if (normalized) return normalized;
-    return profile?.show_explicit_content ? 5 : DEFAULT_MAX_INTENSITY;
-};
-
-type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'explicit' | 'notifications';
+type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'content' | 'notifications';
 
 export default function OnboardingScreen() {
     const router = useRouter();
@@ -73,7 +66,7 @@ export default function OnboardingScreen() {
     const [name, setName] = useState(user?.name || '');
     const [gender, setGender] = useState<Gender | null>(user?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
-    const [maxIntensity, setMaxIntensity] = useState<IntensityLevel>(() => getInitialIntensity(user));
+    const [hideNsfw, setHideNsfw] = useState(user?.hide_nsfw ?? false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<TextInput>(null);
@@ -132,13 +125,13 @@ export default function OnboardingScreen() {
             setError('Please select what brings you to Sauci');
             return;
         }
-        setStage('explicit');
+        setStage('content');
         Events.onboardingStageComplete('purpose');
     };
 
-    const handleIntensityContinue = () => {
+    const handleContentContinue = () => {
         setStage('notifications');
-        Events.onboardingStageComplete('explicit');
+        Events.onboardingStageComplete('content');
     };
 
     const handleEnableNotifications = async () => {
@@ -177,8 +170,10 @@ export default function OnboardingScreen() {
                 }
             }
 
-            const showExplicitContent = maxIntensity >= 3;
-            const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content"];
+            // Derive intensity from hide_nsfw for backwards compatibility
+            const maxIntensity = hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
+            const showExplicitContent = !hideNsfw;
+            const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content", "hide_nsfw"];
 
             const updateData: Record<string, any> = {
                 name: name.trim(),
@@ -186,6 +181,7 @@ export default function OnboardingScreen() {
                 usage_reason: usageReason,
                 max_intensity: maxIntensity,
                 show_explicit_content: showExplicitContent,
+                hide_nsfw: hideNsfw,
                 onboarding_completed: true,
                 updated_at: new Date().toISOString(),
             };
@@ -476,10 +472,10 @@ export default function OnboardingScreen() {
                     </Animated.View>
                 );
 
-            case 'explicit':
+            case 'content':
                 return (
                     <Animated.View
-                        key="explicit"
+                        key="content"
                         entering={SlideInRight.duration(400)}
                         exiting={FadeOut.duration(200)}
                         style={styles.stageContainer}
@@ -489,22 +485,40 @@ export default function OnboardingScreen() {
                                 colors={gradients.primary as [string, string]}
                                 style={styles.iconContainer}
                             >
-                                <Ionicons name="heart-circle" size={44} color={colors.text} />
+                                <Ionicons name="flame" size={44} color={colors.text} />
                             </LinearGradient>
-                            <Text style={styles.title}>Set Your Comfort Zone</Text>
+                            <Text style={styles.title}>Content Preferences</Text>
                             <Text style={styles.subtitle}>
-                                Choose the intimacy level you're comfortable with
+                                Choose what type of content you'd like to see
                             </Text>
                         </View>
 
                         <GlassCard style={styles.card}>
-                            <IntensitySlider
-                                value={maxIntensity}
-                                onValueChange={setMaxIntensity}
-                            />
-                            <Text style={styles.intensityNote}>
-                                Start where you're comfortable — you can always adjust later
+                            <View style={styles.contentToggleRow}>
+                                <View style={styles.contentToggleLeft}>
+                                    <LinearGradient
+                                        colors={gradients.primary as [string, string]}
+                                        style={styles.contentToggleIcon}
+                                    >
+                                        <Ionicons name="eye-off" size={24} color={colors.text} />
+                                    </LinearGradient>
+                                    <View style={styles.contentToggleText}>
+                                        <Text style={styles.contentToggleLabel}>Hide Adult Content</Text>
+                                        <Text style={styles.contentToggleDescription}>
+                                            Only show mild, family-friendly question packs
+                                        </Text>
+                                    </View>
+                                </View>
+                                <GlassToggle
+                                    value={hideNsfw}
+                                    onValueChange={setHideNsfw}
+                                />
+                            </View>
+
+                            <Text style={styles.contentNote}>
+                                You can change this anytime in settings
                             </Text>
+
                             {error && (
                                 <View style={styles.errorContainer}>
                                     <Ionicons name="alert-circle" size={16} color={colors.error} />
@@ -515,7 +529,7 @@ export default function OnboardingScreen() {
 
                         <View style={styles.footer}>
                             <GlassButton
-                                onPress={handleIntensityContinue}
+                                onPress={handleContentContinue}
                                 fullWidth
                                 size="lg"
                             >
@@ -613,8 +627,8 @@ export default function OnboardingScreen() {
                             style={styles.backButton}
                             onPress={() => {
                                 setError(null);
-                                if (stage === 'notifications') setStage('explicit');
-                                else if (stage === 'explicit') setStage('purpose');
+                                if (stage === 'notifications') setStage('content');
+                                else if (stage === 'content') setStage('purpose');
                                 else if (stage === 'purpose') setStage('gender');
                                 else if (stage === 'gender') setStage('name');
                                 else if (stage === 'name') setStage('avatar');
@@ -630,7 +644,7 @@ export default function OnboardingScreen() {
                         <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'purpose' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'explicit' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, stage === 'content' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'notifications' && styles.progressDotActive]} />
                     </View>
                     <View style={styles.backButtonPlaceholder} />
@@ -866,11 +880,42 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontWeight: '600',
     },
-    intensityNote: {
+    contentToggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    contentToggleLeft: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: spacing.md,
+    },
+    contentToggleIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.md,
+    },
+    contentToggleText: {
+        flex: 1,
+    },
+    contentToggleLabel: {
+        ...typography.headline,
+        color: colors.text,
+    },
+    contentToggleDescription: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+        marginTop: 2,
+    },
+    contentNote: {
         ...typography.caption1,
         color: colors.textSecondary,
         textAlign: 'center',
-        marginTop: spacing.md,
+        marginTop: spacing.lg,
     },
     radioOuter: {
         width: 24,

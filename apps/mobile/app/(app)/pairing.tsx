@@ -145,7 +145,7 @@ export default function PairingScreen() {
         if (couple?.invite_code) {
             try {
                 await Share.share({
-                    message: `Join me on Sauci! Use my invite code to pair up: ${couple.invite_code}`,
+                    message: `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`,
                 });
                 Events.codeShared();
             } catch (error) {

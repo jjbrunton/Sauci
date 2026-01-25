@@ -15,7 +15,9 @@ import {
     Pressable,
     Animated,
     Keyboard,
+    Platform,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
@@ -109,6 +111,15 @@ export const MatchNotificationModal: React.FC<Props> = ({
         if (visible) {
             // Dismiss keyboard so it doesn't block the modal buttons
             Keyboard.dismiss();
+
+            // Trigger celebration haptic pattern
+            if (Platform.OS !== 'web') {
+                // Success notification followed by a heavy impact for extra punch
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                setTimeout(() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                }, 150);
+            }
 
             // Reset animations
             modalScale.setValue(0.8);
