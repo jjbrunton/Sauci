@@ -41,6 +41,10 @@ export const useMessageSubscription = (
     const [loading, setLoading] = useState(true);
     const isFocusedRef = useRef(false);
 
+    // Track messages that arrive via real-time during initial fetch to avoid race condition
+    const pendingRealtimeMessagesRef = useRef<Message[]>([]);
+    const isFetchingRef = useRef(false);
+
     // Filter out messages that the user has deleted for themselves
     const messages = useMemo(() => {
         return allMessages.filter(m => !deletedMessageIds.has(m.id));
@@ -104,6 +108,8 @@ export const useMessageSubscription = (
 
         const fetchMessagesAndMarkRead = async () => {
             setLoading(true);
+            isFetchingRef.current = true;
+            pendingRealtimeMessagesRef.current = [];
             setAllMessages([]); // Clear previous chat's messages immediately
 
             const { data } = await supabase
@@ -113,7 +119,14 @@ export const useMessageSubscription = (
                 .order('created_at', { ascending: false });
 
             if (data) {
-                setAllMessages(data);
+                // Merge any messages that arrived via real-time during the fetch
+                const pendingMessages = pendingRealtimeMessagesRef.current;
+                const fetchedIds = new Set(data.map(m => m.id));
+                const newRealtimeMessages = pendingMessages.filter(m => !fetchedIds.has(m.id));
+
+                // Combine: new real-time messages first (newest), then fetched data
+                const mergedMessages = [...newRealtimeMessages, ...data];
+                setAllMessages(mergedMessages);
 
                 const now = new Date().toISOString();
 
@@ -145,6 +158,8 @@ export const useMessageSubscription = (
                 }
             }
 
+            isFetchingRef.current = false;
+            pendingRealtimeMessagesRef.current = [];
             setLoading(false);
         };
 
@@ -179,7 +194,13 @@ export const useMessageSubscription = (
                         newMessage.read_at = now;
                     }
 
-                    setAllMessages(prev => [newMessage, ...prev]);
+                    // If initial fetch is in progress, queue the message to avoid race condition
+                    // where setAllMessages(data) would overwrite this message
+                    if (isFetchingRef.current) {
+                        pendingRealtimeMessagesRef.current.push(newMessage);
+                    } else {
+                        setAllMessages(prev => [newMessage, ...prev]);
+                    }
                     onNewMessage?.();
                 }
             )

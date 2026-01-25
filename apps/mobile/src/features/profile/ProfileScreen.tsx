@@ -121,7 +121,7 @@ export function ProfileScreen() {
                         </LinearGradient>
                         <View style={styles.profileInfo}>
                             <Text style={styles.userName}>{user?.name || "User"}</Text>
-                            <Text style={styles.userEmail}>
+                            <Text style={styles.userEmail} numberOfLines={1} ellipsizeMode="middle">
                                 {isAnonymous ? "Unsaved account" : (user?.email || "")}
                             </Text>
                         </View>

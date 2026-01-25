@@ -82,11 +82,6 @@ export function ContentTile({ pack, isLocked, isNew = false, progress, onPress }
 
         {/* Content */}
         <View style={styles.content}>
-          {pack.category?.name && (
-            <Text style={styles.categoryText} numberOfLines={1}>
-              {pack.category.name}
-            </Text>
-          )}
           <Text style={styles.titleText} numberOfLines={2}>
             {pack.name}
           </Text>
@@ -172,13 +167,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     marginTop: spacing.sm,
-  },
-  categoryText: {
-    ...typography.caption2,
-    color: 'rgba(255, 255, 255, 0.7)',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 2,
   },
   titleText: {
     ...typography.headline,

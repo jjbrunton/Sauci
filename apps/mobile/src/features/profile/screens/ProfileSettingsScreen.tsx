@@ -260,7 +260,7 @@ export function ProfileSettingsScreen() {
                             color={colors.textTertiary}
                             style={styles.inputIcon}
                         />
-                        <Text style={styles.readOnlyText}>
+                        <Text style={styles.readOnlyText} numberOfLines={1} ellipsizeMode="middle">
                             {authEmail || (isAnonymous ? 'Guest account' : 'Loading...')}
                         </Text>
                     </View>
@@ -407,6 +407,7 @@ const styles = StyleSheet.create({
     readOnlyText: {
         ...typography.body,
         color: colors.textSecondary,
+        flex: 1,
     },
     // Gender
     genderDescription: {

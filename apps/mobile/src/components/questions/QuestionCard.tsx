@@ -20,7 +20,7 @@ import { SharePreviewModal } from "../share";
 const ACTION_BUTTON_SIZE = 72;
 const ACTION_BUTTON_OVERHANG_PERCENT = 0.5; // 50% of button hangs below the card
 const actionButtonOffset = ACTION_BUTTON_SIZE * ACTION_BUTTON_OVERHANG_PERCENT;
-const actionButtonBackground = colors.muted;
+const actionButtonBackground = '#3a3a42';
 
 // Haptics helper - not supported on web
 const triggerHaptic = async (style: 'light' | 'medium' | 'heavy' = 'medium') => {
