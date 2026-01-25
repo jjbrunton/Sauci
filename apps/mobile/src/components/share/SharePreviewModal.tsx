@@ -359,21 +359,9 @@ function ShareableCard({
 
             {/* Content */}
             <View style={styles.shareableContent}>
-                <Text style={[styles.questionText, question.is_two_part && styles.questionTextSmaller]}>
+                <Text style={styles.questionText}>
                     {question.text}
                 </Text>
-
-                {/* Partner's version of the question */}
-                {question.partner_text && (
-                    <View style={styles.partnerSection}>
-                        <View style={styles.partnerDivider}>
-                            <View style={styles.partnerDividerLine} />
-                            <Text style={styles.partnerLabel}>Partner sees</Text>
-                            <View style={styles.partnerDividerLine} />
-                        </View>
-                        <Text style={styles.partnerText}>{question.partner_text}</Text>
-                    </View>
-                )}
             </View>
 
             {/* Branding with logo */}
