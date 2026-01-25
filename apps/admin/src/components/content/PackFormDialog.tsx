@@ -203,11 +203,12 @@ export function PackFormDialog({
                         <Switch
                             checked={formData.is_public}
                             onCheckedChange={(checked) => {
-                                setField('is_public', checked);
-                                // Clear scheduled release if making public immediately
-                                if (checked) {
-                                    setField('scheduled_release_at', null);
-                                }
+                                const next = {
+                                    ...formData,
+                                    is_public: checked,
+                                    ...(checked ? { scheduled_release_at: null } : {}),
+                                };
+                                onFormChange(next);
                             }}
                         />
                     </div>

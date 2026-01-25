@@ -10,7 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, gradients, spacing, radius } from '../../../theme';
 import { MessageMeta } from './MessageMeta';
 import { ChatVideoPlayer } from './ChatVideoPlayer';
-import { supabase } from '../../../lib/supabase';
+import { getCachedSignedUrl, getStoragePath } from '../../../lib/imageCache';
 import type { Message } from '../types';
 
 const ACCENT = colors.premium.gold;
@@ -67,14 +67,17 @@ const MessageContentComponent: React.FC<MessageContentProps> = ({
             setMediaLoading(true);
             setMediaError(false);
             try {
-                const { data, error } = await supabase.storage
-                    .from('chat-media')
-                    .createSignedUrl(item.media_path!, 3600); // 1 hour expiry
+                const storagePath = getStoragePath(item.media_path!);
+                const signedUrl = await getCachedSignedUrl(storagePath, 'chat-media');
 
-                if (error) throw error;
-                setMediaUri(data.signedUrl);
+                if (!signedUrl) {
+                    throw new Error('Missing signed URL for chat media');
+                }
+
+                setMediaUri(signedUrl);
             } catch (err) {
                 console.error('Failed to get media URL:', err);
+                setMediaUri(null);
                 setMediaError(true);
             } finally {
                 setMediaLoading(false);

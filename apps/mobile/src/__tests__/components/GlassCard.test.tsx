@@ -72,22 +72,21 @@ describe('GlassCard', () => {
     });
 
     describe('platform behavior', () => {
-        it('uses BlurView on iOS', () => {
+        // GlassCard now uses solid backgrounds instead of BlurView for reliability
+        it('renders correctly on iOS', () => {
             Object.defineProperty(Platform, 'OS', {
                 get: () => 'ios',
             });
 
-            const { getByTestId } = render(
+            const { getByText } = render(
                 <GlassCard>
                     <Text>iOS Card</Text>
                 </GlassCard>
             );
 
-            expect(getByTestId('blur-view')).toBeTruthy();
+            expect(getByText('iOS Card')).toBeTruthy();
         });
 
-        // Note: Testing Android platform requires component re-evaluation
-        // which is complex with module-level Platform checks
         it('renders correctly', () => {
             const { getByText } = render(
                 <GlassCard>
@@ -100,43 +99,42 @@ describe('GlassCard', () => {
     });
 
     describe('intensity prop', () => {
+        // Note: intensity prop is kept for API compatibility but no longer affects visual rendering
+        // since BlurView was replaced with solid backgrounds for reliability
         beforeEach(() => {
             Object.defineProperty(Platform, 'OS', {
                 get: () => 'ios',
             });
         });
 
-        it('applies light intensity', () => {
-            const { getByTestId } = render(
+        it('accepts light intensity prop', () => {
+            const { getByText } = render(
                 <GlassCard intensity="light">
                     <Text>Light Card</Text>
                 </GlassCard>
             );
 
-            const blurView = getByTestId('blur-view');
-            expect(blurView).toBeTruthy();
+            expect(getByText('Light Card')).toBeTruthy();
         });
 
-        it('applies medium intensity by default', () => {
-            const { getByTestId } = render(
+        it('accepts medium intensity by default', () => {
+            const { getByText } = render(
                 <GlassCard>
                     <Text>Medium Card</Text>
                 </GlassCard>
             );
 
-            const blurView = getByTestId('blur-view');
-            expect(blurView).toBeTruthy();
+            expect(getByText('Medium Card')).toBeTruthy();
         });
 
-        it('applies heavy intensity', () => {
-            const { getByTestId } = render(
+        it('accepts heavy intensity prop', () => {
+            const { getByText } = render(
                 <GlassCard intensity="heavy">
                     <Text>Heavy Card</Text>
                 </GlassCard>
             );
 
-            const blurView = getByTestId('blur-view');
-            expect(blurView).toBeTruthy();
+            expect(getByText('Heavy Card')).toBeTruthy();
         });
     });
 

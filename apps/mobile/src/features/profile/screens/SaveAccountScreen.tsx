@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     },
     modeToggleContainer: {
         flexDirection: "row",
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.backgroundLight,
         borderRadius: radius.md,
         padding: 4,
         marginBottom: spacing.md,

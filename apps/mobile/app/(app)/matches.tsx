@@ -1,13 +1,12 @@
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions, ScrollView } from "react-native";
+import { BlurView } from "expo-blur";
 import { useMatchStore, useAuthStore, type PendingQuestion } from "../../src/store";
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
     FadeIn,
-    FadeInDown,
     FadeInRight,
     FadeInUp,
     useSharedValue,
@@ -16,23 +15,20 @@ import Animated, {
     interpolate,
     Extrapolation,
 } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
+import { GradientBackground, GlassButton, DecorativeSeparator } from "../../src/components/ui";
+import { CompactHeader } from "../../src/components/discovery";
 import { SwipeableMatchItem } from "../../src/components/matches";
-import { useAmbientOrbAnimation } from "../../src/hooks";
-import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
+import { colors, spacing, typography, radius } from "../../src/theme";
 import { MatchesTutorial } from "../../src/components/tutorials";
 import { hasSeenMatchesTutorial, markMatchesTutorialSeen } from "../../src/lib/matchesTutorialSeen";
 
-// Premium color palette
-const ACCENT = colors.premium.gold;
-const ACCENT_RGBA = 'rgba(212, 175, 55, ';
-const ROSE = colors.premium.rose;
-const ROSE_RGBA = 'rgba(232, 164, 174, ';
+// Feature colors - Matches uses Primary per DESIGN.md
+const PRIMARY = colors.primary;
+const PRIMARY_RGBA = 'rgba(225, 48, 108, ';
+const SECONDARY = colors.secondary;
+const SECONDARY_RGBA = 'rgba(155, 89, 182, ';
 
 const MAX_CONTENT_WIDTH = 500;
-const NAV_BAR_HEIGHT = 44;
-const STATUS_BAR_HEIGHT = 60;
 const HEADER_SCROLL_DISTANCE = 100;
 
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
@@ -46,6 +42,7 @@ export default function MatchesScreen() {
         hasMore,
         isLoadingMore,
         totalCount,
+        newMatchesCount,
         // Archive state and methods
         archivedMatches,
         showArchived,
@@ -55,15 +52,26 @@ export default function MatchesScreen() {
         // Pending state and methods
         pendingQuestions,
         isLoadingPending,
+        // Their Turn state and methods
+        theirTurnQuestions,
+        isLoadingTheirTurn,
+        fetchTheirTurnQuestions,
         currentView,
         setCurrentView,
         fetchPendingQuestions,
+        // Nudge state and methods
+        nudgeCooldownUntil,
+        isNudging,
+        sendNudge,
+        checkNudgeCooldown,
     } = useMatchStore();
     const { user, couple, partner } = useAuthStore();
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
     const [showTutorial, setShowTutorial] = useState(false);
+    const [nudgeFeedback, setNudgeFeedback] = useState<string | null>(null);
+    const [headerHeight, setHeaderHeight] = useState(130);
 
     const scrollY = useSharedValue(0);
 
@@ -90,29 +98,6 @@ export default function MatchesScreen() {
         return { opacity, transform: [{ scale }] };
     });
 
-    const compactHeaderStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            scrollY.value,
-            [HEADER_SCROLL_DISTANCE * 0.5, HEADER_SCROLL_DISTANCE],
-            [0, 1],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
-    const navBarBackgroundStyle = useAnimatedStyle(() => {
-        const opacity = interpolate(
-            scrollY.value,
-            [0, HEADER_SCROLL_DISTANCE * 0.8],
-            [0, 1],
-            Extrapolation.CLAMP
-        );
-        return { opacity };
-    });
-
-    // Ambient orb breathing animations
-    const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
-
     // Check if tutorial should be shown when screen is focused or matches change
     useFocusEffect(
         useCallback(() => {
@@ -138,8 +123,48 @@ export default function MatchesScreen() {
             fetchMatches(true);
             // Also refresh pending questions when focused
             fetchPendingQuestions();
+            fetchTheirTurnQuestions();
+            // Check nudge cooldown
+            checkNudgeCooldown();
+
+            // Cleanup: mark matches as seen when leaving the screen (if on Complete tab)
+            return () => {
+                const state = useMatchStore.getState();
+                if (state.currentView === 'active' && state.matches.length > 0 && state.newMatchesCount > 0) {
+                    state.markAllAsSeen();
+                }
+            };
         }, [])
     );
+
+    // Format cooldown remaining time
+    const formatCooldownTime = (cooldownUntil: Date): string => {
+        const now = new Date();
+        const diffMs = cooldownUntil.getTime() - now.getTime();
+        if (diffMs <= 0) return '';
+
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+        if (diffHours > 0) {
+            return `${diffHours}h ${diffMins}m`;
+        }
+        return `${diffMins}m`;
+    };
+
+    // Check if nudge is on cooldown
+    const isNudgeOnCooldown = !!(nudgeCooldownUntil && new Date() < nudgeCooldownUntil);
+
+    // Handle nudge button press
+    const handleNudge = async () => {
+        if (isNudging || isNudgeOnCooldown) return;
+
+        const result = await sendNudge();
+        if (result.success) {
+            setNudgeFeedback(result.notificationSent ? 'Nudge sent!' : 'Nudge recorded');
+            setTimeout(() => setNudgeFeedback(null), 3000);
+        }
+    };
 
     const handleLoadMore = useCallback(() => {
         console.log('[Matches] onEndReached called', { isLoading, isLoadingMore, hasMore, matchesCount: matches.length });
@@ -148,11 +173,19 @@ export default function MatchesScreen() {
         }
     }, [isLoading, isLoadingMore, hasMore, matches.length]);
 
+    // Track previous view to detect when leaving Complete tab
+    const prevViewRef = useRef<string>(currentView);
+
+    // Mark matches as seen when navigating AWAY from the Complete tab
     useEffect(() => {
-        if (matches.length > 0) {
+        const prevView = prevViewRef.current;
+        prevViewRef.current = currentView;
+
+        // If we were on 'active' and now switching to a different view, mark as seen
+        if (prevView === 'active' && currentView !== 'active' && matches.length > 0) {
             markAllAsSeen();
         }
-    }, [matches.length]);
+    }, [currentView, matches.length, markAllAsSeen]);
 
     const renderItem = ({ item, index }: { item: any; index: number }) => {
         // Skip rendering if question was deleted
@@ -177,6 +210,20 @@ export default function MatchesScreen() {
         }
 
         const isYesYes = item.match_type === "yes_yes";
+        const isBothAnswered = item.match_type === "both_answered";
+
+        // Get the appropriate label for the match type
+        const getMatchLabel = () => {
+            if (isYesYes) return "YES + YES";
+            if (isBothAnswered) return "MATCHED";
+            return "YES + MAYBE";
+        };
+
+        // Get the appropriate icon for the match type
+        const getMatchIcon = () => {
+            if (isYesYes || isBothAnswered) return "heart";
+            return "heart-half";
+        };
 
         const handleArchive = async () => {
             if (showArchived) {
@@ -196,32 +243,34 @@ export default function MatchesScreen() {
                         onPress={() => router.push(`/chat/${item.id}`)}
                         activeOpacity={0.8}
                     >
-                        <View style={styles.matchCardPremium}>
-                            {/* Subtle gradient background */}
-                            <LinearGradient
-                                colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
-                                style={StyleSheet.absoluteFill}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 1 }}
-                            />
-                            {/* Top silk highlight */}
-                            <LinearGradient
-                                colors={[`${ACCENT_RGBA}0.06)`, 'transparent']}
-                                style={styles.cardSilkHighlight}
-                                start={{ x: 0.5, y: 0 }}
-                                end={{ x: 0.5, y: 1 }}
-                            />
+                        <View style={[styles.matchCardPremium, item.is_new && styles.matchCardNew]}>
+                        {/* Subtle gradient background - removed for flat style
+                        <LinearGradient
+                            colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
+                            style={StyleSheet.absoluteFill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                        />
+                        */}
+                        {/* Top silk highlight - removed for flat style
+                        <LinearGradient
+                            colors={[`${ACCENT_RGBA}0.06)`, 'transparent']}
+                            style={styles.cardSilkHighlight}
+                            start={{ x: 0.5, y: 0 }}
+                            end={{ x: 0.5, y: 1 }}
+                        />
+                        */}
 
                             <View style={styles.matchRow}>
                                 {/* Premium icon container */}
                                 <View style={[
                                     styles.iconContainerPremium,
-                                    isYesYes && styles.iconContainerYesYes
+                                    (isYesYes || isBothAnswered) && styles.iconContainerYesYes
                                 ]}>
                                     <Ionicons
-                                        name={isYesYes ? "heart" : "heart-half"}
+                                        name={getMatchIcon()}
                                         size={20}
-                                        color={isYesYes ? ACCENT : ROSE}
+                                        color={(isYesYes || isBothAnswered) ? PRIMARY : SECONDARY}
                                     />
                                 </View>
 
@@ -235,16 +284,23 @@ export default function MatchesScreen() {
                                         </Text>
                                     )}
                                     <View style={styles.metaRow}>
-                                        <View style={[
-                                            styles.tagPremium,
-                                            isYesYes && styles.tagPremiumHighlight
-                                        ]}>
-                                            <Text style={[
-                                                styles.tagTextPremium,
-                                                isYesYes && styles.tagTextPremiumHighlight
+                                        <View style={styles.metaLeft}>
+                                            <View style={[
+                                                styles.tagPremium,
+                                                (isYesYes || isBothAnswered) && styles.tagPremiumHighlight
                                             ]}>
-                                                {isYesYes ? "YES + YES" : "YES + MAYBE"}
-                                            </Text>
+                                                <Text style={[
+                                                    styles.tagTextPremium,
+                                                    (isYesYes || isBothAnswered) && styles.tagTextPremiumHighlight
+                                                ]}>
+                                                    {getMatchLabel()}
+                                                </Text>
+                                            </View>
+                                            {item.is_new && (
+                                                <View style={styles.newBadge}>
+                                                    <Text style={styles.newBadgeText}>NEW</Text>
+                                                </View>
+                                            )}
                                         </View>
                                         <Text style={styles.datePremium}>
                                             {new Date(item.created_at).toLocaleDateString()}
@@ -259,7 +315,7 @@ export default function MatchesScreen() {
                                         </View>
                                     )}
                                     <View style={styles.chevronContainerPremium}>
-                                        <Ionicons name="chevron-forward" size={16} color={`${ACCENT_RGBA}0.6)`} />
+                                        <Ionicons name="chevron-forward" size={16} color={`${PRIMARY_RGBA}0.6)`} />
                                     </View>
                                 </View>
                             </View>
@@ -291,28 +347,13 @@ export default function MatchesScreen() {
                     activeOpacity={0.8}
                 >
                     <View style={styles.matchCardPremium}>
-                        {/* Subtle gradient background - slightly different hue for pending */}
-                        <LinearGradient
-                            colors={['rgba(33, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
-                            style={StyleSheet.absoluteFill}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                        {/* Top silk highlight */}
-                        <LinearGradient
-                            colors={[`${ROSE_RGBA}0.06)`, 'transparent']}
-                            style={styles.cardSilkHighlight}
-                            start={{ x: 0.5, y: 0 }}
-                            end={{ x: 0.5, y: 1 }}
-                        />
-
                         <View style={styles.matchRow}>
                             {/* Pending icon container - hourglass */}
                             <View style={[styles.iconContainerPremium, styles.iconContainerPending]}>
                                 <Ionicons
                                     name="hourglass-outline"
                                     size={20}
-                                    color={ROSE}
+                                    color={PRIMARY}
                                 />
                             </View>
 
@@ -334,7 +375,7 @@ export default function MatchesScreen() {
 
                             <View style={styles.rightSection}>
                                 <View style={styles.chevronContainerPremium}>
-                                    <Ionicons name="chevron-forward" size={16} color={`${ROSE_RGBA}0.6)`} />
+                                    <Ionicons name="chevron-forward" size={16} color={`${PRIMARY_RGBA}0.6)`} />
                                 </View>
                             </View>
                         </View>
@@ -343,6 +384,57 @@ export default function MatchesScreen() {
                         <View style={[styles.cardPremiumBorder, styles.cardPendingBorder]} pointerEvents="none" />
                     </View>
                 </TouchableOpacity>
+            </Animated.View>
+        );
+    };
+
+    const renderTheirTurnItem = ({ item, index }: { item: PendingQuestion; index: number }) => {
+        if (!item.question) {
+            return null;
+        }
+
+        const packName = item.question.pack?.name ?? 'Unknown Pack';
+        const timeSince = getTimeSince(item.partnerAnsweredAt);
+
+        return (
+            <Animated.View entering={FadeInRight.delay(index * 50).duration(300)}>
+                <View style={styles.matchCardPremium}>
+                    <View style={styles.matchRow}>
+                        {/* Their turn icon container - clock */}
+                        <View style={[styles.iconContainerPremium, styles.iconContainerTheirTurn]}>
+                            <Ionicons
+                                name="time-outline"
+                                size={20}
+                                color={SECONDARY}
+                            />
+                        </View>
+
+                        <View style={styles.content}>
+                            <Text style={styles.questionTextPremium} numberOfLines={2}>
+                                {item.question.text}
+                            </Text>
+                            <View style={styles.metaRow}>
+                                <View style={[styles.tagPremium, styles.tagTheirTurn]}>
+                                    <Text style={[styles.tagTextPremium, styles.tagTextTheirTurn]}>
+                                        {packName}
+                                    </Text>
+                                </View>
+                                <Text style={styles.datePremium}>
+                                    {timeSince}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.rightSection}>
+                            <View style={[styles.chevronContainerPremium, styles.chevronTheirTurn]}>
+                                <Ionicons name="checkmark" size={16} color={SECONDARY} />
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Premium border */}
+                    <View style={[styles.cardPremiumBorder, styles.cardTheirTurnBorder]} pointerEvents="none" />
+                </View>
             </Animated.View>
         );
     };
@@ -386,23 +478,24 @@ export default function MatchesScreen() {
     if (!partner) {
         return (
             <GradientBackground>
-                {/* Ambient Orbs */}
-                <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
-                    <LinearGradient
-                        colors={[colors.premium.goldGlow, 'transparent']}
-                        style={styles.orbGradient}
-                        start={{ x: 0.5, y: 0.5 }}
-                        end={{ x: 1, y: 1 }}
-                    />
-                </Animated.View>
-                <Animated.View style={[styles.ambientOrb, styles.orbBottomLeft, orbStyle2]} pointerEvents="none">
-                    <LinearGradient
-                        colors={[`${ROSE_RGBA}0.2)`, 'transparent']}
-                        style={styles.orbGradient}
-                        start={{ x: 0.5, y: 0.5 }}
-                        end={{ x: 0, y: 0 }}
-                    />
-                </Animated.View>
+            {/* Ambient Orbs - Commented out for flat look
+            <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
+                <LinearGradient
+                    colors={[colors.premium.goldGlow, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 1, y: 1 }}
+                />
+            </Animated.View>
+            <Animated.View style={[styles.ambientOrb, styles.orbBottomLeft, orbStyle2]} pointerEvents="none">
+                <LinearGradient
+                    colors={[`${ROSE_RGBA}0.2)`, 'transparent']}
+                    style={styles.orbGradient}
+                    start={{ x: 0.5, y: 0.5 }}
+                    end={{ x: 0, y: 0 }}
+                />
+            </Animated.View>
+            */}
 
                 <View style={styles.pairingGateContainer}>
                     <Animated.View
@@ -411,14 +504,14 @@ export default function MatchesScreen() {
                     >
                         {/* Icon */}
                         <View style={styles.pairingGateIconContainer}>
-                            <Ionicons name="heart" size={36} color={ROSE} />
+                            <Ionicons name="heart" size={36} color={PRIMARY} />
                         </View>
 
                         {/* Title section */}
                         <Text style={styles.pairingGateLabel}>{couple ? "ALMOST THERE" : "CONNECT"}</Text>
                         <Text style={styles.pairingGateTitle}>{couple ? "Waiting" : "Pair Up"}</Text>
 
-                        <DecorativeSeparator variant="rose" />
+                        <DecorativeSeparator variant="primary" />
 
                         {/* Status badge */}
                         <Animated.View
@@ -439,15 +532,15 @@ export default function MatchesScreen() {
                         {/* Feature hints */}
                         <View style={styles.pairingGateFeatures}>
                             <View style={styles.pairingGateFeatureItem}>
-                                <Ionicons name="heart" size={16} color={ACCENT} />
+                                <Ionicons name="heart" size={16} color={PRIMARY} />
                                 <Text style={styles.pairingGateFeatureText}>See when you both agree</Text>
                             </View>
                             <View style={styles.pairingGateFeatureItem}>
-                                <Ionicons name="sparkles" size={16} color={ACCENT} />
+                                <Ionicons name="sparkles" size={16} color={PRIMARY} />
                                 <Text style={styles.pairingGateFeatureText}>Unlock hidden connections</Text>
                             </View>
                             <View style={styles.pairingGateFeatureItem}>
-                                <Ionicons name="chatbubbles-outline" size={16} color={ACCENT} />
+                                <Ionicons name="chatbubbles-outline" size={16} color={PRIMARY} />
                                 <Text style={styles.pairingGateFeatureText}>Chat about your matches</Text>
                             </View>
                         </View>
@@ -469,7 +562,7 @@ export default function MatchesScreen() {
 
     return (
         <GradientBackground>
-            {/* Ambient Orbs - Premium gold/rose */}
+            {/* Ambient Orbs - Commented out for flat look
             <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
                 <LinearGradient
                     colors={[colors.premium.goldGlow, 'transparent']}
@@ -486,85 +579,125 @@ export default function MatchesScreen() {
                     end={{ x: 0, y: 0 }}
                 />
             </Animated.View>
+            */}
+
+            <View
+                style={[styles.stickyHeader, isWideScreen && styles.stickyHeaderWide]}
+                onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(14, 14, 17, 0.85)" }]} />
+                <CompactHeader
+                    user={user}
+                    partner={partner}
+                    couple={couple}
+                    label="Matches"
+                    showGreeting={false}
+                    showPartnerBadge={false}
+                    accessory={
+                        <TouchableOpacity
+                            style={styles.headerActionButton}
+                            onPress={() => router.push({ pathname: "/(app)/my-answers", params: { returnTo: "/(app)/matches" } })}
+                        >
+                            <Ionicons name="list-outline" size={18} color={colors.text} />
+                        </TouchableOpacity>
+                    }
+                />
+            </View>
 
             <View style={styles.container}>
-                {/* Fixed Nav Bar */}
-                <View style={styles.navBar}>
-                    <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
-                        {Platform.OS === "ios" ? (
-                            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-                        ) : (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
-                        )}
-                    </Animated.View>
-                    
-                    <Animated.Text style={[styles.navBarTitle, compactHeaderStyle]} numberOfLines={1}>
-                        Matches
-                    </Animated.Text>
-                    
-                    {/* My Answers button moved to Nav Bar */}
-                    <TouchableOpacity
-                        style={styles.navBarButton}
-                        onPress={() => router.push({ pathname: "/(app)/my-answers", params: { returnTo: "/(app)/matches" } })}
-                    >
-                         <Ionicons name="list-outline" size={20} color={ACCENT} />
-                    </TouchableOpacity>
-                </View>
 
                 <AnimatedFlatList
-                    data={currentView === 'archived' ? archivedMatches : currentView === 'pending' ? pendingQuestions : matches}
-                    renderItem={currentView === 'pending' ? renderPendingItem as any : renderItem}
+                    data={
+                        currentView === 'archived' ? archivedMatches :
+                        currentView === 'pending' ? pendingQuestions :
+                        currentView === 'their_turn' ? theirTurnQuestions :
+                        matches
+                    }
+                    renderItem={
+                        currentView === 'pending' ? renderPendingItem as any :
+                        currentView === 'their_turn' ? renderTheirTurnItem as any :
+                        renderItem
+                    }
                     keyExtractor={(item: any) => item.id}
-                    contentContainerStyle={[styles.list, isWideScreen && styles.listWide]}
+                    contentContainerStyle={[
+                        styles.list,
+                        isWideScreen && styles.listWide,
+                        { paddingTop: headerHeight },
+                    ]}
                     showsVerticalScrollIndicator={false}
                     onScroll={scrollHandler}
                     scrollEventThrottle={16}
                         refreshControl={
                             <RefreshControl
-                                refreshing={currentView === 'pending' ? isLoadingPending : isLoading}
+                                refreshing={
+                                    currentView === 'pending' ? isLoadingPending :
+                                    currentView === 'their_turn' ? isLoadingTheirTurn :
+                                    isLoading
+                                }
                                 onRefresh={() => {
                                     if (currentView === 'pending') {
                                         fetchPendingQuestions();
+                                    } else if (currentView === 'their_turn') {
+                                        fetchTheirTurnQuestions();
                                     } else {
                                         fetchMatches(true);
                                     }
                                 }}
                                 tintColor={colors.primary}
                                 colors={[colors.primary]}
-                                progressViewOffset={STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT}
+                                progressViewOffset={headerHeight}
                             />
                         }
-                        onEndReached={currentView === 'pending' ? undefined : handleLoadMore}
+                        onEndReached={(currentView === 'pending' || currentView === 'their_turn') ? undefined : handleLoadMore}
                         onEndReachedThreshold={2}
-                        ListFooterComponent={currentView === 'pending' ? null : renderFooter}
+                        ListFooterComponent={(currentView === 'pending' || currentView === 'their_turn') ? null : renderFooter}
                         ListHeaderComponent={
                             <Animated.View
                                 entering={FadeIn.duration(400)}
                                 style={[styles.header, isWideScreen && styles.headerWide, heroStyle]}
                             >
                             <View style={styles.headerContent}>
-                                {/* Premium label */}
-                                <Text style={styles.headerLabel}>DISCOVER</Text>
-                                <Text style={styles.headerTitle}>Matches</Text>
 
-                                {/* Decorative separator */}
-                                <DecorativeSeparator variant="gold" />
-
-                                {/* Filter toggle */}
-                                <View style={styles.filterContainer}>
+                                {/* Filter toggle - horizontal scrollable */}
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.filterContainer}
+                                    style={styles.filterScrollContainer}
+                                >
+                                    <TouchableOpacity
+                                        style={[styles.filterTab, currentView === 'active' && styles.filterTabActive]}
+                                        onPress={() => currentView !== 'active' && setCurrentView('active')}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Ionicons
+                                            name="heart"
+                                            size={16}
+                                            color={currentView === 'active' ? PRIMARY : colors.textTertiary}
+                                        />
+                                        <Text style={[styles.filterTabText, currentView === 'active' && styles.filterTabTextActive]}>
+                                            Complete
+                                        </Text>
+                                        {newMatchesCount > 0 && currentView !== 'active' && (
+                                            <View style={styles.pendingBadge}>
+                                                <Text style={styles.pendingBadgeText}>{newMatchesCount}</Text>
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
                                     <TouchableOpacity
                                         style={[styles.filterTab, currentView === 'pending' && styles.filterTabActive]}
                                         onPress={() => currentView !== 'pending' && setCurrentView('pending')}
                                         activeOpacity={0.7}
                                     >
                                         {isLoadingPending ? (
-                                            <ActivityIndicator size="small" color={ACCENT} />
+                                            <ActivityIndicator size="small" color={PRIMARY} />
                                         ) : (
                                             <>
                                                 <Ionicons
                                                     name="hourglass-outline"
-                                                    size={14}
-                                                    color={currentView === 'pending' ? ACCENT : colors.textTertiary}
+                                                    size={16}
+                                                    color={currentView === 'pending' ? PRIMARY : colors.textTertiary}
                                                 />
                                                 <Text style={[styles.filterTabText, currentView === 'pending' && styles.filterTabTextActive]}>
                                                     Your Turn
@@ -578,18 +711,29 @@ export default function MatchesScreen() {
                                         )}
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={[styles.filterTab, currentView === 'active' && styles.filterTabActive]}
-                                        onPress={() => currentView !== 'active' && setCurrentView('active')}
+                                        style={[styles.filterTab, currentView === 'their_turn' && styles.filterTabActiveSecondary]}
+                                        onPress={() => currentView !== 'their_turn' && setCurrentView('their_turn')}
                                         activeOpacity={0.7}
                                     >
-                                        <Ionicons
-                                            name="heart"
-                                            size={14}
-                                            color={currentView === 'active' ? ACCENT : colors.textTertiary}
-                                        />
-                                        <Text style={[styles.filterTabText, currentView === 'active' && styles.filterTabTextActive]}>
-                                            Complete
-                                        </Text>
+                                        {isLoadingTheirTurn ? (
+                                            <ActivityIndicator size="small" color={PRIMARY} />
+                                        ) : (
+                                            <>
+                                                <Ionicons
+                                                    name="time-outline"
+                                                    size={16}
+                                                    color={currentView === 'their_turn' ? SECONDARY : colors.textTertiary}
+                                                />
+                                                <Text style={[styles.filterTabText, currentView === 'their_turn' && styles.filterTabTextActive]}>
+                                                    Their Turn
+                                                </Text>
+                                                {theirTurnQuestions.length > 0 && currentView !== 'their_turn' && (
+                                                    <View style={[styles.pendingBadge, styles.theirTurnBadge]}>
+                                                        <Text style={styles.pendingBadgeText}>{theirTurnQuestions.length}</Text>
+                                                    </View>
+                                                )}
+                                            </>
+                                        )}
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         style={[styles.filterTab, currentView === 'archived' && styles.filterTabActive]}
@@ -597,13 +741,13 @@ export default function MatchesScreen() {
                                         activeOpacity={0.7}
                                     >
                                         {isLoadingArchived ? (
-                                            <ActivityIndicator size="small" color={ACCENT} />
+                                            <ActivityIndicator size="small" color={PRIMARY} />
                                         ) : (
                                             <>
                                                 <Ionicons
                                                     name="archive-outline"
-                                                    size={14}
-                                                    color={currentView === 'archived' ? ACCENT : colors.textTertiary}
+                                                    size={16}
+                                                    color={currentView === 'archived' ? PRIMARY : colors.textTertiary}
                                                 />
                                                 <Text style={[styles.filterTabText, currentView === 'archived' && styles.filterTabTextActive]}>
                                                     Archived
@@ -611,24 +755,77 @@ export default function MatchesScreen() {
                                             </>
                                         )}
                                     </TouchableOpacity>
-                                </View>
+                                </ScrollView>
 
                                 {/* Count badge */}
                                 <View style={styles.countBadgePremium}>
                                     <Ionicons
-                                        name={currentView === 'archived' ? "archive" : currentView === 'pending' ? "hourglass" : "heart"}
+                                        name={
+                                            currentView === 'archived' ? "archive" :
+                                            currentView === 'pending' ? "hourglass" :
+                                            currentView === 'their_turn' ? "time" :
+                                            "heart"
+                                        }
                                         size={12}
-                                        color={ACCENT}
+                                        color={PRIMARY}
                                     />
                                     <Text style={styles.countTextPremium}>
                                         {currentView === 'archived'
                                             ? `${archivedMatches.length} ARCHIVED`
                                             : currentView === 'pending'
                                             ? `${pendingQuestions.length} WAITING`
+                                            : currentView === 'their_turn'
+                                            ? `${theirTurnQuestions.length} SENT`
                                             : `${totalCount ?? matches.length} COMPLETE`
                                         }
                                     </Text>
                                 </View>
+
+                                {/* Nudge button - only show in Their Turn view with questions */}
+                                {currentView === 'their_turn' && theirTurnQuestions.length > 0 && (
+                                    <View style={styles.nudgeContainer}>
+                                        {nudgeFeedback ? (
+                                            <Animated.View
+                                                entering={FadeIn.duration(200)}
+                                                style={styles.nudgeFeedback}
+                                            >
+                                                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                                <Text style={styles.nudgeFeedbackText}>{nudgeFeedback}</Text>
+                                            </Animated.View>
+                                        ) : (
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.nudgeButton,
+                                                    (isNudging || isNudgeOnCooldown) && styles.nudgeButtonDisabled
+                                                ]}
+                                                onPress={handleNudge}
+                                                disabled={isNudging || isNudgeOnCooldown}
+                                                activeOpacity={0.7}
+                                            >
+                                                {isNudging ? (
+                                                    <ActivityIndicator size="small" color={SECONDARY} />
+                                                ) : (
+                                                    <>
+                                                        <Ionicons
+                                                            name="hand-left-outline"
+                                                            size={16}
+                                                            color={isNudgeOnCooldown ? colors.textTertiary : SECONDARY}
+                                                        />
+                                                        <Text style={[
+                                                            styles.nudgeButtonText,
+                                                            isNudgeOnCooldown && styles.nudgeButtonTextDisabled
+                                                        ]}>
+                                                            {isNudgeOnCooldown && nudgeCooldownUntil
+                                                                ? `Nudge in ${formatCooldownTime(nudgeCooldownUntil)}`
+                                                                : 'Nudge partner'
+                                                            }
+                                                        </Text>
+                                                    </>
+                                                )}
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                )}
                             </View>
                         </Animated.View>
                     }
@@ -640,7 +837,7 @@ export default function MatchesScreen() {
                             >
                                 {/* Archive icon */}
                                 <View style={styles.emptyIconContainer}>
-                                    <Ionicons name="archive-outline" size={48} color={ACCENT} />
+                                    <Ionicons name="archive-outline" size={48} color={PRIMARY} />
                                 </View>
 
                                 {/* Description */}
@@ -662,8 +859,8 @@ export default function MatchesScreen() {
                                 style={styles.emptyContent}
                             >
                                 {/* Pending icon */}
-                                <View style={[styles.emptyIconContainer, { backgroundColor: `${ROSE_RGBA}0.1)`, borderColor: `${ROSE_RGBA}0.2)` }]}>
-                                    <Ionicons name="checkmark-circle-outline" size={48} color={ROSE} />
+                                <View style={[styles.emptyIconContainer, { backgroundColor: `${PRIMARY_RGBA}0.1)`, borderColor: `${PRIMARY_RGBA}0.2)` }]}>
+                                    <Ionicons name="checkmark-circle-outline" size={48} color={PRIMARY} />
                                 </View>
 
                                 {/* Description */}
@@ -673,7 +870,30 @@ export default function MatchesScreen() {
                                 </Text>
 
                                 <GlassButton
-                                    onPress={() => router.push("/(app)/swipe")}
+                                    onPress={() => router.push("/")}
+                                    style={{ marginTop: spacing.lg }}
+                                >
+                                    Keep Swiping
+                                </GlassButton>
+                            </Animated.View>
+                        ) : currentView === 'their_turn' ? (
+                            <Animated.View
+                                entering={FadeInUp.duration(600).springify()}
+                                style={styles.emptyContent}
+                            >
+                                {/* Their Turn icon */}
+                                <View style={[styles.emptyIconContainer, { backgroundColor: `${SECONDARY_RGBA}0.1)`, borderColor: `${SECONDARY_RGBA}0.2)` }]}>
+                                    <Ionicons name="time-outline" size={48} color={SECONDARY} />
+                                </View>
+
+                                {/* Description */}
+                                <Text style={styles.emptyTitle}>Waiting for Partner</Text>
+                                <Text style={styles.emptyDescription}>
+                                    All questions you've answered have been matched! Keep swiping to give your partner more to respond to.
+                                </Text>
+
+                                <GlassButton
+                                    onPress={() => router.push("/")}
                                     style={{ marginTop: spacing.lg }}
                                 >
                                     Keep Swiping
@@ -692,15 +912,15 @@ export default function MatchesScreen() {
                                 {/* Feature hints */}
                                 <View style={styles.emptyFeatures}>
                                     <View style={styles.emptyFeatureItem}>
-                                        <Ionicons name="heart" size={16} color={ACCENT} />
+                                        <Ionicons name="heart" size={16} color={PRIMARY} />
                                         <Text style={styles.emptyFeatureText}>Swipe right for yes</Text>
                                     </View>
                                     <View style={styles.emptyFeatureItem}>
-                                        <Ionicons name="sparkles" size={16} color={ACCENT} />
+                                        <Ionicons name="sparkles" size={16} color={PRIMARY} />
                                         <Text style={styles.emptyFeatureText}>Match when you both agree</Text>
                                     </View>
                                     <View style={styles.emptyFeatureItem}>
-                                        <Ionicons name="chatbubbles-outline" size={16} color={ACCENT} />
+                                        <Ionicons name="chatbubbles-outline" size={16} color={PRIMARY} />
                                         <Text style={styles.emptyFeatureText}>Chat about your matches</Text>
                                     </View>
                                 </View>
@@ -709,7 +929,7 @@ export default function MatchesScreen() {
                                 <Text style={styles.emptyTeaser}>Your first match is just a swipe away</Text>
 
                                 <GlassButton
-                                    onPress={() => router.push("/(app)/swipe")}
+                                    onPress={() => router.push("/")}
                                     style={{ marginTop: spacing.lg }}
                                 >
                                     Start Swiping
@@ -757,47 +977,33 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 150,
     },
-    // Fixed Nav Bar
-    navBar: {
+    stickyHeader: {
         position: "absolute",
         top: 0,
         left: 0,
         right: 0,
-        height: STATUS_BAR_HEIGHT + NAV_BAR_HEIGHT,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: STATUS_BAR_HEIGHT - 10,
-        paddingHorizontal: spacing.md,
-        zIndex: 100,
-    },
-    navBarBackground: {
-        ...StyleSheet.absoluteFillObject,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(212, 175, 55, 0.15)', // Gold tint for matches
+        zIndex: 10,
         overflow: "hidden",
     },
-    navBarTitle: {
-        ...typography.headline,
-        color: colors.text,
-        textAlign: "center",
+    stickyHeaderWide: {
+        left: "50%",
+        right: "auto",
+        width: MAX_CONTENT_WIDTH,
+        transform: [{ translateX: -MAX_CONTENT_WIDTH / 2 }],
     },
-    navBarButton: {
-        position: 'absolute',
-        right: spacing.md,
-        top: STATUS_BAR_HEIGHT - 5,
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-        justifyContent: 'center',
-        alignItems: 'center',
+    headerActionButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.backgroundLight,
+        justifyContent: "center",
+        alignItems: "center",
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.border,
     },
     // Header (Hero)
     header: {
-        paddingTop: STATUS_BAR_HEIGHT + spacing.md,
+        paddingTop: spacing.lg,
         paddingHorizontal: spacing.lg,
         paddingBottom: spacing.lg,
         alignItems: 'center',
@@ -809,12 +1015,13 @@ const styles = StyleSheet.create({
     },
     headerContent: {
         alignItems: 'center',
+        width: '100%',
     },
     headerLabel: {
         ...typography.caption2,
         fontWeight: '600',
         letterSpacing: 3,
-        color: ACCENT,
+        color: PRIMARY,
         marginBottom: spacing.xs,
     },
     headerTitle: {
@@ -822,26 +1029,39 @@ const styles = StyleSheet.create({
         color: colors.text,
         textAlign: 'center',
     },
-    // Filter toggle
+    // Filter toggle - scrollable carousel
+    filterScrollContainer: {
+        flexGrow: 0,
+        marginBottom: spacing.md,
+        alignSelf: 'stretch',
+        marginHorizontal: -(spacing.lg * 2),
+    },
     filterContainer: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: radius.lg,
-        padding: 4,
-        marginBottom: spacing.md,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingHorizontal: spacing.lg * 2,
     },
     filterTab: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.md,
+        justifyContent: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: radius.full,
         gap: spacing.xs,
+        height: 40,
+        backgroundColor: colors.backgroundLight,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     filterTabActive: {
-        backgroundColor: `${ACCENT_RGBA}0.15)`,
+        backgroundColor: `${PRIMARY_RGBA}0.15)`,
+        borderColor: `${PRIMARY_RGBA}0.3)`,
+    },
+    filterTabActiveSecondary: {
+        backgroundColor: `${SECONDARY_RGBA}0.15)`,
+        borderColor: `${SECONDARY_RGBA}0.3)`,
     },
     filterTabText: {
         ...typography.caption1,
@@ -849,11 +1069,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     filterTabTextActive: {
-        color: ACCENT,
+        color: PRIMARY,
         fontWeight: '600',
     },
     pendingBadge: {
-        backgroundColor: ROSE,
+        backgroundColor: PRIMARY,
         borderRadius: 10,
         minWidth: 18,
         height: 18,
@@ -861,6 +1081,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 2,
+    },
+    theirTurnBadge: {
+        backgroundColor: SECONDARY,
     },
     pendingBadgeText: {
         ...typography.caption2,
@@ -871,24 +1094,23 @@ const styles = StyleSheet.create({
     countBadgePremium: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        backgroundColor: colors.backgroundLight,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: radius.full,
         borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.2)`,
+        borderColor: colors.border,
         gap: spacing.xs,
     },
     countTextPremium: {
         ...typography.caption2,
         fontWeight: '600',
         letterSpacing: 2,
-        color: ACCENT,
+        color: PRIMARY,
     },
     // List
     list: {
         padding: spacing.lg,
-        // Remove top padding as header handles it
         paddingTop: 0,
         paddingBottom: Platform.OS === 'ios' ? 120 : 100,
     },
@@ -903,26 +1125,27 @@ const styles = StyleSheet.create({
         borderRadius: radius.lg,
         overflow: 'hidden',
         padding: spacing.md,
+        backgroundColor: colors.backgroundLight,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    matchCardNew: {
+        backgroundColor: `${PRIMARY_RGBA}0.08)`,
+        borderColor: `${PRIMARY_RGBA}0.4)`,
+        borderLeftWidth: 3,
+        borderLeftColor: PRIMARY,
     },
     cardSilkHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 60,
+        display: 'none',
     },
     cardPremiumBorder: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.15)`,
+        display: 'none',
     },
     cardPendingBorder: {
-        borderColor: `${ROSE_RGBA}0.2)`,
+        display: 'none',
+    },
+    cardTheirTurnBorder: {
+        display: 'none',
     },
     matchRow: {
         flexDirection: "row",
@@ -932,20 +1155,24 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: `${ROSE_RGBA}0.1)`,
+        backgroundColor: colors.background,
         borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.2)`,
+        borderColor: colors.border,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
     },
     iconContainerYesYes: {
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
-        borderColor: `${ACCENT_RGBA}0.2)`,
+        backgroundColor: `${PRIMARY_RGBA}0.1)`,
+        borderColor: `${PRIMARY_RGBA}0.2)`,
     },
     iconContainerPending: {
-        backgroundColor: `${ROSE_RGBA}0.15)`,
-        borderColor: `${ROSE_RGBA}0.25)`,
+        backgroundColor: `${PRIMARY_RGBA}0.15)`,
+        borderColor: `${PRIMARY_RGBA}0.25)`,
+    },
+    iconContainerTheirTurn: {
+        backgroundColor: `${SECONDARY_RGBA}0.15)`,
+        borderColor: `${SECONDARY_RGBA}0.25)`,
     },
     content: {
         flex: 1,
@@ -968,26 +1195,51 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
     },
+    metaLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.xs,
+    },
+    newBadge: {
+        backgroundColor: PRIMARY,
+        paddingHorizontal: spacing.xs + 2,
+        paddingVertical: 2,
+        borderRadius: radius.xs,
+    },
+    newBadgeText: {
+        ...typography.caption2,
+        color: colors.text,
+        fontWeight: "700",
+        fontSize: 9,
+        letterSpacing: 0.5,
+    },
     tagPremium: {
-        backgroundColor: `${ROSE_RGBA}0.1)`,
+        backgroundColor: colors.background,
         paddingHorizontal: spacing.sm,
         paddingVertical: 3,
         borderRadius: radius.sm,
         borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.15)`,
+        borderColor: colors.border,
     },
     tagPremiumHighlight: {
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
-        borderColor: `${ACCENT_RGBA}0.2)`,
+        backgroundColor: `${PRIMARY_RGBA}0.1)`,
+        borderColor: `${PRIMARY_RGBA}0.2)`,
     },
     tagTextPremium: {
         ...typography.caption2,
-        color: ROSE,
+        color: SECONDARY,
         fontWeight: "600",
         letterSpacing: 1,
     },
     tagTextPremiumHighlight: {
-        color: ACCENT,
+        color: PRIMARY,
+    },
+    tagTheirTurn: {
+        backgroundColor: `${SECONDARY_RGBA}0.1)`,
+        borderColor: `${SECONDARY_RGBA}0.2)`,
+    },
+    tagTextTheirTurn: {
+        color: SECONDARY,
     },
     datePremium: {
         ...typography.caption2,
@@ -1004,7 +1256,7 @@ const styles = StyleSheet.create({
         width: 22,
         height: 22,
         borderRadius: 11,
-        backgroundColor: ACCENT,
+        backgroundColor: PRIMARY,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -1012,11 +1264,15 @@ const styles = StyleSheet.create({
         width: 28,
         height: 28,
         borderRadius: 14,
-        backgroundColor: `${ACCENT_RGBA}0.08)`,
+        backgroundColor: colors.background,
         borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.15)`,
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    chevronTheirTurn: {
+        backgroundColor: `${SECONDARY_RGBA}0.1)`,
+        borderColor: `${SECONDARY_RGBA}0.2)`,
     },
     // Premium Empty State
     emptyContent: {
@@ -1029,9 +1285,9 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        backgroundColor: colors.backgroundLight,
         borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.2)`,
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: spacing.lg,
@@ -1073,7 +1329,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-    // Pairing gate styles
     pairingGateContainer: {
         flex: 1,
         justifyContent: 'center',
@@ -1090,9 +1345,9 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: `${ROSE_RGBA}0.1)`,
+        backgroundColor: `${PRIMARY_RGBA}0.1)`,
         borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.2)`,
+        borderColor: `${PRIMARY_RGBA}0.2)`,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: spacing.lg,
@@ -1101,7 +1356,7 @@ const styles = StyleSheet.create({
         ...typography.caption2,
         fontWeight: '600',
         letterSpacing: 3,
-        color: ROSE,
+        color: PRIMARY,
         marginBottom: spacing.xs,
     },
     pairingGateTitle: {
@@ -1111,19 +1366,19 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
     },
     pairingGateBadge: {
-        backgroundColor: `${ROSE_RGBA}0.1)`,
+        backgroundColor: `${PRIMARY_RGBA}0.1)`,
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.sm,
         borderRadius: radius.full,
         borderWidth: 1,
-        borderColor: `${ROSE_RGBA}0.2)`,
+        borderColor: `${PRIMARY_RGBA}0.2)`,
         marginBottom: spacing.lg,
     },
     pairingGateBadgeText: {
         ...typography.caption2,
         fontWeight: '600',
         letterSpacing: 2,
-        color: ROSE,
+        color: PRIMARY,
     },
     pairingGateDescription: {
         ...typography.body,
@@ -1151,5 +1406,47 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         color: colors.textTertiary,
         textAlign: 'center',
+    },
+    // Nudge button styles
+    nudgeContainer: {
+        marginTop: spacing.md,
+        alignItems: 'center',
+    },
+    nudgeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: radius.full,
+        gap: spacing.xs,
+        backgroundColor: `${SECONDARY_RGBA}0.15)`,
+        borderWidth: 1,
+        borderColor: `${SECONDARY_RGBA}0.3)`,
+        minWidth: 140,
+    },
+    nudgeButtonDisabled: {
+        backgroundColor: colors.backgroundLight,
+        borderColor: colors.border,
+    },
+    nudgeButtonText: {
+        ...typography.caption1,
+        color: SECONDARY,
+        fontWeight: '600',
+    },
+    nudgeButtonTextDisabled: {
+        color: colors.textTertiary,
+    },
+    nudgeFeedback: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+    },
+    nudgeFeedbackText: {
+        ...typography.caption1,
+        color: colors.success,
+        fontWeight: '500',
     },
 });

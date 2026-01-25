@@ -10,7 +10,6 @@ import {
     Bot,
 } from 'lucide-react';
 import {
-    INTENSITY_LEVELS,
     type GeneratedQuestion,
     type QuestionReview,
     type CouncilGenerationResult,
@@ -199,16 +198,6 @@ function QuestionItem({
                         )}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                        {/* Intensity Badge */}
-                        <span
-                            className={`inline-block text-xs px-2 py-0.5 rounded text-white ${
-                                INTENSITY_LEVELS[question.intensity - 1]?.color || 'bg-muted'
-                            }`}
-                            title={INTENSITY_LEVELS[question.intensity - 1]?.description}
-                        >
-                            {question.intensity} - {INTENSITY_LEVELS[question.intensity - 1]?.label || 'Unknown'}
-                        </span>
-
                         {/* Source Generator Badge (cherry-pick mode) */}
                         {selectionMode === 'cherry_pick' && question.sourceGeneratorModel && (
                             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
@@ -228,7 +217,7 @@ function QuestionItem({
                                             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                                 }`}
                                 title={review.scores
-                                    ? `Scores: ${review.scores.guidelineCompliance}/${review.scores.creativity}/${review.scores.clarity}/${review.scores.intensityAccuracy}`
+                                    ? `Scores: ${review.scores.guidelineCompliance}/${review.scores.creativity}/${review.scores.clarity}`
                                     : ''
                                 }
                             >

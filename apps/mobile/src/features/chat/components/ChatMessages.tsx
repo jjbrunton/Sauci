@@ -19,6 +19,8 @@ type Message = Database['public']['Tables']['messages']['Row'];
 interface ChatMessagesProps {
     messages: Message[];
     userId: string | undefined;
+    userName: string | undefined;
+    partnerName: string | undefined;
     match: Match | null;
     uploadStatus: UploadStatus | null;
     partnerTyping: boolean;
@@ -46,6 +48,8 @@ function isSameDay(date1: Date, date2: Date): boolean {
 const ChatMessagesComponent: React.FC<ChatMessagesProps> = ({
     messages,
     userId,
+    userName,
+    partnerName,
     match,
     uploadStatus,
     partnerTyping,
@@ -108,9 +112,9 @@ const ChatMessagesComponent: React.FC<ChatMessagesProps> = ({
     // Memoize ListFooterComponent to prevent recreation
     const listFooterComponent = useMemo(() => (
         <View style={styles.footerContainer}>
-            <MatchCard match={match} user={userObject} />
+            <MatchCard match={match} user={userObject} userName={userName} partnerName={partnerName} onImagePress={onImagePress} />
         </View>
-    ), [match, userObject]);
+    ), [match, userObject, userName, partnerName, onImagePress]);
 
     // Memoize ListEmptyComponent to prevent recreation
     const listEmptyComponent = useMemo(() => (

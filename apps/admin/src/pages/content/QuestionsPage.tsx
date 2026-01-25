@@ -73,12 +73,8 @@ interface Question {
     config?: QuestionConfig | null;
 }
 
-import { INTENSITY_LEVELS } from '@/lib/openai';
-
-// Helper to get intensity info by level (1-indexed)
-const getIntensity = (level: number) => INTENSITY_LEVELS[level - 1] || INTENSITY_LEVELS[0];
-
 const DEFAULT_AUDIO_DURATION = 60;
+const getDefaultIntensity = (isExplicit?: boolean) => (isExplicit ? 4 : 2);
 
 const QUESTION_TYPE_OPTIONS: Array<{ value: QuestionType; label: string }> = [
     { value: 'swipe', label: 'Swipe' },
@@ -138,7 +134,7 @@ export function QuestionsPage() {
     }>({
         text: '',
         partner_text: '',
-        intensity: 1,
+        intensity: getDefaultIntensity(),
         allowed_couple_genders: [],
         target_user_genders: [],
         required_props: '',
@@ -276,7 +272,7 @@ export function QuestionsPage() {
         setFormData({
             text: '',
             partner_text: '',
-            intensity: 1,
+            intensity: getDefaultIntensity(pack?.is_explicit),
             allowed_couple_genders: [],
             target_user_genders: [],
             required_props: '',
@@ -388,6 +384,7 @@ export function QuestionsPage() {
 
     const handleAiGenerated = (generatedQuestions: Array<{ text: string; partner_text?: string; intensity: number; inverse_pair_id?: string | null }>) => {
         const generatedQuestionType: QuestionType = 'swipe';
+        const defaultIntensity = getDefaultIntensity(pack?.is_explicit);
 
         // Bulk insert AI-generated questions with inverse_of linking
         const insertQuestions = async () => {
@@ -414,7 +411,7 @@ export function QuestionsPage() {
                             pack_id: packId,
                             text: q.text,
                             partner_text: q.partner_text || null,
-                            intensity: q.intensity,
+                            intensity: defaultIntensity,
                             inverse_of: null,
                             question_type: generatedQuestionType,
                             config: null,
@@ -434,7 +431,7 @@ export function QuestionsPage() {
                                 pack_id: packId,
                                 text: primary.text,
                                 partner_text: primary.partner_text || null,
-                                intensity: primary.intensity,
+                                intensity: defaultIntensity,
                                 inverse_of: null,
                                 question_type: generatedQuestionType,
                                 config: null,
@@ -452,7 +449,7 @@ export function QuestionsPage() {
                                     pack_id: packId,
                                     text: inverse.text,
                                     partner_text: inverse.partner_text || null,
-                                    intensity: inverse.intensity,
+                                    intensity: defaultIntensity,
                                     inverse_of: primaryId,
                                     question_type: generatedQuestionType,
                                     config: null,
@@ -470,7 +467,7 @@ export function QuestionsPage() {
                                     pack_id: packId,
                                     text: extra.text,
                                     partner_text: extra.partner_text || null,
-                                    intensity: extra.intensity,
+                                    intensity: defaultIntensity,
                                     inverse_of: null,
                                     question_type: generatedQuestionType,
                                     config: null,
@@ -486,7 +483,7 @@ export function QuestionsPage() {
                             pack_id: packId,
                             text: pair[0].text,
                             partner_text: pair[0].partner_text || null,
-                            intensity: pair[0].intensity,
+                            intensity: defaultIntensity,
                             inverse_of: null,
                             question_type: generatedQuestionType,
                             config: null,
@@ -730,25 +727,6 @@ export function QuestionsPage() {
                                     <p className="text-xs text-muted-foreground">
                                         If set, the partner will see this text instead. Useful for "Would you..." / "Would your partner..." style questions.
                                     </p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Intensity Level</Label>
-                                    <div className="flex gap-2">
-                                        {INTENSITY_LEVELS.map((intensity) => (
-                                            <Button
-                                                key={intensity.level}
-                                                type="button"
-                                                variant={formData.intensity === intensity.level ? 'default' : 'outline'}
-                                                size="sm"
-                                                onClick={() => setFormData(d => ({ ...d, intensity: intensity.level }))}
-                                                className={formData.intensity === intensity.level ? intensity.color : ''}
-                                                title={intensity.description}
-                                            >
-                                                {intensity.level} - {intensity.label}
-                                            </Button>
-                                        ))}
-                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -1026,7 +1004,6 @@ export function QuestionsPage() {
                                     <TableHead className="w-32">Partner Text</TableHead>
                                     <TableHead className="w-24">Couples</TableHead>
                                     <TableHead className="w-24">Initiator</TableHead>
-                                    <TableHead className="w-24">Intensity</TableHead>
                                     <TableHead className="w-24">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -1123,14 +1100,6 @@ export function QuestionsPage() {
                                             ) : (
                                                 <span className="text-muted-foreground text-xs">Any</span>
                                             )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge
-                                                className={`${getIntensity(question.intensity).color} text-white`}
-                                                title={getIntensity(question.intensity).description}
-                                            >
-                                                {getIntensity(question.intensity).label}
-                                            </Badge>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-1">

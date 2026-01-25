@@ -91,15 +91,6 @@ export function ReviewSummary({
                         </p>
                     )}
 
-                    {/* Intensity distribution for cherry-pick */}
-                    {selectionMode === 'cherry_pick' && cherryPickResult && Object.keys(cherryPickResult.intensityDistribution).length > 0 && (
-                        <p>
-                            Intensity distribution: {Object.entries(cherryPickResult.intensityDistribution)
-                                .sort(([a], [b]) => Number(a) - Number(b))
-                                .map(([level, count]) => `L${level}:${count}`)
-                                .join(', ')}
-                        </p>
-                    )}
                 </div>
             )}
         </div>

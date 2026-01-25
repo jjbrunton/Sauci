@@ -1,9 +1,7 @@
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { TONE_LEVELS, type ToneLevel } from '@/lib/openai';
 import type { GeneratorType, GeneratorContext, GenerationConfig } from './hooks/useAiGeneration';
 
 // =============================================================================
@@ -15,7 +13,7 @@ interface GenerationFormProps {
     context?: GeneratorContext;
     config: GenerationConfig;
     onCountChange: (count: number) => void;
-    onToneChange: (tone: ToneLevel) => void;
+    onExplicitChange: (isExplicit: boolean) => void;
     onCrudeLangChange: (crudeLang: boolean) => void;
     onInspirationChange: (inspiration: string) => void;
 }
@@ -29,12 +27,10 @@ export function GenerationForm({
     context,
     config,
     onCountChange,
-    onToneChange,
+    onExplicitChange,
     onCrudeLangChange,
     onInspirationChange,
 }: GenerationFormProps) {
-    const isExplicit = config.tone >= 4;
-
     return (
         <div className="space-y-4">
             {/* Question Count (questions only) */}
@@ -53,42 +49,15 @@ export function GenerationForm({
                 </div>
             )}
 
-            {/* Intimacy Level Selector (questions only) */}
-            {type === 'questions' && (
-                <div className="space-y-2">
-                    <Label>Intimacy Level</Label>
-                    <div className="flex flex-wrap gap-2">
-                        {TONE_LEVELS.map((t) => (
-                            <Button
-                                key={t.level}
-                                type="button"
-                                variant={config.tone === t.level ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => onToneChange(t.level as ToneLevel)}
-                                className={config.tone === t.level ? 'ring-2 ring-offset-1' : ''}
-                                title={t.description}
-                            >
-                                {t.level}. {t.label}
-                            </Button>
-                        ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                        {TONE_LEVELS.find(t => t.level === config.tone)?.description}
-                    </p>
-                </div>
-            )}
-
-            {/* Wild/Explicit Toggle (for other generators) */}
-            {(type === 'category-ideas' || type === 'category-pack-ideas' || type === 'pack') && (
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="explicit-mode"
-                        checked={isExplicit}
-                        onCheckedChange={(checked: boolean) => onToneChange(checked ? 5 : 3)}
-                    />
-                    <Label htmlFor="explicit-mode">Include Wild/Adult Ideas</Label>
-                </div>
-            )}
+            {/* Explicit Toggle */}
+            <div className="flex items-center space-x-2">
+                <Switch
+                    id="explicit-mode"
+                    checked={config.isExplicit}
+                    onCheckedChange={onExplicitChange}
+                />
+                <Label htmlFor="explicit-mode">Explicit Content</Label>
+            </div>
 
             {/* Crude Language Override Toggle */}
             <div className="flex items-center space-x-2">

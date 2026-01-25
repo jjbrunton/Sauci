@@ -31,20 +31,25 @@ const ChatHeaderComponent: React.FC<ChatHeaderProps> = ({
             entering={FadeIn.duration(300)}
             style={[styles.header, { paddingTop: insets.top + spacing.sm }]}
         >
-            {/* Gradient background */}
+            {/* Flat background */}
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.border }]} />
+            
+            {/* Gradient background - removed
             <LinearGradient
                 colors={['rgba(22, 33, 62, 0.8)', 'rgba(13, 13, 26, 0.6)']}
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
             />
-            {/* Top silk highlight */}
+            */}
+            {/* Top silk highlight - removed
             <LinearGradient
                 colors={[`${ACCENT_RGBA}0.1)`, 'transparent']}
                 style={styles.headerSilkHighlight}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
             />
+            */}
 
             <TouchableOpacity
                 onPress={onBack}
@@ -138,11 +143,24 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
+        backgroundColor: colors.backgroundLight,
         borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.2)`,
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    // ...
+    headerSpacer: {
+        width: 40,
+    },
+    settingsButton: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerBorderBottom: {
+        display: 'none',
     },
     headerCenter: {
         flex: 1,
@@ -195,21 +213,5 @@ const styles = StyleSheet.create({
         ...typography.headline,
         color: colors.text,
     },
-    headerSpacer: {
-        width: 40,
-    },
-    settingsButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerBorderBottom: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 1,
-        backgroundColor: `${ACCENT_RGBA}0.15)`,
-    },
+
 });

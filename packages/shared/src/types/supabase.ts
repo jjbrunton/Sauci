@@ -609,6 +609,7 @@ export type Database = {
           is_new: boolean | null
           match_type: Database["public"]["Enums"]["match_type"]
           question_id: string
+          response_summary: Json | null
         }
         Insert: {
           couple_id: string
@@ -617,6 +618,7 @@ export type Database = {
           is_new?: boolean | null
           match_type: Database["public"]["Enums"]["match_type"]
           question_id: string
+          response_summary?: Json | null
         }
         Update: {
           couple_id?: string
@@ -625,6 +627,7 @@ export type Database = {
           is_new?: boolean | null
           match_type?: Database["public"]["Enums"]["match_type"]
           question_id?: string
+          response_summary?: Json | null
         }
         Relationships: [
           {
@@ -797,6 +800,53 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          user_id: string
+          matches_enabled: boolean | null
+          messages_enabled: boolean | null
+          partner_activity_enabled: boolean | null
+          nudges_enabled: boolean | null
+          pack_changes_enabled: boolean | null
+          new_packs_enabled: boolean | null
+          streak_milestones_enabled: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          user_id: string
+          matches_enabled?: boolean | null
+          messages_enabled?: boolean | null
+          partner_activity_enabled?: boolean | null
+          nudges_enabled?: boolean | null
+          pack_changes_enabled?: boolean | null
+          new_packs_enabled?: boolean | null
+          streak_milestones_enabled?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          user_id?: string
+          matches_enabled?: boolean | null
+          messages_enabled?: boolean | null
+          partner_activity_enabled?: boolean | null
+          nudges_enabled?: boolean | null
+          pack_changes_enabled?: boolean | null
+          new_packs_enabled?: boolean | null
+          streak_milestones_enabled?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pack_topics: {
         Row: {
           pack_id: string
@@ -836,6 +886,7 @@ export type Database = {
           gender: string | null
           id: string
           is_premium: boolean | null
+          last_nudge_sent_at: string | null
           max_intensity: number | null
           name: string | null
           onboarding_completed: boolean | null
@@ -853,6 +904,7 @@ export type Database = {
           gender?: string | null
           id: string
           is_premium?: boolean | null
+          last_nudge_sent_at?: string | null
           max_intensity?: number | null
           name?: string | null
           onboarding_completed?: boolean | null
@@ -870,6 +922,7 @@ export type Database = {
           gender?: string | null
           id?: string
           is_premium?: boolean | null
+          last_nudge_sent_at?: string | null
           max_intensity?: number | null
           name?: string | null
           onboarding_completed?: boolean | null
@@ -948,31 +1001,37 @@ export type Database = {
       questions: {
         Row: {
           allowed_couple_genders: string[] | null
+          config: Json | null
           created_at: string | null
           id: string
           intensity: number | null
           pack_id: string
           partner_text: string | null
+          question_type: Database["public"]["Enums"]["question_type"]
           target_user_genders: string[] | null
           text: string
         }
         Insert: {
           allowed_couple_genders?: string[] | null
+          config?: Json | null
           created_at?: string | null
           id?: string
           intensity?: number | null
           pack_id: string
           partner_text?: string | null
+          question_type?: Database["public"]["Enums"]["question_type"]
           target_user_genders?: string[] | null
           text: string
         }
         Update: {
           allowed_couple_genders?: string[] | null
+          config?: Json | null
           created_at?: string | null
           id?: string
           intensity?: number | null
           pack_id?: string
           partner_text?: string | null
+          question_type?: Database["public"]["Enums"]["question_type"]
           target_user_genders?: string[] | null
           text?: string
         }
@@ -1032,6 +1091,7 @@ export type Database = {
           created_at: string | null
           id: string
           question_id: string
+          response_data: Json | null
           user_id: string
         }
         Insert: {
@@ -1040,6 +1100,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           question_id: string
+          response_data?: Json | null
           user_id: string
         }
         Update: {
@@ -1048,6 +1109,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           question_id?: string
+          response_data?: Json | null
           user_id?: string
         }
         Relationships: [
@@ -1347,12 +1409,14 @@ export type Database = {
         Args: { target_pack_id?: string }
         Returns: {
           allowed_couple_genders: string[]
+          config: Json
           id: string
           intensity: number
           is_two_part: boolean
           pack_id: string
           partner_answered: boolean
           partner_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
           target_user_genders: string[]
           text: string
         }[]
@@ -1424,7 +1488,8 @@ export type Database = {
         | "resolved"
         | "closed"
       feedback_type: "bug" | "feature_request" | "general" | "question"
-      match_type: "yes_yes" | "yes_maybe" | "maybe_maybe"
+      match_type: "yes_yes" | "yes_maybe" | "maybe_maybe" | "both_answered"
+      question_type: "swipe" | "text_answer" | "audio" | "photo" | "who_likely"
       report_reason: "harassment" | "spam" | "inappropriate_content" | "other"
       subscription_status:
         | "active"
@@ -1572,7 +1637,8 @@ export const Constants = {
       ],
       feedback_status: ["new", "reviewed", "in_progress", "resolved", "closed"],
       feedback_type: ["bug", "feature_request", "general", "question"],
-      match_type: ["yes_yes", "yes_maybe", "maybe_maybe"],
+      match_type: ["yes_yes", "yes_maybe", "maybe_maybe", "both_answered"],
+      question_type: ["swipe", "text_answer", "audio", "photo", "who_likely"],
       report_reason: ["harassment", "spam", "inappropriate_content", "other"],
       subscription_status: [
         "active",

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
     View,
     Text,
+    TextInput,
     StyleSheet,
     Modal,
     TouchableOpacity,
@@ -10,20 +11,23 @@ import {
     Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
-import type { ResponseWithQuestion, UpdateResponseResult } from "../../store";
-import { useResponsesStore } from "../../store";
-import type { AnswerType } from "@/types";
+import type { ResponseWithQuestion } from "../../store";
+import { useAuthStore, useResponsesStore } from "../../store";
+import { useMediaPicker } from "../../hooks/useMediaPicker";
+import { useResponseMediaUpload } from "../../hooks/useResponseMediaUpload";
+import { useAudioRecorder } from "../../hooks/useAudioRecorder";
+import type { AnswerType, ResponseData } from "@/types";
 import { colors, spacing, typography, radius } from "../../theme";
 import { DeleteMatchConfirmModal } from "./DeleteMatchConfirmModal";
 
 // Premium color palette
 const ACCENT = colors.premium.gold;
 const ACCENT_RGBA = "rgba(212, 175, 55, ";
+const MAX_TEXT_LENGTH = 500;
 
-// Answer button config
+// Answer button config (includes 'maybe' for displaying existing responses)
 const ANSWER_CONFIG = {
     yes: {
         color: colors.success,
@@ -31,19 +35,22 @@ const ANSWER_CONFIG = {
         icon: "checkmark-circle" as const,
         label: "Yes",
     },
-    maybe: {
-        color: colors.warning,
-        rgba: "rgba(243, 156, 18, ",
-        icon: "help-circle" as const,
-        label: "Maybe",
-    },
     no: {
         color: colors.error,
         rgba: "rgba(231, 76, 60, ",
         icon: "close-circle" as const,
         label: "No",
     },
+    maybe: {
+        color: colors.warning,
+        rgba: "rgba(243, 156, 18, ",
+        icon: "help-circle" as const,
+        label: "Maybe",
+    },
 };
+
+// Only these answer types can be selected by users
+type SelectableAnswerType = "yes" | "no";
 
 interface EditResponseSheetProps {
     visible: boolean;
@@ -54,12 +61,32 @@ interface EditResponseSheetProps {
 
 export function EditResponseSheet({ visible, response, onClose, onSuccess }: EditResponseSheetProps) {
     const { updateResponse } = useResponsesStore();
+    const { user, partner } = useAuthStore();
     const [isLoading, setIsLoading] = useState(false);
     const [pendingAnswer, setPendingAnswer] = useState<AnswerType | null>(null);
     const [confirmModalData, setConfirmModalData] = useState<{
         matchId: string;
         messageCount: number;
     } | null>(null);
+    const [textValue, setTextValue] = useState("");
+    const [selectedWhoLikely, setSelectedWhoLikely] = useState<string | null>(null);
+
+    const questionId = response?.question_id ?? "";
+    const maxDurationSeconds = response?.question.config?.max_duration_seconds ?? 60;
+    const { takePhoto, pickMedia } = useMediaPicker({ imageQuality: 0.8 });
+    const { uploading, uploadPhoto, uploadAudio } = useResponseMediaUpload({
+        userId: user?.id ?? "",
+        questionId,
+    });
+    const {
+        state: audioState,
+        durationSeconds,
+        recordingUri,
+        startRecording,
+        stopRecording,
+        resetRecording,
+    } = useAudioRecorder({ maxDurationSeconds });
+    const isBusy = isLoading || uploading;
 
     // Reset state when modal closes
     useEffect(() => {
@@ -67,18 +94,38 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
             setIsLoading(false);
             setPendingAnswer(null);
             setConfirmModalData(null);
+            setTextValue("");
+            setSelectedWhoLikely(null);
+            resetRecording();
         }
-    }, [visible]);
+    }, [visible, resetRecording]);
+
+    useEffect(() => {
+        if (!visible || !response) return;
+
+        if (response.response_data?.type === "text_answer") {
+            setTextValue(response.response_data.text);
+        } else {
+            setTextValue("");
+        }
+
+        if (response.response_data?.type === "who_likely") {
+            setSelectedWhoLikely(response.response_data.chosen_user_id);
+        } else {
+            setSelectedWhoLikely(null);
+        }
+    }, [visible, response]);
 
     if (!response) return null;
 
-    const handleAnswerPress = async (newAnswer: AnswerType) => {
-        if (newAnswer === response.answer || isLoading) return;
+    const handleAnswerPress = async (newAnswer: AnswerType, responseData?: ResponseData | null) => {
+        if (isBusy) return;
+        if (newAnswer === response.answer && typeof responseData === "undefined") return;
 
         setIsLoading(true);
         setPendingAnswer(newAnswer);
 
-        const result = await updateResponse(response.question_id, newAnswer, false);
+        const result = await updateResponse(response.question_id, newAnswer, false, responseData);
 
         if (result.requires_confirmation && result.match_id) {
             // Show confirmation modal
@@ -125,7 +172,76 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
         setPendingAnswer(null);
     };
 
-    const AnswerButton = ({ answer }: { answer: AnswerType }) => {
+    const questionType = response.question.question_type ?? "swipe";
+    const isTextSaveDisabled = textValue.trim().length === 0 || isBusy;
+    const isNoSelected = response.answer === "no";
+    const userLabel = user?.name || "You";
+    const partnerLabel = partner?.name || "Partner";
+    const canUpload = !!user?.id && !!questionId;
+
+    const handleTextSave = async () => {
+        const trimmed = textValue.trim();
+        if (!trimmed) return;
+        await handleAnswerPress("yes", { type: "text_answer", text: trimmed });
+    };
+
+    const handleSetNo = async () => {
+        await handleAnswerPress("no", null);
+    };
+
+    const handleWhoLikelySelect = async (userId: string) => {
+        if (isBusy) return;
+        setSelectedWhoLikely(userId);
+        await handleAnswerPress("yes", { type: "who_likely", chosen_user_id: userId });
+    };
+
+    const handlePhotoPick = async (source: "camera" | "library") => {
+        if (isBusy || !canUpload) return;
+        const result = source === "camera" ? await takePhoto() : await pickMedia();
+        if (!result || result.mediaType !== "image") return;
+
+        const uploadResult = await uploadPhoto(result.uri);
+        if (!uploadResult.success || !uploadResult.mediaPath) {
+            console.error("Failed to upload photo response:", uploadResult.error);
+            return;
+        }
+
+        await handleAnswerPress("yes", { type: "photo", media_path: uploadResult.mediaPath });
+    };
+
+    const handleStartRecording = async () => {
+        if (isBusy) return;
+        await startRecording();
+    };
+
+    const handleStopRecording = async () => {
+        if (isBusy) return;
+        await stopRecording();
+    };
+
+    const handleAudioSave = async () => {
+        if (!recordingUri || isBusy || !canUpload) return;
+
+        const uploadResult = await uploadAudio(recordingUri, durationSeconds);
+        if (!uploadResult.success || !uploadResult.mediaPath) {
+            console.error("Failed to upload audio response:", uploadResult.error);
+            return;
+        }
+
+        await handleAnswerPress("yes", {
+            type: "audio",
+            media_path: uploadResult.mediaPath,
+            duration_seconds: durationSeconds,
+        });
+        resetRecording();
+    };
+
+    const handleDiscardRecording = () => {
+        if (isBusy) return;
+        resetRecording();
+    };
+
+    const AnswerButton = ({ answer }: { answer: SelectableAnswerType }) => {
         const config = ANSWER_CONFIG[answer];
         const isSelected = response.answer === answer;
         const isPending = pendingAnswer === answer;
@@ -140,7 +256,7 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
                     },
                 ]}
                 onPress={() => handleAnswerPress(answer)}
-                disabled={isLoading}
+                disabled={isBusy}
                 activeOpacity={0.7}
             >
                 {isPending && isLoading ? (
@@ -169,6 +285,243 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
         );
     };
 
+    const ActionButton = ({
+        label,
+        icon,
+        color = ACCENT,
+        onPress,
+        disabled = false,
+        loading = false,
+    }: {
+        label: string;
+        icon: keyof typeof Ionicons.glyphMap;
+        color?: string;
+        onPress: () => void;
+        disabled?: boolean;
+        loading?: boolean;
+    }) => {
+        const isDisabled = disabled || loading;
+        const iconColor = isDisabled ? colors.textTertiary : color;
+
+        return (
+            <TouchableOpacity
+                style={[styles.actionButton, isDisabled && styles.actionButtonDisabled]}
+                onPress={onPress}
+                disabled={isDisabled}
+                activeOpacity={0.7}
+            >
+                {loading ? (
+                    <ActivityIndicator color={iconColor} size="small" />
+                ) : (
+                    <Ionicons name={icon} size={20} color={iconColor} />
+                )}
+                <Text style={[styles.actionButtonText, { color: iconColor }]}>
+                    {label}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
+
+    const ChoiceButton = ({
+        label,
+        selected,
+        onPress,
+        disabled = false,
+    }: {
+        label: string;
+        selected: boolean;
+        onPress: () => void;
+        disabled?: boolean;
+    }) => (
+        <TouchableOpacity
+            style={[styles.choiceButton, selected && styles.choiceButtonSelected]}
+            onPress={onPress}
+            disabled={disabled}
+            activeOpacity={0.7}
+        >
+            <Text style={[styles.choiceButtonText, selected && styles.choiceButtonTextSelected]}>
+                {label}
+            </Text>
+            {selected && <Ionicons name="checkmark" size={16} color={ACCENT} />}
+        </TouchableOpacity>
+    );
+
+    const isSavingYes = isLoading && pendingAnswer === "yes";
+    const isSavingNo = isLoading && pendingAnswer === "no";
+
+    const actionContent = (() => {
+        if (questionType === "text_answer") {
+            return (
+                <View style={styles.editorContainer}>
+                    <View style={styles.textInputContainer}>
+                        <TextInput
+                            style={styles.textInput}
+                            value={textValue}
+                            onChangeText={(value) => setTextValue(value.slice(0, MAX_TEXT_LENGTH))}
+                            placeholder="Update your answer..."
+                            placeholderTextColor={colors.textTertiary}
+                            multiline
+                            editable={!isBusy}
+                            textAlignVertical="top"
+                            maxLength={MAX_TEXT_LENGTH}
+                        />
+                        <View style={styles.charCountContainer}>
+                            <Text style={styles.charCount}>
+                                {textValue.length}/{MAX_TEXT_LENGTH}
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label="Set No"
+                            icon="close"
+                            color={ANSWER_CONFIG.no.color}
+                            onPress={handleSetNo}
+                            disabled={isBusy || isNoSelected}
+                            loading={isSavingNo}
+                        />
+                        <ActionButton
+                            label="Save"
+                            icon="checkmark"
+                            color={ANSWER_CONFIG.yes.color}
+                            onPress={handleTextSave}
+                            disabled={isTextSaveDisabled}
+                            loading={isSavingYes}
+                        />
+                    </View>
+                </View>
+            );
+        }
+
+        if (questionType === "who_likely") {
+            return (
+                <View style={styles.editorContainer}>
+                    <View style={styles.choiceRow}>
+                        <ChoiceButton
+                            label={userLabel}
+                            selected={selectedWhoLikely === user?.id}
+                            onPress={() => {
+                                if (user?.id) {
+                                    handleWhoLikelySelect(user.id);
+                                }
+                            }}
+                            disabled={isBusy || !user?.id}
+                        />
+                        <ChoiceButton
+                            label={partnerLabel}
+                            selected={selectedWhoLikely === partner?.id}
+                            onPress={() => {
+                                if (partner?.id) {
+                                    handleWhoLikelySelect(partner.id);
+                                }
+                            }}
+                            disabled={isBusy || !partner?.id}
+                        />
+                    </View>
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label="Set No"
+                            icon="close"
+                            color={ANSWER_CONFIG.no.color}
+                            onPress={handleSetNo}
+                            disabled={isBusy || isNoSelected}
+                            loading={isSavingNo}
+                        />
+                    </View>
+                </View>
+            );
+        }
+
+        if (questionType === "photo") {
+            return (
+                <View style={styles.editorContainer}>
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label="Camera"
+                            icon="camera"
+                            onPress={() => handlePhotoPick("camera")}
+                            disabled={isBusy || !canUpload}
+                            loading={uploading}
+                        />
+                        <ActionButton
+                            label="Library"
+                            icon="images"
+                            onPress={() => handlePhotoPick("library")}
+                            disabled={isBusy || !canUpload}
+                            loading={uploading}
+                        />
+                    </View>
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label="Set No"
+                            icon="close"
+                            color={ANSWER_CONFIG.no.color}
+                            onPress={handleSetNo}
+                            disabled={isBusy || isNoSelected}
+                            loading={isSavingNo}
+                        />
+                    </View>
+                </View>
+            );
+        }
+
+        if (questionType === "audio") {
+            const statusText = audioState === "recording"
+                ? `Recording... ${durationSeconds}s`
+                : recordingUri
+                    ? `Recorded ${durationSeconds}s`
+                    : "Tap record to start";
+
+            return (
+                <View style={styles.editorContainer}>
+                    <Text style={styles.audioStatusText}>{statusText}</Text>
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label={audioState === "recording" ? "Stop" : recordingUri ? "Re-record" : "Record"}
+                            icon={audioState === "recording" ? "square" : "mic"}
+                            onPress={audioState === "recording" ? handleStopRecording : handleStartRecording}
+                            disabled={isBusy}
+                        />
+                        <ActionButton
+                            label="Save"
+                            icon="checkmark"
+                            color={ANSWER_CONFIG.yes.color}
+                            onPress={handleAudioSave}
+                            disabled={!recordingUri || audioState === "recording" || isBusy || !canUpload}
+                            loading={uploading || isSavingYes}
+                        />
+                    </View>
+                    {recordingUri && audioState !== "recording" && (
+                        <TouchableOpacity
+                            style={styles.linkButton}
+                            onPress={handleDiscardRecording}
+                            disabled={isBusy}
+                        >
+                            <Text style={styles.linkButtonText}>Discard recording</Text>
+                        </TouchableOpacity>
+                    )}
+                    <View style={styles.actionRow}>
+                        <ActionButton
+                            label="Set No"
+                            icon="close"
+                            color={ANSWER_CONFIG.no.color}
+                            onPress={handleSetNo}
+                            disabled={isBusy || isNoSelected}
+                            loading={isSavingNo}
+                        />
+                    </View>
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.answerButtons}>
+                <AnswerButton answer="yes" />
+                <AnswerButton answer="no" />
+            </View>
+        );
+    })();
+
     return (
         <Modal
             visible={visible}
@@ -191,7 +544,7 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
                         <BlurView intensity={80} tint="dark" style={styles.sheet}>
                             <SheetContent
                                 response={response}
-                                AnswerButton={AnswerButton}
+                                actions={actionContent}
                                 onClose={onClose}
                             />
                         </BlurView>
@@ -199,7 +552,7 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
                         <View style={[styles.sheet, styles.sheetAndroid]}>
                             <SheetContent
                                 response={response}
-                                AnswerButton={AnswerButton}
+                                actions={actionContent}
                                 onClose={onClose}
                             />
                         </View>
@@ -221,11 +574,11 @@ export function EditResponseSheet({ visible, response, onClose, onSuccess }: Edi
 // Sheet content extracted for reuse between iOS blur and Android solid background
 function SheetContent({
     response,
-    AnswerButton,
+    actions,
     onClose,
 }: {
     response: ResponseWithQuestion;
-    AnswerButton: React.FC<{ answer: AnswerType }>;
+    actions: ReactNode;
     onClose: () => void;
 }) {
     return (
@@ -261,12 +614,8 @@ function SheetContent({
                 </View>
             )}
 
-            {/* Answer buttons */}
-            <View style={styles.answerButtons}>
-                <AnswerButton answer="yes" />
-                <AnswerButton answer="maybe" />
-                <AnswerButton answer="no" />
-            </View>
+            {/* Action content */}
+            <View style={styles.actionsContainer}>{actions}</View>
 
             {/* Bottom padding for safe area */}
             <View style={styles.bottomPadding} />
@@ -359,10 +708,36 @@ const styles = StyleSheet.create({
         color: colors.warning,
         flex: 1,
     },
+    actionsContainer: {
+        marginBottom: spacing.lg,
+    },
+    editorContainer: {
+        gap: spacing.md,
+    },
+    textInputContainer: {
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.12)",
+        padding: spacing.md,
+        minHeight: 120,
+    },
+    textInput: {
+        ...typography.body,
+        color: colors.text,
+        minHeight: 80,
+    },
+    charCountContainer: {
+        alignItems: "flex-end",
+        marginTop: spacing.xs,
+    },
+    charCount: {
+        ...typography.caption2,
+        color: colors.textTertiary,
+    },
     answerButtons: {
         flexDirection: "row",
         gap: spacing.md,
-        marginBottom: spacing.lg,
     },
     answerButton: {
         flex: 1,
@@ -390,6 +765,70 @@ const styles = StyleSheet.create({
         backgroundColor: "rgba(255, 255, 255, 0.1)",
         justifyContent: "center",
         alignItems: "center",
+    },
+    actionRow: {
+        flexDirection: "row",
+        gap: spacing.md,
+        alignItems: "center",
+    },
+    actionButton: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: spacing.md,
+        borderRadius: radius.md,
+        backgroundColor: "rgba(255, 255, 255, 0.05)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.1)",
+        gap: spacing.xs,
+    },
+    actionButtonDisabled: {
+        opacity: 0.6,
+    },
+    actionButtonText: {
+        ...typography.caption1,
+        fontWeight: "600",
+    },
+    choiceRow: {
+        flexDirection: "row",
+        gap: spacing.md,
+    },
+    choiceButton: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: spacing.md,
+        borderRadius: radius.md,
+        backgroundColor: "rgba(255, 255, 255, 0.06)",
+        borderWidth: 1,
+        borderColor: "rgba(255, 255, 255, 0.12)",
+        flexDirection: "row",
+        gap: spacing.xs,
+    },
+    choiceButtonSelected: {
+        borderColor: `${ACCENT_RGBA}0.6)`,
+        backgroundColor: `${ACCENT_RGBA}0.12)`,
+    },
+    choiceButtonText: {
+        ...typography.callout,
+        color: colors.textSecondary,
+        fontWeight: "600",
+    },
+    choiceButtonTextSelected: {
+        color: ACCENT,
+    },
+    audioStatusText: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+        textAlign: "center",
+    },
+    linkButton: {
+        alignSelf: "center",
+    },
+    linkButtonText: {
+        ...typography.caption1,
+        color: colors.textTertiary,
+        textDecorationLine: "underline",
     },
     bottomPadding: {
         height: Platform.OS === "ios" ? 34 : 20,

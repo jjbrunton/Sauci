@@ -10,7 +10,6 @@ import {
     type GeneratedQuestion,
     type GeneratedCategoryIdea,
     type GeneratedPackIdea,
-    type ToneLevel,
     type QuestionReview,
     type CouncilGenerationResult,
     type GenerationCandidate,
@@ -38,7 +37,7 @@ export interface GeneratorContext {
 
 export interface GenerationConfig {
     count: number;
-    tone: ToneLevel;
+    isExplicit: boolean;
     crudeLang: boolean;
     inspiration: string;
 }
@@ -77,7 +76,7 @@ export function useAiGeneration(
     // Config state
     const [config, setConfig] = useState<GenerationConfig>({
         count: 10,
-        tone: context?.isExplicit ? 5 : 2,
+        isExplicit: Boolean(context?.isExplicit),
         crudeLang: false,
         inspiration: '',
     });
@@ -118,14 +117,12 @@ export function useAiGeneration(
     // Council config
     const councilConfig = getCouncilConfig();
 
-    // Update tone when context changes
+    // Update explicit flag when context changes
     useEffect(() => {
-        if (type === 'questions') {
-            setConfig(prev => ({
-                ...prev,
-                tone: context?.isExplicit ? 5 : 2,
-            }));
-        }
+        setConfig(prev => ({
+            ...prev,
+            isExplicit: Boolean(context?.isExplicit),
+        }));
     }, [context?.isExplicit, type]);
 
     // Config setters
@@ -133,8 +130,8 @@ export function useAiGeneration(
         setConfig(prev => ({ ...prev, count }));
     }, []);
 
-    const setTone = useCallback((tone: ToneLevel) => {
-        setConfig(prev => ({ ...prev, tone }));
+    const setExplicit = useCallback((isExplicit: boolean) => {
+        setConfig(prev => ({ ...prev, isExplicit }));
     }, []);
 
     const setCrudeLang = useCallback((crudeLang: boolean) => {
@@ -219,7 +216,7 @@ export function useAiGeneration(
         setFilter('all');
         setSourceModel(null);
 
-        const isExplicit = config.tone >= 4;
+        const isExplicit = config.isExplicit;
 
         try {
             if (type === 'pack') {
@@ -253,7 +250,7 @@ export function useAiGeneration(
                     context.packName,
                     config.count,
                     undefined,
-                    config.tone,
+                    isExplicit ? 5 : 2,
                     context.packDescription || undefined,
                     context.existingQuestions,
                     config.crudeLang,
@@ -369,7 +366,7 @@ export function useAiGeneration(
         // Config
         config,
         setCount,
-        setTone,
+        setExplicit,
         setCrudeLang,
         setInspiration,
 

@@ -25,13 +25,16 @@ import { GradientBackground } from '../../src/components/ui/GradientBackground';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
 import { GlassToggle } from '../../src/components/ui/GlassToggle';
+import { Paywall } from '../../src/components/paywall';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
 import { supabase } from '../../src/lib/supabase';
 import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
+import { hasSeenOnboardingPaywall, markOnboardingPaywallSeen } from '../../src/lib/onboardingPaywallSeen';
 import { useAvatarPicker } from '../../src/hooks/useAvatarPicker';
+import { REQUIRED_ONBOARDING_VERSION, ONBOARDING_OFFERING_ID } from '../../src/constants/onboarding';
 import type { Gender } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
@@ -69,7 +72,9 @@ export default function OnboardingScreen() {
     const [hideNsfw, setHideNsfw] = useState(user?.hide_nsfw ?? false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPaywall, setShowPaywall] = useState(false);
     const inputRef = useRef<TextInput>(null);
+    const paywallNavigationRef = useRef(false);
 
     const {
         avatarUri,
@@ -187,6 +192,7 @@ export default function OnboardingScreen() {
                 show_explicit_content: showExplicitContent,
                 hide_nsfw: hideNsfw,
                 onboarding_completed: true,
+                onboarding_version: REQUIRED_ONBOARDING_VERSION,
                 updated_at: new Date().toISOString(),
             };
 
@@ -210,12 +216,33 @@ export default function OnboardingScreen() {
             console.log('[Onboarding] User fetched, navigating to home...');
             Events.profileUpdated(updatedFields);
             Events.onboardingComplete();
+            const currentUser = useAuthStore.getState().user;
+            if (currentUser?.id && !currentUser.is_premium) {
+                const hasSeenPaywall = await hasSeenOnboardingPaywall(currentUser.id);
+                if (!hasSeenPaywall) {
+                    paywallNavigationRef.current = true;
+                    setShowPaywall(true);
+                    return;
+                }
+            }
             router.replace('/');
         } catch (err: any) {
             console.error('Onboarding error:', err);
             setError(getProfileError(err));
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handlePaywallClose = () => {
+        setShowPaywall(false);
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser?.id) {
+            void markOnboardingPaywallSeen(currentUser.id);
+        }
+        if (paywallNavigationRef.current) {
+            paywallNavigationRef.current = false;
+            router.replace('/');
         }
     };
 
@@ -248,12 +275,11 @@ export default function OnboardingScreen() {
                                     {avatarUri ? (
                                         <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                                     ) : (
-                                        <LinearGradient
-                                            colors={[colors.glass.background, colors.glass.backgroundLight]}
+                                        <View
                                             style={styles.avatarPlaceholder}
                                         >
                                             <Ionicons name="camera" size={40} color={colors.textSecondary} />
-                                        </LinearGradient>
+                                        </View>
                                     )}
                                     <View style={styles.avatarBadge}>
                                         <Ionicons name={avatarUri ? "pencil" : "add"} size={16} color={colors.text} />
@@ -662,6 +688,12 @@ export default function OnboardingScreen() {
                     {renderStage()}
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            <Paywall
+                visible={showPaywall}
+                onClose={handlePaywallClose}
+                offeringId={ONBOARDING_OFFERING_ID}
+            />
         </GradientBackground>
     );
 }
@@ -685,9 +717,92 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.backgroundLight,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    progressDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: colors.border,
+    },
+    // ...
+    avatarPlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: colors.border,
+        borderStyle: 'dashed',
+        backgroundColor: colors.backgroundLight,
+    },
+    // ...
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.background, // Flat background
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: spacing.md,
+    },
+    // ...
+    genderOption: {
+        width: '48%',
+        alignItems: 'center',
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.lg,
+        borderWidth: 2,
+        borderColor: colors.border,
+        paddingVertical: spacing.lg,
+        paddingHorizontal: spacing.md,
+        gap: spacing.sm,
+    },
+    // ...
+    purposeOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.lg,
+        borderWidth: 2,
+        borderColor: colors.border,
+        padding: spacing.md,
+    },
+    // ...
+    purposeIcon: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    radioOuter: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    // ...
+    notificationFeature: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
     },
     backButtonPlaceholder: {
         width: 40,
@@ -697,12 +812,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: spacing.sm,
     },
-    progressDot: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-        backgroundColor: colors.glass.border,
-    },
+
     progressDotActive: {
         backgroundColor: colors.primary,
         width: 24,
@@ -747,16 +857,7 @@ const styles = StyleSheet.create({
         borderWidth: 3,
         borderColor: colors.primary,
     },
-    avatarPlaceholder: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        borderStyle: 'dashed',
-    },
+
     avatarBadge: {
         position: 'absolute',
         bottom: 4,
@@ -800,15 +901,7 @@ const styles = StyleSheet.create({
         color: colors.text,
         marginBottom: spacing.md,
     },
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-        paddingHorizontal: spacing.md,
-    },
+
     inputIcon: {
         marginRight: spacing.sm,
     },
@@ -823,17 +916,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: spacing.sm,
     },
-    genderOption: {
-        width: '48%',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.lg,
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        paddingVertical: spacing.lg,
-        paddingHorizontal: spacing.md,
-        gap: spacing.sm,
-    },
+
     genderOptionSelected: {
         borderColor: colors.primary,
         backgroundColor: colors.primaryLight,
@@ -850,28 +933,12 @@ const styles = StyleSheet.create({
     purposeList: {
         gap: spacing.sm,
     },
-    purposeOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.lg,
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        padding: spacing.md,
-    },
+
     purposeOptionSelected: {
         borderColor: colors.primary,
         backgroundColor: colors.primaryLight,
     },
-    purposeIcon: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.glass.background,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: spacing.md,
-    },
+
     purposeIconSelected: {
         backgroundColor: colors.primaryLight,
     },
@@ -921,15 +988,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: spacing.lg,
     },
-    radioOuter: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
+
     radioOuterSelected: {
         borderColor: colors.primary,
     },
@@ -956,13 +1015,7 @@ const styles = StyleSheet.create({
     footer: {
         marginTop: 'auto',
     },
-    notificationFeature: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.glass.border,
-    },
+
     notificationFeatureLast: {
         borderBottomWidth: 0,
     },

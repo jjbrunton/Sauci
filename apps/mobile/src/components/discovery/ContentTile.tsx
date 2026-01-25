@@ -29,14 +29,13 @@ export function ContentTile({ pack, isLocked, isNew = false, progress, onPress }
   };
   const backgroundColor = getCategoryColor(pack.category);
   const icon = pack.icon || pack.category?.icon || 'layers';
-  const questionCount = pack.questions?.[0]?.count ?? 0;
 
   // Calculate progress percentage
   const progressPercent = progress && progress.totalQuestions > 0
     ? progress.answeredQuestions / progress.totalQuestions
     : 0;
-  // Show progress ring for packs with questions (even at 0%)
-  const showProgress = progress && progress.totalQuestions > 0;
+  // Always show progress ring when progress data exists (even at 0% or 0 questions)
+  const showProgress = !!progress;
 
   return (
     <TouchableOpacity
@@ -55,6 +54,12 @@ export function ContentTile({ pack, isLocked, isNew = false, progress, onPress }
             />
           </View>
           <View style={styles.badges}>
+            {pack.is_explicit && (
+              <View style={styles.explicitBadge}>
+                <Ionicons name="flame" size={10} color={colors.text} />
+                <Text style={styles.explicitBadgeText}>18+</Text>
+              </View>
+            )}
             {isNew && (
               <View style={styles.newBadge}>
                 <Text style={styles.newBadgeText}>NEW</Text>
@@ -84,13 +89,6 @@ export function ContentTile({ pack, isLocked, isNew = false, progress, onPress }
           )}
           <Text style={styles.titleText} numberOfLines={2}>
             {pack.name}
-          </Text>
-        </View>
-
-        {/* Bottom info */}
-        <View style={styles.bottomRow}>
-          <Text style={styles.countText}>
-            {questionCount} {questionCount === 1 ? 'question' : 'questions'}
           </Text>
         </View>
 
@@ -136,6 +134,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
   },
+  explicitBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.xs,
+    gap: 2,
+  },
+  explicitBadgeText: {
+    ...typography.caption2,
+    fontWeight: '700',
+    color: colors.text,
+  },
   newBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     paddingHorizontal: spacing.sm,
@@ -172,13 +184,6 @@ const styles = StyleSheet.create({
     ...typography.headline,
     color: colors.text,
     fontWeight: '700',
-  },
-  bottomRow: {
-    marginTop: 'auto',
-  },
-  countText: {
-    ...typography.caption1,
-    color: 'rgba(255, 255, 255, 0.7)',
   },
 });
 

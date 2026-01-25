@@ -308,7 +308,7 @@ export const ChatScreen: React.FC = () => {
 
     return (
         <GradientBackground>
-            {/* Ambient Orbs */}
+            {/* Ambient Orbs - Commented out for flat look
             <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
                 <LinearGradient
                     colors={[colors.premium.goldGlow, 'transparent']}
@@ -325,6 +325,7 @@ export const ChatScreen: React.FC = () => {
                     end={{ x: 0, y: 0 }}
                 />
             </Animated.View>
+            */}
 
             <KeyboardAvoidingView
                 style={styles.keyboardAvoiding}
@@ -343,6 +344,8 @@ export const ChatScreen: React.FC = () => {
                 <ChatMessages
                     messages={messages}
                     userId={user?.id}
+                    userName={user?.name ?? undefined}
+                    partnerName={partner?.name ?? undefined}
                     match={match}
                     uploadStatus={uploadStatus}
                     partnerTyping={partnerTyping}
@@ -357,15 +360,20 @@ export const ChatScreen: React.FC = () => {
                     entering={FadeInDown.duration(300)}
                     style={[styles.inputWrapper, { paddingBottom: insets.bottom || spacing.sm }]}
                 >
-                    {/* Gradient background */}
+                    {/* Flat background */}
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.backgroundLight, borderTopWidth: 1, borderTopColor: colors.border }]} />
+                    
+                    {/* Gradient background - removed
                     <LinearGradient
                         colors={['rgba(22, 33, 62, 0.9)', 'rgba(13, 13, 26, 0.95)']}
                         style={StyleSheet.absoluteFill}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 0, y: 1 }}
                     />
-                    {/* Top border glow */}
+                    */}
+                    {/* Top border glow - removed
                     <View style={styles.inputWrapperBorder} />
+                    */}
 
                     <InputBar
                         inputText={inputText}

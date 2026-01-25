@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 360,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     header: {
         alignItems: 'center',
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     questionPreview: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background, // Flat inner container
         borderRadius: radius.md,
         padding: spacing.md,
         marginBottom: spacing.md,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     questionText: {
         ...typography.subhead,
@@ -267,12 +267,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.xs,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background, // Flat button
         paddingVertical: spacing.sm,
         paddingHorizontal: spacing.md,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     reasonButtonActive: {
         backgroundColor: colors.primary,
@@ -287,10 +287,10 @@ const styles = StyleSheet.create({
         color: colors.text,
     },
     input: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background,
         borderRadius: radius.md,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
         padding: spacing.md,
         ...typography.body,
         color: colors.text,
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: colors.glass.backgroundLight,
+        backgroundColor: colors.background,
         paddingVertical: spacing.md,
         borderRadius: radius.md,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.glass.borderLight,
+        borderColor: colors.border,
     },
     cancelButtonText: {
         ...typography.body,

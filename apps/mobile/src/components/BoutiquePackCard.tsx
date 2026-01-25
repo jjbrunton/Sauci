@@ -71,33 +71,39 @@ export function BoutiquePackCard({
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Glass overlay */}
-      {useBlur ? (
-        <BlurView
-          intensity={blur.light}
-          tint="dark"
-          style={[StyleSheet.absoluteFill, styles.glassOverlay]}
-        />
-      ) : (
-        <View style={[StyleSheet.absoluteFill, styles.glassOverlayFallback]} />
-      )}
+      {/* Flat overlay - removed glass */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.4)' }]} />
 
-      {/* Silk texture effect */}
+      {/* Silk texture effect - removed for flatter look
       <LinearGradient
         colors={gradients.silkLight as [string, string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[StyleSheet.absoluteFill, { opacity: 0.5 }]}
       />
+      */}
 
-      {/* Top highlight */}
+      {/* Top highlight - removed
       <LinearGradient
         colors={[colors.glass.highlight, 'transparent']}
         style={styles.topHighlight}
       />
+      */}
 
       {/* Content */}
       <View style={styles.content}>
+        {/* Explicit Badge (top-left) */}
+        {pack.is_explicit && (
+          <View style={styles.explicitBadge}>
+            <Ionicons
+              name="flame"
+              size={10}
+              color={colors.text}
+            />
+            <Text style={styles.explicitBadgeText}>18+</Text>
+          </View>
+        )}
+
         {/* PRO Badge (top-right) */}
         {pack.is_premium && (
           <View style={[
@@ -209,7 +215,6 @@ const styles = StyleSheet.create({
   cardPremium: {
     borderWidth: 1,
     borderColor: colors.premium.gold,
-    ...shadows.glow(colors.premium.goldGlow),
   },
   cardEnabled: {
     borderWidth: 1,
@@ -224,22 +229,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glassOverlay: {
-    backgroundColor: 'rgba(22, 33, 62, 0.3)',
+    display: 'none',
   },
   glassOverlayFallback: {
-    backgroundColor: 'rgba(22, 33, 62, 0.5)',
+    display: 'none',
   },
   topHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 40,
+    display: 'none',
   },
   content: {
     flex: 1,
     padding: spacing.md,
     justifyContent: 'space-between',
+  },
+  explicitBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.xs,
+    gap: 3,
+    zIndex: 10,
+  },
+  explicitBadgeText: {
+    ...typography.caption2,
+    color: colors.text,
+    fontWeight: '700',
   },
   proBadge: {
     position: 'absolute',
@@ -255,7 +274,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   proBadgeLocked: {
-    backgroundColor: colors.glass.backgroundLight,
+    backgroundColor: colors.background, // Flat bg
   },
   proBadgeText: {
     ...typography.caption2,

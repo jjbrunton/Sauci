@@ -34,6 +34,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         onMatchesToggle: (value: boolean) => updatePreference('matches_enabled', value),
         onMessagesToggle: (value: boolean) => updatePreference('messages_enabled', value),
         onPartnerActivityToggle: (value: boolean) => updatePreference('partner_activity_enabled', value),
+        onNudgesToggle: (value: boolean) => updatePreference('nudges_enabled', value),
         onPackChangesToggle: (value: boolean) => updatePreference('pack_changes_enabled', value),
         onNewPacksToggle: (value: boolean) => updatePreference('new_packs_enabled', value),
         onStreakMilestonesToggle: (value: boolean) => updatePreference('streak_milestones_enabled', value),
@@ -92,6 +93,17 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                     <View style={styles.itemDivider} />
 
                     <SwitchItem
+                        icon="hand-left-outline"
+                        label="Partner Nudges"
+                        description="When your partner sends you a reminder"
+                        value={preferences.nudges_enabled}
+                        onValueChange={handlers.onNudgesToggle}
+                        disabled={isUpdating}
+                    />
+
+                    <View style={styles.itemDivider} />
+
+                    <SwitchItem
                         icon="layers-outline"
                         label="Pack Updates"
                         description="When your partner enables new packs"
@@ -133,7 +145,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
         paddingTop: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.glass.border,
+        borderTopColor: colors.border,
     },
     subsectionLabel: {
         ...typography.caption1,
@@ -144,7 +156,7 @@ const styles = StyleSheet.create({
     },
     itemDivider: {
         height: 1,
-        backgroundColor: colors.glass.border,
+        backgroundColor: colors.border,
         marginVertical: spacing.sm,
     },
 });

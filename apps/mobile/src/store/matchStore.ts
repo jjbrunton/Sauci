@@ -12,7 +12,19 @@ export interface PendingQuestion {
     partnerAnsweredAt: string;
 }
 
-type MatchViewType = 'active' | 'archived' | 'pending';
+type MatchViewType = 'active' | 'archived' | 'pending' | 'their_turn';
+
+// Rate limit: 12 hours in milliseconds
+const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+interface NudgeResponse {
+    success: boolean;
+    notification_sent?: boolean;
+    reason?: string;
+    next_nudge_available_at?: string;
+    error?: string;
+    cooldown_remaining_seconds?: number;
+}
 
 interface MatchState {
     matches: Match[];
@@ -31,7 +43,13 @@ interface MatchState {
     // Pending (Your Turn) state
     pendingQuestions: PendingQuestion[];
     isLoadingPending: boolean;
+    // Their Turn state (user answered, partner hasn't)
+    theirTurnQuestions: PendingQuestion[];
+    isLoadingTheirTurn: boolean;
     currentView: MatchViewType;
+    // Nudge state
+    nudgeCooldownUntil: Date | null;
+    isNudging: boolean;
     // Methods
     fetchMatches: (refresh?: boolean) => Promise<void>;
     markAsSeen: (matchId: string) => Promise<void>;
@@ -47,7 +65,11 @@ interface MatchState {
     isMatchArchived: (matchId: string) => boolean;
     // Pending methods
     fetchPendingQuestions: () => Promise<void>;
+    fetchTheirTurnQuestions: () => Promise<void>;
     setCurrentView: (view: MatchViewType) => void;
+    // Nudge methods
+    sendNudge: () => Promise<{ success: boolean; notificationSent: boolean }>;
+    checkNudgeCooldown: () => Promise<void>;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -67,7 +89,13 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     // Pending (Your Turn) state
     pendingQuestions: [],
     isLoadingPending: false,
+    // Their Turn state
+    theirTurnQuestions: [],
+    isLoadingTheirTurn: false,
     currentView: 'pending' as MatchViewType,
+    // Nudge state
+    nudgeCooldownUntil: null,
+    isNudging: false,
 
     fetchMatches: async (refresh = false) => {
         const userId = useAuthStore.getState().user?.id;
@@ -291,7 +319,11 @@ clearMatches: () => {
             isLoadingArchived: false,
             pendingQuestions: [],
             isLoadingPending: false,
+            theirTurnQuestions: [],
+            isLoadingTheirTurn: false,
             currentView: 'pending',
+            nudgeCooldownUntil: null,
+            isNudging: false,
         });
     },
 
@@ -547,6 +579,81 @@ clearMatches: () => {
         }
     },
 
+    // Their Turn methods (user answered, partner hasn't yet)
+    fetchTheirTurnQuestions: async () => {
+        const userId = useAuthStore.getState().user?.id;
+        const coupleId = useAuthStore.getState().user?.couple_id;
+
+        if (!coupleId || !userId) {
+            set({ theirTurnQuestions: [], isLoadingTheirTurn: false });
+            return;
+        }
+
+        const state = get();
+        if (state.isLoadingTheirTurn) return;
+
+        set({ isLoadingTheirTurn: true });
+
+        try {
+            // Get partner's user_id
+            const { data: coupleProfiles } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("couple_id", coupleId)
+                .neq("id", userId);
+
+            const partnerId = coupleProfiles?.[0]?.id;
+            if (!partnerId) {
+                set({ theirTurnQuestions: [], isLoadingTheirTurn: false });
+                return;
+            }
+
+            // Get questions the partner has already answered
+            const { data: partnerResponses } = await supabase
+                .from("responses")
+                .select("question_id")
+                .eq("user_id", partnerId)
+                .eq("couple_id", coupleId);
+
+            const partnerAnsweredQuestionIds = new Set(partnerResponses?.map(r => r.question_id) ?? []);
+
+            // Get user's responses (questions they answered that partner hasn't)
+            const { data: userResponses, error } = await supabase
+                .from("responses")
+                .select(`
+                    id,
+                    question_id,
+                    created_at,
+                    question:questions(
+                        *,
+                        pack:question_packs(id, name, icon)
+                    )
+                `)
+                .eq("user_id", userId)
+                .eq("couple_id", coupleId)
+                .order("created_at", { ascending: false });
+
+            if (error) throw error;
+
+            // Filter to only questions partner hasn't answered, excluding deleted questions
+            const theirTurnQuestions: PendingQuestion[] = (userResponses ?? [])
+                .filter(r => {
+                    const question = r.question as unknown as PendingQuestion['question'] | null;
+                    return !partnerAnsweredQuestionIds.has(r.question_id) && question && !(question as any).deleted_at;
+                })
+                .map(r => ({
+                    id: r.id,
+                    question: r.question as unknown as PendingQuestion['question'],
+                    partnerAnsweredAt: r.created_at, // Using user's answer time here
+                }));
+
+            set({ theirTurnQuestions, isLoadingTheirTurn: false });
+        } catch (err) {
+            console.error("Error fetching their turn questions:", err);
+            set({ isLoadingTheirTurn: false });
+        }
+    },
+
     setCurrentView: (view: MatchViewType) => {
         const state = get();
 
@@ -559,6 +666,107 @@ clearMatches: () => {
             get().fetchArchivedMatches();
         } else if (view === 'pending' && state.pendingQuestions.length === 0) {
             get().fetchPendingQuestions();
+        } else if (view === 'their_turn' && state.theirTurnQuestions.length === 0) {
+            get().fetchTheirTurnQuestions();
+        }
+    },
+
+    // Nudge methods
+    sendNudge: async () => {
+        const state = get();
+        if (state.isNudging) {
+            return { success: false, notificationSent: false };
+        }
+
+        // Check if still in cooldown
+        if (state.nudgeCooldownUntil && new Date() < state.nudgeCooldownUntil) {
+            return { success: false, notificationSent: false };
+        }
+
+        set({ isNudging: true });
+
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData?.session?.access_token;
+
+            if (!token) {
+                set({ isNudging: false });
+                return { success: false, notificationSent: false };
+            }
+
+            const response = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/send-nudge-notification`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const data: NudgeResponse = await response.json();
+
+            if (response.status === 429) {
+                // Rate limited - update cooldown
+                const cooldownUntil = data.next_nudge_available_at
+                    ? new Date(data.next_nudge_available_at)
+                    : new Date(Date.now() + (data.cooldown_remaining_seconds || 0) * 1000);
+                set({ nudgeCooldownUntil: cooldownUntil, isNudging: false });
+                return { success: false, notificationSent: false };
+            }
+
+            if (!response.ok) {
+                console.error("Nudge error:", data.error);
+                set({ isNudging: false });
+                return { success: false, notificationSent: false };
+            }
+
+            // Success - update cooldown
+            const cooldownUntil = data.next_nudge_available_at
+                ? new Date(data.next_nudge_available_at)
+                : new Date(Date.now() + NUDGE_COOLDOWN_MS);
+
+            set({ nudgeCooldownUntil: cooldownUntil, isNudging: false });
+
+            return {
+                success: true,
+                notificationSent: data.notification_sent ?? false,
+            };
+        } catch (err) {
+            console.error("Error sending nudge:", err);
+            set({ isNudging: false });
+            return { success: false, notificationSent: false };
+        }
+    },
+
+    checkNudgeCooldown: async () => {
+        const userId = useAuthStore.getState().user?.id;
+        if (!userId) return;
+
+        try {
+            const { data: profile, error } = await supabase
+                .from("profiles")
+                .select("last_nudge_sent_at")
+                .eq("id", userId)
+                .maybeSingle();
+
+            if (error || !profile?.last_nudge_sent_at) {
+                set({ nudgeCooldownUntil: null });
+                return;
+            }
+
+            const lastNudge = new Date(profile.last_nudge_sent_at);
+            const cooldownUntil = new Date(lastNudge.getTime() + NUDGE_COOLDOWN_MS);
+
+            // Only set cooldown if it's still in the future
+            if (cooldownUntil > new Date()) {
+                set({ nudgeCooldownUntil: cooldownUntil });
+            } else {
+                set({ nudgeCooldownUntil: null });
+            }
+        } catch (err) {
+            console.error("Error checking nudge cooldown:", err);
         }
     },
 }));

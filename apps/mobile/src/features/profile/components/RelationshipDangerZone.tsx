@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, Platform, KeyboardAvoidingView, TouchableOpacity, ActivityIndicator, TextInput, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { GlassCard, GlassButton } from '../../../components/ui';
 import { colors, spacing, radius, typography } from '../../../theme';
 
@@ -138,96 +137,90 @@ export const RelationshipDangerZone: React.FC<RelationshipDangerZoneProps> = ({
                 animationType="fade"
                 onRequestClose={closeResetModal}
             >
-                <BlurView
-                    intensity={Platform.OS === 'ios' ? 20 : 0}
-                    tint="dark"
-                    style={StyleSheet.absoluteFill}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
                 >
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={styles.modalOverlay}
-                    >
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <View style={styles.warningModalIconContainer}>
-                                    <Ionicons name="refresh" size={32} color={colors.warning} />
-                                </View>
-                                <Text style={styles.modalTitle}>Reset Progress?</Text>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.warningModalIconContainer}>
+                                <Ionicons name="refresh" size={32} color={colors.warning} />
                             </View>
+                            <Text style={styles.modalTitle}>Reset Progress?</Text>
+                        </View>
 
-                            <Text style={styles.modalDescription}>
-                                This will permanently delete:
-                            </Text>
+                        <Text style={styles.modalDescription}>
+                            This will permanently delete:
+                        </Text>
 
-                            <View style={styles.warningList}>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="swap-horizontal" size={16} color={colors.warning} />
-                                    <Text style={styles.deleteListText}>All your swipes</Text>
-                                </View>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="heart" size={16} color={colors.warning} />
-                                    <Text style={styles.deleteListText}>All matches</Text>
-                                </View>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="chatbubbles" size={16} color={colors.warning} />
-                                    <Text style={styles.deleteListText}>All chat messages</Text>
-                                </View>
+                        <View style={styles.warningList}>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="swap-horizontal" size={16} color={colors.warning} />
+                                <Text style={styles.deleteListText}>All your swipes</Text>
                             </View>
-
-                            <View style={styles.keepList}>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                                    <Text style={styles.deleteListText}>Your partner connection stays</Text>
-                                </View>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="heart" size={16} color={colors.warning} />
+                                <Text style={styles.deleteListText}>All matches</Text>
                             </View>
-
-                            <Text style={styles.confirmLabel}>
-                                Type <Text style={styles.warningKeyword}>RESET</Text> to confirm:
-                            </Text>
-
-                            <TextInput
-                                style={styles.warningInput}
-                                value={confirmText}
-                                onChangeText={setConfirmText}
-                                placeholder="Type RESET"
-                                placeholderTextColor={colors.textTertiary}
-                                autoCapitalize="characters"
-                                autoCorrect={false}
-                                editable={!isResetting}
-                            />
-
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity
-                                    style={styles.cancelButton}
-                                    onPress={closeResetModal}
-                                    disabled={isResetting}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.warningActionButton,
-                                        (confirmText !== "RESET" || isResetting) && styles.deleteButtonDisabled,
-                                    ]}
-                                    onPress={handleResetProgress}
-                                    disabled={confirmText !== "RESET" || isResetting}
-                                    activeOpacity={0.7}
-                                >
-                                    {isResetting ? (
-                                        <ActivityIndicator size="small" color={colors.text} />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="refresh" size={16} color={colors.text} />
-                                            <Text style={styles.deleteButtonText}>Reset</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="chatbubbles" size={16} color={colors.warning} />
+                                <Text style={styles.deleteListText}>All chat messages</Text>
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
-                </BlurView>
+
+                        <View style={styles.keepList}>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                <Text style={styles.deleteListText}>Your partner connection stays</Text>
+                            </View>
+                        </View>
+
+                        <Text style={styles.confirmLabel}>
+                            Type <Text style={styles.warningKeyword}>RESET</Text> to confirm:
+                        </Text>
+
+                        <TextInput
+                            style={styles.warningInput}
+                            value={confirmText}
+                            onChangeText={setConfirmText}
+                            placeholder="Type RESET"
+                            placeholderTextColor={colors.textTertiary}
+                            autoCapitalize="characters"
+                            autoCorrect={false}
+                            editable={!isResetting}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={closeResetModal}
+                                disabled={isResetting}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.warningActionButton,
+                                    (confirmText !== "RESET" || isResetting) && styles.deleteButtonDisabled,
+                                ]}
+                                onPress={handleResetProgress}
+                                disabled={confirmText !== "RESET" || isResetting}
+                                activeOpacity={0.7}
+                            >
+                                {isResetting ? (
+                                    <ActivityIndicator size="small" color={colors.text} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="refresh" size={16} color={colors.text} />
+                                        <Text style={styles.deleteButtonText}>Reset</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Delete Relationship Modal */}
@@ -237,93 +230,87 @@ export const RelationshipDangerZone: React.FC<RelationshipDangerZoneProps> = ({
                 animationType="fade"
                 onRequestClose={closeRelationshipModal}
             >
-                <BlurView
-                    intensity={Platform.OS === 'ios' ? 20 : 0}
-                    tint="dark"
-                    style={StyleSheet.absoluteFill}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
                 >
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={styles.modalOverlay}
-                    >
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <View style={styles.modalIconContainer}>
-                                    <Ionicons name="heart-dislike" size={32} color={colors.error} />
-                                </View>
-                                <Text style={styles.modalTitle}>Delete Relationship Data?</Text>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalIconContainer}>
+                                <Ionicons name="heart-dislike" size={32} color={colors.error} />
                             </View>
+                            <Text style={styles.modalTitle}>Delete Relationship Data?</Text>
+                        </View>
 
-                            <Text style={styles.modalDescription}>
-                                This action cannot be undone. This will permanently delete:
-                            </Text>
+                        <Text style={styles.modalDescription}>
+                            This action cannot be undone. This will permanently delete:
+                        </Text>
 
-                            <View style={styles.deleteList}>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="heart-dislike" size={16} color={colors.error} />
-                                    <Text style={styles.deleteListText}>Your couple connection</Text>
-                                </View>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="checkmark-circle" size={16} color={colors.error} />
-                                    <Text style={styles.deleteListText}>All matches and responses</Text>
-                                </View>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="chatbubbles" size={16} color={colors.error} />
-                                    <Text style={styles.deleteListText}>All chat messages</Text>
-                                </View>
-                                <View style={styles.deleteListItem}>
-                                    <Ionicons name="images" size={16} color={colors.error} />
-                                    <Text style={styles.deleteListText}>All shared photos</Text>
-                                </View>
+                        <View style={styles.deleteList}>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="heart-dislike" size={16} color={colors.error} />
+                                <Text style={styles.deleteListText}>Your couple connection</Text>
                             </View>
-
-                            <Text style={styles.confirmLabel}>
-                                Type <Text style={styles.confirmKeyword}>DELETE</Text> to confirm:
-                            </Text>
-
-                            <TextInput
-                                style={styles.confirmInput}
-                                value={confirmText}
-                                onChangeText={setConfirmText}
-                                placeholder="Type DELETE"
-                                placeholderTextColor={colors.textTertiary}
-                                autoCapitalize="characters"
-                                autoCorrect={false}
-                                editable={!isDeletingRelationship}
-                            />
-
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity
-                                    style={styles.cancelButton}
-                                    onPress={closeRelationshipModal}
-                                    disabled={isDeletingRelationship}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.deleteButton,
-                                        (confirmText !== "DELETE" || isDeletingRelationship) && styles.deleteButtonDisabled,
-                                    ]}
-                                    onPress={handleDeleteRelationship}
-                                    disabled={confirmText !== "DELETE" || isDeletingRelationship}
-                                    activeOpacity={0.7}
-                                >
-                                    {isDeletingRelationship ? (
-                                        <ActivityIndicator size="small" color={colors.text} />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="trash" size={16} color={colors.text} />
-                                            <Text style={styles.deleteButtonText}>Delete</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="checkmark-circle" size={16} color={colors.error} />
+                                <Text style={styles.deleteListText}>All matches and responses</Text>
+                            </View>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="chatbubbles" size={16} color={colors.error} />
+                                <Text style={styles.deleteListText}>All chat messages</Text>
+                            </View>
+                            <View style={styles.deleteListItem}>
+                                <Ionicons name="images" size={16} color={colors.error} />
+                                <Text style={styles.deleteListText}>All shared photos</Text>
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
-                </BlurView>
+
+                        <Text style={styles.confirmLabel}>
+                            Type <Text style={styles.confirmKeyword}>DELETE</Text> to confirm:
+                        </Text>
+
+                        <TextInput
+                            style={styles.confirmInput}
+                            value={confirmText}
+                            onChangeText={setConfirmText}
+                            placeholder="Type DELETE"
+                            placeholderTextColor={colors.textTertiary}
+                            autoCapitalize="characters"
+                            autoCorrect={false}
+                            editable={!isDeletingRelationship}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={closeRelationshipModal}
+                                disabled={isDeletingRelationship}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.deleteButton,
+                                    (confirmText !== "DELETE" || isDeletingRelationship) && styles.deleteButtonDisabled,
+                                ]}
+                                onPress={handleDeleteRelationship}
+                                disabled={confirmText !== "DELETE" || isDeletingRelationship}
+                                activeOpacity={0.7}
+                            >
+                                {isDeletingRelationship ? (
+                                    <ActivityIndicator size="small" color={colors.text} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="trash" size={16} color={colors.text} />
+                                        <Text style={styles.deleteButtonText}>Delete</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );
@@ -426,7 +413,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.backgroundLight,
         borderRadius: radius.xl,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     modalHeader: {
         alignItems: "center",
@@ -493,7 +480,7 @@ const styles = StyleSheet.create({
         color: colors.warning,
     },
     warningInput: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background,
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: colors.warning,
@@ -533,7 +520,7 @@ const styles = StyleSheet.create({
         color: colors.error,
     },
     confirmInput: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background,
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: colors.error,
@@ -549,12 +536,12 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: colors.glass.backgroundLight,
+        backgroundColor: colors.background,
         paddingVertical: spacing.md,
         borderRadius: radius.md,
         alignItems: "center",
         borderWidth: 1,
-        borderColor: colors.glass.borderLight,
+        borderColor: colors.border,
     },
     cancelButtonText: {
         ...typography.body,

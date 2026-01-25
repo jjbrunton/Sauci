@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { GradientBackground, GlassCard, GlassButton } from '../../../components/ui';
+import { GradientBackground } from '../../../components/ui';
 import { colors, featureColors, spacing, typography, radius } from '../../../theme';
 import { useAuthStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
@@ -53,7 +53,7 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
  * Profile settings sub-screen for editing avatar, display name, and gender.
  */
 export function ProfileSettingsScreen() {
-    const { user, fetchUser } = useAuthStore();
+    const { user, fetchUser, isAnonymous } = useAuthStore();
     const settings = useProfileSettings();
     const authEmail = useAuthEmail();
 
@@ -260,10 +260,12 @@ export function ProfileSettingsScreen() {
                             color={colors.textTertiary}
                             style={styles.inputIcon}
                         />
-                        <Text style={styles.readOnlyText}>{authEmail || 'Loading...'}</Text>
+                        <Text style={styles.readOnlyText}>
+                            {authEmail || (isAnonymous ? 'Guest account' : 'Loading...')}
+                        </Text>
                     </View>
                     <Text style={styles.inputHint}>
-                        Email cannot be changed
+                        {isAnonymous ? 'Save your account to add an email' : 'Email cannot be changed'}
                     </Text>
                 </SettingsSection>
 
@@ -300,11 +302,41 @@ const styles = StyleSheet.create({
         padding: 4,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: featureColors.profile.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        // Removed shadows
+    },
+    // ...
+    inputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.background, // Flat
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: spacing.md,
+    },
+    // ...
+    readOnlyField: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.md,
+        opacity: 0.7,
+    },
+    // ...
+    genderOption: {
+        width: '48%',
+        alignItems: 'center',
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.lg,
+        borderWidth: 2,
+        borderColor: colors.border,
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.sm,
+        gap: spacing.xs,
     },
     avatarImage: {
         width: '100%',
@@ -354,15 +386,7 @@ const styles = StyleSheet.create({
         color: colors.textTertiary,
     },
     // Input
-    inputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-        paddingHorizontal: spacing.md,
-    },
+
     inputIcon: {
         marginRight: spacing.sm,
     },
@@ -379,17 +403,7 @@ const styles = StyleSheet.create({
         marginLeft: spacing.xs,
     },
     // Read-only field
-    readOnlyField: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.md,
-        opacity: 0.7,
-    },
+
     readOnlyText: {
         ...typography.body,
         color: colors.textSecondary,
@@ -405,17 +419,7 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         gap: spacing.sm,
     },
-    genderOption: {
-        width: '48%',
-        alignItems: 'center',
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.lg,
-        borderWidth: 2,
-        borderColor: colors.glass.border,
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.sm,
-        gap: spacing.xs,
-    },
+
     genderOptionSelected: {
         borderColor: colors.primary,
         backgroundColor: colors.primaryLight,

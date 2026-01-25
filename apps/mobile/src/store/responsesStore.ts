@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "../lib/supabase";
 import { invokeWithAuthRetry } from "../lib/authErrorHandler";
-import type { Question, QuestionPack, AnswerType } from "@/types";
+import type { Question, QuestionPack, AnswerType, ResponseData } from "@/types";
 import { useAuthStore } from "./authStore";
 import { useMatchStore } from "./matchStore";
 
@@ -10,6 +10,7 @@ export interface ResponseWithQuestion {
     id: string;
     question_id: string;
     answer: AnswerType;
+    response_data?: ResponseData | null;
     created_at: string;
     question: Question & {
         pack: Pick<QuestionPack, "id" | "name" | "icon">;
@@ -49,7 +50,8 @@ interface ResponsesState {
     updateResponse: (
         questionId: string,
         newAnswer: AnswerType,
-        confirmDelete?: boolean
+        confirmDelete?: boolean,
+        responseData?: ResponseData | null
     ) => Promise<UpdateResponseResult>;
     setGroupBy: (groupBy: GroupByOption) => void;
     setDateSortOrder: (order: DateSortOrder) => void;
@@ -108,6 +110,7 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                     id,
                     question_id,
                     answer,
+                    response_data,
                     created_at,
                     question:questions!inner(
                         id,
@@ -115,6 +118,8 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                         partner_text,
                         intensity,
                         pack_id,
+                        question_type,
+                        config,
                         pack:question_packs!inner(id, name, icon)
                     )
                 `)
@@ -180,6 +185,7 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                         id: r.id,
                         question_id: r.question_id,
                         answer: r.answer as AnswerType,
+                        response_data: (r as any).response_data as ResponseData | null,
                         created_at: r.created_at,
                         question: {
                             id: question.id,
@@ -187,6 +193,8 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                             partner_text: question.partner_text,
                             intensity: question.intensity,
                             pack_id: question.pack_id,
+                            question_type: question.question_type,
+                            config: question.config ?? null,
                             created_at: question.created_at || "",
                             pack: {
                                 id: pack.id,
@@ -219,13 +227,15 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
     updateResponse: async (
         questionId: string,
         newAnswer: AnswerType,
-        confirmDelete = false
+        confirmDelete = false,
+        responseData?: ResponseData | null
     ): Promise<UpdateResponseResult> => {
         const { data, error } = await invokeWithAuthRetry("update-response", {
             body: {
                 question_id: questionId,
                 new_answer: newAnswer,
                 confirm_delete_match: confirmDelete,
+                response_data: responseData,
             },
         });
 
@@ -242,9 +252,16 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
             set((state) => ({
                 responses: state.responses.map((r) => {
                     if (r.question_id === questionId) {
+                        const nextResponseData =
+                            newAnswer === "no"
+                                ? null
+                                : typeof responseData !== "undefined"
+                                  ? responseData
+                                  : r.response_data;
                         return {
                             ...r,
                             answer: newAnswer,
+                            response_data: nextResponseData,
                             // Update match status based on result
                             has_match: result.match_deleted
                                 ? false

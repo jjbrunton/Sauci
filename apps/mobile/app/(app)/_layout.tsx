@@ -1,19 +1,18 @@
 import { Tabs, useRouter, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View, ActivityIndicator, StyleSheet, Platform, Text, Pressable, Animated, AppState, AppStateStatus } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform, Text, Pressable, Animated, AppState } from "react-native";
 import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore, useStreakStore } from "../../src/store";
-import { colors, gradients, blur, radius, spacing, typography, shadows } from "../../src/theme";
+import { colors, radius, spacing, typography, shadows } from "../../src/theme";
 import { supabase } from "../../src/lib/supabase";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
 import { syncBadgeCount } from "../../src/lib/badge";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
-import { MatchNotificationModal, MatchNotificationData } from "../../src/components/MatchNotificationModal";
 import { Events } from "../../src/lib/analytics";
-import type { MatchWithQuestion, AnswerType } from "../../src/types";
+import { needsOnboarding } from "../../src/constants/onboarding";
+import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -54,156 +53,20 @@ function TabBarBackground() {
     return null;
 }
 
-interface PlayTabButtonProps {
-    children?: React.ReactNode;
-    onPress?: (e: any) => void;
-    accessibilityState?: { selected?: boolean };
-    isMenuOpen?: boolean;
-    onToggleMenu?: () => void;
-}
-
-interface RadialMenuItem {
-    id: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    angle: number; // degrees from top (0 = top, -45 = left, 45 = right)
-    variant: 'primary' | 'gold' | 'rose' | 'muted';
-}
-
-// Brand color palette for navigation
-const NAV_COLORS = {
-    // Primary brand colors (from logo)
-    primary: colors.primary,
-    primaryRgba: 'rgba(233, 69, 96, ',
-    secondary: colors.secondary,
-    secondaryRgba: 'rgba(155, 89, 182, ',
-    // Feature-specific colors
-    gold: colors.premium.gold,
-    goldRgba: 'rgba(212, 175, 55, ',
-    rose: colors.premium.rose,
-    roseRgba: 'rgba(232, 164, 174, ',
-    dark: '#0d0d1a',
-};
-
-const RADIAL_MENU_ITEMS: RadialMenuItem[] = [
-    { id: 'dares', icon: 'flash', label: 'Dares', angle: -50, variant: 'gold' },
-    { id: 'match', icon: 'flame', label: 'Match', angle: 0, variant: 'primary' },
-    { id: 'quiz', icon: 'help-circle', label: 'Quiz', angle: 50, variant: 'rose' },
-];
-
-const RADIAL_DISTANCE = 100; // Distance from center button
-
-// Store for sharing state between PlayTabButton and AppLayout
-let globalMenuToggle: (() => void) | null = null;
-let globalMenuOpen = false;
-
-function PlayTabButton({ accessibilityState }: PlayTabButtonProps) {
-    const isSelected = accessibilityState?.selected;
-    const [, forceUpdate] = useState({});
-
-    // Subscribe to global state changes
-    useEffect(() => {
-        const interval = setInterval(() => {
-            forceUpdate({});
-        }, 50);
-        return () => clearInterval(interval);
-    }, []);
-
-    return (
-        <View style={styles.playButtonContainer}>
-            {/* Outer glow effect - primary brand */}
-            <View style={[styles.playButtonGlow, isSelected && styles.playButtonGlowActive]} />
-
-            {/* Main circle button - premium dark with primary gradient border */}
-            <Pressable onPress={() => globalMenuToggle?.()}>
-                <Animated.View style={styles.playButtonCircle}>
-                    <View style={styles.playButtonInner}>
-                        {/* Silk highlight at top - primary gradient */}
-                        <LinearGradient
-                            colors={[`${NAV_COLORS.primaryRgba}0.2)`, `${NAV_COLORS.secondaryRgba}0.1)`, 'transparent']}
-                            style={styles.playButtonHighlight}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                        />
-                        <Ionicons
-                            name={globalMenuOpen ? "close" : "flame"}
-                            size={28}
-                            color={globalMenuOpen ? colors.textSecondary : NAV_COLORS.primary}
-                        />
-                    </View>
-                </Animated.View>
-            </Pressable>
-        </View>
-    );
-}
-
 export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut, updateLastActive } = useAuthStore();
-    const { matches, newMatchesCount, addMatch, updateMatchUnreadCount } = useMatchStore();
+    const { matches, newMatchesCount, addMatch, updateMatchUnreadCount, pendingQuestions, fetchPendingQuestions } = useMatchStore();
     const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
     const { initializeRevenueCat } = useSubscriptionStore();
     const { fetchStreak } = useStreakStore();
-    const [matchNotification, setMatchNotification] = useState<MatchNotificationData | null>(null);
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isLocked, setIsLocked] = useState(false);
     const hasCheckedInitialBiometric = useRef(false);
     const wentToBackgroundAt = useRef<number | null>(null);
-
-    // Radial menu state
-    const [isRadialMenuOpen, setIsRadialMenuOpen] = useState(false);
-    const radialMenuAnim = useRef(new Animated.Value(0)).current;
-
-    const toggleRadialMenu = useCallback(() => {
-        const toValue = isRadialMenuOpen ? 0 : 1;
-        setIsRadialMenuOpen(!isRadialMenuOpen);
-        globalMenuOpen = !isRadialMenuOpen;
-
-        Animated.spring(radialMenuAnim, {
-            toValue,
-            useNativeDriver: true,
-            tension: 100,
-            friction: 8,
-        }).start();
-    }, [isRadialMenuOpen, radialMenuAnim]);
-
-    const closeRadialMenu = useCallback(() => {
-        setIsRadialMenuOpen(false);
-        globalMenuOpen = false;
-        Animated.timing(radialMenuAnim, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: true,
-        }).start();
-    }, [radialMenuAnim]);
-
-    const handleRadialMenuItemPress = useCallback((itemId: string) => {
-        closeRadialMenu();
-
-        // Navigate based on item
-        switch (itemId) {
-            case 'match':
-                router.push('/(app)/swipe');
-                break;
-            case 'dares':
-                router.push('/(app)/dares');
-                break;
-            case 'quiz':
-                router.push('/(app)/quiz');
-                break;
-        }
-    }, [router, closeRadialMenu]);
-
-    // Register global menu toggle for PlayTabButton
-    useEffect(() => {
-        globalMenuToggle = toggleRadialMenu;
-        return () => {
-            globalMenuToggle = null;
-        };
-    }, [toggleRadialMenu]);
 
     // Check if we're on screens that should hide the tab bar
     const segmentStrings = segments as string[];
@@ -213,11 +76,11 @@ export default function AppLayout() {
     const isOnSettingsSubscreen = segmentStrings.includes("settings") && segmentStrings.length > 2;
     const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat || isOnSettingsSubscreen;
 
-    // Redirect to login when not authenticated, or to onboarding if not completed
+    // Redirect to login when not authenticated, or to onboarding if not completed/outdated
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
             router.replace("/(auth)/login");
-        } else if (!isLoading && isAuthenticated && user && !user.onboarding_completed && !isOnOnboarding) {
+        } else if (!isLoading && isAuthenticated && user && needsOnboarding(user.onboarding_completed, user.onboarding_version) && !isOnOnboarding) {
             router.replace("/(app)/onboarding");
         }
     }, [isLoading, isAuthenticated, user, router, isOnOnboarding]);
@@ -316,10 +179,17 @@ export default function AppLayout() {
         }
     }, [user?.couple_id, fetchStreak]);
 
-    // Sync app icon badge count whenever matches or messages change
+    // Fetch pending questions (Your Turn) when user is in a couple
     useEffect(() => {
-        syncBadgeCount(newMatchesCount, unreadCount);
-    }, [newMatchesCount, unreadCount]);
+        if (user?.couple_id) {
+            fetchPendingQuestions();
+        }
+    }, [user?.couple_id, fetchPendingQuestions]);
+
+    // Sync app icon badge count whenever matches, messages, or pending questions change
+    useEffect(() => {
+        syncBadgeCount(newMatchesCount + pendingQuestions.length, unreadCount);
+    }, [newMatchesCount, unreadCount, pendingQuestions.length]);
 
     // Initialize RevenueCat for subscription management (iOS and Android only)
     useEffect(() => {
@@ -367,7 +237,7 @@ export default function AppLayout() {
         };
     }, [user?.id, user?.couple_id]);
 
-    // Subscribe to realtime match notifications
+    // Subscribe to realtime match notifications (for badge updates and analytics)
     useEffect(() => {
         if (!user?.couple_id) return;
 
@@ -401,42 +271,12 @@ export default function AppLayout() {
                             Events.milestoneMatch(currentMatchCount + 1);
                         }
 
-                        // Add to store
+                        // Add to store (updates badge count via newMatchesCount)
                         addMatch(matchWithQuestion);
                         Events.matchCreated(matchWithQuestion.match_type || "unknown");
 
-                        // Fetch individual responses to show what each person said
-                        const { data: responses } = await supabase
-                            .from("responses")
-                            .select("user_id, answer")
-                            .eq("question_id", matchWithQuestion.question_id)
-                            .eq("couple_id", user.couple_id);
-
-                        let userResponse: AnswerType | undefined;
-                        let partnerResponse: AnswerType | undefined;
-
-                        if (responses && responses.length >= 2) {
-                            for (const r of responses) {
-                                if (r.user_id === user.id) {
-                                    userResponse = r.answer as AnswerType;
-                                } else {
-                                    partnerResponse = r.answer as AnswerType;
-                                }
-                            }
-                        }
-
-                        // Get partner name from auth store
-                        const { partner } = useAuthStore.getState();
-
-                        // Show notification with response data
-                        setMatchNotification({
-                            id: matchWithQuestion.id,
-                            match_type: matchWithQuestion.match_type,
-                            question: matchWithQuestion.question,
-                            userResponse,
-                            partnerResponse,
-                            partnerName: partner?.name,
-                        });
+                        // Note: No modal popup - user will see badge on matches tab
+                        // Confetti animation is shown inline on swipe screen when user creates match
                     }
                 }
             )
@@ -561,18 +401,6 @@ export default function AppLayout() {
         };
     }, [lastMessage]);
 
-    const dismissNotification = useCallback(() => {
-        setMatchNotification(null);
-    }, []);
-
-    const handleMatchChat = useCallback(() => {
-        if (matchNotification) {
-            const matchId = matchNotification.id;
-            setMatchNotification(null);
-            router.push(`/(app)/chat/${matchId}`);
-        }
-    }, [matchNotification, router]);
-
     const dismissMessageToast = useCallback(() => {
         Animated.timing(messageToastAnim, {
             toValue: -100,
@@ -591,7 +419,7 @@ export default function AppLayout() {
     }, [lastMessage, dismissMessageToast, router]);
 
     // Show loading state while checking authentication or redirecting to onboarding
-    if (isLoading || !isAuthenticated || (user && !user.onboarding_completed && !isOnOnboarding)) {
+    if (isLoading || !isAuthenticated || (user && needsOnboarding(user.onboarding_completed, user.onboarding_version) && !isOnOnboarding)) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
@@ -634,19 +462,9 @@ export default function AppLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="packs"
-                    options={{
-                        title: "Packs",
-                        tabBarIcon: ({ color, size }) => (
-                            <Ionicons name="layers" size={size} color={color} />
-                        ),
-                    }}
-                />
-                <Tabs.Screen
                     name="swipe"
                     options={{
-                        title: "",
-                        tabBarButton: (props) => <PlayTabButton {...props} />,
+                        href: null, // Hide from tab bar - accessed from home screen
                     }}
                 />
                 <Tabs.Screen
@@ -656,7 +474,7 @@ export default function AppLayout() {
                         tabBarIcon: ({ color, size }) => (
                             <Ionicons name="heart" size={size} color={color} />
                         ),
-                        tabBarBadge: (newMatchesCount + unreadCount) > 0 ? (newMatchesCount + unreadCount) : undefined,
+                        tabBarBadge: (newMatchesCount + unreadCount + pendingQuestions.length) > 0 ? (newMatchesCount + unreadCount + pendingQuestions.length) : undefined,
                         tabBarBadgeStyle: {
                             backgroundColor: colors.premium.rose,
                             fontSize: 9,
@@ -719,128 +537,6 @@ export default function AppLayout() {
                     }}
                 />
             </Tabs>
-
-            {/* Radial Menu Overlay */}
-            {isRadialMenuOpen && (
-                <Pressable
-                    style={radialStyles.overlay}
-                    onPress={closeRadialMenu}
-                />
-            )}
-
-            {/* Radial Menu Items - positioned above the center button */}
-            <Animated.View
-                style={[
-                    radialStyles.menuContainer,
-                    { opacity: radialMenuAnim },
-                ]}
-                pointerEvents={isRadialMenuOpen ? 'auto' : 'none'}
-            >
-                {RADIAL_MENU_ITEMS.map((item) => {
-                    // Convert angle to radians and calculate position
-                    const angleRad = (item.angle - 90) * (Math.PI / 180); // -90 to make 0 = top
-                    const translateX = Math.cos(angleRad) * RADIAL_DISTANCE;
-                    const translateY = Math.sin(angleRad) * RADIAL_DISTANCE;
-
-                    const itemScale = radialMenuAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 1],
-                    });
-
-                    const itemTranslateX = radialMenuAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, translateX],
-                    });
-
-                    const itemTranslateY = radialMenuAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0, translateY],
-                    });
-
-                    // Brand and feature variant colors
-                    const getVariantStyles = () => {
-                        switch (item.variant) {
-                            case 'primary':
-                                return {
-                                    bg: `${NAV_COLORS.primaryRgba}0.15)`,
-                                    border: `${NAV_COLORS.primaryRgba}0.35)`,
-                                    icon: NAV_COLORS.primary,
-                                    label: NAV_COLORS.primary,
-                                };
-                            case 'gold':
-                                return {
-                                    bg: `${NAV_COLORS.goldRgba}0.15)`,
-                                    border: `${NAV_COLORS.goldRgba}0.35)`,
-                                    icon: NAV_COLORS.gold,
-                                    label: NAV_COLORS.gold,
-                                };
-                            case 'rose':
-                                return {
-                                    bg: `${NAV_COLORS.roseRgba}0.15)`,
-                                    border: `${NAV_COLORS.roseRgba}0.35)`,
-                                    icon: NAV_COLORS.rose,
-                                    label: NAV_COLORS.rose,
-                                };
-                            case 'muted':
-                            default:
-                                return {
-                                    bg: 'rgba(255, 255, 255, 0.08)',
-                                    border: 'rgba(255, 255, 255, 0.15)',
-                                    icon: colors.textSecondary,
-                                    label: colors.textSecondary,
-                                };
-                        }
-                    };
-
-                    const variantStyles = getVariantStyles();
-
-                    return (
-                        <Animated.View
-                            key={item.id}
-                            style={[
-                                radialStyles.menuItem,
-                                {
-                                    transform: [
-                                        { translateX: itemTranslateX },
-                                        { translateY: itemTranslateY },
-                                        { scale: itemScale },
-                                    ],
-                                },
-                            ]}
-                        >
-                            <Pressable
-                                onPress={() => handleRadialMenuItemPress(item.id)}
-                                style={radialStyles.menuItemButton}
-                            >
-                                <View style={[
-                                    radialStyles.menuItemCircle,
-                                    {
-                                        backgroundColor: variantStyles.bg,
-                                        borderColor: variantStyles.border,
-                                    },
-                                ]}>
-                                    <Ionicons
-                                        name={item.icon}
-                                        size={22}
-                                        color={variantStyles.icon}
-                                    />
-                                </View>
-                                <Text style={[radialStyles.menuItemLabel, { color: variantStyles.label }]}>
-                                    {item.label}
-                                </Text>
-                            </Pressable>
-                        </Animated.View>
-                    );
-                })}
-            </Animated.View>
-
-            {/* Match Notification Modal - Premium styling with response details */}
-            <MatchNotificationModal
-                visible={!!matchNotification}
-                match={matchNotification}
-                onDismiss={dismissNotification}
-                onChat={handleMatchChat}
-            />
 
             {/* Message Toast Notification */}
             {lastMessage && (
@@ -922,99 +618,5 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         color: colors.textSecondary,
         marginTop: 2,
-    },
-    // Play button styles - Premium boutique
-    playButtonContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: -28,
-    },
-    playButtonGlow: {
-        position: 'absolute',
-        width: 76,
-        height: 76,
-        borderRadius: 38,
-        backgroundColor: colors.primaryGlow,
-        opacity: 0.4,
-    },
-    playButtonGlowActive: {
-        opacity: 0.7,
-        ...shadows.glow(colors.primary),
-    },
-    playButtonCircle: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        overflow: 'hidden',
-        borderWidth: 1.5,
-        borderColor: 'rgba(233, 69, 96, 0.4)', // primary brand
-        ...shadows.lg,
-    },
-    playButtonInner: {
-        flex: 1,
-        backgroundColor: '#0d0d1a',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    playButtonHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '50%',
-    },
-    playButtonGradient: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-});
-
-// Radial menu styles - Premium boutique
-const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
-
-const radialStyles = StyleSheet.create({
-    overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(13, 13, 26, 0.85)',
-        zIndex: 998,
-    },
-    menuContainer: {
-        position: 'absolute',
-        bottom: TAB_BAR_HEIGHT + 30, // Position above tab bar, centered on button
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-        zIndex: 999,
-    },
-    menuItem: {
-        position: 'absolute',
-        alignItems: 'center',
-    },
-    menuItemButton: {
-        alignItems: 'center',
-    },
-    menuItemCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(22, 33, 62, 0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...shadows.md,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255, 255, 255, 0.15)',
-    },
-    menuItemLabel: {
-        ...typography.caption2,
-        color: colors.text,
-        marginTop: 8,
-        fontWeight: '500',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-        textShadowColor: 'rgba(0, 0, 0, 0.5)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
     },
 });

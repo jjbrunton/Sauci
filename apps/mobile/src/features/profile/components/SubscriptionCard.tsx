@@ -243,23 +243,56 @@ const styles = StyleSheet.create({
         opacity: 0.3,
     },
     proCardInner: {
-        backgroundColor: 'rgba(22, 33, 62, 0.8)',
+        backgroundColor: colors.backgroundLight, // Solid/Flat background
         margin: 1,
         borderRadius: radius.lg - 1,
         padding: spacing.md,
     },
-    proHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
+    // ...
     proBadge: {
         width: 36,
         height: 36,
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        ...shadows.glow(colors.premium.gold),
+        // Removed glow
     },
+    // ...
+    manageButton: {
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.md,
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    proStatusRow: {
+        flexDirection: 'row',
+        marginTop: spacing.md,
+        paddingTop: spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+        gap: spacing.lg,
+    },
+    // ...
+    freeCardInner: {
+        backgroundColor: colors.backgroundLight, // Solid/Flat background
+        margin: 1,
+        borderRadius: radius.lg - 1,
+        padding: spacing.lg,
+    },
+    // ...
+    ctaButtonContainer: {
+        borderRadius: radius.md,
+        overflow: 'hidden',
+        // Removed glow
+    },
+    proHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
     proHeaderText: {
         flex: 1,
         marginLeft: spacing.md,
@@ -274,27 +307,13 @@ const styles = StyleSheet.create({
         color: colors.textTertiary,
         marginTop: 2,
     },
-    manageButton: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.md,
-        backgroundColor: colors.glass.background,
-        borderWidth: 1,
-        borderColor: `${colors.premium.gold}40`,
-    },
+
     manageButtonText: {
         ...typography.subhead,
         color: colors.premium.gold,
         fontWeight: '600',
     },
-    proStatusRow: {
-        flexDirection: 'row',
-        marginTop: spacing.md,
-        paddingTop: spacing.md,
-        borderTopWidth: 1,
-        borderTopColor: colors.glass.border,
-        gap: spacing.lg,
-    },
+
     proStatusItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -313,12 +332,7 @@ const styles = StyleSheet.create({
     freeBorderGradient: {
         ...StyleSheet.absoluteFillObject,
     },
-    freeCardInner: {
-        backgroundColor: 'rgba(22, 33, 62, 0.85)',
-        margin: 1,
-        borderRadius: radius.lg - 1,
-        padding: spacing.lg,
-    },
+
     freeHeader: {
         alignItems: 'center',
         marginBottom: spacing.lg,
@@ -358,11 +372,7 @@ const styles = StyleSheet.create({
         ...typography.body,
         color: colors.text,
     },
-    ctaButtonContainer: {
-        borderRadius: radius.md,
-        overflow: 'hidden',
-        ...shadows.glow(colors.premium.gold),
-    },
+
     ctaButton: {
         flexDirection: 'row',
         alignItems: 'center',

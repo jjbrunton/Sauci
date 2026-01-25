@@ -1,4 +1,5 @@
 import { Database } from '../../types/supabase';
+import { ResponseData } from '@sauci/shared';
 
 /** Message type from database */
 export type Message = Database['public']['Tables']['messages']['Row'];
@@ -15,8 +16,10 @@ export interface Match {
     id: string;
     question_id: string;
     couple_id: string;
-    match_type: 'yes_yes' | 'yes_maybe' | 'maybe_maybe';
+    match_type: 'yes_yes' | 'yes_maybe' | 'maybe_maybe' | 'both_answered';
     created_at: string;
+    /** Summary of both partners' response data (keyed by user_id) for non-swipe questions */
+    response_summary?: Record<string, ResponseData> | null;
     question?: {
         id: string;
         text: string;

@@ -12,6 +12,10 @@ export interface Profile {
     public_key_jwk?: Record<string, unknown> | null;
     /** When true, packs marked as is_explicit will be hidden */
     hide_nsfw?: boolean;
+    /** Whether onboarding flow has been completed */
+    onboarding_completed?: boolean;
+    /** Version of onboarding flow completed. 0 = never, 1+ = that version */
+    onboarding_version?: number;
 }
 
 // Couple pairing
@@ -45,6 +49,10 @@ export interface Question {
     required_props?: string[] | null;
     /** References the primary question that this is an inverse of (e.g., give vs receive). NULL means this is a primary/standalone question. */
     inverse_of?: string | null;
+    /** Type of question interaction (default: 'swipe') */
+    question_type?: QuestionType;
+    /** Configuration options for specific question types */
+    config?: QuestionConfig | null;
     created_at: string;
     deleted_at?: string | null;
 }
@@ -52,8 +60,23 @@ export interface Question {
 // User's answer type
 export type AnswerType = 'yes' | 'no' | 'maybe';
 
+// Question type (default is 'swipe' for backwards compatibility)
+export type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
+
+// Question configuration options
+export interface QuestionConfig {
+    max_duration_seconds?: number;  // For audio questions (default: 60)
+}
+
+// Response data for non-swipe question types
+export type ResponseData =
+    | { type: 'text_answer'; text: string }
+    | { type: 'audio'; media_path: string; duration_seconds: number }
+    | { type: 'photo'; media_path: string }
+    | { type: 'who_likely'; chosen_user_id: string };
+
 // Match type when both partners agree
-export type MatchType = 'yes_yes' | 'yes_maybe' | 'maybe_maybe';
+export type MatchType = 'yes_yes' | 'yes_maybe' | 'maybe_maybe' | 'both_answered';
 
 // User response to a question
 export interface Response {
@@ -62,6 +85,8 @@ export interface Response {
     question_id: string;
     couple_id: string;
     answer: AnswerType;
+    /** Additional response data for non-swipe question types */
+    response_data?: ResponseData | null;
     created_at: string;
 }
 
@@ -72,6 +97,8 @@ export interface Match {
     question_id: string;
     match_type: MatchType;
     is_new: boolean;
+    /** Summary of both partners' response data (keyed by user_id) for non-swipe questions */
+    response_summary?: Record<string, ResponseData> | null;
     created_at: string;
 }
 

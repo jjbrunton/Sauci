@@ -8,3 +8,11 @@ export type { UseTypingIndicatorConfig, UseTypingIndicatorReturn } from './useTy
 export { useMessageSubscription } from './useMessageSubscription';
 export type { UseMessageSubscriptionConfig, UseMessageSubscriptionReturn } from './useMessageSubscription';
 export { useMediaSaver } from './useMediaSaver';
+export { useResponseMediaUpload } from './useResponseMediaUpload';
+export type {
+    UseResponseMediaUploadOptions,
+    UseResponseMediaUploadReturn,
+    UploadResult,
+} from './useResponseMediaUpload';
+export { useAudioRecorder } from './useAudioRecorder';
+export type { UseAudioRecorderOptions, RecordingState } from './useAudioRecorder';

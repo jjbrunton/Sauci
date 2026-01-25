@@ -92,16 +92,17 @@ describe('GlassInput', () => {
     });
 
     describe('platform behavior', () => {
-        it('uses BlurView on iOS', () => {
+        // GlassInput now uses solid backgrounds instead of BlurView for reliability
+        it('renders correctly on iOS', () => {
             Object.defineProperty(Platform, 'OS', {
                 get: () => 'ios',
             });
 
-            const { getByTestId } = render(
+            const { getByPlaceholderText } = render(
                 <GlassInput placeholder="iOS Input" />
             );
 
-            expect(getByTestId('blur-view')).toBeTruthy();
+            expect(getByPlaceholderText('iOS Input')).toBeTruthy();
         });
 
         // Note: Testing Android platform requires component re-evaluation

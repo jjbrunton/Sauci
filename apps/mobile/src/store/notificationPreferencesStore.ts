@@ -7,6 +7,7 @@ export interface NotificationPreferences {
     matches_enabled: boolean;
     messages_enabled: boolean;
     partner_activity_enabled: boolean;
+    nudges_enabled: boolean;
     pack_changes_enabled: boolean;
     new_packs_enabled: boolean;
     streak_milestones_enabled: boolean;

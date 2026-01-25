@@ -63,8 +63,8 @@ export async function getCachedSignedUrl(
 export function getStoragePath(mediaPath: string): string {
     if (mediaPath.startsWith('http')) {
         // Old format: extract path from full URL
-        const match = mediaPath.match(/\/chat-media\/(.+)$/);
-        return match ? match[1] : mediaPath;
+        const match = mediaPath.match(/\/(chat-media|response-media)\/(.+)$/);
+        return match ? match[2] : mediaPath;
     }
     return mediaPath;
 }

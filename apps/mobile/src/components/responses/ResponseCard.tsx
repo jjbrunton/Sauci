@@ -8,8 +8,6 @@ import { colors, spacing, typography, radius } from "../../theme";
 // Premium color palette
 const ACCENT = colors.premium.gold;
 const ACCENT_RGBA = "rgba(212, 175, 55, ";
-const ROSE = colors.premium.rose;
-const ROSE_RGBA = "rgba(232, 164, 174, ";
 
 // Answer colors (semantic)
 const ANSWER_COLORS = {
@@ -30,15 +28,97 @@ const ANSWER_COLORS = {
     },
 };
 
+const RESPONSE_TYPE_CONFIG = {
+    text_answer: {
+        icon: "chatbubble-ellipses-outline" as const,
+        label: "TEXT",
+    },
+    photo: {
+        icon: "image-outline" as const,
+        label: "PHOTO",
+    },
+    audio: {
+        icon: "mic-outline" as const,
+        label: "AUDIO",
+    },
+    who_likely: {
+        icon: "people-outline" as const,
+        label: "WHO",
+    },
+};
+
 interface ResponseCardProps {
     response: ResponseWithQuestion;
     index: number;
     onEditPress: () => void;
     onChatPress?: () => void;
+    viewerId?: string;
+    viewerName?: string | null;
+    partnerName?: string | null;
 }
 
-export function ResponseCard({ response, index, onEditPress, onChatPress }: ResponseCardProps) {
+function truncateText(value: string, maxLength: number) {
+    if (value.length <= maxLength) return value;
+    return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function getResponseSummary(
+    response: ResponseWithQuestion,
+    viewerId?: string,
+    viewerName?: string | null,
+    partnerName?: string | null
+) {
+    const data = response.response_data;
+    if (!data) return null;
+
+    if (data.type === "text_answer") {
+        return `"${truncateText(data.text, 90)}"`;
+    }
+
+    if (data.type === "photo") {
+        return "Photo response saved";
+    }
+
+    if (data.type === "audio") {
+        const duration = data.duration_seconds ? `${data.duration_seconds}s` : "";
+        return duration ? `Audio response (${duration})` : "Audio response saved";
+    }
+
+    if (data.type === "who_likely") {
+        const chosenName = data.chosen_user_id === viewerId
+            ? viewerName || "you"
+            : partnerName || "your partner";
+        return `You chose ${chosenName}`;
+    }
+
+    return null;
+}
+
+export function ResponseCard({
+    response,
+    index,
+    onEditPress,
+    onChatPress,
+    viewerId,
+    viewerName,
+    partnerName,
+}: ResponseCardProps) {
     const answerStyle = ANSWER_COLORS[response.answer];
+    const questionType = response.question.question_type ?? "swipe";
+    const responseSummary = getResponseSummary(response, viewerId, viewerName, partnerName);
+    const typeKey = response.response_data?.type || (questionType !== "swipe" ? questionType : null);
+    const typeConfig = typeKey ? RESPONSE_TYPE_CONFIG[typeKey as keyof typeof RESPONSE_TYPE_CONFIG] : null;
+    const showTypeBadge = questionType !== "swipe" && response.answer !== "no" && !!typeConfig;
+    const badgeColor = showTypeBadge ? ACCENT : answerStyle.color;
+    const badgeRgba = showTypeBadge ? ACCENT_RGBA : answerStyle.rgba;
+    const badgeIcon = showTypeBadge && typeConfig
+        ? typeConfig.icon
+        : response.answer === "yes"
+            ? "checkmark"
+            : response.answer === "no"
+                ? "close"
+                : "help";
+    const tagLabel = showTypeBadge && typeConfig ? typeConfig.label : answerStyle.label;
 
     return (
         <Animated.View entering={FadeInRight.delay(index * 30).duration(250)}>
@@ -52,7 +132,7 @@ export function ResponseCard({ response, index, onEditPress, onChatPress }: Resp
                 />
                 {/* Top silk highlight */}
                 <LinearGradient
-                    colors={[`${answerStyle.rgba}0.06)`, "transparent"]}
+                    colors={[`${badgeRgba}0.06)`, "transparent"]}
                     style={styles.cardSilkHighlight}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
@@ -63,19 +143,13 @@ export function ResponseCard({ response, index, onEditPress, onChatPress }: Resp
                     <View
                         style={[
                             styles.answerBadge,
-                            { backgroundColor: `${answerStyle.rgba}0.15)`, borderColor: `${answerStyle.rgba}0.3)` },
+                            { backgroundColor: `${badgeRgba}0.15)`, borderColor: `${badgeRgba}0.3)` },
                         ]}
                     >
                         <Ionicons
-                            name={
-                                response.answer === "yes"
-                                    ? "checkmark"
-                                    : response.answer === "no"
-                                      ? "close"
-                                      : "help"
-                            }
+                            name={badgeIcon}
                             size={18}
-                            color={answerStyle.color}
+                            color={badgeColor}
                         />
                     </View>
 
@@ -84,6 +158,11 @@ export function ResponseCard({ response, index, onEditPress, onChatPress }: Resp
                         <Text style={styles.questionText} numberOfLines={2}>
                             {response.question.text}
                         </Text>
+                        {responseSummary && (
+                            <Text style={styles.responseSummary} numberOfLines={2}>
+                                {responseSummary}
+                            </Text>
+                        )}
 
                         <View style={styles.metaRow}>
                             {/* Answer tag */}
@@ -91,13 +170,13 @@ export function ResponseCard({ response, index, onEditPress, onChatPress }: Resp
                                 style={[
                                     styles.tag,
                                     {
-                                        backgroundColor: `${answerStyle.rgba}0.1)`,
-                                        borderColor: `${answerStyle.rgba}0.2)`,
+                                        backgroundColor: `${badgeRgba}0.1)`,
+                                        borderColor: `${badgeRgba}0.2)`,
                                     },
                                 ]}
                             >
-                                <Text style={[styles.tagText, { color: answerStyle.color }]}>
-                                    {answerStyle.label}
+                                <Text style={[styles.tagText, { color: badgeColor }]}>
+                                    {tagLabel}
                                 </Text>
                             </View>
 
@@ -181,6 +260,11 @@ const styles = StyleSheet.create({
         fontWeight: "500",
         marginBottom: spacing.xs,
         lineHeight: 20,
+    },
+    responseSummary: {
+        ...typography.caption1,
+        color: colors.textSecondary,
+        marginBottom: spacing.xs,
     },
     metaRow: {
         flexDirection: "row",

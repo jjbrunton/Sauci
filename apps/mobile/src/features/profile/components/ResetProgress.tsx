@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, Platform, KeyboardAvoidingView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 import { GlassCard } from '../../../components/ui';
 import { colors, spacing, radius, typography } from '../../../theme';
 
@@ -67,99 +66,93 @@ export const ResetProgress: React.FC<ResetProgressProps> = ({ onResetProgress })
                 animationType="fade"
                 onRequestClose={() => !isResetting && setShowResetModal(false)}
             >
-                <BlurView
-                    intensity={Platform.OS === 'ios' ? 20 : 0}
-                    tint="dark"
-                    style={StyleSheet.absoluteFill}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.modalOverlay}
                 >
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        style={styles.modalOverlay}
-                    >
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <View style={styles.modalIconContainer}>
-                                    <Ionicons name="refresh" size={32} color={colors.warning} />
-                                </View>
-                                <Text style={styles.modalTitle}>Reset Progress?</Text>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <View style={styles.modalIconContainer}>
+                                <Ionicons name="refresh" size={32} color={colors.warning} />
                             </View>
+                            <Text style={styles.modalTitle}>Reset Progress?</Text>
+                        </View>
 
-                            <Text style={styles.modalDescription}>
-                                This action cannot be undone. This will permanently delete:
-                            </Text>
+                        <Text style={styles.modalDescription}>
+                            This action cannot be undone. This will permanently delete:
+                        </Text>
 
-                            <View style={styles.resetList}>
-                                <View style={styles.resetListItem}>
-                                    <Ionicons name="swap-horizontal" size={16} color={colors.warning} />
-                                    <Text style={styles.resetListText}>All your swipes</Text>
-                                </View>
-                                <View style={styles.resetListItem}>
-                                    <Ionicons name="heart" size={16} color={colors.warning} />
-                                    <Text style={styles.resetListText}>All matches</Text>
-                                </View>
-                                <View style={styles.resetListItem}>
-                                    <Ionicons name="chatbubbles" size={16} color={colors.warning} />
-                                    <Text style={styles.resetListText}>All chat messages</Text>
-                                </View>
+                        <View style={styles.resetList}>
+                            <View style={styles.resetListItem}>
+                                <Ionicons name="swap-horizontal" size={16} color={colors.warning} />
+                                <Text style={styles.resetListText}>All your swipes</Text>
                             </View>
-
-                            <View style={styles.keepList}>
-                                <View style={styles.keepListItem}>
-                                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                                    <Text style={styles.keepListText}>Your partner connection stays</Text>
-                                </View>
+                            <View style={styles.resetListItem}>
+                                <Ionicons name="heart" size={16} color={colors.warning} />
+                                <Text style={styles.resetListText}>All matches</Text>
                             </View>
-
-                            <Text style={styles.confirmLabel}>
-                                Type <Text style={styles.confirmKeyword}>RESET</Text> to confirm:
-                            </Text>
-
-                            <TextInput
-                                style={styles.confirmInput}
-                                value={resetConfirmText}
-                                onChangeText={setResetConfirmText}
-                                placeholder="Type RESET"
-                                placeholderTextColor={colors.textTertiary}
-                                autoCapitalize="characters"
-                                autoCorrect={false}
-                                editable={!isResetting}
-                            />
-
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity
-                                    style={styles.cancelButton}
-                                    onPress={() => {
-                                        setShowResetModal(false);
-                                        setResetConfirmText("");
-                                    }}
-                                    disabled={isResetting}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={[
-                                        styles.confirmResetButton,
-                                        (resetConfirmText !== "RESET" || isResetting) && styles.confirmResetButtonDisabled,
-                                    ]}
-                                    onPress={handleReset}
-                                    disabled={resetConfirmText !== "RESET" || isResetting}
-                                    activeOpacity={0.7}
-                                >
-                                    {isResetting ? (
-                                        <ActivityIndicator size="small" color={colors.text} />
-                                    ) : (
-                                        <>
-                                            <Ionicons name="refresh" size={16} color={colors.text} />
-                                            <Text style={styles.confirmResetButtonText}>Reset</Text>
-                                        </>
-                                    )}
-                                </TouchableOpacity>
+                            <View style={styles.resetListItem}>
+                                <Ionicons name="chatbubbles" size={16} color={colors.warning} />
+                                <Text style={styles.resetListText}>All chat messages</Text>
                             </View>
                         </View>
-                    </KeyboardAvoidingView>
-                </BlurView>
+
+                        <View style={styles.keepList}>
+                            <View style={styles.keepListItem}>
+                                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                                <Text style={styles.keepListText}>Your partner connection stays</Text>
+                            </View>
+                        </View>
+
+                        <Text style={styles.confirmLabel}>
+                            Type <Text style={styles.confirmKeyword}>RESET</Text> to confirm:
+                        </Text>
+
+                        <TextInput
+                            style={styles.confirmInput}
+                            value={resetConfirmText}
+                            onChangeText={setResetConfirmText}
+                            placeholder="Type RESET"
+                            placeholderTextColor={colors.textTertiary}
+                            autoCapitalize="characters"
+                            autoCorrect={false}
+                            editable={!isResetting}
+                        />
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={() => {
+                                    setShowResetModal(false);
+                                    setResetConfirmText("");
+                                }}
+                                disabled={isResetting}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.confirmResetButton,
+                                    (resetConfirmText !== "RESET" || isResetting) && styles.confirmResetButtonDisabled,
+                                ]}
+                                onPress={handleReset}
+                                disabled={resetConfirmText !== "RESET" || isResetting}
+                                activeOpacity={0.7}
+                            >
+                                {isResetting ? (
+                                    <ActivityIndicator size="small" color={colors.text} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="refresh" size={16} color={colors.text} />
+                                        <Text style={styles.confirmResetButtonText}>Reset</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
         </>
     );
@@ -240,7 +233,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.backgroundLight,
         borderRadius: radius.xl,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     modalHeader: {
         alignItems: "center",
@@ -313,7 +306,7 @@ const styles = StyleSheet.create({
         color: colors.warning,
     },
     confirmInput: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background,
         borderRadius: radius.md,
         borderWidth: 1,
         borderColor: colors.warning,
@@ -329,12 +322,12 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         flex: 1,
-        backgroundColor: colors.glass.backgroundLight,
+        backgroundColor: colors.background,
         paddingVertical: spacing.md,
         borderRadius: radius.md,
         alignItems: "center",
         borderWidth: 1,
-        borderColor: colors.glass.borderLight,
+        borderColor: colors.border,
     },
     cancelButtonText: {
         ...typography.body,

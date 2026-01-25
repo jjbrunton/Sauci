@@ -155,11 +155,32 @@ const styles = StyleSheet.create({
         padding: 3,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: featureColors.profile.accent,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 6,
+        // Removed shadows for flat look
+    },
+    // ...
+    avatarEditBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: colors.backgroundLight,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: colors.background,
+    },
+    // ...
+    cancelEditButton: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: colors.backgroundLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     avatarImage: {
         width: '100%',
@@ -191,19 +212,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    avatarEditBadge: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: colors.surfaceSolid,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 2,
-        borderColor: colors.background,
-    },
+
     profileInfo: {
         flex: 1,
         justifyContent: 'center',
@@ -253,12 +262,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginLeft: spacing.xs,
     },
-    cancelEditButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: colors.glass.highlight,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+
 });

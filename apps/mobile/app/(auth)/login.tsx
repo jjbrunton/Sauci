@@ -768,10 +768,18 @@ const styles = StyleSheet.create({
     },
     modeToggleContainer: {
         flexDirection: "row",
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background, // Flat background
         borderRadius: radius.md,
         padding: 4,
         marginBottom: spacing.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
     },
     modeToggle: {
         flex: 1,
@@ -832,11 +840,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginBottom: spacing.lg,
     },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: colors.glass.border,
-    },
+
     dividerText: {
         ...typography.caption1,
         color: colors.textTertiary,

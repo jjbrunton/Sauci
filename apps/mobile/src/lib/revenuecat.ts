@@ -145,7 +145,7 @@ class RevenueCatService {
         return result.current;
     }
 
-    async getOfferingsDebug(): Promise<{
+    async getOfferingsDebug(offeringIdentifier?: string): Promise<{
         current: PurchasesOffering | null;
         availableOfferings: string[] | null;
         error: string | null;
@@ -162,8 +162,17 @@ class RevenueCatService {
             const offerings = await this.Purchases.getOfferings();
             const availableOfferings = Object.keys(offerings.all || {});
 
+            // If a specific offering is requested, try to get it
+            let targetOffering = offerings.current;
+            if (offeringIdentifier && offerings.all?.[offeringIdentifier]) {
+                console.log(`RevenueCat: Using offering "${offeringIdentifier}"`);
+                targetOffering = offerings.all[offeringIdentifier];
+            } else if (offeringIdentifier) {
+                console.log(`RevenueCat: Offering "${offeringIdentifier}" not found, falling back to current`);
+            }
+
             return {
-                current: offerings.current,
+                current: targetOffering,
                 availableOfferings,
                 error: null
             };

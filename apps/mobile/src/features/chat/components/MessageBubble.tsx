@@ -51,13 +51,14 @@ const MessageBubbleComponent = ({ isMe, index, children, onLongPress }: MessageB
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                     >
-                        {/* Silk highlight */}
+                        {/* Silk highlight removed for flat look
                         <LinearGradient
                             colors={['rgba(255, 255, 255, 0.15)', 'transparent']}
                             style={styles.bubbleSilkHighlight}
                             start={{ x: 0.5, y: 0 }}
                             end={{ x: 0.5, y: 1 }}
                         />
+                        */}
                         {children}
                     </LinearGradient>
                 </TouchableOpacity>
@@ -72,20 +73,22 @@ const MessageBubbleComponent = ({ isMe, index, children, onLongPress }: MessageB
                     accessibilityHint="Long press to report"
                 >
                     <View style={[styles.bubble, styles.theirBubble]}>
-                        {/* Subtle gradient background */}
+                        {/* Subtle gradient background removed
                         <LinearGradient
                             colors={['rgba(22, 33, 62, 0.6)', 'rgba(13, 13, 26, 0.8)']}
                             style={StyleSheet.absoluteFill}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                         />
-                        {/* Silk highlight */}
+                        */}
+                        {/* Silk highlight removed
                         <LinearGradient
                             colors={[`${ACCENT_RGBA}0.08)`, 'transparent']}
                             style={styles.bubbleSilkHighlight}
                             start={{ x: 0.5, y: 0 }}
                             end={{ x: 0.5, y: 1 }}
                         />
+                        */}
                         {children}
                     </View>
                 </TouchableOpacity>
@@ -126,13 +129,10 @@ const styles = StyleSheet.create({
     theirBubble: {
         borderTopLeftRadius: radius.xs,
         borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.15)`,
+        borderColor: colors.border,
+        backgroundColor: colors.backgroundLight,
     },
     bubbleSilkHighlight: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 30,
+        display: 'none',
     },
 });

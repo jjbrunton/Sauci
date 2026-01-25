@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Platform, View, Text, useWindowDimensions } fro
 import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useAuthStore, usePacksStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
@@ -69,6 +70,7 @@ export default function DiscoveryScreen() {
   const { packs, categories, fetchPacks, getPackProgress } = usePacksStore();
   const { width } = useWindowDimensions();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(130);
 
   const isPremiumUser = user?.is_premium ?? false;
   const isWideScreen = width > MAX_CONTENT_WIDTH;
@@ -91,18 +93,25 @@ export default function DiscoveryScreen() {
 
   return (
     <GradientBackground>
+      <View
+        style={[styles.stickyHeader, isWideScreen && styles.stickyHeaderWide]}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+      >
+        <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(14, 14, 17, 0.85)' }]} />
+        <CompactHeader user={user} partner={partner} couple={couple} />
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.contentContainer,
           isWideScreen && styles.contentContainerWide,
+          { paddingTop: headerHeight },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.innerContainer, isWideScreen && styles.innerContainerWide]}>
-          {/* Compact Header */}
-          <CompactHeader user={user} partner={partner} couple={couple} />
-
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (
             <ContentRow
@@ -149,6 +158,7 @@ export default function DiscoveryScreen() {
     </GradientBackground>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -197,4 +207,19 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: spacing.lg,
   },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    overflow: 'hidden', // Ensures blur doesn't bleed if we rounded corners (optional)
+  },
+  stickyHeaderWide: {
+    left: '50%',
+    right: 'auto',
+    width: MAX_CONTENT_WIDTH,
+    transform: [{ translateX: -MAX_CONTENT_WIDTH / 2 }],
+  },
 });
+

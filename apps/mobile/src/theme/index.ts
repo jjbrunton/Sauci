@@ -1,26 +1,29 @@
 import { Platform } from 'react-native';
 
 export const colors = {
-  // Backgrounds
-  background: '#0d0d1a',
-  backgroundLight: '#1a1a2e',
-  surface: 'rgba(22, 33, 62, 0.6)',
-  surfaceSolid: '#16213e',
+  // Backgrounds - Updated to Flat/Admin Palette
+  background: '#0e0e11', // hsl(240 10% 6%)
+  backgroundLight: '#17171c', // hsl(240 8% 10%)
+  surface: '#17171c', // Mapped to card color
+  surfaceSolid: '#17171c',
 
-  // Glass effects
+  // Border
+  border: '#303036', // hsl(240 6% 20%)
+
+  // Glass effects - Retained keys for compat, but mapped to flat/subtle values
   glass: {
-    background: 'rgba(22, 33, 62, 0.4)',
-    backgroundLight: 'rgba(22, 33, 62, 0.6)',
-    border: 'rgba(255, 255, 255, 0.08)',
-    borderLight: 'rgba(255, 255, 255, 0.12)',
-    highlight: 'rgba(255, 255, 255, 0.05)',
+    background: '#17171c', // Solid card color
+    backgroundLight: '#222228', // Slightly lighter
+    border: '#303036',
+    borderLight: '#404048',
+    highlight: 'transparent', // Removed highlight
   },
 
   // Brand
-  primary: '#e94560',
-  primaryDark: '#c73a52',
-  primaryLight: 'rgba(233, 69, 96, 0.15)',
-  primaryGlow: 'rgba(233, 69, 96, 0.3)',
+  primary: '#e1306c', // Adjusted to match admin rose approximately
+  primaryDark: '#c12055',
+  primaryLight: 'rgba(225, 48, 108, 0.15)',
+  primaryGlow: 'rgba(225, 48, 108, 0.3)',
   secondary: '#9b59b6',
   secondaryDark: '#8e44ad',
   secondaryLight: 'rgba(155, 89, 182, 0.15)',
@@ -68,13 +71,13 @@ export const colors = {
 };
 
 export const gradients = {
-  primary: ['#e94560', '#9b59b6'],
-  primarySubtle: ['rgba(233, 69, 96, 0.8)', 'rgba(155, 89, 182, 0.8)'],
-  primaryReverse: ['#9b59b6', '#e94560'],
-  primaryVertical: ['#e94560', '#9b59b6'],
-  background: ['#1a1a2e', '#0d0d1a'],
-  backgroundReverse: ['#0d0d1a', '#1a1a2e'],
-  glass: ['rgba(255, 255, 255, 0.08)', 'rgba(255, 255, 255, 0)'],
+  primary: ['#e1306c', '#9b59b6'],
+  primarySubtle: ['rgba(225, 48, 108, 0.8)', 'rgba(155, 89, 182, 0.8)'],
+  primaryReverse: ['#9b59b6', '#e1306c'],
+  primaryVertical: ['#e1306c', '#9b59b6'],
+  background: ['#0e0e11', '#1f1417', '#0e0e11'], // Premium subtle gradient from admin
+  backgroundReverse: ['#0e0e11', '#1f1417', '#0e0e11'],
+  glass: ['#17171c', '#17171c'], // Solid fallback
   success: ['#2ECC71', '#27ae60'],
   warning: ['#F39C12', '#e67e22'],
   error: ['#E74C3C', '#c0392b'],

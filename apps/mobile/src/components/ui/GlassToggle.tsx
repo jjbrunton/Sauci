@@ -66,11 +66,18 @@ export function GlassToggle({
     const backgroundColor = interpolateColor(
       progress.value,
       [0, 1],
-      ['rgba(255, 255, 255, 0.1)', 'transparent'] // We use LinearGradient for active state
+      [colors.backgroundLight, 'transparent'] // Use backgroundLight for inactive
     );
     
+    const borderColor = interpolateColor(
+      progress.value,
+      [0, 1],
+      [colors.border, 'transparent'] // Use standard border for inactive
+    );
+
     return {
       backgroundColor,
+      borderColor,
     };
   });
 
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.border, // Use standard border
     overflow: 'hidden',
     justifyContent: 'center',
     padding: PADDING,

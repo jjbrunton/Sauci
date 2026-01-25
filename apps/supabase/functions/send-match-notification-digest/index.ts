@@ -2,15 +2,20 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0?target=deno";
 
 /**
- * Send coalesced match notifications.
+ * Send session-based activity notifications.
  * Called by pg_cron every minute and processes any pending notifications
- * whose notify_at has passed.
+ * whose notify_at has passed (5 minutes of user inactivity).
+ *
+ * Sends notification to the PARTNER of the active user with copy:
+ * "[Partner] has been answering questions!"
  */
 
 interface PendingMatchNotification {
     id: string;
     couple_id: string;
+    active_user_id: string | null;
     match_count: number;
+    response_count: number;
     latest_match_id: string | null;
     notify_at: string;
 }
@@ -67,7 +72,7 @@ Deno.serve(async (req) => {
         // Get all pending notifications where notify_at has passed
         const { data: pendingNotifications, error: fetchError } = await supabase
             .from("pending_match_notifications")
-            .select("id, couple_id, match_count, latest_match_id, notify_at")
+            .select("id, couple_id, active_user_id, match_count, response_count, latest_match_id, notify_at")
             .lte("notify_at", nowIso);
 
         if (fetchError) {
@@ -87,19 +92,20 @@ Deno.serve(async (req) => {
 
         const coupleIds = Array.from(new Set(pendingNotifications.map((n) => n.couple_id)));
 
-        // Fetch all push tokens + match notification preference for couples
+        // Fetch all profiles for couples (need name, push_token, last_active_at, prefs)
         const { data: profiles, error: profilesError } = await supabase
             .from("profiles")
             .select(
                 `
                 id,
+                name,
                 couple_id,
                 push_token,
-                notification_preferences:notification_preferences(matches_enabled)
+                last_active_at,
+                notification_preferences:notification_preferences(partner_activity_enabled)
             `
             )
-            .in("couple_id", coupleIds)
-            .not("push_token", "is", null);
+            .in("couple_id", coupleIds);
 
         if (profilesError) {
             console.error("Error fetching profiles:", profilesError);
@@ -110,11 +116,21 @@ Deno.serve(async (req) => {
         }
 
         const profilesByCouple = new Map<string, any[]>();
+        const profilesById = new Map<string, any>();
         for (const profile of profiles || []) {
             const list = profilesByCouple.get(profile.couple_id) ?? [];
             list.push(profile);
             profilesByCouple.set(profile.couple_id, list);
+            profilesById.set(profile.id, profile);
         }
+
+        // Helper to check if user is currently active (within last 5 minutes)
+        const isUserActive = (lastActiveAt: string | null): boolean => {
+            if (!lastActiveAt) return false;
+            const lastActive = new Date(lastActiveAt).getTime();
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+            return lastActive > fiveMinutesAgo;
+        };
 
         const messages: ExpoPushMessage[] = [];
         const processedIds: string[] = [];
@@ -122,43 +138,62 @@ Deno.serve(async (req) => {
         for (const notification of pendingNotifications as PendingMatchNotification[]) {
             const coupleProfiles = profilesByCouple.get(notification.couple_id) ?? [];
 
-            for (const profile of coupleProfiles) {
-                const prefs = Array.isArray(profile.notification_preferences)
-                    ? profile.notification_preferences[0]
-                    : profile.notification_preferences;
+            // Find the active user (the one who was answering) and their partner
+            const activeUser = notification.active_user_id
+                ? profilesById.get(notification.active_user_id)
+                : null;
 
-                // Skip if user has explicitly disabled match notifications
-                if (prefs && prefs.matches_enabled === false) {
-                    continue;
-                }
+            // Find the partner (the one who should receive the notification)
+            const partner = coupleProfiles.find(p => p.id !== notification.active_user_id);
 
-                const count = Math.max(1, Number(notification.match_count) || 1);
-                const latestMatchId = notification.latest_match_id;
-
-                // If the match was deleted before the digest fired, don't notify.
-                if (!latestMatchId) {
-                    continue;
-                }
-
-                if (count === 1) {
-                    messages.push({
-                        to: profile.push_token,
-                        title: "It's a match! 💕",
-                        body: "You and your partner matched on something new!",
-                        sound: "default",
-                        data: { type: "match", match_id: latestMatchId },
-                    });
-                } else {
-                    messages.push({
-                        to: profile.push_token,
-                        title: "New matches 💕",
-                        body: `You have ${count} new matches`,
-                        sound: "default",
-                        // Include latest_match_id for backwards compatibility
-                        data: { type: "match_digest", count, match_id: latestMatchId },
-                    });
-                }
+            // Skip if we can't identify the partner or they have no push token
+            if (!partner || !partner.push_token) {
+                processedIds.push(notification.id);
+                continue;
             }
+
+            // Skip if partner is currently active in the app
+            if (isUserActive(partner.last_active_at)) {
+                console.log(`Skipping notification - partner ${partner.id} is active in app`);
+                processedIds.push(notification.id);
+                continue;
+            }
+
+            // Check notification preferences (partner_activity_enabled)
+            const prefs = Array.isArray(partner.notification_preferences)
+                ? partner.notification_preferences[0]
+                : partner.notification_preferences;
+
+            if (prefs && prefs.partner_activity_enabled === false) {
+                processedIds.push(notification.id);
+                continue;
+            }
+
+            // Get active user's name for personalized notification
+            const activeUserName = activeUser?.name || "Your partner";
+            const matchCount = Math.max(0, Number(notification.match_count) || 0);
+
+            // Build notification message
+            // Primary message: "[Partner] has been answering questions!"
+            // Include match count in body if there are matches
+            let body = `Tap to see what you both said`;
+            if (matchCount > 0) {
+                body = matchCount === 1
+                    ? `You have a new match! Tap to see what you both said`
+                    : `You have ${matchCount} new matches! Tap to see what you both said`;
+            }
+
+            messages.push({
+                to: partner.push_token,
+                title: `${activeUserName} has been answering questions! 💕`,
+                body,
+                sound: "default",
+                data: {
+                    type: "match_digest",
+                    count: matchCount,
+                    match_id: notification.latest_match_id,
+                },
+            });
 
             processedIds.push(notification.id);
         }

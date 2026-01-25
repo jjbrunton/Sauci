@@ -32,7 +32,7 @@ export function ContentRow({
   const handleSeeAll = () => {
     // Navigate to packs screen with category filter
     router.push({
-      pathname: '/(app)/packs',
+      pathname: '/',
       params: categoryId ? { category: categoryId } : undefined,
     });
   };

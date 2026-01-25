@@ -11,59 +11,83 @@ interface CompactHeaderProps {
   user: Profile | null;
   partner: Profile | null;
   couple: Couple | null;
+  label?: string;
+  accessory?: React.ReactNode;
+  showGreeting?: boolean;
+  showPartnerBadge?: boolean;
 }
 
-export function CompactHeader({ user, partner, couple }: CompactHeaderProps) {
+export function CompactHeader({
+  user,
+  partner,
+  couple,
+  label = 'Discover',
+  accessory,
+  showGreeting = true,
+  showPartnerBadge = true,
+}: CompactHeaderProps) {
   return (
     <Animated.View
       entering={FadeInDown.delay(100).duration(500).springify()}
       style={styles.container}
     >
-      {/* Greeting */}
-      <View style={styles.greetingRow}>
-        <View>
-          <Text style={styles.welcomeLabel}>Discover</Text>
-          <Text style={styles.greeting}>
-            Hey, {user?.name || 'Beautiful'}
-          </Text>
-        </View>
-
-        {/* Partner badge */}
-        {partner ? (
-          <View style={styles.partnerBadge}>
-            {partner.avatar_url ? (
-              <Image
-                source={{ uri: partner.avatar_url }}
-                style={styles.partnerAvatar}
-                cachePolicy="disk"
-                contentFit="cover"
-                transition={200}
-              />
-            ) : (
-              <Ionicons name="heart" size={12} color={colors.primary} />
-            )}
-            <Text style={styles.partnerText} numberOfLines={1}>
-              {partner.name || partner.email?.split('@')[0] || 'Partner'}
+      {showGreeting ? (
+        <View style={styles.greetingRow}>
+          <View>
+            <Text style={styles.welcomeLabel}>{label}</Text>
+            <Text style={styles.greeting}>
+              Hey, {user?.name || 'Beautiful'}
             </Text>
           </View>
-        ) : couple ? (
-          <TouchableOpacity
-            style={styles.waitingBadge}
-            onPress={() => router.push('/(app)/pairing')}
-          >
-            <Ionicons name="hourglass-outline" size={12} color={colors.primary} />
-            <Text style={styles.waitingText}>Waiting</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.pairBadge}
-            onPress={() => router.push('/(app)/pairing')}
-          >
-            <Ionicons name="add-circle-outline" size={14} color={colors.textTertiary} />
-            <Text style={styles.pairText}>Connect</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
+          <View style={styles.rightSection}>
+            {/* Partner badge */}
+            {showPartnerBadge ? (
+              partner ? (
+                <View style={styles.partnerBadge}>
+                  {partner.avatar_url ? (
+                    <Image
+                      source={{ uri: partner.avatar_url }}
+                      style={styles.partnerAvatar}
+                      cachePolicy="disk"
+                      contentFit="cover"
+                      transition={200}
+                    />
+                  ) : (
+                    <Ionicons name="heart" size={12} color={colors.primary} />
+                  )}
+                  <Text style={styles.partnerText} numberOfLines={1}>
+                    {partner.name || partner.email?.split('@')[0] || 'Partner'}
+                  </Text>
+                </View>
+              ) : couple ? (
+                <TouchableOpacity
+                  style={styles.waitingBadge}
+                  onPress={() => router.push('/(app)/pairing')}
+                >
+                  <Ionicons name="hourglass-outline" size={12} color={colors.primary} />
+                  <Text style={styles.waitingText}>Waiting</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.pairBadge}
+                  onPress={() => router.push('/(app)/pairing')}
+                >
+                  <Ionicons name="add-circle-outline" size={14} color={colors.textTertiary} />
+                  <Text style={styles.pairText}>Connect</Text>
+                </TouchableOpacity>
+              )
+            ) : null}
+            {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.titleRow}>
+          {accessory ? <View style={styles.titleSpacer} /> : null}
+          <Text style={styles.titleOnly}>{label}</Text>
+          {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -78,6 +102,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  accessory: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleOnly: {
+    ...typography.title2,
+    color: colors.text,
+    textAlign: 'center',
+    flex: 1,
+  },
+  titleSpacer: {
+    width: 32,
   },
   welcomeLabel: {
     ...typography.caption2,

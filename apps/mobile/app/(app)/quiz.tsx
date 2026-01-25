@@ -163,13 +163,34 @@ const styles = StyleSheet.create({
         opacity: 0.6,
     },
     badge: {
-        backgroundColor: 'rgba(232, 164, 174, 0.1)',
+        backgroundColor: colors.backgroundLight,
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.full,
         borderWidth: 1,
-        borderColor: 'rgba(232, 164, 174, 0.2)',
+        borderColor: colors.border,
         marginBottom: spacing.xl,
+    },
+    interestButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm + 2,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: spacing.sm,
+    },
+    interestButtonActive: {
+        backgroundColor: colors.background,
+        borderColor: colors.primary,
+    },
+    interestButtonText: {
+        ...typography.subhead,
+        fontWeight: '600',
+        color: ACCENT_COLOR,
     },
     badgeText: {
         ...typography.caption2,
@@ -207,26 +228,5 @@ const styles = StyleSheet.create({
     interestButtonContainer: {
         marginTop: spacing.xl,
         minHeight: 44,
-    },
-    interestButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(232, 164, 174, 0.1)',
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm + 2,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: 'rgba(232, 164, 174, 0.2)',
-        gap: spacing.sm,
-    },
-    interestButtonActive: {
-        backgroundColor: 'rgba(232, 164, 174, 0.15)',
-        borderColor: 'rgba(232, 164, 174, 0.3)',
-    },
-    interestButtonText: {
-        ...typography.subhead,
-        fontWeight: '600',
-        color: ACCENT_COLOR,
     },
 });

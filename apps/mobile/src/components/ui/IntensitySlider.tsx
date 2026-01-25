@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Image, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Modal, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -126,6 +127,9 @@ export function IntensitySlider({
                                             <Image
                                                 source={{ uri: partnerAvatar }}
                                                 style={styles.partnerAvatarSmall}
+                                                cachePolicy="memory-disk"
+                                                contentFit="cover"
+                                                transition={150}
                                             />
                                         ) : (
                                             <Ionicons name="heart" size={8} color={colors.secondary} />
@@ -189,7 +193,13 @@ export function IntensitySlider({
                         onPress={() => setShowInfoModal(true)}
                     >
                         {partnerAvatar ? (
-                            <Image source={{ uri: partnerAvatar }} style={styles.partnerAvatarTiny} />
+                            <Image
+                                source={{ uri: partnerAvatar }}
+                                style={styles.partnerAvatarTiny}
+                                cachePolicy="memory-disk"
+                                contentFit="cover"
+                                transition={150}
+                            />
                         ) : (
                             <View style={styles.partnerIconTiny}>
                                 <Ionicons name="person" size={10} color={colors.secondary} />
@@ -276,7 +286,13 @@ export function IntensitySlider({
 
                                     <View style={styles.comparisonPerson}>
                                         {partnerAvatar ? (
-                                            <Image source={{ uri: partnerAvatar }} style={styles.comparisonAvatarImage} />
+                                            <Image
+                                                source={{ uri: partnerAvatar }}
+                                                style={styles.comparisonAvatarImage}
+                                                cachePolicy="memory-disk"
+                                                contentFit="cover"
+                                                transition={150}
+                                            />
                                         ) : (
                                             <View style={[styles.comparisonAvatar, { backgroundColor: HEAT_COLORS[(partnerValue ?? 1) - 1] }]}>
                                                 <Text style={styles.comparisonEmoji}>{partnerLevel?.emoji}</Text>
@@ -388,13 +404,13 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.backgroundLight, // Flat
         borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.border,
     },
     levelIndicatorActive: {
-        backgroundColor: 'rgba(233, 69, 96, 0.15)',
-        borderColor: 'rgba(233, 69, 96, 0.3)',
+        backgroundColor: colors.background, // Nested
+        borderColor: colors.primary,
     },
     levelIndicatorPartner: {
         borderColor: colors.secondary,
@@ -435,15 +451,15 @@ const styles = StyleSheet.create({
         color: colors.secondary,
     },
     currentCard: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.backgroundLight, // Flat
         borderRadius: radius.md,
         padding: spacing.md,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderColor: colors.border,
     },
     currentCardWarning: {
-        borderColor: 'rgba(243, 156, 18, 0.3)',
-        backgroundColor: 'rgba(243, 156, 18, 0.05)',
+        borderColor: colors.warning,
+        backgroundColor: colors.background, // Use background for warning state to differentiate
     },
     currentHeader: {
         flexDirection: 'row',
@@ -486,7 +502,7 @@ const styles = StyleSheet.create({
         marginTop: spacing.sm,
         paddingTop: spacing.sm,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255, 255, 255, 0.08)',
+        borderTopColor: colors.border,
     },
     partnerAvatarTiny: {
         width: 20,
@@ -509,7 +525,6 @@ const styles = StyleSheet.create({
     mismatchTextWarning: {
         color: colors.warning,
     },
-    // Modal styles
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -522,13 +537,13 @@ const styles = StyleSheet.create({
         maxWidth: 360,
         borderRadius: radius.xl,
         overflow: 'hidden',
-        backgroundColor: Platform.OS === 'ios' ? 'transparent' : colors.backgroundLight,
+        backgroundColor: colors.backgroundLight, // Flat
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.border,
     },
     modalInner: {
         padding: spacing.lg,
-        backgroundColor: Platform.OS === 'ios' ? 'rgba(26, 26, 46, 0.85)' : 'transparent',
+        backgroundColor: colors.backgroundLight,
     },
     modalHeader: {
         alignItems: 'center',
@@ -551,7 +566,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.background,
         borderRadius: radius.lg,
         padding: spacing.md,
         marginBottom: spacing.lg,
@@ -627,12 +642,12 @@ const styles = StyleSheet.create({
         color: colors.warning,
     },
     modalCloseButton: {
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background,
         borderRadius: radius.md,
         paddingVertical: spacing.md,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
     },
     modalCloseText: {
         ...typography.subhead,

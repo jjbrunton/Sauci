@@ -418,10 +418,56 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.backgroundLight,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    input: {
+        backgroundColor: colors.background, // Flat background
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: spacing.md,
+        ...typography.headline,
+        color: colors.text,
+        textAlign: "center",
+        letterSpacing: 4,
+        fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+        marginBottom: spacing.md,
+    },
+    // ...
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    // ...
+    copyIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.background,
+        justifyContent: "center",
+        alignItems: "center",
+        marginLeft: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    waitingBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        gap: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     title: {
         ...typography.title1,
@@ -462,29 +508,13 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
         marginLeft: spacing.xs,
     },
-    input: {
-        backgroundColor: colors.glass.background,
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-        padding: spacing.md,
-        ...typography.headline,
-        color: colors.text,
-        textAlign: "center",
-        letterSpacing: 4,
-        fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-        marginBottom: spacing.md,
-    },
+
     divider: {
         flexDirection: "row",
         alignItems: "center",
         marginVertical: spacing.lg,
     },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: colors.glass.border,
-    },
+
     dividerText: {
         ...typography.subhead,
         color: colors.textTertiary,
@@ -501,15 +531,7 @@ const styles = StyleSheet.create({
         letterSpacing: 6,
         fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
     },
-    copyIcon: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: colors.glass.background,
-        justifyContent: "center",
-        alignItems: "center",
-        marginLeft: spacing.md,
-    },
+
     tapToCopy: {
         ...typography.caption1,
         color: colors.textTertiary,
@@ -520,15 +542,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: spacing.xl,
     },
-    waitingBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: colors.glass.background,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        gap: spacing.sm,
-    },
+
     waitingText: {
         ...typography.subhead,
         color: colors.textTertiary,

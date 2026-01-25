@@ -203,45 +203,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     plusButton: {
-        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        backgroundColor: colors.backgroundLight,
         borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.2)',
+        borderColor: colors.border,
     },
-    mediaMenuContainer: {
-        flexDirection: 'row',
-        overflow: 'hidden',
-        gap: spacing.xs,
-    },
-    mediaMenuItem: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
+    // ...
     mediaMenuItemInner: {
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.backgroundLight,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: colors.border,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    inputFieldWrapper: {
-        flex: 1,
-        position: 'relative',
-    },
+    // ...
     inputFieldBorder: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: radius.xl,
         borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.15)',
+        borderColor: colors.border,
     },
     input: {
         ...typography.body,
         color: colors.text,
-        backgroundColor: 'rgba(22, 33, 62, 0.6)',
+        backgroundColor: colors.background, // Nested flat background
         borderRadius: radius.xl,
         paddingHorizontal: spacing.md,
         paddingTop: 12,
@@ -255,7 +242,27 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
+        // Keep gradient for primary action to make it pop
     },
+    mediaMenuContainer: {
+        flexDirection: 'row',
+        overflow: 'hidden',
+        gap: spacing.xs,
+    },
+    mediaMenuItem: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    inputFieldWrapper: {
+        flex: 1,
+        position: 'relative',
+    },
+
+
+
     sendButtonHighlight: {
         position: 'absolute',
         top: 0,

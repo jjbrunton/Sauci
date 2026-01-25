@@ -37,7 +37,6 @@ import { Plus, Pencil, Trash2, Zap, Loader2, Clock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { IconPreview } from '@/components/ui/icon-picker';
-import { INTENSITY_LEVELS } from '@/lib/openai';
 
 // =============================================================================
 // Types
@@ -71,8 +70,7 @@ const DURATION_OPTIONS = [
     { value: '168', label: '1 week' },
 ];
 
-// Helper to get intensity info by level (1-indexed)
-const getIntensity = (level: number) => INTENSITY_LEVELS[level - 1] || INTENSITY_LEVELS[0];
+const getDefaultIntensity = (isExplicit?: boolean) => (isExplicit ? 4 : 2);
 
 // Format duration for display
 const formatDuration = (hours: number | null): string => {
@@ -107,7 +105,7 @@ export function DaresPage() {
         suggested_duration_hours: string;
     }>({
         text: '',
-        intensity: 1,
+        intensity: getDefaultIntensity(),
         suggested_duration_hours: '',
     });
 
@@ -169,7 +167,7 @@ export function DaresPage() {
 
     const openCreateDialog = () => {
         setEditingDare(null);
-        setFormData({ text: '', intensity: 1, suggested_duration_hours: '' });
+        setFormData({ text: '', intensity: getDefaultIntensity(pack?.is_explicit), suggested_duration_hours: '' });
         setDialogOpen(true);
     };
 
@@ -344,25 +342,6 @@ export function DaresPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label>Intensity Level</Label>
-                                <div className="flex gap-2 flex-wrap">
-                                    {INTENSITY_LEVELS.map((intensity) => (
-                                        <Button
-                                            key={intensity.level}
-                                            type="button"
-                                            variant={formData.intensity === intensity.level ? 'default' : 'outline'}
-                                            size="sm"
-                                            onClick={() => setFormData(d => ({ ...d, intensity: intensity.level }))}
-                                            className={formData.intensity === intensity.level ? intensity.color : ''}
-                                            title={intensity.description}
-                                        >
-                                            {intensity.level} - {intensity.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
                                 <Label>Suggested Duration</Label>
                                 <Select
                                     value={formData.suggested_duration_hours}
@@ -467,7 +446,6 @@ export function DaresPage() {
                                 </TableHead>
                                 <TableHead className="w-12">#</TableHead>
                                 <TableHead>Dare</TableHead>
-                                <TableHead className="w-24">Intensity</TableHead>
                                 <TableHead className="w-24">Duration</TableHead>
                                 <TableHead className="w-24">Actions</TableHead>
                             </TableRow>
@@ -490,14 +468,6 @@ export function DaresPage() {
                                     </TableCell>
                                     <TableCell>
                                         <span className="line-clamp-2">{dare.text}</span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            className={`${getIntensity(dare.intensity).color} text-white`}
-                                            title={getIntensity(dare.intensity).description}
-                                        >
-                                            {getIntensity(dare.intensity).label}
-                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         {dare.suggested_duration_hours ? (

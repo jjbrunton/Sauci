@@ -10,40 +10,45 @@ import {
     Platform,
     Pressable,
     Linking,
+    Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useAuthStore, useSubscriptionStore } from "../../store";
-import { colors, gradients, spacing, radius, typography } from "../../theme";
+import { colors, gradients, spacing, radius, typography, shadows } from "../../theme";
 import type { PurchasesPackage } from "../../lib/revenuecat";
 import { Events } from "../../lib/analytics";
+
+const logoImage = require("../../../assets/logo.png");
 
 interface PaywallProps {
     visible: boolean;
     onClose: () => void;
     onSuccess?: () => void;
+    /** Optional RevenueCat offering identifier. If not provided, uses the default offering. */
+    offeringId?: string;
 }
 
 const FEATURES = [
     {
-        icon: "diamond" as const,
-        title: "Unlock All Packs",
-        description: "Access every premium collection",
+        icon: "layers" as const,
+        title: "All Premium Packs",
+        description: "Unlock every intimate collection",
     },
     {
         icon: "sparkles" as const,
-        title: "Exclusive Content",
-        description: "New packs added regularly",
+        title: "New Content Weekly",
+        description: "Fresh questions added regularly",
     },
     {
         icon: "heart" as const,
-        title: "Share with Partner",
-        description: "Both of you get Pro access",
+        title: "Shared Access",
+        description: "Your partner gets Pro too",
     },
 ];
 
-export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
+export function Paywall({ visible, onClose, onSuccess, offeringId }: PaywallProps) {
     const { isAnonymous } = useAuthStore();
 
     const handleClose = (reason: "dismiss" | "success" | "restore" | "system") => {
@@ -67,15 +72,13 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
     const [guestConfirmed, setGuestConfirmed] = useState(false);
 
     useEffect(() => {
-        if (visible && !offerings) {
-            fetchOfferings();
-        }
         if (visible) {
+            fetchOfferings(offeringId);
             Events.paywallShown("paywall");
             setGuestConfirmed(false);
             setShowGuestConfirm(false);
         }
-    }, [visible, offerings, fetchOfferings]);
+    }, [visible, offeringId, fetchOfferings]);
 
     useEffect(() => {
         // Auto-select annual package as default (better value)
@@ -169,18 +172,13 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
         >
             <View style={styles.overlay}>
                 <View style={styles.content}>
-                    {/* Premium gradient background */}
+                    {/* Gold accent line at top */}
                     <LinearGradient
-                        colors={['rgba(22, 33, 62, 0.98)', 'rgba(13, 13, 26, 1)']}
-                        style={StyleSheet.absoluteFill}
+                        colors={[colors.premium.gold, colors.premium.goldDark]}
+                        style={styles.topAccent}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
                     />
-                    {/* Top silk highlight */}
-                    <LinearGradient
-                        colors={['rgba(212, 175, 55, 0.08)', 'transparent']}
-                        style={styles.silkHighlight}
-                    />
-                    {/* Premium border accent */}
-                    <View style={styles.premiumBorderAccent} />
 
                     <ScrollView
                         showsVerticalScrollIndicator={false}
@@ -192,47 +190,34 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                             onPress={() => handleClose("dismiss")}
                             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                            <Ionicons name="close" size={24} color={colors.textSecondary} />
+                            <Ionicons name="close" size={22} color={colors.textSecondary} />
                         </TouchableOpacity>
 
                         {/* Header */}
                         <View style={styles.header}>
-                            {/* Premium label */}
-                            <Text style={styles.label}>EXCLUSIVE ACCESS</Text>
-
-                            {/* Icon with glow */}
-                            <View style={styles.iconContainer}>
-                                <LinearGradient
-                                    colors={[colors.premium.gold, colors.premium.goldDark]}
-                                    style={StyleSheet.absoluteFill}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
+                            {/* Sauci logo */}
+                            <View style={styles.logoContainer}>
+                                <Image
+                                    source={logoImage}
+                                    style={styles.logo}
+                                    resizeMode="contain"
                                 />
-                                <Ionicons name="diamond" size={32} color={colors.background} />
                             </View>
 
                             <Text style={styles.title}>Sauci Pro</Text>
-
-                            {/* Decorative separator */}
-                            <View style={styles.separator}>
-                                <View style={styles.separatorLine} />
-                                <View style={styles.separatorDiamond} />
-                                <View style={styles.separatorLine} />
-                            </View>
-
                             <Text style={styles.subtitle}>
-                                Unlock all premium content for you and your partner
+                                Unlock the full intimate experience
                             </Text>
                         </View>
 
                         {/* Features */}
                         <View style={styles.features}>
-                            {FEATURES.map((feature, index) => (
+                            {FEATURES.map((feature) => (
                                 <View key={feature.title} style={styles.featureRow}>
                                     <View style={styles.featureIcon}>
                                         <Ionicons
                                             name={feature.icon}
-                                            size={18}
+                                            size={20}
                                             color={colors.premium.gold}
                                         />
                                     </View>
@@ -242,11 +227,6 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                             {feature.description}
                                         </Text>
                                     </View>
-                                    <Ionicons
-                                        name="checkmark-circle"
-                                        size={20}
-                                        color={colors.premium.gold}
-                                    />
                                 </View>
                             ))}
                         </View>
@@ -261,75 +241,96 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                     </Text>
                                 </View>
                             ) : offerings?.availablePackages ? (
-                                offerings.availablePackages.map((pkg) => {
-                                    const isSelected =
-                                        selectedPackage?.identifier === pkg.identifier;
-                                    const isAnnual = pkg.packageType === "ANNUAL";
-
-                                    return (
-                                        <Pressable
-                                            key={pkg.identifier}
-                                            onPress={() => setSelectedPackage(pkg)}
-                                            style={[
-                                                styles.packageCard,
-                                                isSelected && styles.packageCardSelected,
-                                                isAnnual && styles.packageCardAnnual,
-                                            ]}
-                                        >
-                                            {isAnnual && (
-                                                <LinearGradient
-                                                    colors={['rgba(212, 175, 55, 0.1)', 'rgba(184, 134, 11, 0.05)']}
-                                                    style={StyleSheet.absoluteFill}
-                                                />
-                                            )}
-                                            {isAnnual && savings && savings > 0 && (
-                                                <View style={styles.savingsBadge}>
-                                                    <LinearGradient
-                                                        colors={[colors.premium.gold, colors.premium.goldDark]}
-                                                        style={StyleSheet.absoluteFill}
-                                                        start={{ x: 0, y: 0 }}
-                                                        end={{ x: 1, y: 0 }}
-                                                    />
-                                                    <Ionicons name="star" size={10} color={colors.background} />
-                                                    <Text style={styles.savingsText}>
-                                                        SAVE {savings}%
-                                                    </Text>
-                                                </View>
-                                            )}
-                                            <View style={styles.packageContent}>
-                                                <View
+                                <>
+                                    {/* Annual package - hero card */}
+                                    {offerings.availablePackages
+                                        .filter((p) => p.packageType === "ANNUAL")
+                                        .map((pkg) => {
+                                            const isSelected = selectedPackage?.identifier === pkg.identifier;
+                                            return (
+                                                <Pressable
+                                                    key={pkg.identifier}
+                                                    onPress={() => setSelectedPackage(pkg)}
                                                     style={[
-                                                        styles.radioOuter,
-                                                        isSelected && styles.radioOuterSelected,
+                                                        styles.packageCard,
+                                                        styles.packageCardAnnual,
+                                                        isSelected && styles.packageCardSelected,
                                                     ]}
                                                 >
-                                                    {isSelected && <View style={styles.radioInner} />}
-                                                </View>
-                                                <View style={styles.packageInfo}>
-                                                    <View style={styles.packageTitleRow}>
-                                                        <Text style={[
-                                                            styles.packageTitle,
-                                                            isAnnual && styles.packageTitleAnnual
+                                                    {/* Subtle gold tint background */}
+                                                    <View style={styles.annualBackground} />
+
+                                                    {/* Best value badge */}
+                                                    {savings && savings > 0 && (
+                                                        <View style={styles.savingsBadge}>
+                                                            <LinearGradient
+                                                                colors={[colors.premium.gold, colors.premium.goldDark]}
+                                                                style={StyleSheet.absoluteFill}
+                                                                start={{ x: 0, y: 0 }}
+                                                                end={{ x: 1, y: 0 }}
+                                                            />
+                                                            <Text style={styles.savingsText}>
+                                                                SAVE {savings}%
+                                                            </Text>
+                                                        </View>
+                                                    )}
+
+                                                    <View style={styles.packageContent}>
+                                                        <View style={[
+                                                            styles.radioOuter,
+                                                            isSelected && styles.radioOuterSelected,
                                                         ]}>
-                                                            {isAnnual ? "Annual" : "Monthly"}
-                                                        </Text>
-                                                        {isAnnual && (
-                                                            <View style={styles.bestValueBadge}>
-                                                                <Text style={styles.bestValueText}>BEST VALUE</Text>
+                                                            {isSelected && <View style={styles.radioInner} />}
+                                                        </View>
+                                                        <View style={styles.packageInfo}>
+                                                            <View style={styles.packageHeader}>
+                                                                <Text style={styles.packageTitleAnnual}>Annual</Text>
+                                                                <View style={styles.recommendedBadge}>
+                                                                    <Ionicons name="star" size={10} color={colors.premium.gold} />
+                                                                    <Text style={styles.recommendedText}>BEST VALUE</Text>
+                                                                </View>
                                                             </View>
-                                                        )}
+                                                            <Text style={styles.packagePriceAnnual}>
+                                                                {formatPrice(pkg)}
+                                                            </Text>
+                                                        </View>
                                                     </View>
-                                                    <Text style={[
-                                                        styles.packagePrice,
-                                                        isAnnual && styles.packagePriceAnnual
-                                                    ]}>
-                                                        {formatPrice(pkg)}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                        </Pressable>
-                                    );
-                                })
+                                                </Pressable>
+                                            );
+                                        })}
+
+                                    {/* Monthly package */}
+                                    {offerings.availablePackages
+                                        .filter((p) => p.packageType === "MONTHLY")
+                                        .map((pkg) => {
+                                            const isSelected = selectedPackage?.identifier === pkg.identifier;
+                                            return (
+                                                <Pressable
+                                                    key={pkg.identifier}
+                                                    onPress={() => setSelectedPackage(pkg)}
+                                                    style={[
+                                                        styles.packageCard,
+                                                        isSelected && styles.packageCardSelected,
+                                                    ]}
+                                                >
+                                                    <View style={styles.packageContent}>
+                                                        <View style={[
+                                                            styles.radioOuter,
+                                                            isSelected && styles.radioOuterSelected,
+                                                        ]}>
+                                                            {isSelected && <View style={styles.radioInner} />}
+                                                        </View>
+                                                        <View style={styles.packageInfo}>
+                                                            <Text style={styles.packageTitle}>Monthly</Text>
+                                                            <Text style={styles.packagePrice}>
+                                                                {formatPrice(pkg)}
+                                                            </Text>
+                                                        </View>
+                                                    </View>
+                                                </Pressable>
+                                            );
+                                        })}
+                                </>
                             ) : (
                                 <View style={styles.errorContainer}>
                                     <Text style={styles.errorText}>
@@ -342,7 +343,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                     )}
                                     <TouchableOpacity
                                         style={styles.retryButton}
-                                        onPress={fetchOfferings}
+                                        onPress={() => fetchOfferings(offeringId)}
                                     >
                                         <Text style={styles.retryButtonText}>Retry</Text>
                                     </TouchableOpacity>
@@ -379,7 +380,6 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                         start={{ x: 0, y: 0 }}
                                         end={{ x: 1, y: 0 }}
                                     >
-                                        <Ionicons name="diamond" size={18} color={colors.background} style={{ marginRight: spacing.sm }} />
                                         <Text style={styles.purchaseButtonText}>Unlock Pro</Text>
                                     </LinearGradient>
                                 )}
@@ -405,18 +405,19 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                 <TouchableOpacity
                                     onPress={() => Linking.openURL("https://sauci.app/terms")}
                                 >
-                                    <Text style={styles.legalLinkText}>Terms of Use</Text>
+                                    <Text style={styles.legalLinkText}>Terms</Text>
                                 </TouchableOpacity>
                                 <Text style={styles.legalSeparator}>•</Text>
                                 <TouchableOpacity
                                     onPress={() => Linking.openURL("https://sauci.app/privacy")}
                                 >
-                                    <Text style={styles.legalLinkText}>Privacy Policy</Text>
+                                    <Text style={styles.legalLinkText}>Privacy</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </ScrollView>
 
+                    {/* Guest confirmation modal */}
                     {showGuestConfirm && (
                         <View style={styles.guestConfirmOverlay}>
                             <Pressable
@@ -425,8 +426,8 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                             />
                             <View style={styles.guestConfirmCard}>
                                 <View style={styles.guestConfirmHeader}>
-                                    <View style={styles.guestConfirmIcon}>
-                                        <Ionicons name="shield-checkmark" size={22} color={colors.premium.gold} />
+                                    <View style={styles.guestConfirmIconWrapper}>
+                                        <Ionicons name="shield-checkmark" size={24} color={colors.premium.gold} />
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => setShowGuestConfirm(false)}
@@ -440,7 +441,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                 <Text style={styles.guestConfirmTitle}>Save your account first?</Text>
                                 <Text style={styles.guestConfirmBody}>
                                     Unsaved accounts can't be recovered if you delete the app or switch devices.
-                                    Saving your account protects your access to Pro.
+                                    Saving protects your Pro access.
                                 </Text>
 
                                 <View style={styles.guestConfirmActions}>
@@ -452,7 +453,14 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                             router.push("/(app)/settings/save-account" as any);
                                         }}
                                     >
-                                        <Text style={styles.guestConfirmPrimaryText}>Save account</Text>
+                                        <LinearGradient
+                                            colors={[colors.premium.gold, colors.premium.goldDark]}
+                                            style={styles.guestConfirmPrimaryGradient}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                        >
+                                            <Text style={styles.guestConfirmPrimaryText}>Save account</Text>
+                                        </LinearGradient>
                                     </Pressable>
 
                                     <Pressable
@@ -463,7 +471,7 @@ export function Paywall({ visible, onClose, onSuccess }: PaywallProps) {
                                             await doPurchase();
                                         }}
                                     >
-                                        <Text style={styles.guestConfirmSecondaryText}>Continue purchase</Text>
+                                        <Text style={styles.guestConfirmSecondaryText}>Continue anyway</Text>
                                     </Pressable>
                                 </View>
                             </View>
@@ -485,132 +493,84 @@ const styles = StyleSheet.create({
         backgroundColor: colors.background,
         borderTopLeftRadius: radius.xxl,
         borderTopRightRadius: radius.xxl,
-        maxHeight: "90%",
-        borderWidth: 1,
-        borderBottomWidth: 0,
-        borderColor: 'rgba(212, 175, 55, 0.2)',
+        maxHeight: "92%",
         overflow: 'hidden',
     },
-    silkHighlight: {
+    topAccent: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: 150,
+        height: 3,
         borderTopLeftRadius: radius.xxl,
         borderTopRightRadius: radius.xxl,
     },
-    premiumBorderAccent: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 2,
-        backgroundColor: colors.premium.gold,
-        opacity: 0.4,
-    },
     scrollContent: {
         padding: spacing.lg,
-        paddingTop: spacing.xl,
-        paddingBottom: Platform.OS === "ios" ? 40 : spacing.lg,
+        paddingTop: spacing.xxl,
+        paddingBottom: Platform.OS === "ios" ? 44 : spacing.xl,
     },
     closeButton: {
         position: "absolute",
-        top: spacing.md,
-        right: spacing.md,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        top: spacing.sm,
+        right: spacing.sm,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.backgroundLight,
         justifyContent: "center",
         alignItems: "center",
         zIndex: 10,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
     },
+
+    // Header
     header: {
         alignItems: "center",
         marginBottom: spacing.xl,
     },
-    label: {
-        ...typography.caption1,
-        fontWeight: '600',
-        letterSpacing: 3,
-        color: colors.premium.gold,
-        textAlign: 'center',
-        marginBottom: spacing.md,
-    },
-    iconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
+    logoContainer: {
+        width: 88,
+        height: 88,
         justifyContent: "center",
         alignItems: "center",
-        overflow: 'hidden',
-        marginBottom: spacing.md,
-        shadowColor: colors.premium.gold,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.6,
-        shadowRadius: 20,
-        elevation: 12,
+        marginBottom: spacing.lg,
+    },
+    logo: {
+        width: 88,
+        height: 88,
     },
     title: {
-        ...typography.title1,
+        ...typography.largeTitle,
         color: colors.text,
         marginBottom: spacing.xs,
-        textShadowColor: 'rgba(212, 175, 55, 0.3)',
-        textShadowOffset: { width: 0, height: 0 },
-        textShadowRadius: 10,
-    },
-    separator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: spacing.md,
-        width: 140,
-    },
-    separatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: 'rgba(212, 175, 55, 0.3)',
-    },
-    separatorDiamond: {
-        width: 6,
-        height: 6,
-        backgroundColor: colors.premium.gold,
-        transform: [{ rotate: '45deg' }],
-        marginHorizontal: spacing.md,
-        opacity: 0.8,
     },
     subtitle: {
         ...typography.body,
         color: colors.textSecondary,
         textAlign: "center",
-        lineHeight: 24,
     },
+
+    // Features
     features: {
         marginBottom: spacing.xl,
-        backgroundColor: 'rgba(212, 175, 55, 0.05)',
-        borderRadius: radius.lg,
-        padding: spacing.md,
-        borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.1)',
+        gap: spacing.sm,
     },
     featureRow: {
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.md,
     },
     featureIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: colors.premium.goldLight,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
-        borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.2)',
     },
     featureText: {
         flex: 1,
@@ -622,7 +582,10 @@ const styles = StyleSheet.create({
     featureDescription: {
         ...typography.subhead,
         color: colors.textSecondary,
+        marginTop: 2,
     },
+
+    // Packages
     packages: {
         marginBottom: spacing.lg,
         gap: spacing.md,
@@ -638,27 +601,28 @@ const styles = StyleSheet.create({
     },
     packageCard: {
         position: "relative",
-        backgroundColor: 'rgba(22, 33, 62, 0.4)',
+        backgroundColor: colors.backgroundLight,
         borderRadius: radius.lg,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 2,
+        borderColor: colors.border,
         padding: spacing.md,
         overflow: "hidden",
     },
     packageCardSelected: {
         borderColor: colors.premium.gold,
-        borderWidth: 2,
     },
     packageCardAnnual: {
-        borderColor: 'rgba(212, 175, 55, 0.3)',
+        borderColor: colors.premium.goldLight,
+    },
+    annualBackground: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.premium.goldLight,
+        opacity: 0.3,
     },
     savingsBadge: {
         position: "absolute",
-        top: -1,
+        top: 0,
         right: spacing.md,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
         paddingHorizontal: spacing.sm,
         paddingVertical: 4,
         borderBottomLeftRadius: radius.sm,
@@ -680,7 +644,7 @@ const styles = StyleSheet.create({
         height: 24,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
+        borderColor: colors.border,
         justifyContent: "center",
         alignItems: "center",
         marginRight: spacing.md,
@@ -697,7 +661,7 @@ const styles = StyleSheet.create({
     packageInfo: {
         flex: 1,
     },
-    packageTitleRow: {
+    packageHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
@@ -707,19 +671,23 @@ const styles = StyleSheet.create({
         color: colors.text,
     },
     packageTitleAnnual: {
+        ...typography.headline,
         color: colors.premium.champagne,
     },
-    bestValueBadge: {
-        backgroundColor: 'rgba(212, 175, 55, 0.2)',
-        paddingHorizontal: spacing.xs,
+    recommendedBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: colors.premium.goldLight,
+        paddingHorizontal: spacing.sm,
         paddingVertical: 2,
         borderRadius: radius.xs,
     },
-    bestValueText: {
+    recommendedText: {
         ...typography.caption2,
         color: colors.premium.gold,
         fontWeight: '700',
-        letterSpacing: 0.5,
+        letterSpacing: 0.3,
     },
     packagePrice: {
         ...typography.subhead,
@@ -727,9 +695,12 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     packagePriceAnnual: {
+        ...typography.subhead,
         color: colors.premium.champagne,
-        opacity: 0.8,
+        marginTop: 2,
     },
+
+    // Error states
     errorContainer: {
         alignItems: "center",
         padding: spacing.lg,
@@ -741,12 +712,10 @@ const styles = StyleSheet.create({
         marginBottom: spacing.md,
     },
     retryButton: {
-        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        backgroundColor: colors.premium.goldLight,
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: 'rgba(212, 175, 55, 0.2)',
     },
     retryButtonText: {
         ...typography.subhead,
@@ -764,17 +733,17 @@ const styles = StyleSheet.create({
         color: colors.error,
         textAlign: "center",
     },
+
+    // Actions
     actions: {
         marginBottom: spacing.lg,
     },
     purchaseButton: {
         borderRadius: radius.lg,
         overflow: "hidden",
+        ...shadows.lg,
         shadowColor: colors.premium.gold,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        shadowOpacity: 0.4,
     },
     purchaseButtonDisabled: {
         opacity: 0.5,
@@ -786,7 +755,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.premium.gold,
     },
     purchaseButtonGradient: {
-        flexDirection: 'row',
         paddingVertical: spacing.md,
         alignItems: "center",
         justifyContent: 'center',
@@ -795,6 +763,7 @@ const styles = StyleSheet.create({
         ...typography.headline,
         color: colors.background,
         fontWeight: '700',
+        fontSize: 18,
     },
     restoreButton: {
         alignItems: "center",
@@ -803,11 +772,12 @@ const styles = StyleSheet.create({
     },
     restoreText: {
         ...typography.subhead,
-        color: colors.premium.gold,
-        opacity: 0.8,
+        color: colors.textSecondary,
     },
+
+    // Legal
     legal: {
-        paddingHorizontal: spacing.md,
+        paddingHorizontal: spacing.sm,
     },
     legalText: {
         ...typography.caption1,
@@ -820,11 +790,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         marginTop: spacing.sm,
-        gap: spacing.xs,
+        gap: spacing.sm,
     },
     legalLinkText: {
         ...typography.caption1,
-        color: colors.premium.gold,
+        color: colors.textSecondary,
         textDecorationLine: "underline",
     },
     legalSeparator: {
@@ -832,21 +802,22 @@ const styles = StyleSheet.create({
         color: colors.textTertiary,
     },
 
+    // Guest confirm modal
     guestConfirmOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
         justifyContent: "center",
         alignItems: "center",
         padding: spacing.lg,
     },
     guestConfirmCard: {
         width: "100%",
-        maxWidth: 420,
-        backgroundColor: "rgba(22, 33, 62, 0.98)",
+        maxWidth: 400,
+        backgroundColor: colors.backgroundLight,
         borderRadius: radius.xl,
         padding: spacing.lg,
         borderWidth: 1,
-        borderColor: "rgba(212, 175, 55, 0.2)",
+        borderColor: colors.border,
     },
     guestConfirmHeader: {
         flexDirection: "row",
@@ -854,23 +825,21 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginBottom: spacing.md,
     },
-    guestConfirmIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "rgba(212, 175, 55, 0.12)",
+    guestConfirmIconWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: colors.premium.goldLight,
         justifyContent: "center",
         alignItems: "center",
     },
     guestConfirmClose: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.background,
         justifyContent: "center",
         alignItems: "center",
-        borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.1)",
     },
     guestConfirmTitle: {
         ...typography.title3,
@@ -878,19 +847,20 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
     },
     guestConfirmBody: {
-        ...typography.subhead,
+        ...typography.body,
         color: colors.textSecondary,
-        lineHeight: 20,
+        lineHeight: 22,
         marginBottom: spacing.lg,
-        textAlign: "left",
     },
     guestConfirmActions: {
         gap: spacing.sm,
     },
     guestConfirmPrimary: {
-        backgroundColor: colors.premium.gold,
-        paddingVertical: spacing.md,
         borderRadius: radius.lg,
+        overflow: 'hidden',
+    },
+    guestConfirmPrimaryGradient: {
+        paddingVertical: spacing.md,
         alignItems: "center",
     },
     guestConfirmPrimaryText: {
@@ -899,16 +869,16 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
     guestConfirmSecondary: {
-        backgroundColor: "rgba(255, 255, 255, 0.06)",
+        backgroundColor: colors.background,
         paddingVertical: spacing.md,
         borderRadius: radius.lg,
         alignItems: "center",
         borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.12)",
+        borderColor: colors.border,
     },
     guestConfirmSecondaryText: {
         ...typography.subhead,
-        color: colors.text,
+        color: colors.textSecondary,
         fontWeight: "600",
     },
 });

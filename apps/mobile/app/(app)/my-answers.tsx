@@ -48,7 +48,7 @@ type GroupByOption = "pack" | "date" | "answer";
 
 export default function MyAnswersScreen() {
     const { responses, isLoading, isLoadingMore, hasMore, groupBy, dateSortOrder, fetchResponses, setGroupBy, toggleDateSortOrder, totalCount } = useResponsesStore();
-    const { user } = useAuthStore();
+    const { user, partner } = useAuthStore();
     const router = useRouter();
     const params = useLocalSearchParams();
     const { width } = useWindowDimensions();
@@ -152,6 +152,9 @@ export default function MyAnswersScreen() {
             index={index}
             onEditPress={() => handleEditPress(item)}
             onChatPress={item.match_id ? () => router.push(`/chat/${item.match_id}`) : undefined}
+            viewerId={user?.id}
+            viewerName={user?.name}
+            partnerName={partner?.name}
         />
     );
 
@@ -210,7 +213,7 @@ export default function MyAnswersScreen() {
 
     return (
         <GradientBackground>
-            {/* Ambient Orbs */}
+            {/* Ambient Orbs - Commented out for flat look
             <Animated.View
                 style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]}
                 pointerEvents="none"
@@ -233,16 +236,13 @@ export default function MyAnswersScreen() {
                     end={{ x: 0, y: 0 }}
                 />
             </Animated.View>
+            */}
 
             <View style={styles.container}>
                 {/* Fixed Nav Bar */}
                 <View style={styles.navBar}>
                     <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
-                        {Platform.OS === "ios" ? (
-                            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-                        ) : (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
-                        )}
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
                     </Animated.View>
                     
                     <TouchableOpacity style={styles.navBarBackButton} onPress={handleBack}>
@@ -322,7 +322,7 @@ export default function MyAnswersScreen() {
                                     come back here to review and change your answers anytime.
                                 </Text>
                                 <GlassButton
-                                    onPress={() => router.push("/(app)/swipe")}
+                                    onPress={() => router.push("/")}
                                     style={{ marginTop: spacing.lg }}
                                 >
                                     Start Swiping
@@ -390,7 +390,8 @@ const styles = StyleSheet.create({
     navBarBackground: {
         ...StyleSheet.absoluteFillObject,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(212, 175, 55, 0.15)', // Gold tint
+        borderBottomColor: colors.border,
+        backgroundColor: colors.background,
         overflow: "hidden",
     },
     navBarBackButton: {
@@ -401,12 +402,52 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        backgroundColor: colors.backgroundLight,
         justifyContent: "center",
         alignItems: "center",
         borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.1)",
+        borderColor: colors.border,
     },
+    // ...
+    countBadgePremium: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: spacing.xs,
+    },
+    // ...
+    groupByButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        backgroundColor: colors.backgroundLight,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    groupByButtonActive: {
+        backgroundColor: colors.background,
+        borderColor: colors.primary,
+    },
+    // ...
+    emptyIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: colors.backgroundLight,
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: spacing.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+
     navBarTitle: {
         ...typography.headline,
         color: colors.text,
@@ -439,17 +480,7 @@ const styles = StyleSheet.create({
         color: colors.text,
         textAlign: "center",
     },
-    countBadgePremium: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: `${ACCENT_RGBA}0.2)`,
-        gap: spacing.xs,
-    },
+
     countTextPremium: {
         ...typography.caption2,
         fontWeight: "600",
@@ -463,20 +494,8 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
         marginTop: spacing.md,
     },
-    groupByButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        backgroundColor: "rgba(255, 255, 255, 0.05)",
-        borderWidth: 1,
-        borderColor: "rgba(255, 255, 255, 0.1)",
-    },
-    groupByButtonActive: {
-        backgroundColor: `${ACCENT_RGBA}0.15)`,
-        borderColor: `${ACCENT_RGBA}0.3)`,
-    },
+
+
     groupByText: {
         ...typography.caption1,
         color: colors.textSecondary,
@@ -518,15 +537,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingVertical: spacing.xxl,
     },
-    emptyIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: `${ACCENT_RGBA}0.1)`,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: spacing.lg,
-    },
+
     emptyTitle: {
         ...typography.title2,
         color: colors.text,

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { View, StyleSheet, Text, ActivityIndicator, Platform, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import { decode } from "base64-arraybuffer";
 import Animated, {
     FadeIn,
     FadeInUp,
@@ -17,16 +19,45 @@ import { supabase } from "../../src/lib/supabase";
 import { usePacksStore, useAuthStore } from "../../src/store";
 import { useAmbientOrbAnimation } from "../../src/hooks";
 import { skipQuestion, getSkippedQuestionIds } from "../../src/lib/skippedQuestions";
-import { hasSeenSwipeTutorial, markSwipeTutorialSeen } from "../../src/lib/swipeTutorialSeen";
 import { invokeWithAuthRetry } from "../../src/lib/authErrorHandler";
-// import SwipeCard from "../../src/components/SwipeCard";
-import { SwipeCardPremium as SwipeCard } from "../../src/components/swipe"; // PoC: Premium styling
-import { SwipeTutorial } from "../../src/components/tutorials";
+import {
+    QuestionCard,
+    QuestionCardText,
+    QuestionCardPhoto,
+    QuestionCardAudio,
+    QuestionCardWhoLikely
+} from "../../src/components/questions";
 import { QuestionFeedbackModal } from "../../src/components/feedback";
+import { MatchConfetti } from "../../src/components/MatchConfetti";
 import { GradientBackground, GlassCard, GlassButton, DecorativeSeparator } from "../../src/components/ui";
 import { Paywall } from "../../src/components/paywall";
 import { Events } from "../../src/lib/analytics";
-import { colors, gradients, spacing, typography, radius, shadows } from "../../src/theme";
+import { colors, gradients, spacing, typography, radius, shadows, getCategoryColor } from "../../src/theme";
+import type { AnswerType } from "../../src/types";
+
+// Response data types for different question types
+interface TextResponseData {
+    type: 'text_answer';
+    text: string;
+}
+
+interface PhotoResponseData {
+    type: 'photo';
+    media_path: string;
+}
+
+interface AudioResponseData {
+    type: 'audio';
+    media_path: string;
+    duration_seconds: number;
+}
+
+interface WhoLikelyResponseData {
+    type: 'who_likely';
+    chosen_user_id: string;
+}
+
+type ResponseData = TextResponseData | PhotoResponseData | AudioResponseData | WhoLikelyResponseData;
 
 interface DailyLimitInfo {
     responses_today: number;
@@ -47,15 +78,25 @@ export default function SwipeScreen() {
     const [questions, setQuestions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [showTutorial, setShowTutorial] = useState(false);
     const [feedbackQuestion, setFeedbackQuestion] = useState<{id: string, text: string} | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const [isBlocked, setIsBlocked] = useState(false);
     const [gapInfo, setGapInfo] = useState<{ unanswered: number; threshold: number } | null>(null);
     const [dailyLimitInfo, setDailyLimitInfo] = useState<DailyLimitInfo | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
     const [packContext, setPackContext] = useState<{ name: string; icon: string } | null>(null);
-    const { enabledPackIds, ensureEnabledPacksLoaded } = usePacksStore();
-    const { partner, couple } = useAuthStore();
+    const [showConfetti, setShowConfetti] = useState(false);
+    const { enabledPackIds, ensureEnabledPacksLoaded, packs } = usePacksStore();
+    const { user, partner, couple } = useAuthStore();
+
+    // Supported question types - filter out types the UI doesn't support yet
+    const supportedTypes = ['swipe', 'text_answer', 'photo', 'audio', 'who_likely'];
+
+    // Filter questions to only supported types (safety during rollout)
+    // Must be calculated early since it's used by effectiveTotal and throughout rendering
+    const filteredQuestions = questions.filter(q =>
+        !q.question_type || supportedTypes.includes(q.question_type)
+    );
     const hasTrackedExhausted = useRef(false);
     const fetchRequestId = useRef(0);
     const lastFetchedMode = useRef<string | undefined>(undefined);
@@ -134,8 +175,7 @@ export default function SwipeScreen() {
                 fetchQuestions();
             }
         });
-        checkTutorial();
-    }, [packId, mode]);
+    }, [packId, mode, startQuestionId]);
 
     // Fetch pack context when packId is provided
     useEffect(() => {
@@ -252,7 +292,7 @@ export default function SwipeScreen() {
 
     // Calculate effective total questions (accounting for gap limit AND daily limit)
     const effectiveTotal = (() => {
-        let total = questions.length;
+        let total = filteredQuestions.length;
 
         // Apply gap limit if active
         if (gapInfo && gapInfo.threshold > 0) {
@@ -270,23 +310,11 @@ export default function SwipeScreen() {
 
     // Track when all questions are exhausted
     useEffect(() => {
-        if (questions.length > 0 && currentIndex >= questions.length && !hasTrackedExhausted.current) {
+        if (filteredQuestions.length > 0 && currentIndex >= filteredQuestions.length && !hasTrackedExhausted.current) {
             hasTrackedExhausted.current = true;
             Events.allQuestionsExhausted();
         }
-    }, [currentIndex, questions.length]);
-
-    const checkTutorial = async () => {
-        const seen = await hasSeenSwipeTutorial();
-        if (!seen) {
-            setShowTutorial(true);
-        }
-    };
-
-    const handleTutorialComplete = async () => {
-        await markSwipeTutorialSeen();
-        setShowTutorial(false);
-    };
+    }, [currentIndex, filteredQuestions.length]);
 
     // Filter out questions from disabled packs immediately when enabledPackIds changes
     // Skip this filter in pending mode - user should answer ALL questions partner swiped on
@@ -328,7 +356,12 @@ export default function SwipeScreen() {
             }
 
             // Filter out recently skipped questions
-            const filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
+            let filtered = (data || []).filter((q: any) => !skippedIds.has(q.id));
+
+            // If no unskipped questions remain, show skipped ones again
+            if (filtered.length === 0 && data && data.length > 0) {
+                filtered = data;
+            }
 
             // Always check answer gap and daily limit when user has partner and not viewing specific pack
             if (partner && !packId) {
@@ -469,33 +502,123 @@ export default function SwipeScreen() {
         }
     };
 
-    const handleSwipe = async (direction: "left" | "right" | "up" | "down") => {
-        const question = questions[currentIndex];
+    // Upload media (photo/audio) to Supabase storage
+    const uploadResponseMedia = async (
+        localUri: string,
+        questionId: string,
+        mediaType: 'photo' | 'audio'
+    ): Promise<string | null> => {
+        if (!user?.id) return null;
 
-        setCurrentIndex(prev => prev + 1);
+        try {
+            const timestamp = Date.now();
+            const extMatch = localUri.match(/\.(\w+)$/);
+            const ext = extMatch ? extMatch[1] : (mediaType === 'photo' ? 'jpg' : 'm4a');
+            const fileName = `${user.id}/${questionId}_${timestamp}.${ext}`;
+            const contentType = mediaType === 'photo'
+                ? `image/${ext === 'jpg' ? 'jpeg' : ext}`
+                : `audio/${ext}`;
+
+            let fileBody: ArrayBuffer | Blob;
+
+            if (Platform.OS === 'web') {
+                const response = await fetch(localUri);
+                fileBody = await response.blob();
+            } else {
+                const base64 = await FileSystem.readAsStringAsync(localUri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+                fileBody = decode(base64);
+            }
+
+            const { error } = await supabase.storage
+                .from('response-media')
+                .upload(fileName, fileBody, { contentType });
+
+            if (error) {
+                console.error('Media upload error:', error);
+                return null;
+            }
+
+            return fileName;
+        } catch (error) {
+            console.error('Media upload failed:', error);
+            return null;
+        }
+    };
+
+    // Handle answer submission from question cards (supports response_data for new question types)
+    const handleAnswer = async (questionId: string, answer: AnswerType | 'skip', responseData?: ResponseData) => {
+        const question = filteredQuestions[currentIndex];
 
         // Handle skip - don't submit a response, just store it for later
-        if (direction === "down") {
-            await skipQuestion(question.id);
+        if (answer === 'skip') {
+            setCurrentIndex(prev => prev + 1);
+            await skipQuestion(questionId);
             Events.questionSkipped();
             return;
         }
 
-        const answer = direction === "right" ? "yes" : direction === "left" ? "no" : "maybe";
-
         try {
-            const { error } = await invokeWithAuthRetry("submit-response", {
+            // Upload media if response contains photo or audio with local URI
+            let finalResponseData = responseData;
+            if (responseData) {
+                if (responseData.type === 'photo' && responseData.media_path) {
+                    setIsUploading(true);
+                    try {
+                        const uploadedPath = await uploadResponseMedia(responseData.media_path, questionId, 'photo');
+                        if (uploadedPath) {
+                            finalResponseData = { ...responseData, media_path: uploadedPath };
+                        } else {
+                            console.error('Photo upload failed, skipping response_data');
+                            finalResponseData = undefined;
+                        }
+                    } finally {
+                        setIsUploading(false);
+                    }
+                } else if (responseData.type === 'audio' && responseData.media_path) {
+                    setIsUploading(true);
+                    try {
+                        const uploadedPath = await uploadResponseMedia(responseData.media_path, questionId, 'audio');
+                        if (uploadedPath) {
+                            finalResponseData = { ...responseData, media_path: uploadedPath };
+                        } else {
+                            console.error('Audio upload failed, skipping response_data');
+                            finalResponseData = undefined;
+                        }
+                    } finally {
+                        setIsUploading(false);
+                    }
+                }
+            }
+
+            const { data, error } = await invokeWithAuthRetry("submit-response", {
                 body: {
-                    question_id: question.id,
+                    question_id: questionId,
                     answer,
+                    response_data: finalResponseData,
                 },
             });
 
             if (error) {
                 console.error("Submit response error:", error);
+                // Advance to next question even on error
+                setCurrentIndex(prev => prev + 1);
             } else {
                 Events.questionAnswered(answer, question.pack_id);
-                
+
+                // Check if a match was created
+                const hasMatch = data?.match != null;
+
+                if (hasMatch) {
+                    // Show confetti celebration - delay advancing to next question
+                    setShowConfetti(true);
+                    // Confetti component will call onAnimationComplete which advances
+                } else {
+                    // No match - advance immediately
+                    setCurrentIndex(prev => prev + 1);
+                }
+
                 // Skip limit checks in pending mode - user is just catching up
                 if (mode !== 'pending') {
                     // Increment local daily count if we have limit info
@@ -514,6 +637,131 @@ export default function SwipeScreen() {
             }
         } catch (error) {
             console.error("Failed to submit response", error);
+            // Advance to next question even on error
+            setCurrentIndex(prev => prev + 1);
+        }
+    };
+
+    // Handle confetti animation completion
+    const handleConfettiComplete = useCallback(() => {
+        setShowConfetti(false);
+        setCurrentIndex(prev => prev + 1);
+    }, []);
+
+    // Get pack info for a question - use packContext if viewing a specific pack, otherwise question's pack
+    const getQuestionPackInfo = (question: any) => {
+        // If viewing specific pack, use that context but try to enrich with color from store
+        if (packId) {
+            const pack = packs.find(p => p.id === packId);
+            const categoryColor = pack ? getCategoryColor(pack.category) : undefined;
+            
+            if (packContext) {
+                return { ...packContext, color: categoryColor };
+            }
+            if (pack) {
+                return { name: pack.name, icon: pack.icon || 'layers', color: categoryColor };
+            }
+        }
+
+        // For pending mode or mixed mode, look up pack details
+        if (question.pack_id) {
+            const pack = packs.find(p => p.id === question.pack_id);
+            const categoryColor = pack ? getCategoryColor(pack.category) : undefined;
+            
+            // Pending questions might have name/icon embedded if pack not found in store
+            if (question.pack_name) {
+                return { 
+                    name: question.pack_name, 
+                    icon: question.pack_icon || 'layers',
+                    color: categoryColor 
+                };
+            }
+            
+            if (pack) {
+                return { name: pack.name, icon: pack.icon || 'layers', color: categoryColor };
+            }
+        }
+        
+        return null;
+    };
+
+    // Render the appropriate question card based on question_type
+    const renderQuestionCard = (question: any) => {
+        // For backwards compatibility: default to 'swipe' if no question_type
+        const questionType = question.question_type || 'swipe';
+        const packInfo = getQuestionPackInfo(question);
+
+        switch (questionType) {
+            case 'text_answer':
+                return (
+                    <QuestionCardText
+                        key={question.id}
+                        question={question}
+                        packInfo={packInfo}
+                        onAnswer={(answer, responseData) => handleAnswer(question.id, answer, responseData)}
+                        onReport={() => setFeedbackQuestion({
+                            id: question.id,
+                            text: question.text
+                        })}
+                    />
+                );
+            case 'photo':
+                return (
+                    <QuestionCardPhoto
+                        key={question.id}
+                        question={question}
+                        packInfo={packInfo}
+                        onAnswer={(answer, responseData) => handleAnswer(question.id, answer, responseData)}
+                        onReport={() => setFeedbackQuestion({
+                            id: question.id,
+                            text: question.text
+                        })}
+                    />
+                );
+            case 'audio':
+                return (
+                    <QuestionCardAudio
+                        key={question.id}
+                        question={question}
+                        packInfo={packInfo}
+                        onAnswer={(answer, responseData) => handleAnswer(question.id, answer, responseData)}
+                        onReport={() => setFeedbackQuestion({
+                            id: question.id,
+                            text: question.text
+                        })}
+                    />
+                );
+            case 'who_likely':
+                return (
+                    <QuestionCardWhoLikely
+                        key={question.id}
+                        question={question}
+                        packInfo={packInfo}
+                        user={{ id: user?.id || '', name: user?.name || undefined, avatar_url: user?.avatar_url }}
+                        partner={{ id: partner?.id || '', name: partner?.name || undefined, avatar_url: partner?.avatar_url }}
+                        onAnswer={(responseData) => handleAnswer(question.id, 'yes', responseData)}
+                        onSkip={() => handleAnswer(question.id, 'skip')}
+                        onReport={() => setFeedbackQuestion({
+                            id: question.id,
+                            text: question.text
+                        })}
+                    />
+                );
+            case 'swipe':
+            default:
+                // Standard swipe card for 'swipe' type and any unknown types (backwards compatibility)
+                return (
+                    <QuestionCard
+                        key={question.id}
+                        question={question}
+                        packInfo={packInfo}
+                        onAnswer={(answer) => handleAnswer(question.id, answer)}
+                        onReport={() => setFeedbackQuestion({
+                            id: question.id,
+                            text: question.text
+                        })}
+                    />
+                );
         }
     };
 
@@ -600,7 +848,7 @@ export default function SwipeScreen() {
         const LIMIT_ACCENT = colors.premium.gold;
         return (
             <GradientBackground>
-                {/* Ambient Orbs - Gold/warm glow */}
+                {/* Ambient Orbs - Gold/warm glow - Commented out for flat design
                 <Animated.View style={[styles.ambientOrb, styles.dailyLimitOrbTop, orbStyle1]} pointerEvents="none">
                     <LinearGradient
                         colors={[colors.premium.goldGlow, 'transparent']}
@@ -617,6 +865,7 @@ export default function SwipeScreen() {
                         end={{ x: 0, y: 0 }}
                     />
                 </Animated.View>
+                */}
 
                 <View style={styles.centerContainer}>
                     <Animated.View
@@ -826,10 +1075,10 @@ export default function SwipeScreen() {
                         <Text style={styles.waitingTeaser}>Your journey of discovery awaits</Text>
 
                         <GlassButton
-                            onPress={() => router.push("/packs")}
+                            onPress={() => router.push("/")}
                             style={{ marginTop: spacing.lg }}
                         >
-                            Choose Packs
+                            Browse Packs
                         </GlassButton>
                     </Animated.View>
                 </View>
@@ -837,7 +1086,7 @@ export default function SwipeScreen() {
         );
     }
 
-    if (currentIndex >= questions.length) {
+    if (currentIndex >= filteredQuestions.length) {
         const CAUGHT_UP_ACCENT = colors.premium.rose;
         const isPackMode = !!packId;
         const isPendingMode = mode === 'pending';
@@ -878,8 +1127,8 @@ export default function SwipeScreen() {
                             {isPendingMode
                                 ? "You've answered all the questions your partner swiped on. Nice work! Check back later for more."
                                 : isPackMode
-                                ? "You've answered all questions in this pack. Explore other packs to discover more!"
-                                : "You've answered all available questions. New questions are added regularly, or explore different packs."
+                                ? "You've answered all questions in this pack. Head home to discover more!"
+                                : "You've answered all available questions. New questions are added regularly, or explore different packs from home."
                             }
                         </Text>
 
@@ -907,8 +1156,8 @@ export default function SwipeScreen() {
                                         <Text style={styles.waitingFeatureText}>New questions weekly</Text>
                                     </View>
                                     <View style={styles.waitingFeatureItem}>
-                                        <Ionicons name="layers-outline" size={16} color={CAUGHT_UP_ACCENT} />
-                                        <Text style={styles.waitingFeatureText}>Try different packs</Text>
+                                        <Ionicons name="home-outline" size={16} color={CAUGHT_UP_ACCENT} />
+                                        <Text style={styles.waitingFeatureText}>Explore from home</Text>
                                     </View>
                                     <View style={styles.waitingFeatureItem}>
                                         <Ionicons name="chatbubbles-outline" size={16} color={CAUGHT_UP_ACCENT} />
@@ -936,10 +1185,10 @@ export default function SwipeScreen() {
                             </GlassButton>
                         ) : isPackMode ? (
                             <GlassButton
-                                onPress={() => router.back()}
+                                onPress={() => router.push("/")}
                                 style={{ marginTop: spacing.lg }}
                             >
-                                Explore More Packs
+                                Back to Home
                             </GlassButton>
                         ) : (
                             <GlassButton
@@ -958,7 +1207,7 @@ export default function SwipeScreen() {
 
     return (
         <GradientBackground>
-            {/* Ambient Orbs - Premium gold/rose */}
+            {/* Ambient Orbs - Premium gold/rose - Commented out for flat design
             <Animated.View style={[styles.ambientOrb, styles.orbTopRight, orbStyle1]} pointerEvents="none">
                 <LinearGradient
                     colors={[colors.premium.goldGlow, 'transparent']}
@@ -975,6 +1224,7 @@ export default function SwipeScreen() {
                     end={{ x: 0, y: 0 }}
                 />
             </Animated.View>
+            */}
 
             <View style={styles.container}>
                 {/* Header */}
@@ -995,14 +1245,14 @@ export default function SwipeScreen() {
                                 {mode === 'pending' ? 'YOUR TURN' : packContext ? packContext.name.toUpperCase() : 'EXPLORE'}
                             </Text>
                             <Text style={styles.progressText}>
-                                {currentIndex + 1} of {effectiveTotal || questions.length}
+                                {currentIndex + 1} of {effectiveTotal || filteredQuestions.length}
                             </Text>
                             <View style={[styles.progressBar, styles.progressBarPremium]}>
                                 <Animated.View
                                     style={[
                                         styles.progressFill,
                                         styles.progressFillPremium,
-                                        { width: `${((currentIndex + 1) / (effectiveTotal || questions.length || 1)) * 100}%` }
+                                        { width: `${((currentIndex + 1) / (effectiveTotal || filteredQuestions.length || 1)) * 100}%` }
                                     ]}
                                 >
                                     {/* Shimmer sweep */}
@@ -1025,51 +1275,22 @@ export default function SwipeScreen() {
                 {/* Card Stack */}
                 <View style={styles.cardContainer}>
                     {/* Third card (deepest) */}
-                    {questions[currentIndex + 2] && (
+                    {filteredQuestions[currentIndex + 2] && (
                         <View style={[styles.stackCard, styles.stackCardThird]} />
                     )}
 
                     {/* Second card */}
-                    {questions[currentIndex + 1] && (
+                    {filteredQuestions[currentIndex + 1] && (
                         <View style={[styles.stackCard, styles.stackCardSecond]} />
                     )}
 
-                    {/* Active card */}
-                    <SwipeCard
-                        key={questions[currentIndex].id}
-                        question={questions[currentIndex]}
-                        onSwipe={handleSwipe}
-                        onReport={() => setFeedbackQuestion({
-                            id: questions[currentIndex].id,
-                            text: questions[currentIndex].text
-                        })}
-                    />
+                    {/* Active card - render appropriate component based on question_type */}
+                    {renderQuestionCard(filteredQuestions[currentIndex])}
                 </View>
-
-                {/* Hint - Premium styling */}
-                <Animated.View
-                    entering={FadeIn.delay(500).duration(400)}
-                    style={styles.hintContainer}
-                >
-                    <Text style={styles.hintTextPremium}>Swipe or tap to answer</Text>
-                    
-                    <TouchableOpacity
-                        onPress={() => router.push({ pathname: "/my-answers", params: { returnTo: "/(app)/swipe" } })}
-                        style={styles.editLinkButton}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                        <Text style={styles.editLinkText}>Edit previous answers</Text>
-                    </TouchableOpacity>
-                </Animated.View>
 
                 {/* Bottom spacing for tab bar */}
                 <View style={styles.bottomSpacer} />
             </View>
-
-            {/* Tutorial Overlay */}
-            {showTutorial && (
-                <SwipeTutorial onComplete={handleTutorialComplete} />
-            )}
 
             {/* Question Feedback Modal */}
             <QuestionFeedbackModal
@@ -1077,6 +1298,12 @@ export default function SwipeScreen() {
                 onClose={() => setFeedbackQuestion(null)}
                 questionId={feedbackQuestion?.id || ''}
                 questionText={feedbackQuestion?.text || ''}
+            />
+
+            {/* Match Confetti Animation */}
+            <MatchConfetti
+                visible={showConfetti}
+                onAnimationComplete={handleConfettiComplete}
             />
 
             {/* Paywall Modal */}
@@ -1089,6 +1316,16 @@ export default function SwipeScreen() {
                     fetchQuestions();
                 }}
             />
+
+            {/* Upload spinner overlay */}
+            {isUploading && (
+                <View style={styles.uploadOverlay}>
+                    <View style={styles.uploadSpinnerContainer}>
+                        <ActivityIndicator size="large" color={colors.premium.gold} />
+                        <Text style={styles.uploadText}>Uploading...</Text>
+                    </View>
+                </View>
+            )}
         </GradientBackground>
     );
 }
@@ -1193,11 +1430,11 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
     },
-    // Card stack - Premium styling
+    // Card stack - Premium styling (background cards)
     stackCard: {
         position: "absolute",
         width: "85%",
-        height: 500,
+        height: "85%",
         backgroundColor: '#0d0d1a',
         borderRadius: radius.xl,
         borderWidth: 1,
@@ -1212,32 +1449,6 @@ const styles = StyleSheet.create({
         transform: [{ scale: 0.90 }, { translateY: 24 }],
         opacity: 0.2,
         ...shadows.sm,
-    },
-    hintContainer: {
-        alignItems: "center",
-        paddingBottom: spacing.md,
-    },
-    hintText: {
-        ...typography.caption1,
-        color: colors.textTertiary,
-    },
-    hintTextPremium: {
-        ...typography.caption1,
-        fontStyle: 'italic',
-        color: colors.textTertiary,
-        letterSpacing: 0.5,
-    },
-    editLinkButton: {
-        marginTop: spacing.md,
-        paddingVertical: spacing.xs,
-        paddingHorizontal: spacing.sm,
-    },
-    editLinkText: {
-        ...typography.caption2,
-        color: colors.premium.gold,
-        textDecorationLine: 'underline',
-        opacity: 0.8,
-        letterSpacing: 0.5,
     },
     bottomSpacer: {
         height: Platform.OS === 'ios' ? 100 : 80,
@@ -1442,5 +1653,27 @@ const styles = StyleSheet.create({
         ...typography.body,
         fontWeight: '600',
         color: '#000',
+    },
+    // Upload overlay styles
+    uploadOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+    },
+    uploadSpinnerContainer: {
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.xl,
+        paddingVertical: spacing.lg,
+        borderRadius: radius.lg,
+        alignItems: 'center',
+        gap: spacing.md,
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.2)',
+    },
+    uploadText: {
+        ...typography.subhead,
+        color: colors.text,
     },
 });

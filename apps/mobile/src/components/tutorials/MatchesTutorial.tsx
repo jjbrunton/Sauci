@@ -34,7 +34,7 @@ const STEPS: TutorialStep[] = [
     {
         key: "match",
         title: "You've Got a Match!",
-        description: "When both you and your partner swipe YES or MAYBE on the same question, it creates a match. This means you're both interested!",
+        description: "When both you and your partner swipe YES on the same question, it creates a match. This means you're both interested!",
         icon: "heart",
         gradient: gradients.primary as [string, string],
     },
@@ -185,11 +185,6 @@ export default function MatchesTutorial({ onComplete }: Props) {
                                             <Ionicons name="heart" size={16} color={colors.text} />
                                             <Text style={styles.badgeText}>YES + YES</Text>
                                         </LinearGradient>
-                                        <View style={styles.badgeConnector} />
-                                        <View style={[styles.matchBadge, styles.maybeBadge]}>
-                                            <Ionicons name="heart-half" size={16} color={colors.primary} />
-                                            <Text style={[styles.badgeText, styles.maybeBadgeText]}>YES + MAYBE</Text>
-                                        </View>
                                     </View>
                                 </View>
                             )}
@@ -249,9 +244,9 @@ export default function MatchesTutorial({ onComplete }: Props) {
                                             <Text style={styles.answerCardQuestion} numberOfLines={1}>
                                                 "Try something new together"
                                             </Text>
-                                            <View style={[styles.answerCardBadge, styles.answerCardBadgeMaybe]}>
-                                                <Ionicons name="help" size={12} color={colors.warning} />
-                                                <Text style={[styles.answerCardBadgeText, styles.answerCardBadgeTextMaybe]}>MAYBE</Text>
+                                            <View style={[styles.answerCardBadge, styles.answerCardBadgeNo]}>
+                                                <Ionicons name="close" size={12} color={colors.error} />
+                                                <Text style={[styles.answerCardBadgeText, styles.answerCardBadgeTextNo]}>NO</Text>
                                             </View>
                                         </View>
                                     </View>
@@ -384,24 +379,11 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         gap: spacing.xs,
     },
-    maybeBadge: {
-        backgroundColor: colors.glass.background,
-        borderWidth: 1,
-        borderColor: colors.glass.border,
-    },
     badgeText: {
         ...typography.caption1,
         color: colors.text,
         fontWeight: "700",
         letterSpacing: 0.5,
-    },
-    maybeBadgeText: {
-        color: colors.primary,
-    },
-    badgeConnector: {
-        width: 20,
-        height: 2,
-        backgroundColor: colors.glass.border,
     },
     chatDemo: {
         marginTop: spacing.lg,
@@ -508,18 +490,18 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         gap: 2,
     },
-    answerCardBadgeMaybe: {
-        backgroundColor: "rgba(243, 156, 18, 0.2)",
+    answerCardBadgeNo: {
+        backgroundColor: "rgba(231, 76, 60, 0.2)",
         borderWidth: 1,
-        borderColor: colors.warning,
+        borderColor: colors.error,
     },
     answerCardBadgeText: {
         ...typography.caption2,
         fontWeight: "700",
         color: colors.text,
     },
-    answerCardBadgeTextMaybe: {
-        color: colors.warning,
+    answerCardBadgeTextNo: {
+        color: colors.error,
     },
     answerCardEdit: {
         marginLeft: spacing.sm,

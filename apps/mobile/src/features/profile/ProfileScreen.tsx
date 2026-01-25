@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Alert, TouchableOpacity } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -9,9 +10,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { GradientBackground } from '../../components/ui';
 import { Paywall } from '../../components/paywall';
+import { CompactHeader } from '../../components/discovery';
 import { colors, featureColors, spacing, typography, radius } from '../../theme';
 import { useAuthStore, useSubscriptionStore } from '../../store';
-import { resetSwipeTutorial } from '../../lib/swipeTutorialSeen';
 import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
 import { supabase } from '../../lib/supabase';
 
@@ -29,12 +30,13 @@ export function ProfileScreen() {
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
 
-    const { user, partner, fetchUser, isAnonymous } = useAuthStore();
+    const { user, partner, couple, fetchUser, isAnonymous } = useAuthStore();
     const { subscription } = useSubscriptionStore();
     const settings = useProfileSettings();
 
     // Paywall state
     const [showPaywall, setShowPaywall] = useState(false);
+    const [headerHeight, setHeaderHeight] = useState(130);
 
     // Derived state
     const isOwnSubscription = subscription.isProUser || user?.is_premium;
@@ -61,28 +63,31 @@ export function ProfileScreen() {
 
     return (
         <GradientBackground>
+            <View
+                style={[styles.stickyHeader, isWideScreen && styles.stickyHeaderWide]}
+                onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+            >
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(14, 14, 17, 0.85)' }]} />
+                <CompactHeader
+                    user={user}
+                    partner={partner}
+                    couple={couple}
+                    label="Settings"
+                    showGreeting={false}
+                    showPartnerBadge={false}
+                />
+            </View>
+
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={[
                     styles.contentContainer,
                     isWideScreen && styles.contentContainerWide,
+                    { paddingTop: headerHeight },
                 ]}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header with user info (compact) */}
-                <Animated.View
-                    entering={FadeInDown.delay(100).duration(500)}
-                    style={styles.header}
-                >
-                    <Text style={styles.headerLabel}>YOUR SAUCI</Text>
-                    <Text style={styles.title}>Settings</Text>
-                    <View style={styles.separator}>
-                        <View style={styles.separatorLine} />
-                        <View style={styles.separatorDiamond} />
-                        <View style={styles.separatorLine} />
-                    </View>
-                </Animated.View>
-
                 {/* Compact Profile Preview */}
                 <Animated.View
                     entering={FadeInDown.delay(150).duration(500)}
@@ -214,16 +219,6 @@ export function ProfileScreen() {
                         />
                         <View style={styles.divider} />
                         <MenuItem
-                            icon="refresh-outline"
-                            label="Reset Swipe Tutorial"
-                            description="Show the tutorial again"
-                            onPress={async () => {
-                                await resetSwipeTutorial();
-                                Alert.alert("Success", "Swipe tutorial has been reset.");
-                            }}
-                        />
-                        <View style={styles.divider} />
-                        <MenuItem
                             icon="heart-outline"
                             label="Reset Matches Tutorial"
                             description="Show the tutorial again"
@@ -289,59 +284,31 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: MAX_CONTENT_WIDTH,
     },
-    header: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
-        paddingHorizontal: spacing.lg,
-        paddingBottom: spacing.md,
-        alignItems: 'center',
+    stickyHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        overflow: 'hidden',
     },
-    headerLabel: {
-        ...typography.caption2,
-        fontWeight: '600',
-        letterSpacing: 3,
-        color: colors.secondary,
-        marginBottom: spacing.xs,
-    },
-    title: {
-        ...typography.largeTitle,
-        color: colors.text,
-        textAlign: 'center',
-    },
-    separator: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginVertical: spacing.md,
-        width: 100,
-    },
-    separatorLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: 'rgba(155, 89, 182, 0.3)',
-    },
-    separatorDiamond: {
-        width: 6,
-        height: 6,
-        backgroundColor: colors.secondary,
-        transform: [{ rotate: '45deg' }],
-        marginHorizontal: spacing.sm,
-        opacity: 0.6,
+    stickyHeaderWide: {
+        left: '50%',
+        right: 'auto',
+        width: MAX_CONTENT_WIDTH,
+        transform: [{ translateX: -MAX_CONTENT_WIDTH / 2 }],
     },
     // Profile Preview
     profilePreview: {
         marginHorizontal: spacing.lg,
         marginBottom: spacing.lg,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.backgroundLight, // Flat background
         borderRadius: radius.lg,
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
         overflow: 'hidden',
     },
-    profilePreviewContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: spacing.md,
-    },
+    // ...
     avatarGradient: {
         width: 56,
         height: 56,
@@ -349,7 +316,26 @@ const styles = StyleSheet.create({
         padding: 2,
         justifyContent: 'center',
         alignItems: 'center',
+        // Removed shadow
     },
+    // ...
+    versionBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: colors.backgroundLight, // Flat background
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        gap: spacing.xs,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    profilePreviewContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: spacing.md,
+    },
+
     avatar: {
         width: '100%',
         height: '100%',
@@ -387,7 +373,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: colors.glass.border,
+        backgroundColor: colors.border,
         marginVertical: spacing.md,
     },
     // Version Badge
@@ -395,15 +381,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         marginTop: spacing.lg,
     },
-    versionBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: colors.glass.background,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        gap: spacing.xs,
-    },
+
     version: {
         ...typography.caption1,
         color: colors.textTertiary,

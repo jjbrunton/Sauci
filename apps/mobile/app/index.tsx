@@ -1,6 +1,7 @@
 import { Redirect } from "expo-router";
 import { useAuthStore } from "../src/store";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { needsOnboarding } from "../src/constants/onboarding";
 
 export default function Index() {
     const { isAuthenticated, isLoading, user } = useAuthStore();
@@ -19,8 +20,8 @@ export default function Index() {
         return <Redirect href="/(auth)/login" />;
     }
 
-    // If user hasn't completed onboarding, go to onboarding first
-    if (!user?.onboarding_completed) {
+    // If user hasn't completed onboarding or needs to re-onboard, go to onboarding
+    if (needsOnboarding(user?.onboarding_completed, user?.onboarding_version)) {
         return <Redirect href="/(app)/onboarding" />;
     }
 

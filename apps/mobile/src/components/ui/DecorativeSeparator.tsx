@@ -2,10 +2,10 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 import { colors, spacing } from '../../theme';
 
-export type SeparatorVariant = 'rose' | 'gold' | 'muted';
+export type SeparatorVariant = 'primary' | 'rose' | 'gold' | 'muted';
 
 export interface DecorativeSeparatorProps {
-    /** Color variant: 'rose' (default), 'gold' (premium/yes-yes), 'muted' */
+    /** Color variant: 'primary' (default), 'rose' (quiz), 'gold' (premium/dares), 'muted' */
     variant?: SeparatorVariant;
     /** Width of the separator. Default: 140 */
     width?: DimensionValue;
@@ -16,6 +16,10 @@ export interface DecorativeSeparatorProps {
 }
 
 const VARIANT_COLORS: Record<SeparatorVariant, { line: string; diamond: string }> = {
+    primary: {
+        line: 'rgba(225, 48, 108, 0.3)',
+        diamond: colors.primary,
+    },
     rose: {
         line: 'rgba(232, 164, 174, 0.3)',
         diamond: colors.premium.rose,
@@ -35,7 +39,7 @@ const VARIANT_COLORS: Record<SeparatorVariant, { line: string; diamond: string }
  * Used for visual separation in waiting states, headers, and empty states.
  */
 export const DecorativeSeparator: React.FC<DecorativeSeparatorProps> = ({
-    variant = 'rose',
+    variant = 'primary',
     width = 140,
     marginVertical = spacing.lg,
     style,

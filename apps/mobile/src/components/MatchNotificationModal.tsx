@@ -252,18 +252,12 @@ export const MatchNotificationModal: React.FC<Props> = ({
                 <View style={styles.glowOuter} />
 
                 <View style={styles.modalContainer}>
-                    {/* Glass background */}
-                    <BlurView intensity={40} tint="dark" style={styles.blurContainer}>
-                        <LinearGradient
-                            colors={['rgba(22, 33, 62, 0.95)', 'rgba(13, 13, 26, 0.98)']}
-                            style={styles.gradientOverlay}
-                        />
-                    </BlurView>
-
+                    {/* Flat background */}
+                    <View style={styles.flatBackground} />
                     {/* Content */}
                     <View style={styles.content}>
-                        {/* Title section */}
-                        <Text style={styles.title}>It's a Match!</Text>
+                            {/* Title section */}
+                            <Text style={styles.title}>It's a Match!</Text>
 
                         {/* Match type badge */}
                         <View style={[styles.matchTypeBadge, { borderColor: `${matchTypeInfo.color}30` }]}>
@@ -342,9 +336,6 @@ export const MatchNotificationModal: React.FC<Props> = ({
                             </Pressable>
                         </View>
                     </View>
-
-                    {/* Border */}
-                    <View style={styles.border} pointerEvents="none" />
                 </View>
             </Animated.View>
         </Animated.View>
@@ -374,24 +365,22 @@ const styles = StyleSheet.create({
         borderRadius: radius.xl + 3,
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: 'rgba(233, 69, 96, 0.15)',
-        shadowColor: colors.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 8,
+        borderColor: colors.primary, // Simpler border
+        opacity: 0.2, // Subtle opacity
     },
     modalContainer: {
         width: '100%',
         borderRadius: radius.xl,
         overflow: 'hidden',
+        backgroundColor: colors.backgroundLight, // Solid background
+        borderWidth: 1,
+        borderColor: colors.border,
     },
-    blurContainer: {
+    flatBackground: {
         ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.backgroundLight,
     },
-    gradientOverlay: {
-        ...StyleSheet.absoluteFillObject,
-    },
+    // Removed blur/gradient styles
     content: {
         padding: spacing.xl,
         paddingTop: spacing.lg,
@@ -404,7 +393,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
     },
     matchTypeBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: colors.background, // Darker flat background
         paddingHorizontal: spacing.lg,
         paddingVertical: spacing.sm,
         borderRadius: radius.full,
@@ -523,21 +512,17 @@ const styles = StyleSheet.create({
     dismissButton: {
         flex: 1,
         borderRadius: radius.lg,
-        backgroundColor: colors.glass.background,
+        backgroundColor: colors.background, // Flat dark background
         borderWidth: 1,
-        borderColor: colors.glass.border,
+        borderColor: colors.border,
         paddingVertical: spacing.md,
         alignItems: 'center',
         justifyContent: 'center',
     },
+    // Removed border style since it's now on modalContainer
+    // border: { ... }
     dismissButtonText: {
         ...typography.headline,
         color: colors.textSecondary,
-    },
-    border: {
-        ...StyleSheet.absoluteFillObject,
-        borderRadius: radius.xl,
-        borderWidth: 1,
-        borderColor: 'rgba(233, 69, 96, 0.2)',
     },
 });

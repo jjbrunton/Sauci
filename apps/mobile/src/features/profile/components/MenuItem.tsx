@@ -127,6 +127,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: spacing.md,
         backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(239, 68, 68, 0.2)', // Added border
     },
     textContainer: {
         flex: 1,

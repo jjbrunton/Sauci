@@ -7,18 +7,48 @@ const corsHeaders = {
 };
 
 type Answer = "yes" | "no" | "maybe";
-type MatchType = "yes_yes" | "yes_maybe" | "maybe_maybe";
+type MatchType = "yes_yes" | "yes_maybe" | "maybe_maybe" | "both_answered";
+type QuestionType = "swipe" | "text_answer" | "audio" | "photo" | "who_likely";
+
+type ResponseData =
+    | { type: "text_answer"; text: string }
+    | { type: "audio"; media_path: string; duration_seconds: number }
+    | { type: "photo"; media_path: string }
+    | { type: "who_likely"; chosen_user_id: string };
 
 interface SubmitResponseBody {
     question_id: string;
     answer: Answer;
+    response_data?: ResponseData;  // Optional for backwards compatibility
 }
 
-function calculateMatch(a1: Answer, a2: Answer): MatchType | null {
-    if (a1 === "no" || a2 === "no") return null;
-    if (a1 === "yes" && a2 === "yes") return "yes_yes";
-    if (a1 === "maybe" && a2 === "maybe") return "maybe_maybe";
-    return "yes_maybe";
+interface Question {
+    id: string;
+    question_type?: QuestionType;
+    // ... other fields
+}
+
+function calculateMatchType(question: Question, answer1: Answer, answer2: Answer): MatchType | null {
+    // For swipe questions (or legacy questions without type), use existing logic
+    if (!question.question_type || question.question_type === "swipe") {
+        if (answer1 === "no" || answer2 === "no") return null;
+        if (answer1 === "yes" && answer2 === "yes") return "yes_yes";
+        if (answer1 === "maybe" && answer2 === "maybe") return "maybe_maybe";
+        return "yes_maybe";
+    }
+
+    // For text/audio/photo questions: match if both answered positively
+    if (["text_answer", "audio", "photo"].includes(question.question_type)) {
+        if (answer1 === "no" || answer2 === "no") return null;
+        return "both_answered";
+    }
+
+    // For who_likely: always matches when both answered
+    if (question.question_type === "who_likely") {
+        return "both_answered";
+    }
+
+    return null;
 }
 
 Deno.serve(async (req) => {
@@ -54,12 +84,26 @@ Deno.serve(async (req) => {
         }
 
         // Parse request body
-        const { question_id, answer }: SubmitResponseBody = await req.json();
+        const { question_id, answer, response_data }: SubmitResponseBody = await req.json();
 
         if (!question_id || !answer) {
             return new Response(
                 JSON.stringify({ error: "Missing question_id or answer" }),
                 { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
+        // Fetch the question to get its type
+        const { data: question, error: questionError } = await supabase
+            .from("questions")
+            .select("id, question_type")
+            .eq("id", question_id)
+            .single();
+
+        if (questionError || !question) {
+            return new Response(
+                JSON.stringify({ error: "Question not found" }),
+                { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
@@ -147,6 +191,7 @@ Deno.serve(async (req) => {
                     question_id,
                     couple_id: profile.couple_id,
                     answer,
+                    response_data: response_data ?? null,
                 },
                 { onConflict: "user_id,question_id" }
             )
@@ -163,7 +208,7 @@ Deno.serve(async (req) => {
         // Check for partner's response
         const { data: partnerResponse } = await supabase
             .from("responses")
-            .select("answer")
+            .select("answer, response_data, user_id")
             .eq("couple_id", profile.couple_id)
             .eq("question_id", question_id)
             .neq("user_id", user.id)
@@ -172,9 +217,15 @@ Deno.serve(async (req) => {
         let match = null;
 
         if (partnerResponse) {
-            const matchType = calculateMatch(answer, partnerResponse.answer as Answer);
+            const matchType = calculateMatchType(question as Question, answer, partnerResponse.answer as Answer);
 
             if (matchType) {
+                // Build response_summary for 'both_answered' matches
+                const responseSummary = (matchType === "both_answered") ? {
+                    [user.id]: response_data ?? null,
+                    [partnerResponse.user_id]: partnerResponse.response_data ?? null,
+                } : null;
+
                 // Create or update match
                 const { data: newMatch, error: matchError } = await supabase
                     .from("matches")
@@ -184,6 +235,7 @@ Deno.serve(async (req) => {
                             question_id,
                             match_type: matchType,
                             is_new: true,
+                            response_summary: responseSummary,
                         },
                         { onConflict: "couple_id,question_id" }
                     )

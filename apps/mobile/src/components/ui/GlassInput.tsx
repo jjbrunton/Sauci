@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, TextInput, View, Text, TextInputProps, ViewStyle, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { colors, radius, blur, animations, typography } from '../../theme';
+import { colors, radius, animations, typography } from '../../theme';
 
 interface GlassInputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -16,7 +15,6 @@ interface GlassInputProps extends Omit<TextInputProps, 'style'> {
   icon?: React.ReactNode;
 }
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 const AnimatedView = Animated.View;
 
 export function GlassInput({
@@ -41,49 +39,36 @@ export function GlassInput({
     props.onBlur?.(e);
   };
 
-  const animatedBorderStyle = useAnimatedStyle(() => ({
+  const animatedContainerStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      focusAnim.value,
+      [0, 1],
+      [colors.backgroundLight, colors.backgroundLight] // Consistent flat background
+    ),
     borderColor: interpolateColor(
       focusAnim.value,
       [0, 1],
-      [error ? colors.error : colors.glass.border, error ? colors.error : colors.primary]
+      [error ? colors.error : colors.border, error ? colors.error : colors.primary]
     ),
   }));
-
-  const useBlur = Platform.OS === 'ios';
-
-  const inputContent = (
-    <View style={styles.inputWrapper}>
-      {icon && <View style={styles.icon}>{icon}</View>}
-      <TextInput
-        {...props}
-        style={[styles.input, icon ? styles.inputWithIcon : undefined]}
-        placeholderTextColor={colors.textTertiary}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        selectionColor={colors.primary}
-      />
-    </View>
-  );
 
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
 
-      {useBlur ? (
-        <AnimatedView style={[styles.blurWrapper, animatedBorderStyle]}>
-          <BlurView
-            intensity={blur.light}
-            tint="dark"
-            style={styles.blurContainer}
-          >
-            {inputContent}
-          </BlurView>
-        </AnimatedView>
-      ) : (
-        <AnimatedView style={[styles.fallbackContainer, animatedBorderStyle]}>
-          {inputContent}
-        </AnimatedView>
-      )}
+      <AnimatedView style={[styles.inputContainer, animatedContainerStyle]}>
+        <View style={styles.inputWrapper}>
+          {icon && <View style={styles.icon}>{icon}</View>}
+          <TextInput
+            {...props}
+            style={[styles.input, icon ? styles.inputWithIcon : undefined]}
+            placeholderTextColor={colors.textTertiary}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            selectionColor={colors.primary}
+          />
+        </View>
+      </AnimatedView>
 
       {error && <Text style={styles.error}>{error}</Text>}
     </View>
@@ -100,18 +85,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  blurWrapper: {
-    borderRadius: radius.md,
+  inputContainer: {
+    borderRadius: radius.lg,
     borderWidth: 1,
     overflow: 'hidden',
-  },
-  blurContainer: {
-    backgroundColor: colors.glass.background,
-  },
-  fallbackContainer: {
-    borderRadius: radius.md,
-    borderWidth: 1,
-    backgroundColor: colors.glass.backgroundLight,
   },
   inputWrapper: {
     flexDirection: 'row',

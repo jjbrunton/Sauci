@@ -14,7 +14,7 @@ export interface SettingsSectionProps {
 }
 
 /**
- * Reusable settings section with title and glass card container.
+ * Reusable settings section with title and solid card container.
  */
 export function SettingsSection({ title, delay = 200, children }: SettingsSectionProps) {
     return (

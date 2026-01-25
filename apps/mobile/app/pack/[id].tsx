@@ -242,12 +242,19 @@ export default function PackDetailsScreen() {
                     {category ? category.name.toUpperCase() : 'PREVIEW'}
                 </Text>
 
+                {/* Explicit badge */}
+                {pack?.is_explicit && (
+                    <View style={styles.explicitBadge}>
+                        <Ionicons name="flame" size={12} color={colors.text} />
+                        <Text style={styles.explicitBadgeText}>18+ EXPLICIT</Text>
+                    </View>
+                )}
+
                 {/* Icon with enhanced glow for premium */}
                 <View style={styles.iconWrapper}>
                     {pack?.is_premium && (
                         <>
-                            <View style={styles.iconGlowOuter} />
-                            <View style={styles.iconGlow} />
+                            {/* Glow effects removed for flat design */}
                         </>
                     )}
                     <View style={[
@@ -329,11 +336,7 @@ export default function PackDetailsScreen() {
                 {/* Fixed Nav Bar */}
                 <View style={styles.navBar}>
                     <Animated.View style={[styles.navBarBackground, navBarBackgroundStyle]}>
-                        {Platform.OS === "ios" ? (
-                            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
-                        ) : (
-                            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(13, 13, 26, 0.95)" }]} />
-                        )}
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
                     </Animated.View>
 
                     <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -440,8 +443,87 @@ const styles = StyleSheet.create({
     navBarBackground: {
         ...StyleSheet.absoluteFillObject,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(233, 69, 96, 0.15)',
+        borderBottomColor: colors.border,
         overflow: "hidden",
+        backgroundColor: colors.background, // Flat
+    },
+    // ...
+
+    // ...
+    premiumBanner: {
+        marginHorizontal: spacing.lg,
+        marginBottom: spacing.lg,
+        borderRadius: radius.md,
+        overflow: 'hidden',
+        // Removed heavy shadow
+        borderWidth: 1,
+        borderColor: colors.premium.gold,
+    },
+    // ...
+    iconWrapper: {
+        position: 'relative',
+        marginBottom: spacing.md,
+        // Removed glowing background elements
+    },
+    // ...
+    iconContainer: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: colors.backgroundLight,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: colors.border,
+        overflow: 'hidden',
+    },
+    iconContainerPremium: {
+        borderColor: colors.premium.gold,
+        borderWidth: 2,
+        backgroundColor: colors.backgroundLight,
+        // Removed heavy shadows
+    },
+    // ...
+    statsBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    questionCard: {
+        backgroundColor: colors.backgroundLight, // Flat
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: spacing.sm,
+    },
+    // ...
+    partnerTextContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        marginBottom: spacing.sm,
+        paddingVertical: spacing.xs,
+        paddingHorizontal: spacing.sm,
+        backgroundColor: colors.background, // Nested flat container
+        borderRadius: radius.sm,
+        alignSelf: 'flex-start',
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    // ...
+    tooltipContainer: {
+        maxWidth: 320,
+        overflow: 'hidden',
+        backgroundColor: colors.backgroundLight, // Flat
+        borderWidth: 1,
+        borderColor: colors.border,
     },
     backButton: {
         zIndex: 10,
@@ -482,17 +564,7 @@ const styles = StyleSheet.create({
     },
 
     // Premium Banner
-    premiumBanner: {
-        marginHorizontal: spacing.lg,
-        marginBottom: spacing.lg,
-        borderRadius: radius.md,
-        overflow: 'hidden',
-        shadowColor: colors.premium.gold,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
-    },
+
     premiumBannerContent: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -519,49 +591,32 @@ const styles = StyleSheet.create({
     labelPremium: {
         color: colors.premium.gold,
     },
-    iconWrapper: {
-        position: 'relative',
+    explicitBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.error,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+        gap: spacing.xs,
         marginBottom: spacing.md,
     },
+    explicitBadgeText: {
+        ...typography.caption2,
+        fontWeight: '700',
+        color: colors.text,
+        letterSpacing: 1,
+    },
+
+    // Removed glow styles
     iconGlowOuter: {
-        position: 'absolute',
-        top: -20,
-        left: -20,
-        right: -20,
-        bottom: -20,
-        borderRadius: 60,
-        backgroundColor: 'rgba(212, 175, 55, 0.08)',
+        display: 'none',
     },
     iconGlow: {
-        position: 'absolute',
-        top: -10,
-        left: -10,
-        right: -10,
-        bottom: -10,
-        borderRadius: 50,
-        backgroundColor: 'rgba(212, 175, 55, 0.2)',
+        display: 'none',
     },
-    iconContainer: {
-        width: 72,
-        height: 72,
-        borderRadius: 36,
-        backgroundColor: 'rgba(255, 255, 255, 0.06)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-        overflow: 'hidden',
-    },
-    iconContainerPremium: {
-        borderColor: colors.premium.gold,
-        borderWidth: 2,
-        backgroundColor: 'rgba(212, 175, 55, 0.15)',
-        shadowColor: colors.premium.gold,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 12,
-        elevation: 8,
-    },
+
+
     crownBadge: {
         position: 'absolute',
         top: -4,
@@ -647,17 +702,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         marginBottom: spacing.md,
     },
-    statsBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-        backgroundColor: 'rgba(233, 69, 96, 0.1)',
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: radius.full,
-        borderWidth: 1,
-        borderColor: 'rgba(233, 69, 96, 0.2)',
-    },
+
     statsBadgePremium: {
         backgroundColor: 'rgba(212, 175, 55, 0.1)',
         borderColor: 'rgba(212, 175, 55, 0.3)',
@@ -676,13 +721,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md,
         paddingBottom: Platform.OS === 'ios' ? 100 : 80,
     },
-    questionCard: {
-        backgroundColor: 'rgba(22, 33, 62, 0.4)',
-        borderRadius: radius.md,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.06)',
-        marginBottom: spacing.sm,
-    },
+
     questionContent: {
         padding: spacing.md,
     },
@@ -697,17 +736,7 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
         lineHeight: 22,
     },
-    partnerTextContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-        marginBottom: spacing.sm,
-        paddingVertical: spacing.xs,
-        paddingHorizontal: spacing.sm,
-        backgroundColor: 'rgba(232, 164, 174, 0.1)',
-        borderRadius: radius.sm,
-        alignSelf: 'flex-start',
-    },
+
     partnerText: {
         ...typography.caption1,
         color: colors.premium.rose,
@@ -755,10 +784,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: spacing.lg,
     },
-    tooltipContainer: {
-        maxWidth: 320,
-        overflow: 'hidden',
-    },
+
     tooltipTitle: {
         ...typography.title3,
         color: colors.text,

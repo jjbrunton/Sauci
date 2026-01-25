@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { supabase } from "./supabase";
 import { captureError } from "./sentry";
 import { Events } from "./analytics";
+import { useMatchStore } from "../store/matchStore";
 
 // Configure notification behavior for foreground
 // We don't show system alerts since the app handles notifications with in-app toasts
@@ -18,7 +19,7 @@ Notifications.setNotificationHandler({
 
 // Types
 export interface NotificationData {
-  type: "match" | "message" | "match_digest";
+  type: "match" | "message" | "match_digest" | "partner_activity" | "nudge";
   match_id?: string;
   message_id?: string;
   count?: number;
@@ -231,6 +232,20 @@ export function handleNotificationResponse(
   }
 
   if (data.type === "match_digest") {
+    router.push("/(app)/matches");
+    return;
+  }
+
+  if (data.type === "nudge") {
+    // Navigate to Matches > Your Turn tab
+    useMatchStore.getState().setCurrentView('pending');
+    router.push("/(app)/matches");
+    return;
+  }
+
+  if (data.type === "partner_activity") {
+    // Navigate to Matches > Your Turn tab (questions to answer)
+    useMatchStore.getState().setCurrentView('pending');
     router.push("/(app)/matches");
     return;
   }

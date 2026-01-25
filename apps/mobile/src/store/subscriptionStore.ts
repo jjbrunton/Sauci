@@ -23,7 +23,7 @@ interface SubscriptionStoreState {
 
     // Actions
     initializeRevenueCat: (userId: string) => Promise<void>;
-    fetchOfferings: () => Promise<void>;
+    fetchOfferings: (offeringIdentifier?: string) => Promise<void>;
     purchasePackage: (pkg: PurchasesPackage) => Promise<PurchaseResult>;
     restorePurchases: () => Promise<boolean>;
     refreshSubscriptionStatus: () => Promise<void>;
@@ -77,7 +77,7 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
         }
     },
 
-    fetchOfferings: async () => {
+    fetchOfferings: async (offeringIdentifier?: string) => {
         set({ isLoadingOfferings: true, error: null });
         try {
             // Check if RevenueCat is initialized
@@ -90,7 +90,7 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
                 return;
             }
 
-            const result = await revenueCatService.getOfferingsDebug();
+            const result = await revenueCatService.getOfferingsDebug(offeringIdentifier);
 
             if (result.error) {
                 set({

@@ -134,6 +134,7 @@ Edge functions in `apps/supabase/functions/` handle complex operations:
 - `delete-relationship` - Deletes couple data (matches, messages, media) while keeping accounts
 - `delete-account` - Permanently deletes user account and all associated data (Apple App Store requirement)
 - `send-notification` - Push notifications for matches
+- `send-nudge-notification` - Partner nudge notifications (rate limited to once per 12 hours)
 - `revenuecat-webhook` - Subscription webhook handler
 - `sync-subscription` - Syncs RevenueCat subscription status
 - `redeem-code` - Redeems promotional codes for premium access (website only)
@@ -165,6 +166,7 @@ This approach:
 | `revenuecat-webhook` | false | Webhook signature validation |
 | `send-notification` | false | Internal trigger (no auth) |
 | `send-message-notification` | false | Internal trigger (no auth) |
+| `send-nudge-notification` | false | Manual via getUser() |
 
 ### Database Best Practices
 - **Always use `.maybeSingle()` instead of `.single()`** when the row might not exist. `.single()` throws an error if 0 or >1 rows are returned.
