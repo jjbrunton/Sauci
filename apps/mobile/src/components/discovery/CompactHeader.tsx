@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, radius } from '../../theme';
@@ -30,7 +31,17 @@ export function CompactHeader({ user, partner, couple }: CompactHeaderProps) {
         {/* Partner badge */}
         {partner ? (
           <View style={styles.partnerBadge}>
-            <Ionicons name="heart" size={12} color={colors.primary} />
+            {partner.avatar_url ? (
+              <Image
+                source={{ uri: partner.avatar_url }}
+                style={styles.partnerAvatar}
+                cachePolicy="disk"
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <Ionicons name="heart" size={12} color={colors.primary} />
+            )}
             <Text style={styles.partnerText} numberOfLines={1}>
               {partner.name || partner.email?.split('@')[0] || 'Partner'}
             </Text>
@@ -96,6 +107,13 @@ const styles = StyleSheet.create({
     ...typography.caption1,
     color: colors.text,
     fontWeight: '500',
+  },
+  partnerAvatar: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(233, 69, 96, 0.3)',
   },
   pairBadge: {
     flexDirection: 'row',

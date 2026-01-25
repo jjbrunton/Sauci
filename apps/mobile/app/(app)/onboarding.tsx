@@ -86,6 +86,10 @@ export default function OnboardingScreen() {
     }, []);
 
     const handleAvatarContinue = () => {
+        if (!avatarUri) {
+            setError('Please add a profile photo to continue');
+            return;
+        }
         setStage('name');
         Events.onboardingStageComplete('avatar');
     };
@@ -269,7 +273,7 @@ export default function OnboardingScreen() {
 
                         <View style={styles.footer}>
                             <GlassButton onPress={handleAvatarContinue} fullWidth size="lg">
-                                {avatarUri ? 'Continue' : 'Skip for Now'}
+                                Continue
                             </GlassButton>
                         </View>
                     </Animated.View>
@@ -296,7 +300,7 @@ export default function OnboardingScreen() {
                             )}
                             <Text style={styles.title}>What can we call you?</Text>
                             <Text style={styles.subtitle}>
-                                This is how your partner will see you
+                                Nicknames and pet names are welcome too!
                             </Text>
                         </View>
 

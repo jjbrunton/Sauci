@@ -24,7 +24,7 @@ export function ContentRow({
   packs,
   isPremiumUser,
   delay = 0,
-  showSeeAll = true,
+  showSeeAll = false,
   categoryId,
   getPackProgress,
   onShowPaywall,
