@@ -7,21 +7,21 @@ const features = [
   {
     icon: Heart,
     title: 'Swipe to Connect',
-    description: 'Answer intimate questions with simple swipes. Yes, no, or maybe - your desires stay private until you match.',
+    description: 'Answer thoughtful questions with simple swipes. Yes, no, or maybe - your answers stay private until you match.',
     color: 'text-primary',
     bgColor: 'bg-primary/10',
   },
   {
     icon: Sparkles,
     title: 'Discover Matches',
-    description: 'When both partners swipe positively on a question, a match is created. Discover what you both secretly want.',
+    description: 'When both partners swipe positively on a question, a match is created. Find common ground and shared interests.',
     color: 'text-secondary',
     bgColor: 'bg-secondary/10',
   },
   {
     icon: MessageCircle,
     title: 'Unlock Conversations',
-    description: 'Each match opens a private chat thread. Talk about your desires in a safe, dedicated space.',
+    description: 'Each match opens a private chat thread. Discuss topics that matter in a safe, dedicated space.',
     color: 'text-green-400',
     bgColor: 'bg-green-400/10',
   },
@@ -35,7 +35,7 @@ const features = [
   {
     icon: Flame,
     title: 'Curated Question Packs',
-    description: 'Explore themed packs from playful to passionate. New packs added regularly to keep things exciting.',
+    description: 'Explore themed packs covering communication, goals, values, and more. New packs added regularly.',
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/10',
   },
@@ -63,10 +63,10 @@ export default function Features() {
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
             Everything You Need to{' '}
-            <span className="gradient-text">Explore Together</span>
+            <span className="gradient-text">Grow Together</span>
           </h2>
           <p className="text-lg text-white/60 max-w-2xl mx-auto">
-            Sauci creates a safe space for couples to discover their shared desires without fear of judgment.
+            Sauci creates a safe space for couples to understand each other better and strengthen their relationship.
           </p>
         </motion.div>
 

@@ -1,12 +1,12 @@
 # Sauci Design System
 
-A boutique, premium design framework for the Sauci couples intimacy app.
+A boutique, premium design framework for the Sauci couples relationship app.
 
 ## Brand Identity
 
-**Aesthetic:** Boutique lingerie store meets modern dating app. Think Ann Summers sophistication - sensual but tasteful, premium but accessible, intimate but playful.
+**Aesthetic:** Premium couples app with a warm, sophisticated feel. Think modern wellness meets connection - supportive but not clinical, premium but accessible, personal but playful.
 
-**Mood:** Romantic, luxurious, warm, inviting, confident
+**Mood:** Warm, supportive, confident, inviting, growth-oriented
 
 **Key Principles:**
 
@@ -230,7 +230,7 @@ Feature-specific colors for quick action items:
 |------|---------|-------|
 | **Match** | Primary | `#e1306c` (core feature) |
 | **Dares** | Gold | `#D4AF37` (premium/adventure) |
-| **Quiz** | Rose | `#E8A4AE` (intimacy) |
+| **Quiz** | Rose | `#E8A4AE` (connection) |
 
 ---
 
@@ -240,7 +240,7 @@ Feature-specific colors for quick action items:
 
 | Feature | Icon Name | Ionicons | Description |
 |---------|-----------|----------|-------------|
-| **Swipe/Match** | `flame` | 🔥 | Fire/passion - the core swiping experience |
+| **Swipe/Match** | `flame` | 🔥 | Fire/energy - the core swiping experience |
 | **Dares** | `flash` | ⚡ | Lightning bolt - adventure, excitement, energy |
 | **Quiz** | `help-circle` | ❓ | Question mark - discovery, questions about each other |
 | **Matches** (tab) | `heart` | ❤️ | Love heart - connections made between partners |

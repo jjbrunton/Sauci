@@ -20,7 +20,7 @@ const steps: Array<{
   {
     number: '02',
     title: 'Browse Question Packs',
-    description: 'Choose from curated packs ranging from romantic to adventurous. Each pack contains thoughtful questions.',
+    description: 'Choose from curated packs covering communication, life goals, and relationship growth.',
     icon: Layers,
     color: 'text-secondary',
   },
@@ -34,7 +34,7 @@ const steps: Array<{
   {
     number: '04',
     title: 'Discover Your Matches',
-    description: 'When both partners answer positively, it\'s a match! Explore your shared desires through private chats.',
+    description: 'When both partners answer positively, it\'s a match! Discuss what matters most through private chats.',
     icon: Heart,
     color: 'text-pink-400',
   },
@@ -60,7 +60,7 @@ export default function HowItWorks() {
             How <span className="gradient-text">Sauci</span> Works
           </h2>
           <p className="text-lg text-white/60 max-w-2xl mx-auto">
-            Four simple steps to deeper connection and discovery with your partner.
+            Four simple steps to better communication and a stronger relationship.
           </p>
         </motion.div>
 

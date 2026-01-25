@@ -47,7 +47,7 @@ export default function Pricing() {
             Upgrade to <span className="gradient-text">Sauci Pro</span>
           </h2>
           <p className="text-lg text-white/60 max-w-2xl mx-auto">
-            Unlock the full experience and explore every dimension of your relationship together.
+            Unlock the full experience and discover new ways to connect with your partner.
           </p>
         </motion.div>
 

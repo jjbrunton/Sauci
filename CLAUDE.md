@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sauci is a couples intimacy app featuring swipeable question packs with partner matching. Users swipe on questions (yes/no/maybe), and when both partners answer positively, a "match" is created that unlocks a chat thread for that question.
+Sauci is a couples relationship app that helps partners communicate better and grow closer together. Users swipe on thoughtful questions (yes/no/maybe), and when both partners answer positively, a "match" is created that unlocks a chat thread for that topic.
 
 ## Commands
 

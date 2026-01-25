@@ -32,13 +32,13 @@ export default function CTA() {
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            Ready to Discover What You{' '}
-            <span className="gradient-text">Both Desire?</span>
+            Ready to Build a{' '}
+            <span className="gradient-text">Stronger Relationship?</span>
           </h2>
 
           <p className="text-lg text-white/60 max-w-2xl mx-auto mb-8">
-            Join thousands of couples who have deepened their connection with Sauci.
-            Download now and start exploring together.
+            Join thousands of couples who communicate better with Sauci.
+            Download now and start growing together.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

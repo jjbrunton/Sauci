@@ -4,21 +4,21 @@ import { PostHogProvider } from './providers'
 import { PostHogPageView } from './PostHogPageView'
 
 export const metadata: Metadata = {
-  title: 'Sauci - Ignite Your Connection',
-  description: 'Discover what you both desire. Sauci is the couples intimacy app that helps partners explore their connection through fun, meaningful questions.',
-  keywords: ['couples app', 'intimacy', 'relationship', 'connection', 'dating', 'love'],
+  title: 'Sauci - Grow Closer Together',
+  description: 'Sauci helps couples communicate better and strengthen their relationship through thoughtful questions and meaningful conversations.',
+  keywords: ['couples app', 'relationship', 'communication', 'connection', 'couples questions', 'relationship improvement'],
   authors: [{ name: 'Sauci' }],
   openGraph: {
-    title: 'Sauci - Ignite Your Connection',
-    description: 'Discover what you both desire. The couples intimacy app for deeper connections.',
+    title: 'Sauci - Grow Closer Together',
+    description: 'The couples app for better communication and stronger relationships.',
     url: 'https://sauci.app',
     siteName: 'Sauci',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Sauci - Ignite Your Connection',
-    description: 'Discover what you both desire. The couples intimacy app for deeper connections.',
+    title: 'Sauci - Grow Closer Together',
+    description: 'The couples app for better communication and stronger relationships.',
   },
   icons: {
     icon: '/favicon.png',

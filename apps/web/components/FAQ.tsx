@@ -18,7 +18,7 @@ const faqs = [
   {
     question: 'What happens if my partner says no to a question?',
     answer:
-      "Nothing! They won't know you were interested, and you won't know they said no. The question simply doesn't become a match. This creates a safe space to be honest about your desires.",
+      "Nothing! They won't know you were interested, and you won't know they said no. The question simply doesn't become a match. This creates a safe space to be completely honest.",
   },
   {
     question: 'Do both partners need Pro?',
@@ -29,6 +29,11 @@ const faqs = [
     question: 'Is my data secure?',
     answer:
       'Yes. All chat messages are end-to-end encrypted, meaning only you and your partner can read them. We take your privacy seriously and never share your data with third parties.',
+  },
+  {
+    question: 'What kind of questions are in Sauci?',
+    answer:
+      "Sauci covers everything from daily life and communication styles to future goals, values, and relationship growth. Our question packs are designed by relationship experts to help couples understand each other better.",
   },
 ]
 

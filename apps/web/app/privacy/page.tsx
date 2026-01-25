@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - Sauci',
-  description: 'Privacy Policy for Sauci - the couples intimacy app',
+  description: 'Privacy Policy for Sauci - the couples relationship app',
 }
 
 export default function PrivacyPolicy() {

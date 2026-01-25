@@ -45,13 +45,13 @@ export default function Hero() {
           </motion.div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight mb-6">
-            Discover What You{' '}
-            <span className="gradient-text">Both Desire</span>
+            Grow Closer{' '}
+            <span className="gradient-text">Together</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-white/70 max-w-xl mx-auto lg:mx-0 mb-8">
-            Swipe on intimate questions with your partner. When you both say yes,
-            it&apos;s a match. Start conversations you&apos;ve always wanted to have.
+            Answer thoughtful questions with your partner. When you both agree,
+            it&apos;s a match. Start meaningful conversations that strengthen your bond.
           </p>
 
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-4">

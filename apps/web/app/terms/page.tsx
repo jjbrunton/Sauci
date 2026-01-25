@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Terms & Conditions - Sauci',
-  description: 'Terms and Conditions for Sauci - the couples intimacy app',
+  description: 'Terms and Conditions for Sauci - the couples relationship app',
 }
 
 export default function TermsAndConditions() {
