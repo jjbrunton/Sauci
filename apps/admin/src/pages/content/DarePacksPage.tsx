@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { useEntityForm } from '@/hooks/useEntityForm';
@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 interface Category {
     id: string;
     name: string;
+    icon?: string | null;
 }
 
 interface DarePack {
@@ -73,9 +74,12 @@ interface DarePackFormData {
 // =============================================================================
 
 export function DarePacksPage() {
+    const { categoryId } = useParams<{ categoryId: string }>();
+
     // Data state
     const [darePacks, setDarePacks] = useState<DarePack[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [category, setCategory] = useState<Category | null>(null);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(12);
@@ -90,7 +94,7 @@ export function DarePacksPage() {
             is_premium: false,
             is_public: false,
             is_explicit: false,
-            category_id: '',
+            category_id: categoryId ?? '',
         },
         (pack) => ({
             name: pack.name,
@@ -113,12 +117,30 @@ export function DarePacksPage() {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
+            // Fetch category info
+            if (categoryId) {
+                const { data: categoryData } = await supabase
+                    .from('categories')
+                    .select('id, name, icon')
+                    .eq('id', categoryId)
+                    .single();
+                setCategory(categoryData || null);
+            } else {
+                setCategory(null);
+            }
+
             // Fetch dare packs
-            const { data: packData, error, count } = await supabase
+            let query = supabase
                 .from('dare_packs')
                 .select('*', { count: 'exact' })
                 .order('sort_order', { ascending: true })
                 .range(from, to);
+
+            if (categoryId) {
+                query = query.eq('category_id', categoryId);
+            }
+
+            const { data: packData, error, count } = await query;
 
             if (error) throw error;
 
@@ -159,11 +181,15 @@ export function DarePacksPage() {
         } finally {
             setLoading(false);
         }
-    }, [page, pageSize]);
+    }, [page, pageSize, categoryId]);
 
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [categoryId]);
 
     useEffect(() => {
         const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -305,16 +331,27 @@ export function DarePacksPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-                        <Zap className="h-8 w-8 text-orange-500" />
-                        Dare Packs
+                        {category ? (
+                            <>
+                                <IconPreview value={category.icon} fallback="flame-outline" className="text-3xl" />
+                                {category.name}
+                            </>
+                        ) : (
+                            <>
+                                <Zap className="h-8 w-8 text-orange-500" />
+                                Dare Packs
+                            </>
+                        )}
                     </h1>
                     <p className="text-muted-foreground">
-                        Manage dare packs that users can send to their partners
+                        {category
+                            ? `Manage dare packs in the ${category.name} category`
+                            : 'Manage dare packs that users can send to their partners'}
                     </p>
                 </div>
                 <Dialog open={form.dialogOpen} onOpenChange={form.setDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button onClick={form.openCreate}>
+                        <Button onClick={() => form.openCreateWith({ category_id: categoryId ?? '' })}>
                             <Plus className="mr-2 h-4 w-4" />
                             Add Dare Pack
                         </Button>

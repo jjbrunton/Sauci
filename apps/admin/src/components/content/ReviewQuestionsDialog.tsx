@@ -26,6 +26,16 @@ import { supabase } from '@/config';
 import { auditedSupabase } from '@/hooks/useAuditedSupabase';
 import { toast } from 'sonner';
 
+type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
+
+const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+    swipe: 'Swipe',
+    text_answer: 'Text Answer',
+    audio: 'Audio',
+    photo: 'Photo',
+    who_likely: 'Who Is More Likely',
+};
+
 interface Question {
     id: string;
     text: string;
@@ -34,6 +44,7 @@ interface Question {
     allowed_couple_genders: string[] | null;
     target_user_genders: string[] | null;
     required_props?: string[] | null;
+    question_type?: QuestionType | null;
 }
 
 interface ReviewQuestionsDialogProps {
@@ -601,6 +612,11 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                         {/* Question Column */}
                                                         <TableCell className="align-top py-3">
                                                             <div className="text-sm font-medium">{suggestion.question.text}</div>
+                                                            <div className="mt-1">
+                                                                <Badge variant="outline" className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                                                    {QUESTION_TYPE_LABELS[suggestion.question.question_type ?? 'swipe']}
+                                                                </Badge>
+                                                            </div>
                                                             {suggestion.question.partner_text && (
                                                                 <div className="text-xs text-muted-foreground mt-1.5 italic">
                                                                     Partner: {suggestion.question.partner_text}

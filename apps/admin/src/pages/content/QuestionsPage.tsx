@@ -52,6 +52,12 @@ interface QuestionPack {
     is_explicit: boolean;
 }
 
+type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
+
+interface QuestionConfig {
+    max_duration_seconds?: number;
+}
+
 interface Question {
     id: string;
     pack_id: string;
@@ -63,12 +69,38 @@ interface Question {
     required_props?: string[] | null;
     inverse_of?: string | null;
     created_at: string | null;
+    question_type?: QuestionType | null;
+    config?: QuestionConfig | null;
 }
 
 import { INTENSITY_LEVELS } from '@/lib/openai';
 
 // Helper to get intensity info by level (1-indexed)
 const getIntensity = (level: number) => INTENSITY_LEVELS[level - 1] || INTENSITY_LEVELS[0];
+
+const DEFAULT_AUDIO_DURATION = 60;
+
+const QUESTION_TYPE_OPTIONS: Array<{ value: QuestionType; label: string }> = [
+    { value: 'swipe', label: 'Swipe' },
+    { value: 'text_answer', label: 'Text Answer' },
+    { value: 'audio', label: 'Audio' },
+    { value: 'photo', label: 'Photo' },
+    { value: 'who_likely', label: 'Who Is More Likely' },
+];
+
+const getQuestionTypeLabel = (type?: QuestionType | null) => {
+    const resolved = type ?? 'swipe';
+    return QUESTION_TYPE_OPTIONS.find(option => option.value === resolved)?.label ?? 'Swipe';
+};
+
+const getConfigSummary = (question: Question) => {
+    if (question.question_type === 'audio') {
+        const duration = question.config?.max_duration_seconds ?? DEFAULT_AUDIO_DURATION;
+        return `${duration}s max`;
+    }
+
+    return null;
+};
 
 export function QuestionsPage() {
     const { packId } = useParams<{ packId: string }>();
@@ -90,6 +122,7 @@ export function QuestionsPage() {
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [totalCount, setTotalCount] = useState(0);
+    const [questionTypeFilter, setQuestionTypeFilter] = useState<QuestionType | 'all'>('all');
 
     // Form state
     const [formData, setFormData] = useState<{
@@ -100,6 +133,8 @@ export function QuestionsPage() {
         target_user_genders: string[];
         required_props: string;
         inverse_of: string;
+        question_type: QuestionType;
+        max_duration_seconds: string;
     }>({
         text: '',
         partner_text: '',
@@ -108,6 +143,8 @@ export function QuestionsPage() {
         target_user_genders: [],
         required_props: '',
         inverse_of: '',
+        question_type: 'swipe',
+        max_duration_seconds: String(DEFAULT_AUDIO_DURATION),
     });
 
     // All questions in pack for inverse_of dropdown (loaded once)
@@ -126,12 +163,18 @@ export function QuestionsPage() {
                 .select('id, name, description, icon, is_explicit')
                 .eq('id', packId)
                 .single();
-            const questionsPromise = supabase
+            let questionsQuery = supabase
                 .from('questions')
                 .select('*', { count: 'exact' })
                 .eq('pack_id', packId)
                 .order('created_at', { ascending: true })
                 .range(from, to);
+
+            if (questionTypeFilter !== 'all') {
+                questionsQuery = questionsQuery.eq('question_type', questionTypeFilter);
+            }
+
+            const questionsPromise = questionsQuery;
             const allPackPromise = supabase
                 .from('questions')
                 .select('id, text, inverse_of')
@@ -162,7 +205,7 @@ export function QuestionsPage() {
         } finally {
             setLoading(false);
         }
-    }, [packId, page, pageSize]);
+    }, [packId, page, pageSize, questionTypeFilter]);
 
     // Real-time subscription for questions in this pack
     const { status: realtimeStatus } = useRealtimeSubscription<Question>({
@@ -204,6 +247,11 @@ export function QuestionsPage() {
     }, [packId]);
 
     useEffect(() => {
+        setPage(1);
+        setSelectedIds(new Set());
+    }, [questionTypeFilter]);
+
+    useEffect(() => {
         setSelectedIds(new Set());
     }, [page, pageSize]);
 
@@ -233,6 +281,8 @@ export function QuestionsPage() {
             target_user_genders: [],
             required_props: '',
             inverse_of: '',
+            question_type: 'swipe',
+            max_duration_seconds: String(DEFAULT_AUDIO_DURATION),
         });
         await fetchAllPackQuestions();
         setDialogOpen(true);
@@ -248,6 +298,8 @@ export function QuestionsPage() {
             target_user_genders: question.target_user_genders || [],
             required_props: question.required_props?.join(', ') ?? '',
             inverse_of: question.inverse_of || '',
+            question_type: question.question_type ?? 'swipe',
+            max_duration_seconds: String(question.config?.max_duration_seconds ?? DEFAULT_AUDIO_DURATION),
         });
         await fetchAllPackQuestions();
         setDialogOpen(true);
@@ -264,6 +316,13 @@ export function QuestionsPage() {
             .map(value => value.trim())
             .filter(Boolean);
         const requiredPropsValue = requiredProps.length > 0 ? requiredProps : null;
+        const parsedMaxDuration = Number(formData.max_duration_seconds);
+        const maxDuration = Number.isFinite(parsedMaxDuration) && parsedMaxDuration > 0
+            ? parsedMaxDuration
+            : DEFAULT_AUDIO_DURATION;
+        const configValue = formData.question_type === 'audio'
+            ? { max_duration_seconds: maxDuration }
+            : null;
 
         setSaving(true);
         try {
@@ -276,6 +335,8 @@ export function QuestionsPage() {
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
                     inverse_of: formData.inverse_of || null,
+                    question_type: formData.question_type,
+                    config: configValue,
                 });
 
                 if (error) throw error;
@@ -290,6 +351,8 @@ export function QuestionsPage() {
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
                     inverse_of: formData.inverse_of || null,
+                    question_type: formData.question_type,
+                    config: configValue,
                 });
 
                 if (error) throw error;
@@ -324,6 +387,8 @@ export function QuestionsPage() {
     };
 
     const handleAiGenerated = (generatedQuestions: Array<{ text: string; partner_text?: string; intensity: number; inverse_pair_id?: string | null }>) => {
+        const generatedQuestionType: QuestionType = 'swipe';
+
         // Bulk insert AI-generated questions with inverse_of linking
         const insertQuestions = async () => {
             try {
@@ -351,6 +416,8 @@ export function QuestionsPage() {
                             partner_text: q.partner_text || null,
                             intensity: q.intensity,
                             inverse_of: null,
+                            question_type: generatedQuestionType,
+                            config: null,
                         }))
                     );
                     if (standaloneError) throw standaloneError;
@@ -369,6 +436,8 @@ export function QuestionsPage() {
                                 partner_text: primary.partner_text || null,
                                 intensity: primary.intensity,
                                 inverse_of: null,
+                                question_type: generatedQuestionType,
+                                config: null,
                             }]
                         );
                         if (primaryError) throw primaryError;
@@ -385,6 +454,8 @@ export function QuestionsPage() {
                                     partner_text: inverse.partner_text || null,
                                     intensity: inverse.intensity,
                                     inverse_of: primaryId,
+                                    question_type: generatedQuestionType,
+                                    config: null,
                                 }]
                             );
                             if (inverseError) throw inverseError;
@@ -401,6 +472,8 @@ export function QuestionsPage() {
                                     partner_text: extra.partner_text || null,
                                     intensity: extra.intensity,
                                     inverse_of: null,
+                                    question_type: generatedQuestionType,
+                                    config: null,
                                 }]
                             );
                             if (extraError) throw extraError;
@@ -410,12 +483,15 @@ export function QuestionsPage() {
                         const { error } = await auditedSupabase.insert(
                             'questions',
                             [{
-                                pack_id: packId,
-                                text: pair[0].text,
-                                partner_text: pair[0].partner_text || null,
-                                intensity: pair[0].intensity,
-                                inverse_of: null,
-                            }]
+                            pack_id: packId,
+                            text: pair[0].text,
+                            partner_text: pair[0].partner_text || null,
+                            intensity: pair[0].intensity,
+                            inverse_of: null,
+                            question_type: generatedQuestionType,
+                            config: null,
+                        }]
+
                         );
                         if (error) throw error;
                     }
@@ -440,7 +516,7 @@ export function QuestionsPage() {
         try {
             const { data, error } = await supabase
                 .from('questions')
-                .select('id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, created_at')
+                .select('id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, question_type, created_at')
                 .eq('pack_id', packId)
                 .order('created_at', { ascending: true });
 
@@ -588,6 +664,45 @@ export function QuestionsPage() {
                                         rows={3}
                                     />
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="question_type">Question Type</Label>
+                                    <Select
+                                        value={formData.question_type}
+                                        onValueChange={(value) => setFormData(d => ({ ...d, question_type: value as QuestionType }))}
+                                    >
+                                        <SelectTrigger id="question_type">
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {QUESTION_TYPE_OPTIONS.map(option => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        Select how users will answer this question in the app.
+                                    </p>
+                                </div>
+
+                                {formData.question_type === 'audio' && (
+                                    <div className="space-y-2">
+                                        <Label htmlFor="max_duration_seconds">Max Duration (seconds)</Label>
+                                        <Input
+                                            id="max_duration_seconds"
+                                            type="number"
+                                            min={1}
+                                            value={formData.max_duration_seconds}
+                                            onChange={(e) => setFormData(d => ({ ...d, max_duration_seconds: e.target.value }))}
+                                            placeholder="60"
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Audio responses will be limited to this duration.
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
@@ -772,6 +887,26 @@ export function QuestionsPage() {
                 </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-3">
+                <Label className="text-sm text-muted-foreground">Question Type</Label>
+                <Select
+                    value={questionTypeFilter}
+                    onValueChange={(value) => setQuestionTypeFilter(value as QuestionType | 'all')}
+                >
+                    <SelectTrigger className="w-56">
+                        <SelectValue placeholder="All types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All types</SelectItem>
+                        {QUESTION_TYPE_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
             {/* Bulk Action Bar */}
             {selectedIds.size > 0 && (
                 <div className="flex items-center justify-between bg-muted/50 border rounded-lg px-4 py-3">
@@ -886,6 +1021,7 @@ export function QuestionsPage() {
                                     </TableHead>
                                     <TableHead className="w-12">#</TableHead>
                                     <TableHead>Question</TableHead>
+                                    <TableHead className="w-28">Type</TableHead>
                                     <TableHead className="w-20">Inverse</TableHead>
                                     <TableHead className="w-32">Partner Text</TableHead>
                                     <TableHead className="w-24">Couples</TableHead>
@@ -912,6 +1048,18 @@ export function QuestionsPage() {
                                         </TableCell>
                                         <TableCell>
                                             <span className="line-clamp-2">{question.text}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                                                    {getQuestionTypeLabel(question.question_type)}
+                                                </Badge>
+                                                {getConfigSummary(question) && (
+                                                    <p className="text-[10px] text-muted-foreground">
+                                                        {getConfigSummary(question)}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             {question.inverse_of ? (

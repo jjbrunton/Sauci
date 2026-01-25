@@ -61,6 +61,14 @@ function App() {
                             }
                         />
                         <Route
+                            path="/categories/:categoryId/dare-packs"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_PACKS}>
+                                    <DarePacksPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path="/packs/:packId/questions"
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>

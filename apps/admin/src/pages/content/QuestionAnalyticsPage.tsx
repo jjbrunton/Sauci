@@ -7,12 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, Pie, PieChart as RechartsPieChart } from 'recharts';
 import { Crown, MessageCircle, PieChart, Sparkles, Tag, Eye, EyeOff } from 'lucide-react';
 
+type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
+
 interface QuestionRow {
     id: string;
     pack_id: string;
     intensity: number | null;
     partner_text: string | null;
     inverse_of?: string | null;
+    question_type?: QuestionType | null;
 }
 
 interface PackRow {
@@ -62,6 +65,14 @@ type SegmentKey = 'all' | 'premium' | 'free';
 const intensityPalette = ['#22c55e', '#84cc16', '#facc15', '#f97316', '#ef4444'];
 const intensityLabels = ['Gentle', 'Warm', 'Playful', 'Steamy', 'Intense'];
 
+const QUESTION_TYPE_CONFIG: Record<QuestionType, { label: string; color: string }> = {
+    swipe: { label: 'Swipe', color: '#38bdf8' },
+    text_answer: { label: 'Text', color: '#f59e0b' },
+    audio: { label: 'Audio', color: '#a78bfa' },
+    photo: { label: 'Photo', color: '#f472b6' },
+    who_likely: { label: 'Who Likely', color: '#22c55e' },
+};
+
 const formatPercent = (count: number, total: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
 
 const getCategoryName = (category?: PackRow['category']) => {
@@ -89,6 +100,7 @@ export function QuestionAnalyticsPage() {
         taggedQuestions: 0,
     });
     const [premiumBreakdown, setPremiumBreakdown] = useState<ChartDatum[]>([]);
+    const [questionTypeBreakdown, setQuestionTypeBreakdown] = useState<ChartDatum[]>([]);
     const [intensityBreakdown, setIntensityBreakdown] = useState<Record<SegmentKey, ChartDatum[]>>({
         all: [],
         premium: [],
@@ -125,7 +137,7 @@ export function QuestionAnalyticsPage() {
                 const to = from + pageSize - 1;
                 const { data, error } = await supabase
                     .from('questions')
-                    .select('id, pack_id, intensity, partner_text, inverse_of')
+                    .select('id, pack_id, intensity, partner_text, inverse_of, question_type')
                     .range(from, to);
 
                 if (error) throw error;
@@ -210,6 +222,13 @@ export function QuestionAnalyticsPage() {
                     free: { ...emptyIntensityCounts },
                 };
                 const untaggedCounts: Record<SegmentKey, number> = { all: 0, premium: 0, free: 0 };
+                const questionTypeCounts: Record<QuestionType, number> = {
+                    swipe: 0,
+                    text_answer: 0,
+                    audio: 0,
+                    photo: 0,
+                    who_likely: 0,
+                };
                 const categoryCountsBySegment: Record<SegmentKey, Map<string, BreakdownItem>> = {
                     all: new Map(),
                     premium: new Map(),
@@ -233,6 +252,9 @@ export function QuestionAnalyticsPage() {
                     const segmentKey: SegmentKey = isPremium ? 'premium' : 'free';
                     const categoryName = getCategoryName(pack?.category);
                     const categoryId = pack?.category_id || 'uncategorized';
+                    const questionType = question.question_type ?? 'swipe';
+
+                    questionTypeCounts[questionType] = (questionTypeCounts[questionType] || 0) + 1;
 
                     if (isPremium) {
                         premiumCount += 1;
@@ -302,6 +324,13 @@ export function QuestionAnalyticsPage() {
                     { name: 'Premium', value: premiumCount, color: '#f59e0b' },
                     { name: 'Free', value: freeCount, color: '#22c55e' },
                 ];
+                const questionTypeData: ChartDatum[] = (Object.entries(QUESTION_TYPE_CONFIG) as Array<
+                    [QuestionType, { label: string; color: string }]
+                >).map(([key, config]) => ({
+                    name: config.label,
+                    value: questionTypeCounts[key],
+                    color: config.color,
+                }));
 
                 const buildIntensityData = (key: SegmentKey) => intensityLabels.map((label, index) => ({
                     name: label,
@@ -355,6 +384,7 @@ export function QuestionAnalyticsPage() {
                     taggedQuestions: taggedCount,
                 });
                 setPremiumBreakdown(premiumData);
+                setQuestionTypeBreakdown(questionTypeData);
                 setIntensityBreakdown(intensityData);
                 setTopicBreakdown(topicData);
                 setCategoryBreakdown(categoryData);
@@ -644,6 +674,58 @@ export function QuestionAnalyticsPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Question Types</CardTitle>
+                    <CardDescription>
+                        Distribution of questions by answer format
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <Skeleton className="h-[240px] w-full" />
+                    ) : stats.totalQuestions === 0 ? (
+                        <div className="flex items-center justify-center h-[240px] text-muted-foreground">
+                            No question data available yet
+                        </div>
+                    ) : (
+                        <div className="h-[240px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={questionTypeBreakdown}>
+                                    <XAxis
+                                        dataKey="name"
+                                        stroke="hsl(var(--muted-foreground))"
+                                        fontSize={11}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="hsl(var(--muted-foreground))"
+                                        fontSize={11}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(value) => `${value}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: '1px solid #e2e8f0',
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                        }}
+                                    />
+                                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                                        {questionTypeBreakdown.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             <Card>
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

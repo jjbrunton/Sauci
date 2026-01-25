@@ -56,7 +56,8 @@ interface Category {
     sort_order: number | null;
     created_at: string | null;
     is_public: boolean;
-    pack_count?: number;
+    question_pack_count?: number;
+    dare_pack_count?: number;
 }
 
 interface CategoryFormData {
@@ -134,9 +135,14 @@ function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility }
                 </div>
 
                 <div className="flex items-center justify-between mt-auto">
-                    <Badge variant="secondary" className="font-normal">
-                        {category.pack_count} pack{category.pack_count !== 1 ? 's' : ''}
-                    </Badge>
+                    <div className="flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="font-normal">
+                            {category.question_pack_count} question pack{category.question_pack_count !== 1 ? 's' : ''}
+                        </Badge>
+                        <Badge variant="secondary" className="font-normal">
+                            {category.dare_pack_count} dare pack{category.dare_pack_count !== 1 ? 's' : ''}
+                        </Badge>
+                    </div>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
@@ -158,11 +164,18 @@ function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility }
                     </div>
                 </div>
 
-                <Link to={`/categories/${category.id}/packs`}>
-                    <Button variant="outline" className="w-full">
-                        View Packs
-                    </Button>
-                </Link>
+                <div className="grid gap-2">
+                    <Link to={`/categories/${category.id}/packs`}>
+                        <Button variant="outline" className="w-full">
+                            View Question Packs
+                        </Button>
+                    </Link>
+                    <Link to={`/categories/${category.id}/dare-packs`}>
+                        <Button variant="outline" className="w-full">
+                            View Dare Packs
+                        </Button>
+                    </Link>
+                </div>
             </CardContent>
         </Card>
     );
@@ -213,17 +226,30 @@ export function CategoriesPage() {
             setTotalCount(count || 0);
 
             const categoryIds = (cats || []).map(c => c.id);
-            const packCounts: Record<string, number> = {};
+            const questionPackCounts: Record<string, number> = {};
+            const darePackCounts: Record<string, number> = {};
 
             if (categoryIds.length > 0) {
-                const { data: packs } = await supabase
-                    .from('question_packs')
-                    .select('category_id')
-                    .in('category_id', categoryIds);
+                const [{ data: packs }, { data: darePacks }] = await Promise.all([
+                    supabase
+                        .from('question_packs')
+                        .select('category_id')
+                        .in('category_id', categoryIds),
+                    supabase
+                        .from('dare_packs')
+                        .select('category_id')
+                        .in('category_id', categoryIds),
+                ]);
 
                 packs?.forEach(p => {
                     if (p.category_id) {
-                        packCounts[p.category_id] = (packCounts[p.category_id] || 0) + 1;
+                        questionPackCounts[p.category_id] = (questionPackCounts[p.category_id] || 0) + 1;
+                    }
+                });
+
+                darePacks?.forEach(p => {
+                    if (p.category_id) {
+                        darePackCounts[p.category_id] = (darePackCounts[p.category_id] || 0) + 1;
                     }
                 });
             }
@@ -231,7 +257,8 @@ export function CategoriesPage() {
             setCategories(
                 (cats || []).map(c => ({
                     ...c,
-                    pack_count: packCounts[c.id] || 0,
+                    question_pack_count: questionPackCounts[c.id] || 0,
+                    dare_pack_count: darePackCounts[c.id] || 0,
                 }))
             );
         } catch (error) {
