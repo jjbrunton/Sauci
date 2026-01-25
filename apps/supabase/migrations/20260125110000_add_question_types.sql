@@ -2,24 +2,25 @@
 -- This migration adds support for different question types beyond the original swipe mechanic.
 -- New types include: text_answer, audio, photo, and who_likely
 
--- 1. Create question_type enum
-CREATE TYPE question_type AS ENUM ('swipe', 'text_answer', 'audio', 'photo', 'who_likely');
+-- 1. Create question_type enum (if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'question_type') THEN
+    CREATE TYPE question_type AS ENUM ('swipe', 'text_answer', 'audio', 'photo', 'who_likely');
+  END IF;
+END
+$$;
 
 -- 2. Add columns to questions table
--- question_type: The type of question (defaults to 'swipe' for backwards compatibility)
--- config: JSONB field for type-specific configuration (e.g., max_length for text, duration for audio)
 ALTER TABLE questions
-  ADD COLUMN question_type question_type NOT NULL DEFAULT 'swipe',
-  ADD COLUMN config JSONB DEFAULT '{}';
+  ADD COLUMN IF NOT EXISTS question_type question_type NOT NULL DEFAULT 'swipe',
+  ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}';
 
 -- 3. Add response_data to responses table
--- This stores type-specific response data (e.g., text answer, audio URL, photo URL, selection)
--- For swipe questions, this remains NULL (the answer column is used)
 ALTER TABLE responses
-  ADD COLUMN response_data JSONB DEFAULT NULL;
+  ADD COLUMN IF NOT EXISTS response_data JSONB DEFAULT NULL;
 
 -- 4. Extend match_type enum with 'both_answered' for non-swipe question types
--- Using DO block because ADD VALUE IF NOT EXISTS doesn't work in transaction blocks
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -33,20 +34,18 @@ END
 $$;
 
 -- 5. Add response_summary to matches table
--- This stores a summary of both partners' responses for display purposes
--- For swipe matches, this can remain NULL
--- For other types, it contains both responses for easy retrieval
 ALTER TABLE matches
-  ADD COLUMN response_summary JSONB DEFAULT NULL;
+  ADD COLUMN IF NOT EXISTS response_summary JSONB DEFAULT NULL;
 
 -- 6. Create storage bucket for response media (audio, photos)
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('response-media', 'response-media', false)
 ON CONFLICT (id) DO NOTHING;
 
--- 7. RLS policies for response-media bucket
+-- 7. RLS policies for response-media bucket (drop and recreate to ensure correct definition)
 
 -- Policy: Users can upload to their own folder (user_id/*)
+DROP POLICY IF EXISTS "Users can upload to own folder" ON storage.objects;
 CREATE POLICY "Users can upload to own folder"
 ON storage.objects
 FOR INSERT
@@ -57,6 +56,7 @@ WITH CHECK (
 );
 
 -- Policy: Users can update their own uploads
+DROP POLICY IF EXISTS "Users can update own uploads" ON storage.objects;
 CREATE POLICY "Users can update own uploads"
 ON storage.objects
 FOR UPDATE
@@ -71,6 +71,7 @@ WITH CHECK (
 );
 
 -- Policy: Users can delete their own uploads
+DROP POLICY IF EXISTS "Users can delete own uploads" ON storage.objects;
 CREATE POLICY "Users can delete own uploads"
 ON storage.objects
 FOR DELETE
@@ -81,7 +82,7 @@ USING (
 );
 
 -- Policy: Users can read from their couple's folder (their own + partner's uploads)
--- This allows partners to see each other's media in matches
+DROP POLICY IF EXISTS "Users can read couple media" ON storage.objects;
 CREATE POLICY "Users can read couple media"
 ON storage.objects
 FOR SELECT
