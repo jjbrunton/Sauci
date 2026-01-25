@@ -14,10 +14,19 @@ jobs:
   deploy-database:
     name: Deploy Migrations & Functions
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        environment:
+          - name: non-prod
+            project_ref: itbzhrvlgvdmzbnhzhyx
+          - name: prod
+            project_ref: ckjcrkjpmhqhiucifukx
 
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ckjcrkjpmhqhiucifukx
+      SUPABASE_PROJECT_REF: ${{ matrix.environment.project_ref }}
+      ENVIRONMENT_NAME: ${{ matrix.environment.name }}
 
     steps:
       - name: Checkout repository
@@ -28,13 +37,13 @@ jobs:
         with:
           version: latest
 
-      - name: Link to Production Project
+      - name: Link to ${{ matrix.environment.name }} Project
         run: supabase link --project-ref $SUPABASE_PROJECT_REF --workdir apps
 
-      - name: Apply Database Migrations
+      - name: Apply Database Migrations (${{ matrix.environment.name }})
         run: supabase db push --workdir apps
 
-      - name: Sync Edge Function Secrets
+      - name: Sync Edge Function Secrets (${{ matrix.environment.name }})
         env:
           # Add secrets from GitHub Secrets
           REVENUECAT_WEBHOOK_SECRET: ${{ secrets.REVENUECAT_WEBHOOK_SECRET }}
@@ -57,13 +66,13 @@ jobs:
           [ -n "$DISCORD_WEBHOOK_URL" ] && secrets_to_set="$secrets_to_set DISCORD_WEBHOOK_URL=$DISCORD_WEBHOOK_URL"
 
           if [ -n "$secrets_to_set" ]; then
-            echo "Syncing secrets to Supabase..."
+            echo "Syncing secrets to Supabase ($ENVIRONMENT_NAME)..."
             supabase secrets set $secrets_to_set --project-ref $SUPABASE_PROJECT_REF
           else
             echo "No secrets to sync"
           fi
 
-      - name: Deploy Edge Functions
+      - name: Deploy Edge Functions (${{ matrix.environment.name }})
         run: |
           # Deploy all edge functions (excluding _shared directory)
           for dir in apps/supabase/functions/*/; do
@@ -75,11 +84,11 @@ jobs:
               continue
             fi
 
-            echo "Deploying function: $function_name"
+            echo "Deploying function: $function_name to $ENVIRONMENT_NAME"
             supabase functions deploy "$function_name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_REF --workdir apps
           done
 
-      - name: Remove Deleted Functions
+      - name: Remove Deleted Functions (${{ matrix.environment.name }})
         run: |
           # Get list of functions deployed on Supabase (skip header lines, extract slug column)
           deployed=$(supabase functions list --project-ref $SUPABASE_PROJECT_REF | grep -E '^[a-z]' | awk '{print $1}')
@@ -94,7 +103,7 @@ jobs:
             [[ "$func" =~ ^[^a-z] ]] && continue
 
             if ! echo "$local_functions" | grep -q "^${func}$"; then
-              echo "Deleting removed function: $func"
+              echo "Deleting removed function from $ENVIRONMENT_NAME: $func"
               supabase functions delete "$func" --project-ref $SUPABASE_PROJECT_REF
             fi
           done
