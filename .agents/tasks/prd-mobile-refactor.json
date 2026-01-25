@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "project": "Mobile App File Size Refactor",
+  "overview": "Refactor the existing React Native (Expo) mobile app to keep most files within ~300-400 lines by splitting into smaller modules without changing functionality.",
+  "goals": [
+    "Reduce oversized files to a target range of ~300-400 lines where practical",
+    "Improve maintainability by splitting files into clearer layers (ui/components, hooks, services, utils)",
+    "Preserve existing behavior and UI"
+  ],
+  "nonGoals": [
+    "No functional changes",
+    "No UI changes",
+    "No new product features"
+  ],
+  "successMetrics": [
+    "All files are within target size or documented as justified exceptions",
+    "Refactor passes existing tests, lint, and typecheck"
+  ],
+  "openQuestions": [
+    "Which specific files currently exceed 400 lines and need priority refactors?",
+    "Are there any existing architectural constraints that limit splitting (e.g., circular deps)?"
+  ],
+  "stack": {
+    "framework": "React Native (Expo)",
+    "hosting": "App stores via Expo/EAS",
+    "database": "Existing app data layer (no changes)",
+    "auth": "Existing app auth (no changes)"
+  },
+  "routes": [
+    {
+      "path": "(existing)",
+      "name": "App Routes",
+      "purpose": "No route changes; refactor only"
+    }
+  ],
+  "uiNotes": [
+    "No UI changes; keep visual output identical",
+    "Split view logic into smaller components without altering layout"
+  ],
+  "dataModel": [
+    {
+      "entity": "N/A",
+      "fields": []
+    }
+  ],
+  "importFormat": {
+    "description": "Not applicable",
+    "example": {}
+  },
+  "rules": [
+    "Target file size is ~300-400 lines; exceptions must include justification",
+    "Refactor should follow layer-based split: ui/components, hooks, services, utils",
+    "No behavior changes; identical inputs must yield identical outputs"
+  ],
+  "qualityGates": [
+    "npm test",
+    "npm run lint",
+    "npm run typecheck"
+  ],
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Inventory oversized files and refactor plan",
+      "status": "done",
+      "dependsOn": [],
+      "description": "As a developer, I want an inventory of oversized files and a planned split strategy so refactors are systematic and safe.",
+      "acceptanceCriteria": [
+        "Produce a list of files > 400 lines with line counts",
+        "For each file, define target split into layers (ui/components, hooks, services, utils)",
+        "Example: a 900-line screen file -> screen container + UI subcomponents + hooks + service module",
+        "Negative case: a file under 300 lines is not split unless a clear modularization need is documented"
+      ],
+      "startedAt": "2026-01-25T20:40:12.238126+00:00",
+      "completedAt": "2026-01-25T20:47:05.362525+00:00",
+      "updatedAt": "2026-01-25T20:47:05.362425+00:00"
+    },
+    {
+      "id": "US-002",
+      "title": "Refactor screen-level files into layer-based modules",
+      "status": "in_progress",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a developer, I want oversized screen files split into smaller modules so each file stays around 300-400 lines.",
+      "acceptanceCriteria": [
+        "Split screen files into container + UI components + hooks + services as needed",
+        "Example: screen logic moves into `hooks/use<Screen>.ts` and data calls into `services/<screen>.ts`",
+        "Negative case: moving a function that creates circular dependencies is rejected and alternative split is used",
+        "All screens render identically before and after refactor"
+      ],
+      "startedAt": "2026-01-25T20:47:07.436262+00:00",
+      "completedAt": null,
+      "updatedAt": "2026-01-25T20:47:07.436370+00:00"
+    },
+    {
+      "id": "US-003",
+      "title": "Refactor oversized shared components",
+      "status": "open",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a developer, I want oversized shared components split into smaller pieces to improve clarity and reusability.",
+      "acceptanceCriteria": [
+        "Split shared UI components into smaller subcomponents and helper modules",
+        "Example: extract nested UI blocks into `components/<Component>/SubComponent.tsx`",
+        "Negative case: do not extract one-off UI fragments that would reduce cohesion",
+        "No change to public component API unless required for split"
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Refactor oversized hooks/services/utils",
+      "status": "open",
+      "dependsOn": [
+        "US-001"
+      ],
+      "description": "As a developer, I want oversized logic files split into smaller, focused modules for readability.",
+      "acceptanceCriteria": [
+        "Split large hooks into smaller hooks or helper functions in utils",
+        "Example: a 500-line hook becomes a main hook + `utils/<hook>-helpers.ts`",
+        "Negative case: do not split logic in a way that increases public API surface without justification",
+        "All previous exports remain available or are re-exported from the original entry point"
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Validate refactor quality gates",
+      "status": "open",
+      "dependsOn": [
+        "US-002",
+        "US-003",
+        "US-004"
+      ],
+      "description": "As a developer, I want automated checks to pass to ensure the refactor preserved behavior.",
+      "acceptanceCriteria": [
+        "Run `npm test`, `npm run lint`, and `npm run typecheck` successfully",
+        "Example: all tests pass without modifications to test expectations",
+        "Negative case: if a check fails, refactor is incomplete and must be fixed before completion"
+      ]
+    }
+  ]
+}
