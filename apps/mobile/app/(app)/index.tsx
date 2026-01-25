@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useAuthStore, usePacksStore } from '../../src/store';
+import { useAuthStore, usePacksStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
 import { CompactHeader, ContentRow } from '../../src/components/discovery';
@@ -68,11 +68,13 @@ function groupPacksByCategory(
 export default function DiscoveryScreen() {
   const { user, partner, couple } = useAuthStore();
   const { packs, categories, fetchPacks, getPackProgress } = usePacksStore();
+  const { subscription } = useSubscriptionStore();
   const { width } = useWindowDimensions();
   const [showPaywall, setShowPaywall] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(130);
 
-  const isPremiumUser = user?.is_premium ?? false;
+  // Check all sources of premium access: user flag, partner flag, or active subscription
+  const isPremiumUser = user?.is_premium || partner?.is_premium || subscription.isProUser;
   const isWideScreen = width > MAX_CONTENT_WIDTH;
 
   // Refresh data when screen gains focus

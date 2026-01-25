@@ -43,11 +43,14 @@ function TabBarBackground() {
     // The solid rgba background in tabBarStyle provides the visual effect on Android
     if (Platform.OS === 'ios') {
         return (
-            <BlurView
-                intensity={100}
-                tint="dark"
-                style={StyleSheet.absoluteFill}
-            />
+            <>
+                <BlurView
+                    intensity={80}
+                    tint="dark"
+                    style={StyleSheet.absoluteFill}
+                />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(14, 14, 17, 0.85)' }]} />
+            </>
         );
     }
     return null;
@@ -435,7 +438,7 @@ export default function AppLayout() {
                     tabBarBackground: () => <TabBarBackground />,
                     tabBarStyle: shouldHideTabBar ? { display: 'none' } : {
                         position: 'absolute',
-                        backgroundColor: 'rgba(13, 13, 26, 0.92)',
+                        backgroundColor: 'rgba(14, 14, 17, 0.85)',
                         borderTopColor: 'rgba(233, 69, 96, 0.2)', // primary brand color
                         borderTopWidth: 1,
                         paddingTop: 8,

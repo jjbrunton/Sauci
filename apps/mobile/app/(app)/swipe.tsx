@@ -1267,8 +1267,6 @@ export default function SwipeScreen() {
                                 </Animated.View>
                             </View>
                         </View>
-                        {/* Spacer to balance header when back button is shown */}
-                        {(packId || mode === 'pending') && <View style={styles.headerSpacer} />}
                     </View>
                 </Animated.View>
 
@@ -1370,11 +1368,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     backButton: {
+        position: 'absolute',
+        left: 0,
         padding: spacing.sm,
-        marginRight: spacing.sm,
-    },
-    headerSpacer: {
-        width: 40, // Match back button width for centering
     },
     progressContainer: {
         alignItems: "center",
