@@ -5,7 +5,6 @@ import { useAuthStore, usePacksStore } from "../../../store";
 import { skipQuestion, getSkippedQuestionIds } from "../../../lib/skippedQuestions";
 import { invokeWithAuthRetry } from "../../../lib/authErrorHandler";
 import { Events } from "../../../lib/analytics";
-import { getCategoryColor } from "../../../theme";
 import type { AnswerType } from "../../../types";
 import type { DailyLimitInfo, PackInfo, ResponseData } from "../types";
 import {
@@ -16,6 +15,13 @@ import {
     fetchRecommendedQuestions,
     uploadResponseMedia,
 } from "../services/swipeService";
+import {
+    buildPackInfo,
+    calculateEffectiveTotal,
+    filterSupportedQuestions,
+    getCountdownState,
+    resolveResponseData,
+} from "../utils/useSwipeScreen-helpers";
 
 interface GapInfo {
     unanswered: number;
@@ -44,11 +50,7 @@ export const useSwipeScreen = () => {
     const { enabledPackIds, ensureEnabledPacksLoaded, packs } = usePacksStore();
     const { user, partner, couple } = useAuthStore();
 
-    const supportedTypes = ['swipe', 'text_answer', 'photo', 'audio', 'who_likely'];
-
-    const filteredQuestions = questions.filter(q =>
-        !q.question_type || supportedTypes.includes(q.question_type)
-    );
+    const filteredQuestions = filterSupportedQuestions(questions);
 
     const hasTrackedExhausted = useRef(false);
     const fetchRequestId = useRef(0);
@@ -194,21 +196,12 @@ export const useSwipeScreen = () => {
         }
 
         const updateCountdown = () => {
-            const now = new Date();
-            const reset = new Date(dailyLimitInfo.reset_at);
-            const diff = reset.getTime() - now.getTime();
+            const { expired, text } = getCountdownState(dailyLimitInfo.reset_at);
+            setCountdown(text);
 
-            if (diff <= 0) {
-                setCountdown("00:00:00");
+            if (expired) {
                 fetchQuestions();
-                return;
             }
-
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
         };
 
         updateCountdown();
@@ -290,20 +283,12 @@ export const useSwipeScreen = () => {
         }
     }, [enabledPackIds, mode, packId, questions.length, currentIndex]);
 
-    const effectiveTotal = (() => {
-        let total = filteredQuestions.length;
-
-        if (gapInfo && gapInfo.threshold > 0) {
-            const remaining = gapInfo.threshold - gapInfo.unanswered;
-            total = Math.min(total, currentIndex + Math.max(0, remaining));
-        }
-
-        if (dailyLimitInfo && dailyLimitInfo.limit_value > 0 && !dailyLimitInfo.is_blocked) {
-            total = Math.min(total, currentIndex + dailyLimitInfo.remaining);
-        }
-
-        return total;
-    })();
+    const effectiveTotal = calculateEffectiveTotal(
+        filteredQuestions.length,
+        gapInfo,
+        dailyLimitInfo,
+        currentIndex
+    );
 
     const handleAnswer = useCallback(async (questionId: string, answer: AnswerType | 'skip', responseData?: ResponseData) => {
         if (answer === 'skip') {
@@ -314,47 +299,13 @@ export const useSwipeScreen = () => {
         }
 
         try {
-            let finalResponseData = responseData;
-
-            if (responseData && user?.id) {
-                if (responseData.type === 'photo' && responseData.media_path) {
-                    setIsUploading(true);
-                    try {
-                        const uploadedPath = await uploadResponseMedia(
-                            responseData.media_path,
-                            questionId,
-                            'photo',
-                            user.id
-                        );
-                        if (uploadedPath) {
-                            finalResponseData = { ...responseData, media_path: uploadedPath };
-                        } else {
-                            console.error('Photo upload failed, skipping response_data');
-                            finalResponseData = undefined;
-                        }
-                    } finally {
-                        setIsUploading(false);
-                    }
-                } else if (responseData.type === 'audio' && responseData.media_path) {
-                    setIsUploading(true);
-                    try {
-                        const uploadedPath = await uploadResponseMedia(
-                            responseData.media_path,
-                            questionId,
-                            'audio',
-                            user.id
-                        );
-                        if (uploadedPath) {
-                            finalResponseData = { ...responseData, media_path: uploadedPath };
-                        } else {
-                            console.error('Audio upload failed, skipping response_data');
-                            finalResponseData = undefined;
-                        }
-                    } finally {
-                        setIsUploading(false);
-                    }
-                }
-            }
+            const finalResponseData = await resolveResponseData({
+                responseData,
+                questionId,
+                userId: user?.id,
+                setIsUploading,
+                uploadResponseMedia,
+            });
 
             const { data, error } = await invokeWithAuthRetry("submit-response", {
                 body: {
@@ -403,38 +354,16 @@ export const useSwipeScreen = () => {
         setCurrentIndex(prev => prev + 1);
     }, []);
 
-    const getQuestionPackInfo = useCallback((question: any): PackInfo | null => {
-        if (packId) {
-            const pack = packs.find(p => p.id === packId);
-            const categoryColor = pack ? getCategoryColor(pack.category) : undefined;
-
-            if (packContext) {
-                return { ...packContext, color: categoryColor };
-            }
-            if (pack) {
-                return { name: pack.name, icon: pack.icon || 'layers', color: categoryColor };
-            }
-        }
-
-        if (question.pack_id) {
-            const pack = packs.find(p => p.id === question.pack_id);
-            const categoryColor = pack ? getCategoryColor(pack.category) : undefined;
-
-            if (question.pack_name) {
-                return {
-                    name: question.pack_name,
-                    icon: question.pack_icon || 'layers',
-                    color: categoryColor,
-                };
-            }
-
-            if (pack) {
-                return { name: pack.name, icon: pack.icon || 'layers', color: categoryColor };
-            }
-        }
-
-        return null;
-    }, [packContext, packId, packs]);
+    const getQuestionPackInfo = useCallback(
+        (question: any): PackInfo | null =>
+            buildPackInfo({
+                packId,
+                packContext,
+                packs,
+                question,
+            }),
+        [packContext, packId, packs]
+    );
 
     return {
         packId,
