@@ -77,7 +77,7 @@
     {
       "id": "US-002",
       "title": "Refactor screen-level files into layer-based modules",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "US-001"
       ],
@@ -89,13 +89,13 @@
         "All screens render identically before and after refactor"
       ],
       "startedAt": "2026-01-25T20:47:07.436262+00:00",
-      "completedAt": null,
-      "updatedAt": "2026-01-25T20:47:07.436370+00:00"
+      "completedAt": "2026-01-25T21:07:57.526689+00:00",
+      "updatedAt": "2026-01-25T21:07:57.526580+00:00"
     },
     {
       "id": "US-003",
       "title": "Refactor oversized shared components",
-      "status": "open",
+      "status": "in_progress",
       "dependsOn": [
         "US-001"
       ],
@@ -105,7 +105,10 @@
         "Example: extract nested UI blocks into `components/<Component>/SubComponent.tsx`",
         "Negative case: do not extract one-off UI fragments that would reduce cohesion",
         "No change to public component API unless required for split"
-      ]
+      ],
+      "startedAt": "2026-01-26T14:09:11.801117+00:00",
+      "completedAt": null,
+      "updatedAt": "2026-01-26T14:09:11.801233+00:00"
     },
     {
       "id": "US-004",
