@@ -176,3 +176,30 @@ Run summary: /Users/jjbrunton/Projects/Sauci/.ralph/runs/run-20260126-140911-553
   - Useful context
   - Root npm lacks a test script; lint currently fails from pre-existing issues.
 ---
+## [2026-01-26 14:26:40] - US-004: Refactor oversized hooks/services/utils
+Thread: 
+Run: 20260126-140911-55357 (iteration 2)
+Run log: /Users/jjbrunton/Projects/Sauci/.ralph/runs/run-20260126-140911-55357-iter-2.log
+Run summary: /Users/jjbrunton/Projects/Sauci/.ralph/runs/run-20260126-140911-55357-iter-2.md
+- Guardrails reviewed: yes
+- No-commit run: false
+- Commit: 5a9defb refactor(swipe): split useSwipeScreen helpers
+- Post-commit status: clean
+- Verification:
+  - Command: npm test -> FAIL (missing script: "test")
+  - Command: npm run lint -> FAIL (pre-existing lint errors in @sauci/mobile)
+  - Command: npm run typecheck -> PASS
+  - Command: npm run build -> PASS
+- Files changed:
+  - .agents/tasks/prd-mobile-refactor.json
+  - .ralph/activity.log
+  - .ralph/runs/run-20260126-140911-55357-iter-1.md
+  - apps/mobile/src/features/swipe/hooks/useSwipeScreen.ts
+  - apps/mobile/src/features/swipe/utils/useSwipeScreen-helpers.ts
+- What was implemented
+  - Split useSwipeScreen logic into helper utilities for filtering, countdowns, totals, pack info, and upload handling while preserving exports.
+- **Learnings for future iterations:**
+  - Patterns discovered
+  - Gotchas encountered
+  - Useful context
+---
