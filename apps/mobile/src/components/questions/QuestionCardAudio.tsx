@@ -13,6 +13,7 @@ import Animated, {
     Easing,
     FadeInDown,
     FadeIn,
+    type SharedValue,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, gradients, radius, shadows, typography, spacing, animations } from "../../theme";
@@ -574,8 +575,13 @@ function PreviewContent({
 
 // Audio level visualization component
 function AudioLevelBars({ isActive }: { isActive: boolean }) {
-    const bars = 5;
-    const barAnimations = Array.from({ length: bars }, () => useSharedValue(0.3));
+    const barAnimations = [
+        useSharedValue(0.3),
+        useSharedValue(0.3),
+        useSharedValue(0.3),
+        useSharedValue(0.3),
+        useSharedValue(0.3),
+    ];
 
     useEffect(() => {
         if (isActive) {
@@ -605,19 +611,22 @@ function AudioLevelBars({ isActive }: { isActive: boolean }) {
 
     return (
         <View style={styles.audioLevelContainer}>
-            {barAnimations.map((anim, index) => {
-                const barStyle = useAnimatedStyle(() => ({
-                    height: interpolate(anim.value, [0, 1], [8, 40]),
-                }));
-
-                return (
-                    <Animated.View
-                        key={index}
-                        style={[styles.audioLevelBar, barStyle]}
-                    />
-                );
-            })}
+            {barAnimations.map((anim, index) => (
+                <AudioLevelBar key={index} anim={anim} />
+            ))}
         </View>
+    );
+}
+
+function AudioLevelBar({ anim }: { anim: SharedValue<number> }) {
+    const barStyle = useAnimatedStyle(() => ({
+        height: interpolate(anim.value, [0, 1], [8, 40]),
+    }));
+
+    return (
+        <Animated.View
+            style={[styles.audioLevelBar, barStyle]}
+        />
     );
 }
 

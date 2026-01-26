@@ -32,22 +32,7 @@ const MessageContentComponent: React.FC<MessageContentProps> = ({
     onImagePress,
     onVideoFullScreen,
 }) => {
-    // Check if message was deleted for everyone
-    if (item.deleted_at) {
-        return (
-            <View style={styles.deletedContainer}>
-                <Ionicons
-                    name="ban-outline"
-                    size={14}
-                    color={colors.textTertiary}
-                />
-                <Text style={styles.deletedText}>
-                    {isMe ? 'You deleted this message' : 'This message was deleted'}
-                </Text>
-            </View>
-        );
-    }
-
+    const isDeleted = !!item.deleted_at;
     const isVideo = item.media_type === 'video';
     const isViewed = !!item.media_viewed_at;
     const isRecipientHidden = !isMe && !isViewed;
@@ -58,7 +43,7 @@ const MessageContentComponent: React.FC<MessageContentProps> = ({
     const [mediaError, setMediaError] = useState(false);
 
     useEffect(() => {
-        if (!item.media_path || isRecipientHidden) {
+        if (isDeleted || !item.media_path || isRecipientHidden) {
             setMediaUri(null);
             return;
         }
@@ -85,10 +70,26 @@ const MessageContentComponent: React.FC<MessageContentProps> = ({
         };
 
         fetchMediaUrl();
-    }, [item.media_path, isRecipientHidden]);
+    }, [item.media_path, isRecipientHidden, isDeleted]);
 
     // Handle expired videos
     const isExpired = !!item.media_expired;
+
+    // Check if message was deleted for everyone
+    if (isDeleted) {
+        return (
+            <View style={styles.deletedContainer}>
+                <Ionicons
+                    name="ban-outline"
+                    size={14}
+                    color={colors.textTertiary}
+                />
+                <Text style={styles.deletedText}>
+                    {isMe ? 'You deleted this message' : 'This message was deleted'}
+                </Text>
+            </View>
+        );
+    }
 
     if (isExpired && isVideo) {
         return (

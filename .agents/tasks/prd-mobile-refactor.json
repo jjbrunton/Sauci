@@ -113,7 +113,7 @@
     {
       "id": "US-004",
       "title": "Refactor oversized hooks/services/utils",
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "US-001"
       ],
@@ -125,13 +125,13 @@
         "All previous exports remain available or are re-exported from the original entry point"
       ],
       "startedAt": "2026-01-26T14:22:32.363863+00:00",
-      "completedAt": null,
-      "updatedAt": "2026-01-26T14:22:32.363979+00:00"
+      "completedAt": "2026-01-26T14:28:08.569075+00:00",
+      "updatedAt": "2026-01-26T14:28:08.568972+00:00"
     },
     {
       "id": "US-005",
       "title": "Validate refactor quality gates",
-      "status": "open",
+      "status": "in_progress",
       "dependsOn": [
         "US-002",
         "US-003",
@@ -142,7 +142,10 @@
         "Run `npm test`, `npm run lint`, and `npm run typecheck` successfully",
         "Example: all tests pass without modifications to test expectations",
         "Negative case: if a check fails, refactor is incomplete and must be fixed before completion"
-      ]
+      ],
+      "startedAt": "2026-01-26T14:28:10.644821+00:00",
+      "completedAt": null,
+      "updatedAt": "2026-01-26T14:28:10.644945+00:00"
     }
   ]
 }

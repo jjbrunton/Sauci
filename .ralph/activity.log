@@ -1,6 +1,7 @@
 # Activity Log
 
 ## Run Summary
+- 2026-01-26 14:28:08 | run=20260126-140911-55357 | iter=2 | mode=build | story=US-004 | duration=336s | status=success
 - 2026-01-26 14:22:30 | run=20260126-140911-55357 | iter=1 | mode=build | story=US-003 | duration=799s | status=success
 - 2026-01-25 21:09:07 | run=20260125-204012-65223 | iter=25 | mode=build | story=US-003 | duration=0s | status=error
 - 2026-01-25 21:09:04 | run=20260125-204012-65223 | iter=24 | mode=build | story=US-003 | duration=0s | status=error
@@ -101,3 +102,11 @@
 [2026-01-26 14:26:13] Ran tests and build for US-004
 [2026-01-26 14:26:51] Updated progress log for US-004
 [2026-01-26 14:27:24] Committed US-004 changes
+[2026-01-26 14:28:08] ITERATION 2 end (duration=336s)
+[2026-01-26 14:28:10] ITERATION 3 start (mode=build story=US-005)
+[2026-01-26 14:28:59] Start US-005 validation run (manual log; helper missing)
+[2026-01-26 14:29:29] Added root test script for US-005
+[2026-01-26 14:30:41] Fixed lint hook violations for US-005
+[2026-01-26 14:31:01] Ran npm test, lint, typecheck, build for US-005
+[2026-01-26 14:31:14] Added AGENTS.md operational notes
+[2026-01-26 14:32:00] Re-ran npm test after lint fixes
