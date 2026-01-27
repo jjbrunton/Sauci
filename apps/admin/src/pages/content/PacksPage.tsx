@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination';
-import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Flame, Heart, Tags, ChevronUp, ChevronDown, Clock, BellOff } from 'lucide-react';
+import { Plus, MessageCircle, Pencil, Trash2, Sparkles, Crown, Eye, EyeOff, Tags, ChevronUp, ChevronDown, Clock, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
@@ -513,6 +513,11 @@ export function PacksPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        {pack.is_explicit && (
+                                            <Badge variant="destructive">
+                                                NSFW
+                                            </Badge>
+                                        )}
                                         {pack.is_premium && (
                                             <Badge variant="default" className="bg-amber-500">
                                                 <Crown className="h-3 w-3 mr-1" />
@@ -540,17 +545,6 @@ export function PacksPage() {
                                             <Badge variant="secondary">
                                                 <EyeOff className="h-3 w-3 mr-1" />
                                                 Draft
-                                            </Badge>
-                                        )}
-                                        {pack.is_explicit ? (
-                                            <Badge variant="outline" className="border-red-500 text-red-400">
-                                                <Flame className="h-3 w-3 mr-1" />
-                                                Explicit
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline" className="border-pink-400 text-pink-300">
-                                                <Heart className="h-3 w-3 mr-1" />
-                                                Safe
                                             </Badge>
                                         )}
                                     </div>

@@ -1,7 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import type { GeneratorType, GeneratorContext, GenerationConfig } from './hooks/useAiGeneration';
 
 // =============================================================================
@@ -13,8 +12,6 @@ interface GenerationFormProps {
     context?: GeneratorContext;
     config: GenerationConfig;
     onCountChange: (count: number) => void;
-    onExplicitChange: (isExplicit: boolean) => void;
-    onCrudeLangChange: (crudeLang: boolean) => void;
     onInspirationChange: (inspiration: string) => void;
 }
 
@@ -27,8 +24,6 @@ export function GenerationForm({
     context,
     config,
     onCountChange,
-    onExplicitChange,
-    onCrudeLangChange,
     onInspirationChange,
 }: GenerationFormProps) {
     return (
@@ -48,29 +43,6 @@ export function GenerationForm({
                     />
                 </div>
             )}
-
-            {/* Explicit Toggle */}
-            <div className="flex items-center space-x-2">
-                <Switch
-                    id="explicit-mode"
-                    checked={config.isExplicit}
-                    onCheckedChange={onExplicitChange}
-                />
-                <Label htmlFor="explicit-mode">Explicit Content</Label>
-            </div>
-
-            {/* Crude Language Override Toggle */}
-            <div className="flex items-center space-x-2">
-                <Switch
-                    id="crude-lang"
-                    checked={config.crudeLang}
-                    onCheckedChange={onCrudeLangChange}
-                />
-                <Label htmlFor="crude-lang">Crude Language Override</Label>
-                <span className="text-xs text-muted-foreground">
-                    (use "fuck", "suck cock" etc. instead of tasteful phrasing)
-                </span>
-            </div>
 
             {/* Inspiration/Suggestions Textarea */}
             <div className="space-y-2">

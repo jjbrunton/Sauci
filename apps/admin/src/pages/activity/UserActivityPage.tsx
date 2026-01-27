@@ -440,7 +440,7 @@ export function UserActivityPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
@@ -457,7 +457,7 @@ export function UserActivityPage() {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ActivityTab)}>
-                <TabsList className="grid w-full grid-cols-4 max-w-[600px]">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 max-w-[600px]">
                     <TabsTrigger value="responses" className="gap-2">
                         <ThumbsUp className="h-4 w-4" />
                         Responses

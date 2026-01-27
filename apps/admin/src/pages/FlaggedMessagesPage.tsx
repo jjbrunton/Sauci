@@ -435,7 +435,7 @@ export function FlaggedMessagesPage() {
                                 <TableRow>
                                     <TableHead>Time</TableHead>
                                     <TableHead>Reason</TableHead>
-                                    <TableHead>Type</TableHead>
+                                    <TableHead className="hidden md:table-cell">Type</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -460,48 +460,57 @@ export function FlaggedMessagesPage() {
                                                 <Badge variant="destructive" className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-0">
                                                     {message.flag_reason || 'Unknown'}
                                                 </Badge>
+                                                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                                    {message.media_path ? (
+                                                        <Badge variant="outline">{message.media_type || 'Media'}</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">Text</Badge>
+                                                    )}
+                                                </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="hidden md:table-cell">
                                                 {message.media_path ? (
                                                     <Badge variant="outline">{message.media_type || 'Media'}</Badge>
                                                 ) : (
                                                     <Badge variant="secondary">Text</Badge>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleViewAiMessage(message)}
-                                                >
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    Review
-                                                </Button>
-                                                {message.media_path && message.media_type !== 'video' && (
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleDescribeInline(message)}
-                                                        disabled={describingInline === message.id}
+                                                        onClick={() => handleViewAiMessage(message)}
                                                     >
-                                                        {describingInline === message.id ? (
-                                                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                                        ) : (
-                                                            <Sparkles className="h-4 w-4 mr-2" />
-                                                        )}
-                                                        Describe
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        Review
                                                     </Button>
-                                                )}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                    onClick={() => handleMarkSafe(message.id)}
-                                                    disabled={processing === message.id}
-                                                >
-                                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                                    Mark Safe
-                                                </Button>
+                                                    {message.media_path && message.media_type !== 'video' && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDescribeInline(message)}
+                                                            disabled={describingInline === message.id}
+                                                        >
+                                                            {describingInline === message.id ? (
+                                                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                                            ) : (
+                                                                <Sparkles className="h-4 w-4 mr-2" />
+                                                            )}
+                                                            Describe
+                                                        </Button>
+                                                    )}
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        onClick={() => handleMarkSafe(message.id)}
+                                                        disabled={processing === message.id}
+                                                    >
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                        Mark Safe
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                         {inlineDescriptions[message.id] && (
@@ -550,9 +559,9 @@ export function FlaggedMessagesPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Time</TableHead>
-                                    <TableHead>Reporter</TableHead>
+                                    <TableHead className="hidden md:table-cell">Reporter</TableHead>
                                     <TableHead>Reason</TableHead>
-                                    <TableHead>Type</TableHead>
+                                    <TableHead className="hidden md:table-cell">Type</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -572,50 +581,62 @@ export function FlaggedMessagesPage() {
                                             <TableCell className="font-mono text-sm">
                                                 {format(new Date(report.created_at), 'MMM d, HH:mm')}
                                             </TableCell>
-                                            <TableCell className="text-sm">
+                                            <TableCell className="hidden md:table-cell text-sm">
                                                 {report.reporter_profile?.name || report.reporter_profile?.email || 'Unknown'}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-200">
                                                     {REASON_LABELS[report.reason] || report.reason}
                                                 </Badge>
+                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                                    <span className="truncate max-w-[220px]">
+                                                        {report.reporter_profile?.name || report.reporter_profile?.email || 'Unknown'}
+                                                    </span>
+                                                    {report.message?.media_path ? (
+                                                        <Badge variant="outline">{report.message.media_type || 'Media'}</Badge>
+                                                    ) : (
+                                                        <Badge variant="secondary">Text</Badge>
+                                                    )}
+                                                </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="hidden md:table-cell">
                                                 {report.message?.media_path ? (
                                                     <Badge variant="outline">{report.message.media_type || 'Media'}</Badge>
                                                 ) : (
                                                     <Badge variant="secondary">Text</Badge>
                                                 )}
                                             </TableCell>
-                                            <TableCell className="text-right space-x-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleViewReport(report)}
-                                                >
-                                                    <Eye className="h-4 w-4 mr-2" />
-                                                    Review
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                                    onClick={() => handleDismissReport(report.id)}
-                                                    disabled={processing === report.id}
-                                                >
-                                                    <XCircle className="h-4 w-4 mr-2" />
-                                                    Dismiss
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                                                    onClick={() => handleReviewReport(report.id)}
-                                                    disabled={processing === report.id}
-                                                >
-                                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                                    Mark Reviewed
-                                                </Button>
+                                            <TableCell className="text-right">
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleViewReport(report)}
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        Review
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                                        onClick={() => handleDismissReport(report.id)}
+                                                        disabled={processing === report.id}
+                                                    >
+                                                        <XCircle className="h-4 w-4 mr-2" />
+                                                        Dismiss
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                        onClick={() => handleReviewReport(report.id)}
+                                                        disabled={processing === report.id}
+                                                    >
+                                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                                        Mark Reviewed
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))

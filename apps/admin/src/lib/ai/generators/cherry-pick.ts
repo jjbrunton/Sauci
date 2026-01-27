@@ -14,7 +14,6 @@ import type {
     PooledQuestion,
     CherryPickEvaluation,
     CherryPickResult,
-    CouncilConfig,
 } from '../types';
 
 /**
@@ -34,7 +33,6 @@ export async function evaluateQuestionPool(
         index: i,
         text: q.text,
         partner_text: q.partner_text || null,
-        intensity: q.intensity,
         generatorIndex: q.sourceGeneratorIndex,
     }));
 
@@ -69,11 +67,10 @@ ${REVIEW_GUIDELINES}
 
 <scoring_weights>
 Your scores will be weighted as follows for final selection:
-- Guideline Compliance: 25%
-- Creativity: 20%
-- Clarity: 20%
+- Guideline Compliance: 30%
+- Creativity: 25%
+- Clarity: 25%
 - Uniqueness: 20%
-- Intensity Accuracy: 15%
 
 Calibrate your scores knowing these weights. A low compliance score has the most impact.
 </scoring_weights>
@@ -86,8 +83,7 @@ Two questions are duplicates if they:
 
 For duplicates, mark the WORSE version as duplicate and keep the version with:
 1. Better phrasing/creativity
-2. More appropriate intensity grading
-3. Better partner_text (if applicable)
+2. Better partner_text (if applicable)
 </duplicate_detection>
 
 <verdict_rules>
@@ -110,7 +106,6 @@ ${JSON.stringify(questionsForEval, null, 2)}
         "guidelineCompliance": 1-10,
         "creativity": 1-10,
         "clarity": 1-10,
-        "intensityAccuracy": 1-10,
         "uniqueness": 1-10
       },
       "isDuplicate": boolean,
@@ -151,16 +146,12 @@ Evaluate ALL ${pooledQuestions.length} questions.
 }
 
 /**
- * Select top N questions from evaluations, optionally balancing intensity levels
+ * Select top N questions from evaluations
  */
 export function selectTopQuestions(
     pooledQuestions: PooledQuestion[],
     evaluations: CherryPickEvaluation[],
-    requestedCount: number,
-    options: {
-        ensureIntensityDistribution: boolean;
-        requestedIntensity?: number;
-    }
+    requestedCount: number
 ): CherryPickResult {
     // Step 1: Filter out duplicates (keep only the original, not the duplicate)
     const duplicateIndices = new Set<number>();
@@ -178,74 +169,25 @@ export function selectTopQuestions(
             question: pooledQuestions[e.questionIndex],
             // Weighted overall score
             weightedScore: (
-                (e.scores.guidelineCompliance * 0.25) +
-                (e.scores.creativity * 0.20) +
-                (e.scores.clarity * 0.20) +
-                (e.scores.intensityAccuracy * 0.15) +
+                (e.scores.guidelineCompliance * 0.30) +
+                (e.scores.creativity * 0.25) +
+                (e.scores.clarity * 0.25) +
                 (e.scores.uniqueness * 0.20)
             ) * 10,
         }))
         .sort((a, b) => b.weightedScore - a.weightedScore);
 
-    let selected: typeof scoredQuestions = [];
-
-    // Step 3: Select questions
-    if (options.requestedIntensity) {
-        // If specific intensity requested, just take top N of that intensity
-        const matchingIntensity = scoredQuestions.filter(
-            sq => sq.question.intensity === options.requestedIntensity
-        );
-        selected = matchingIntensity.slice(0, requestedCount);
-    } else if (options.ensureIntensityDistribution) {
-        // Balance across intensity levels
-        const perIntensity = Math.ceil(requestedCount / 5);
-        const byIntensity: Record<number, typeof scoredQuestions> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-
-        for (const sq of scoredQuestions) {
-            const intensity = sq.question.intensity;
-            if (intensity >= 1 && intensity <= 5) {
-                byIntensity[intensity].push(sq);
-            }
-        }
-
-        // Take top N from each intensity level
-        for (let intensity = 1; intensity <= 5; intensity++) {
-            const toTake = byIntensity[intensity].slice(0, perIntensity);
-            selected.push(...toTake);
-        }
-
-        // If we still need more, fill from remaining top-scored questions
-        if (selected.length < requestedCount) {
-            const selectedIndices = new Set(selected.map(s => s.evaluation.questionIndex));
-            const remaining = scoredQuestions.filter(
-                sq => !selectedIndices.has(sq.evaluation.questionIndex)
-            );
-            selected.push(...remaining.slice(0, requestedCount - selected.length));
-        }
-
-        // Sort final selection by score
-        selected.sort((a, b) => b.weightedScore - a.weightedScore);
-        selected = selected.slice(0, requestedCount);
-    } else {
-        // Simple top N by score
-        selected = scoredQuestions.slice(0, requestedCount);
-    }
+    // Step 3: Select top N by score
+    const selected = scoredQuestions.slice(0, requestedCount);
 
     // Step 4: Build result
     const selectedQuestions = selected.map(s => s.question);
-
-    // Calculate intensity distribution
-    const intensityDistribution: Record<number, number> = {};
-    for (const q of selectedQuestions) {
-        intensityDistribution[q.intensity] = (intensityDistribution[q.intensity] || 0) + 1;
-    }
 
     return {
         selectedQuestions,
         evaluations,
         poolSize: pooledQuestions.length,
         duplicatesRemoved: duplicateIndices.size,
-        intensityDistribution,
     };
 }
 
@@ -255,8 +197,7 @@ export function selectTopQuestions(
 export async function performCherryPickSelection(
     candidates: GenerationCandidate[],
     packContext: { name: string; description?: string | null; isExplicit: boolean; tone: ToneLevel },
-    requestedCount: number,
-    config: CouncilConfig
+    requestedCount: number
 ): Promise<{
     questions: GeneratedQuestion[];
     reviews: QuestionReview[];
@@ -280,10 +221,7 @@ export async function performCherryPickSelection(
     const evaluations = await evaluateQuestionPool(pooledQuestions, packContext, requestedCount);
 
     // Step 3: Select top questions
-    const cherryPickResult = selectTopQuestions(pooledQuestions, evaluations, requestedCount, {
-        ensureIntensityDistribution: config.cherryPickEnsureIntensityDistribution,
-        requestedIntensity: undefined,
-    });
+    const cherryPickResult = selectTopQuestions(pooledQuestions, evaluations, requestedCount);
 
     // Step 4: Convert to standard review format for UI compatibility
     const reviews: QuestionReview[] = cherryPickResult.selectedQuestions.map((q, i) => {
@@ -302,7 +240,6 @@ export async function performCherryPickSelection(
                     guidelineCompliance: 7,
                     creativity: 7,
                     clarity: 7,
-                    intensityAccuracy: 7,
                     anatomicalConsistency: 10,
                     partnerTextQuality: 10,
                     coupleTargeting: 10,
@@ -324,7 +261,6 @@ export async function performCherryPickSelection(
                 guidelineCompliance: evaluation.scores.guidelineCompliance,
                 creativity: evaluation.scores.creativity,
                 clarity: evaluation.scores.clarity,
-                intensityAccuracy: evaluation.scores.intensityAccuracy,
                 // Cherry-pick doesn't evaluate these, default to passing
                 anatomicalConsistency: 10,
                 partnerTextQuality: 10,
@@ -346,8 +282,7 @@ export async function performCherryPickSelection(
             totalScore += review.scores.guidelineCompliance || 0;
             totalScore += review.scores.creativity || 0;
             totalScore += review.scores.clarity || 0;
-            totalScore += review.scores.intensityAccuracy || 0;
-            scoreCount += 4;
+            scoreCount += 3;
         }
     }
     const overallQuality = scoreCount > 0 ? Math.round((totalScore / scoreCount) * 10) / 10 : 0;

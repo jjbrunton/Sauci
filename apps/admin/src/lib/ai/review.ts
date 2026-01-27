@@ -36,7 +36,6 @@ export async function reviewGeneratedQuestions(
         index: i,
         text: q.text,
         partner_text: q.partner_text || null,
-        intensity: q.intensity,
         location_type: q.location_type,
         effort_level: q.effort_level,
         // Include targeting for review (may not always be present)
@@ -64,7 +63,7 @@ ${REVIEW_GUIDELINES}
 <verdict_rules>
 - PASS: All scores >= 7, no major issues
 - FLAG: Any score 5-7, or minor issues worth noting (admin should review but can use)
-- REJECT: Any score < 5, or major violations (mixed anatomy, wrong intensity, severe guideline violation)
+- REJECT: Any score < 5, or major violations (mixed anatomy, severe guideline violation)
 </verdict_rules>
 
 <questions_to_review>
@@ -83,13 +82,11 @@ ${JSON.stringify(questionsForReview, null, 2)}
         "guidelineCompliance": 1-10,      // Criterion 1
         "creativity": 1-10,               // Criterion 2
         "clarity": 1-10,                  // Criterion 3
-        "intensityAccuracy": 1-10,        // Criterion 4
-        "anatomicalConsistency": 1-10,    // Criterion 5
-        "partnerTextQuality": 1-10,       // Criterion 6 (10 if no partner_text needed)
-        "coupleTargeting": 1-10,          // Criterion 7
-        "initiatorTargeting": 1-10        // Criterion 8 (10 if symmetric)
+        "anatomicalConsistency": 1-10,    // Criterion 4
+        "partnerTextQuality": 1-10,       // Criterion 5 (10 if no partner_text needed)
+        "coupleTargeting": 1-10,          // Criterion 6
+        "initiatorTargeting": 1-10        // Criterion 7 (10 if symmetric)
       },
-      "intensitySuggestion": number|null, // Suggested intensity (1-5) if current seems wrong, null if correct
       "targetingSuggestions": {           // Only include if targeting needs changes
         "suggestedCoupleTargets": string[]|null,  // ["male+male", "female+male", "female+female"] or subset
         "suggestedInitiator": string[]|null,      // ["male", "female"] or null for any
@@ -99,7 +96,7 @@ ${JSON.stringify(questionsForReview, null, 2)}
   ]
 }
 
-Review ALL questions against ALL 8 criteria. Be thorough but fair - only flag/reject for genuine issues.
+Review ALL questions against ALL 7 criteria. Be thorough but fair - only flag/reject for genuine issues.
 </output_format>`;
 
     const response = await openai.chat.completions.create({
@@ -132,18 +129,17 @@ Review ALL questions against ALL 8 criteria. Be thorough but fair - only flag/re
     const flagged = reviews.filter(r => r.verdict === 'flag').length;
     const rejected = reviews.filter(r => r.verdict === 'reject').length;
 
-    // Calculate overall quality as weighted average of all 8 scores
-    // Weights: guidelineCompliance 20%, creativity 15%, clarity 15%, intensityAccuracy 15%,
-    //          anatomicalConsistency 15%, partnerTextQuality 10%, coupleTargeting 5%, initiatorTargeting 5%
+    // Calculate overall quality as weighted average of all 7 scores
+    // Weights: guidelineCompliance 25%, creativity 18%, clarity 18%,
+    //          anatomicalConsistency 17%, partnerTextQuality 12%, coupleTargeting 5%, initiatorTargeting 5%
     let totalWeightedScore = 0;
     let totalWeight = 0;
     const weights = {
-        guidelineCompliance: 0.20,
-        creativity: 0.15,
-        clarity: 0.15,
-        intensityAccuracy: 0.15,
-        anatomicalConsistency: 0.15,
-        partnerTextQuality: 0.10,
+        guidelineCompliance: 0.25,
+        creativity: 0.18,
+        clarity: 0.18,
+        anatomicalConsistency: 0.17,
+        partnerTextQuality: 0.12,
         coupleTargeting: 0.05,
         initiatorTargeting: 0.05,
     };
@@ -200,7 +196,6 @@ export async function selectBestGeneration(
             index: qi,
             text: q.text,
             partner_text: q.partner_text || null,
-            intensity: q.intensity,
             allowed_couple_genders: (q as { allowed_couple_genders?: string[] | null }).allowed_couple_genders || null,
             target_user_genders: (q as { target_user_genders?: string[] | null }).target_user_genders || null,
         })),
@@ -235,9 +230,8 @@ Ranked by importance (approximate weights):
 1. Overall quality and creativity of questions (30%)
 2. Variety and uniqueness within the set (20%)
 3. Adherence to pack theme and tone (20%)
-4. Proper intensity grading (15%)
-5. Correct use of "your partner" language (10%)
-6. Quality of partner_text for asymmetric questions (5%)
+4. Correct use of "your partner" language (15%)
+5. Quality of partner_text for asymmetric questions (10%)
 </selection_criteria>
 
 <output_format>
@@ -254,13 +248,11 @@ Ranked by importance (approximate weights):
         "guidelineCompliance": 1-10,
         "creativity": 1-10,
         "clarity": 1-10,
-        "intensityAccuracy": 1-10,
         "anatomicalConsistency": 1-10,
         "partnerTextQuality": 1-10,
         "coupleTargeting": 1-10,
         "initiatorTargeting": 1-10
       },
-      "intensitySuggestion": number|null,
       "targetingSuggestions": {
         "suggestedCoupleTargets": string[]|null,
         "suggestedInitiator": string[]|null,
@@ -270,7 +262,7 @@ Ranked by importance (approximate weights):
   ]
 }
 
-Select the best set and review ALL questions in that set against ALL 8 criteria.
+Select the best set and review ALL questions in that set against ALL 7 criteria.
 </output_format>`;
 
     const response = await openai.chat.completions.create({
@@ -300,7 +292,7 @@ Select the best set and review ALL questions in that set against ALL 8 criteria.
     const reviews: QuestionReview[] = parsed.reviews || [];
     const reasoning = parsed.reasoning || 'No reasoning provided';
 
-    // Calculate summary with weighted average of all 8 scores
+    // Calculate summary with weighted average of all 7 scores
     const passed = reviews.filter(r => r.verdict === 'pass').length;
     const flagged = reviews.filter(r => r.verdict === 'flag').length;
     const rejected = reviews.filter(r => r.verdict === 'reject').length;
@@ -308,12 +300,11 @@ Select the best set and review ALL questions in that set against ALL 8 criteria.
     let totalWeightedScore = 0;
     let totalWeight = 0;
     const weights = {
-        guidelineCompliance: 0.20,
-        creativity: 0.15,
-        clarity: 0.15,
-        intensityAccuracy: 0.15,
-        anatomicalConsistency: 0.15,
-        partnerTextQuality: 0.10,
+        guidelineCompliance: 0.25,
+        creativity: 0.18,
+        clarity: 0.18,
+        anatomicalConsistency: 0.17,
+        partnerTextQuality: 0.12,
         coupleTargeting: 0.05,
         initiatorTargeting: 0.05,
     };

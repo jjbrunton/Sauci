@@ -226,13 +226,13 @@ export function UsersPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>User</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Couple</TableHead>
-                            <TableHead>Storage</TableHead>
-                            <TableHead>Joined</TableHead>
-                            <TableHead>Last Active</TableHead>
-                            <TableHead className="w-12"></TableHead>
+                            <TableHead className="hidden md:table-cell">Email</TableHead>
+                            <TableHead className="hidden md:table-cell">Status</TableHead>
+                            <TableHead className="hidden lg:table-cell">Couple</TableHead>
+                            <TableHead className="hidden lg:table-cell">Storage</TableHead>
+                            <TableHead className="hidden xl:table-cell">Joined</TableHead>
+                            <TableHead className="hidden xl:table-cell">Last Active</TableHead>
+                            <TableHead className="hidden md:table-cell w-12"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -243,102 +243,137 @@ export function UsersPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            paginatedProfiles.map((profile) => (
-                                <TableRow key={profile.id}>
-                                    <TableCell>
-                                        <Link to={`/users/${profile.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={profile.avatar_url || undefined} />
-                                                <AvatarFallback>
-                                                    {profile.name?.charAt(0).toUpperCase() || 'U'}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium hover:text-primary transition-colors">
-                                                {profile.name || 'Unnamed User'}
-                                            </span>
-                                        </Link>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        <div className="flex items-center gap-1.5">
-                                            {profile.email ? (
-                                                <>
-                                                    {profile.email}
-                                                    {!profile.email_confirmed_at && (
-                                                        <span title="Email not verified">
-                                                            <MailWarning className="h-3.5 w-3.5 text-amber-500" />
-                                                        </span>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">
-                                                    Guest
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        {profile.is_premium ? (
-                                            <Badge className="bg-amber-500">
-                                                <Crown className="h-3 w-3 mr-1" />
-                                                Premium
-                                            </Badge>
-                                        ) : profile.partner_is_premium ? (
-                                            <Badge className="bg-amber-500/70">
-                                                <Crown className="h-3 w-3 mr-1" />
-                                                Partner
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">
-                                                Free
-                                            </Badge>
+                            paginatedProfiles.map((profile) => {
+                                const statusBadge = profile.is_premium ? (
+                                    <Badge className="bg-amber-500">
+                                        <Crown className="h-3 w-3 mr-1" />
+                                        Premium
+                                    </Badge>
+                                ) : profile.partner_is_premium ? (
+                                    <Badge className="bg-amber-500/70">
+                                        <Crown className="h-3 w-3 mr-1" />
+                                        Partner
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">
+                                        Free
+                                    </Badge>
+                                );
+
+                                const coupleBadge = profile.couple_id ? (
+                                    profile.partner_count && profile.partner_count >= 2 ? (
+                                        <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
+                                            <Users className="h-3 w-3 mr-1" />
+                                            Paired
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-200">
+                                            <Hourglass className="h-3 w-3 mr-1" />
+                                            Pairing
+                                        </Badge>
+                                    )
+                                ) : (
+                                    <span className="text-muted-foreground text-xs">Not paired</span>
+                                );
+
+                                const emailContent = profile.email ? (
+                                    <span className="flex items-center gap-1.5 truncate max-w-[220px]">
+                                        <span className="truncate">{profile.email}</span>
+                                        {!profile.email_confirmed_at && (
+                                            <MailWarning className="h-3.5 w-3.5 text-amber-500" aria-label="Email not verified" />
                                         )}
-                                    </TableCell>
-                                    <TableCell>
-                                        {profile.couple_id ? (
-                                            profile.partner_count && profile.partner_count >= 2 ? (
-                                                <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200">
-                                                    <Users className="h-3 w-3 mr-1" />
-                                                    Paired
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 hover:bg-amber-200">
-                                                    <Hourglass className="h-3 w-3 mr-1" />
-                                                    Pairing
-                                                </Badge>
-                                            )
-                                        ) : (
-                                            <span className="text-muted-foreground text-sm">—</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        {profile.storage_bytes && profile.storage_bytes > 0 ? (
-                                            <div className="flex items-center gap-1 text-sm">
-                                                <HardDrive className="h-3 w-3 text-muted-foreground" />
-                                                {formatBytes(profile.storage_bytes)}
+                                    </span>
+                                ) : (
+                                    <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-200">
+                                        Guest
+                                    </Badge>
+                                );
+
+                                const storageLabel = profile.storage_bytes && profile.storage_bytes > 0
+                                    ? formatBytes(profile.storage_bytes)
+                                    : '—';
+
+                                const joinedLabel = profile.created_at
+                                    ? format(new Date(profile.created_at), 'MMM d, yyyy')
+                                    : '—';
+
+                                const lastActiveLabel = profile.last_sign_in_at
+                                    ? format(new Date(profile.last_sign_in_at), 'MMM d, yyyy h:mm a')
+                                    : 'Never';
+
+                                return (
+                                    <TableRow key={profile.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Link to={`/users/${profile.id}`} className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
+                                                    <Avatar className="h-9 w-9">
+                                                        <AvatarImage src={profile.avatar_url || undefined} />
+                                                        <AvatarFallback>
+                                                            {profile.name?.charAt(0).toUpperCase() || 'U'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="font-medium truncate hover:text-primary transition-colors">
+                                                        {profile.name || 'Unnamed User'}
+                                                    </span>
+                                                </Link>
+                                                <div className="ml-auto md:hidden">
+                                                    <Link to={`/users/${profile.id}`}>
+                                                        <Button variant="ghost" size="icon">
+                                                            <ChevronRight className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <span className="text-muted-foreground text-sm">—</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {profile.created_at
-                                            ? format(new Date(profile.created_at), 'MMM d, yyyy')
-                                            : '—'}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {profile.last_sign_in_at
-                                            ? format(new Date(profile.last_sign_in_at), 'MMM d, yyyy h:mm a')
-                                            : 'Never'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Link to={`/users/${profile.id}`}>
-                                            <Button variant="ghost" size="icon">
-                                                <ChevronRight className="h-4 w-4" />
-                                            </Button>
-                                        </Link>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                                {emailContent}
+                                                {statusBadge}
+                                                {coupleBadge}
+                                                {storageLabel !== '—' && (
+                                                    <span className="flex items-center gap-1">
+                                                        <HardDrive className="h-3 w-3 text-muted-foreground" />
+                                                        {storageLabel}
+                                                    </span>
+                                                )}
+                                                <span className="text-muted-foreground">Active {lastActiveLabel}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell text-muted-foreground">
+                                            <div className="flex items-center gap-1.5">
+                                                {emailContent}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {statusBadge}
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell">
+                                            {profile.couple_id ? coupleBadge : <span className="text-muted-foreground text-sm">—</span>}
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell">
+                                            {profile.storage_bytes && profile.storage_bytes > 0 ? (
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <HardDrive className="h-3 w-3 text-muted-foreground" />
+                                                    {storageLabel}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground text-sm">—</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
+                                            {joinedLabel}
+                                        </TableCell>
+                                        <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
+                                            {lastActiveLabel}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <Link to={`/users/${profile.id}`}>
+                                                <Button variant="ghost" size="icon">
+                                                    <ChevronRight className="h-4 w-4" />
+                                                </Button>
+                                            </Link>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

@@ -29,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Zap, Pencil, Trash2, Loader2, Crown, Eye, EyeOff, Flame, Heart, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Zap, Pencil, Trash2, Loader2, Crown, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 // =============================================================================
@@ -52,9 +52,6 @@ interface DarePack {
     is_explicit: boolean;
     sort_order: number;
     category_id: string | null;
-    min_intensity: number | null;
-    max_intensity: number | null;
-    avg_intensity: number | null;
     created_at: string | null;
     dare_count?: number;
 }
@@ -296,15 +293,6 @@ export function DarePacksPage() {
         }
     };
 
-    const getIntensityColor = (avg: number | null) => {
-        if (avg === null) return 'bg-muted';
-        if (avg <= 1.5) return 'bg-green-500';
-        if (avg <= 2.5) return 'bg-lime-500';
-        if (avg <= 3.5) return 'bg-yellow-500';
-        if (avg <= 4.5) return 'bg-orange-500';
-        return 'bg-red-500';
-    };
-
     // =============================================================================
     // Render
     // =============================================================================
@@ -446,9 +434,9 @@ export function DarePacksPage() {
 
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
-                                    <Label>Explicit</Label>
+                                    <Label>NSFW</Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Contains adult/explicit content
+                                        Contains adult or mature content
                                     </p>
                                 </div>
                                 <Switch
@@ -456,6 +444,7 @@ export function DarePacksPage() {
                                     onCheckedChange={(checked) => form.setField('is_explicit', checked)}
                                 />
                             </div>
+
                         </div>
 
                         <DialogFooter>
@@ -522,6 +511,11 @@ export function DarePacksPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        {pack.is_explicit && (
+                                            <Badge variant="destructive">
+                                                NSFW
+                                            </Badge>
+                                        )}
                                         {pack.is_premium && (
                                             <Badge variant="default" className="bg-amber-500">
                                                 <Crown className="h-3 w-3 mr-1" />
@@ -537,17 +531,6 @@ export function DarePacksPage() {
                                             <Badge variant="secondary">
                                                 <EyeOff className="h-3 w-3 mr-1" />
                                                 Draft
-                                            </Badge>
-                                        )}
-                                        {pack.is_explicit ? (
-                                            <Badge variant="outline" className="border-red-500 text-red-400">
-                                                <Flame className="h-3 w-3 mr-1" />
-                                                Explicit
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline" className="border-pink-400 text-pink-300">
-                                                <Heart className="h-3 w-3 mr-1" />
-                                                Safe
                                             </Badge>
                                         )}
                                     </div>
@@ -574,17 +557,6 @@ export function DarePacksPage() {
                                 <CardDescription className="line-clamp-2">
                                     {pack.description || 'No description'}
                                 </CardDescription>
-                                {/* Intensity indicator */}
-                                {pack.avg_intensity !== null && (
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Badge className={`${getIntensityColor(pack.avg_intensity)} text-white`}>
-                                            Avg: {pack.avg_intensity?.toFixed(1)}
-                                        </Badge>
-                                        <span className="text-xs text-muted-foreground">
-                                            Range: {pack.min_intensity ?? '?'} - {pack.max_intensity ?? '?'}
-                                        </span>
-                                    </div>
-                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center justify-between">

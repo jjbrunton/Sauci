@@ -1,6 +1,6 @@
 // =============================================================================
 // AI Configuration Constants
-// Council config, tone levels, intensity levels, and prompt guides
+// Council config, tone levels, and prompt guides
 // =============================================================================
 
 import { getCachedAiConfig, preloadAiConfig, type AiConfig } from '@/hooks/useAiConfig';
@@ -33,7 +33,6 @@ export function getCouncilConfig(): CouncilConfig {
             reviewerModel: remoteConfig.council_reviewer_model || 'google/gemini-pro-1.5',
             reviewerTemperature: remoteConfig.council_reviewer_temperature ?? 0.3,
             selectionMode: remoteConfig.council_selection_mode || 'whole_set',
-            cherryPickEnsureIntensityDistribution: remoteConfig.cherry_pick_ensure_intensity_distribution ?? true,
         };
     }
 
@@ -44,7 +43,6 @@ export function getCouncilConfig(): CouncilConfig {
         reviewerModel: import.meta.env.VITE_COUNCIL_REVIEWER_MODEL || 'google/gemini-pro-1.5',
         reviewerTemperature: 0.3,
         selectionMode: 'whole_set',
-        cherryPickEnsureIntensityDistribution: true,
     };
 }
 
@@ -68,67 +66,6 @@ export const TONE_LEVELS = [
     { level: 4, label: 'Steamy', description: 'Explicit sexual activities & moderate adventure' },
     { level: 5, label: 'Intense', description: 'Advanced/BDSM/Extreme exploration' },
 ] as const;
-
-// =============================================================================
-// INTENSITY LEVELS
-// For UI display - consistent with AI grading
-// =============================================================================
-
-export const INTENSITY_LEVELS = [
-    { level: 1, label: 'Gentle', description: 'Pure emotional connection & non-sexual bonding', color: 'bg-green-500' },
-    { level: 2, label: 'Warm', description: 'Romantic atmosphere & affectionate touch', color: 'bg-lime-500' },
-    { level: 3, label: 'Playful', description: 'Light sexual exploration & sensual discovery', color: 'bg-yellow-500' },
-    { level: 4, label: 'Steamy', description: 'Explicit sexual activities & moderate adventure', color: 'bg-orange-500' },
-    { level: 5, label: 'Intense', description: 'Advanced/BDSM/Extreme exploration', color: 'bg-red-500' },
-] as const;
-
-// =============================================================================
-// INTENSITY GRADING GUIDE
-// Full version for detailed AI prompts
-// =============================================================================
-
-export const INTENSITY_GUIDE = `
-INTENSITY GRADING GUIDE - Use this to assign intensity levels consistently:
-
-Level 1 - GENTLE (Pure emotional connection & non-sexual bonding):
-- Focus: Emotional safety, friendship-based activities, quality time
-- Examples: Cook together, take a walk holding hands, give non-sexual foot massages, watch a movie cuddling
-- Emotional bonding without sexual undertones
-
-Level 2 - WARM (Romantic atmosphere & affectionate touch):
-- Focus: Creating romantic moments, sensual but non-sexual touch, building anticipation
-- Examples: Slow dance in the living room, candlelit bath together (non-sexual), extended kissing sessions, sensual massage with oils
-- Romantic intimacy building up to arousal
-
-Level 3 - PLAYFUL (Light sexual exploration & sensual discovery):
-- Focus: Sexual touch without penetration, playful experimentation, building arousal
-- Examples: Mutual masturbation, oral sex, light roleplay (doctor/patient), using basic toys together
-- Fun and exploratory sexual contact
-
-Level 4 - STEAMY (Explicit sexual activities & moderate adventure):
-- Focus: Full sexual intercourse with adventurous elements, moderate BDSM/kink
-- Examples: Sex in different locations/positions, light bondage, anal play with toys, recording consensual intimate moments
-- Passionate and adventurous sexual connection
-
-Level 5 - INTENSE (Advanced/BDSM/Extreme exploration):
-- Focus: Edge play, power dynamics, intense physical experiences
-- Examples: Heavy impact play, advanced bondage, consensual non-consent scenes, multi-partner activities
-- Very intense, taboo kinks, and extreme exploration
-`;
-
-// =============================================================================
-// INTENSITY GUIDE (SHORT)
-// Condensed version for prompts to save tokens
-// =============================================================================
-
-export const INTENSITY_GUIDE_SHORT = `
-INTENSITY LEVELS:
-1 (Gentle): Pure emotional connection, non-sexual bonding (cooking, cuddling, foot massages)
-2 (Warm): Romantic atmosphere, affectionate touch (slow dance, sensual massage, kissing)
-3 (Playful): Light sexual exploration, sensual discovery (oral, mutual masturbation, light roleplay)
-4 (Steamy): Explicit sexual activities, moderate adventure (sex positions, light bondage, anal play)
-5 (Intense): Advanced/BDSM/Extreme exploration (impact play, power dynamics, taboo kinks)
-`;
 
 // =============================================================================
 // REVIEW GUIDELINES
@@ -155,32 +92,25 @@ REVIEW CRITERIA - Score each 1-10:
    - Partner text (if present) clearly describes receiver's experience
    - No confusing or ambiguous phrasing
 
-4. INTENSITY ACCURACY:
-   Level 1 (Gentle): Pure emotional connection, non-sexual bonding
-   Level 2 (Warm): Romantic atmosphere, affectionate touch
-   Level 3 (Playful): Light sexual exploration, sensual discovery (oral, toys)
-   Level 4 (Steamy): Explicit sexual activities, moderate adventure (intercourse, light bondage)
-   Level 5 (Intense): Advanced/BDSM/Extreme exploration (impact play, power dynamics)
-
-5. ANATOMICAL CONSISTENCY:
+4. ANATOMICAL CONSISTENCY:
    - No mixed male/female anatomy in alternatives
    - BAD: "Finger or give your partner a handjob"
    - GOOD: Pick one activity
 
-6. PARTNER TEXT QUALITY (if applicable):
+5. PARTNER TEXT QUALITY (if applicable):
    - Engaging and enticing, not clinical
    - BAD: "Receive oral from your partner"
    - GOOD: "Let your partner pleasure you with their mouth"
    - When initiator causes a response, frame as allowing: "Let your partner make you moan"
 
-7. COUPLE TARGETING (flag if incorrect):
+6. COUPLE TARGETING (flag if incorrect):
    - Default: ALL couples (null) unless explicit anatomical requirement
    - Restrict to ['male+male', 'female+male'] ONLY if activity requires penis
    - Restrict to ['female+male', 'female+female'] ONLY if activity requires vagina
    - Sex toys are GENDER-NEUTRAL (vibrators, dildos, plugs work for anyone)
    - Flag if targeting seems too restrictive or missing needed restrictions
 
-8. INITIATOR TARGETING (for asymmetric questions only):
+7. INITIATOR TARGETING (for asymmetric questions only):
    - Default: null (anyone can initiate) unless explicit anatomical requirement
    - Set initiator based on WHO DOES the action in "text" field
    - "Swallow your partner's cum" -> initiator: female (in M+F, receiver of cum)

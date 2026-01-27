@@ -302,7 +302,7 @@ export function AdminsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight">Admin Management</h1>
@@ -312,8 +312,8 @@ export function AdminsPage() {
                         Manage system administrators and their roles
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative w-64">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search admins..."
@@ -509,10 +509,10 @@ export function AdminsPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Admin User</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role / Permissions</TableHead>
-                            <TableHead>Added On</TableHead>
-                            <TableHead className="w-[120px]">Actions</TableHead>
+                            <TableHead className="hidden md:table-cell">Email</TableHead>
+                            <TableHead className="hidden lg:table-cell">Role / Permissions</TableHead>
+                            <TableHead className="hidden xl:table-cell">Added On</TableHead>
+                            <TableHead className="hidden md:table-cell w-[120px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -529,82 +529,128 @@ export function AdminsPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            paginatedAdmins.map((admin) => (
-                                <TableRow key={admin.user_id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={admin.profile?.avatar_url || undefined} />
-                                                <AvatarFallback>
-                                                    {admin.profile?.name?.charAt(0).toUpperCase() || 'A'}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">
-                                                {admin.profile?.name || 'Unknown User'}
-                                            </span>
-                                            {admin.user_id === currentUser?.id && (
-                                                <Badge variant="outline" className="ml-2">You</Badge>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {admin.profile?.email || '—'}
-                                    </TableCell>
-                                    <TableCell>
-                                        {admin.role === 'super_admin' ? (
-                                            <Badge variant="default">
-                                                <Shield className="h-3 w-3 mr-1" />
-                                                Super Admin
-                                            </Badge>
-                                        ) : (
-                                            <div className="flex flex-wrap gap-1">
-                                                {admin.permissions.length === 0 ? (
-                                                    <span className="text-muted-foreground text-sm">No permissions</span>
-                                                ) : (
-                                                    admin.permissions.slice(0, 3).map(perm => (
-                                                        <Badge key={perm} variant="secondary" className="text-xs">
-                                                            {PERMISSION_METADATA[perm as PermissionKey]?.label.replace('Can ', '') || perm}
-                                                        </Badge>
-                                                    ))
-                                                )}
-                                                {admin.permissions.length > 3 && (
-                                                    <Badge variant="outline" className="text-xs">
-                                                        +{admin.permissions.length - 3} more
-                                                    </Badge>
+                            paginatedAdmins.map((admin) => {
+                                const isSelf = admin.user_id === currentUser?.id;
+                                const mobileRoleBadge = admin.role === 'super_admin' ? (
+                                    <Badge variant="default">
+                                        <Shield className="h-3 w-3 mr-1" />
+                                        Super Admin
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="secondary">
+                                        {admin.permissions.length > 0
+                                            ? `${admin.permissions.length} permission${admin.permissions.length !== 1 ? 's' : ''}`
+                                            : 'No permissions'}
+                                    </Badge>
+                                );
+
+                                return (
+                                    <TableRow key={admin.user_id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <Avatar className="h-9 w-9">
+                                                    <AvatarImage src={admin.profile?.avatar_url || undefined} />
+                                                    <AvatarFallback>
+                                                        {admin.profile?.name?.charAt(0).toUpperCase() || 'A'}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium truncate">
+                                                    {admin.profile?.name || 'Unknown User'}
+                                                </span>
+                                                {isSelf && (
+                                                    <Badge variant="outline" className="ml-2">You</Badge>
                                                 )}
                                             </div>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '—'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1">
-                                            {admin.user_id !== currentUser?.id && (
-                                                <>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                                <span className="truncate max-w-[220px]">
+                                                    {admin.profile?.email || '—'}
+                                                </span>
+                                                {mobileRoleBadge}
+                                                <span className="text-muted-foreground">
+                                                    Added {admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '—'}
+                                                </span>
+                                            </div>
+                                            {!isSelf && (
+                                                <div className="mt-3 flex flex-wrap gap-2 md:hidden">
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
+                                                        variant="outline"
+                                                        size="sm"
                                                         onClick={() => handleEditPermissions(admin)}
-                                                        title="Edit Permissions"
                                                     >
-                                                        <Settings className="h-4 w-4" />
+                                                        <Settings className="h-3 w-3 mr-1" />
+                                                        Edit
                                                     </Button>
                                                     <Button
-                                                        variant="ghost"
-                                                        size="icon"
+                                                        variant="outline"
+                                                        size="sm"
                                                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                                         onClick={() => handleRemoveAdmin(admin)}
-                                                        title="Revoke Access"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Trash2 className="h-3 w-3 mr-1" />
+                                                        Remove
                                                     </Button>
-                                                </>
+                                                </div>
                                             )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell text-muted-foreground">
+                                            {admin.profile?.email || '—'}
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell">
+                                            {admin.role === 'super_admin' ? (
+                                                <Badge variant="default">
+                                                    <Shield className="h-3 w-3 mr-1" />
+                                                    Super Admin
+                                                </Badge>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {admin.permissions.length === 0 ? (
+                                                        <span className="text-muted-foreground text-sm">No permissions</span>
+                                                    ) : (
+                                                        admin.permissions.slice(0, 3).map(perm => (
+                                                            <Badge key={perm} variant="secondary" className="text-xs">
+                                                                {PERMISSION_METADATA[perm as PermissionKey]?.label.replace('Can ', '') || perm}
+                                                            </Badge>
+                                                        ))
+                                                    )}
+                                                    {admin.permissions.length > 3 && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            +{admin.permissions.length - 3} more
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
+                                            {admin.created_at ? format(new Date(admin.created_at), 'MMM d, yyyy') : '—'}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <div className="flex items-center gap-1">
+                                                {!isSelf && (
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleEditPermissions(admin)}
+                                                            title="Edit Permissions"
+                                                        >
+                                                            <Settings className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleRemoveAdmin(admin)}
+                                                            title="Revoke Access"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

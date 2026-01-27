@@ -24,7 +24,6 @@ import type {
 export async function generateQuestionsWithCouncil(
     packName: string,
     count: number = 10,
-    intensity?: number,
     tone: ToneLevel = 3,
     packDescription?: string,
     existingQuestions?: string[],
@@ -90,7 +89,6 @@ export async function generateQuestionsWithCouncil(
         const questions = await generateQuestions(
             packName,
             count,
-            intensity,
             tone,
             packDescription,
             existingQuestions,
@@ -138,7 +136,6 @@ export async function generateQuestionsWithCouncil(
                 gen.model,
                 packName,
                 count,
-                intensity,
                 tone,
                 packDescription,
                 existingQuestions,
@@ -191,8 +188,7 @@ export async function generateQuestionsWithCouncil(
             const cherryPickResult = await performCherryPickSelection(
                 successfulCandidates,
                 packContext,
-                count,
-                config
+                count
             );
             const reviewTime = Date.now() - startReview;
 

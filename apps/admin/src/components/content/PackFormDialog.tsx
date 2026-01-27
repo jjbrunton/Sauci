@@ -260,10 +260,10 @@ export function PackFormDialog({
                         </div>
                     )}
 
-                    {/* Explicit Toggle */}
+                    {/* NSFW Toggle */}
                     <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                            <Label>Explicit Content</Label>
+                            <Label>NSFW</Label>
                             <p className="text-sm text-muted-foreground">
                                 Contains adult or mature content
                             </p>

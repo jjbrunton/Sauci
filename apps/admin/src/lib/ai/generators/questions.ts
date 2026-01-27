@@ -1,10 +1,10 @@
 // =============================================================================
 // Question Generation Functions
-// Generate questions for packs with various tone/intensity settings
+// Generate questions for packs with various tone settings
 // =============================================================================
 
 import { getOpenAI, getModel, getTemperature } from '../client';
-import { INTENSITY_GUIDE_SHORT, TONE_INSTRUCTIONS, SYSTEM_MESSAGES, CORE_LANGUAGE_RULES } from '../config';
+import { TONE_INSTRUCTIONS, SYSTEM_MESSAGES, CORE_LANGUAGE_RULES } from '../config';
 import type { GeneratedQuestion, ToneLevel } from '../types';
 
 /**
@@ -13,7 +13,6 @@ import type { GeneratedQuestion, ToneLevel } from '../types';
 function buildQuestionPrompt(
     packName: string,
     count: number,
-    intensity: number | undefined,
     tone: ToneLevel,
     packDescription?: string,
     existingQuestions?: string[],
@@ -37,12 +36,6 @@ function buildQuestionPrompt(
     const inspirationInstruction = sanitizedInspiration
         ? `\n\n<user_guidance>\n${sanitizedInspiration}\n</user_guidance>\n\nIncorporate the user guidance above into your generation where appropriate. Use it to inform the theme and style of questions.`
         : '';
-
-    const intensityInstruction = tone === 1
-        ? 'All questions should be intensity level 1 (non-sexual bonding).'
-        : intensity
-            ? `All questions should be at intensity level ${intensity}.`
-            : 'Vary the intensity levels appropriate for the tone.';
 
     const toneInstruction = TONE_INSTRUCTIONS[tone];
 
@@ -90,12 +83,7 @@ Generate ${count} unique questions for a couples' intimacy question pack called 
 </task>
 ${descriptionContext}${inspirationInstruction}${existingQuestionsContext}
 
-<intensity_guide>
-${INTENSITY_GUIDE_SHORT}
-</intensity_guide>
-
 <instructions>
-${intensityInstruction}
 ${toneInstruction}${explicitWarning}${crudeLangInstruction}
 </instructions>
 
@@ -147,7 +135,6 @@ Return a JSON object with this exact structure:
     {
       "text": string,              // REQUIRED: 5-12 words, doer's perspective using "your partner"
       "partner_text": string|null, // REQUIRED for asymmetric, null for symmetric
-      "intensity": 1-5,            // REQUIRED: must match the intensity level guidelines
       "requires_props": string[]|null,  // Optional: items needed (e.g., ["blindfold", "massage oil"])
       "inverse_pair_id": string|null,   // REQUIRED for asymmetric pairs, null for symmetric
       "location_type": "home"|"public"|"outdoors"|"travel"|"anywhere",  // Optional
@@ -164,7 +151,6 @@ Return a JSON object with this exact structure:
 export async function generateQuestions(
     packName: string,
     count: number = 10,
-    intensity?: number,
     tone: ToneLevel = 3,
     packDescription?: string,
     existingQuestions?: string[],
@@ -176,7 +162,6 @@ export async function generateQuestions(
     const prompt = buildQuestionPrompt(
         packName,
         count,
-        intensity,
         tone,
         packDescription,
         existingQuestions,
@@ -212,7 +197,6 @@ export async function generateQuestionsWithModel(
     model: string,
     packName: string,
     count: number,
-    intensity: number | undefined,
     tone: ToneLevel,
     packDescription: string | undefined,
     existingQuestions: string[] | undefined,
@@ -225,7 +209,6 @@ export async function generateQuestionsWithModel(
     const prompt = buildQuestionPrompt(
         packName,
         count,
-        intensity,
         tone,
         packDescription,
         existingQuestions,

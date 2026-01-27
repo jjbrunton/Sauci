@@ -49,7 +49,6 @@ interface QuestionPack {
     name: string;
     description: string | null;
     icon: string | null;
-    is_explicit: boolean;
 }
 
 type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
@@ -74,7 +73,6 @@ interface Question {
 }
 
 const DEFAULT_AUDIO_DURATION = 60;
-const getDefaultIntensity = (isExplicit?: boolean) => (isExplicit ? 4 : 2);
 
 const QUESTION_TYPE_OPTIONS: Array<{ value: QuestionType; label: string }> = [
     { value: 'swipe', label: 'Swipe' },
@@ -124,7 +122,6 @@ export function QuestionsPage() {
     const [formData, setFormData] = useState<{
         text: string;
         partner_text: string;
-        intensity: number;
         allowed_couple_genders: string[];
         target_user_genders: string[];
         required_props: string;
@@ -134,7 +131,6 @@ export function QuestionsPage() {
     }>({
         text: '',
         partner_text: '',
-        intensity: getDefaultIntensity(),
         allowed_couple_genders: [],
         target_user_genders: [],
         required_props: '',
@@ -156,7 +152,7 @@ export function QuestionsPage() {
 
             const packPromise = supabase
                 .from('question_packs')
-                .select('id, name, description, icon, is_explicit')
+                .select('id, name, description, icon')
                 .eq('id', packId)
                 .single();
             let questionsQuery = supabase
@@ -272,7 +268,6 @@ export function QuestionsPage() {
         setFormData({
             text: '',
             partner_text: '',
-            intensity: getDefaultIntensity(pack?.is_explicit),
             allowed_couple_genders: [],
             target_user_genders: [],
             required_props: '',
@@ -289,7 +284,6 @@ export function QuestionsPage() {
         setFormData({
             text: question.text,
             partner_text: question.partner_text || '',
-            intensity: question.intensity,
             allowed_couple_genders: question.allowed_couple_genders || [],
             target_user_genders: question.target_user_genders || [],
             required_props: question.required_props?.join(', ') ?? '',
@@ -326,7 +320,6 @@ export function QuestionsPage() {
                 const { error } = await auditedSupabase.update('questions', editingQuestion.id, {
                     text: formData.text,
                     partner_text: formData.partner_text || null,
-                    intensity: formData.intensity,
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
@@ -342,7 +335,6 @@ export function QuestionsPage() {
                     pack_id: packId,
                     text: formData.text,
                     partner_text: formData.partner_text || null,
-                    intensity: formData.intensity,
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
                     target_user_genders: formData.target_user_genders.length > 0 ? formData.target_user_genders : null,
                     required_props: requiredPropsValue,
@@ -384,7 +376,6 @@ export function QuestionsPage() {
 
     const handleAiGenerated = (generatedQuestions: Array<{ text: string; partner_text?: string; intensity: number; inverse_pair_id?: string | null }>) => {
         const generatedQuestionType: QuestionType = 'swipe';
-        const defaultIntensity = getDefaultIntensity(pack?.is_explicit);
 
         // Bulk insert AI-generated questions with inverse_of linking
         const insertQuestions = async () => {
@@ -411,7 +402,6 @@ export function QuestionsPage() {
                             pack_id: packId,
                             text: q.text,
                             partner_text: q.partner_text || null,
-                            intensity: defaultIntensity,
                             inverse_of: null,
                             question_type: generatedQuestionType,
                             config: null,
@@ -431,7 +421,6 @@ export function QuestionsPage() {
                                 pack_id: packId,
                                 text: primary.text,
                                 partner_text: primary.partner_text || null,
-                                intensity: defaultIntensity,
                                 inverse_of: null,
                                 question_type: generatedQuestionType,
                                 config: null,
@@ -449,7 +438,6 @@ export function QuestionsPage() {
                                     pack_id: packId,
                                     text: inverse.text,
                                     partner_text: inverse.partner_text || null,
-                                    intensity: defaultIntensity,
                                     inverse_of: primaryId,
                                     question_type: generatedQuestionType,
                                     config: null,
@@ -467,7 +455,6 @@ export function QuestionsPage() {
                                     pack_id: packId,
                                     text: extra.text,
                                     partner_text: extra.partner_text || null,
-                                    intensity: defaultIntensity,
                                     inverse_of: null,
                                     question_type: generatedQuestionType,
                                     config: null,
@@ -483,7 +470,6 @@ export function QuestionsPage() {
                             pack_id: packId,
                             text: pair[0].text,
                             partner_text: pair[0].partner_text || null,
-                            intensity: defaultIntensity,
                             inverse_of: null,
                             question_type: generatedQuestionType,
                             config: null,
@@ -649,7 +635,6 @@ export function QuestionsPage() {
                                         <AIPolishButton
                                             text={formData.text}
                                             type="question"
-                                            explicit={pack?.is_explicit ?? false}
                                             onPolished={(val) => setFormData(d => ({ ...d, text: val }))}
                                         />
                                     </div>
@@ -713,7 +698,6 @@ export function QuestionsPage() {
                                         <AIPolishButton
                                             text={formData.partner_text}
                                             type="partner_text"
-                                            explicit={pack?.is_explicit ?? false}
                                             onPolished={(val) => setFormData(d => ({ ...d, partner_text: val }))}
                                         />
                                     </div>
@@ -926,7 +910,7 @@ export function QuestionsPage() {
                 open={aiDialogOpen}
                 onOpenChange={setAiDialogOpen}
                 type="questions"
-                context={{ packName: pack?.name, packDescription: pack?.description, isExplicit: pack?.is_explicit, existingQuestions: questions.map(q => q.text) }}
+                context={{ packName: pack?.name, packDescription: pack?.description, existingQuestions: questions.map(q => q.text) }}
                 onGenerated={handleAiGenerated}
             />
 
@@ -934,7 +918,6 @@ export function QuestionsPage() {
                 open={reviewOpen}
                 onOpenChange={setReviewOpen}
                 questions={reviewQuestions}
-                isExplicit={pack?.is_explicit ?? false}
                 onUpdated={fetchData}
             />
 

@@ -240,7 +240,7 @@ export function FeedbackPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold tracking-tight">User Feedback</h1>
@@ -253,8 +253,8 @@ export function FeedbackPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-4">
-                <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <div className="relative w-full md:flex-1 md:max-w-sm">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         placeholder="Search feedback..."
@@ -264,7 +264,7 @@ export function FeedbackPage() {
                     />
                 </div>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-full md:w-[150px]">
                         <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -276,7 +276,7 @@ export function FeedbackPage() {
                     </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-full md:w-[150px]">
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -295,12 +295,12 @@ export function FeedbackPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Type</TableHead>
+                            <TableHead className="hidden md:table-cell">Type</TableHead>
                             <TableHead>Title</TableHead>
-                            <TableHead>User</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead className="hidden lg:table-cell">User</TableHead>
+                            <TableHead className="hidden md:table-cell">Status</TableHead>
+                            <TableHead className="hidden lg:table-cell">Created</TableHead>
+                            <TableHead className="hidden md:table-cell w-[100px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -321,27 +321,35 @@ export function FeedbackPage() {
                         ) : (
                             paginatedFeedback.map((item) => (
                                 <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleOpenDetail(item)}>
-                                    <TableCell>{getTypeBadge(item.type)}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{getTypeBadge(item.type)}</TableCell>
                                     <TableCell>
-                                        <div className="max-w-[300px]">
+                                        <div className="md:max-w-[300px]">
                                             <div className="font-medium truncate">{item.title}</div>
                                             <div className="text-sm text-muted-foreground truncate">
                                                 {item.description.slice(0, 80)}
                                                 {item.description.length > 80 && '...'}
                                             </div>
                                         </div>
+                                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                            {getTypeBadge(item.type)}
+                                            {getStatusBadge(item.status)}
+                                            <span className="truncate max-w-[220px]">
+                                                {item.profile?.name || item.profile?.email || 'Unknown user'}
+                                            </span>
+                                            <span>{format(new Date(item.created_at), 'MMM d, yyyy')}</span>
+                                        </div>
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="hidden lg:table-cell">
                                         <div className="text-sm">
                                             <div className="font-medium">{item.profile?.name || 'Unknown'}</div>
                                             <div className="text-muted-foreground">{item.profile?.email}</div>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
+                                    <TableCell className="hidden md:table-cell">{getStatusBadge(item.status)}</TableCell>
+                                    <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
                                         {format(new Date(item.created_at), 'MMM d, yyyy')}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="hidden md:table-cell">
                                         <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleOpenDetail(item); }}>
                                             View
                                         </Button>

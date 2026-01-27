@@ -23,7 +23,6 @@ export interface CouncilConfig {
     reviewerModel: string;
     reviewerTemperature?: number;
     selectionMode: CouncilSelectionMode;
-    cherryPickEnsureIntensityDistribution: boolean;
 }
 
 // =============================================================================
@@ -71,7 +70,6 @@ export interface QuestionReviewScores {
     guidelineCompliance: number;
     creativity: number;
     clarity: number;
-    intensityAccuracy: number;
     anatomicalConsistency: number;
     partnerTextQuality: number;
     coupleTargeting: number;
@@ -85,7 +83,6 @@ export interface QuestionReview {
     suggestions?: string;
     scores: QuestionReviewScores;
     // Additional detailed feedback
-    intensitySuggestion?: number | null; // Suggested intensity if current seems wrong
     targetingSuggestions?: {
         suggestedCoupleTargets?: string[] | null;
         suggestedInitiator?: string[] | null;
@@ -173,7 +170,6 @@ export interface CherryPickEvaluation {
         guidelineCompliance: number;
         creativity: number;
         clarity: number;
-        intensityAccuracy: number;
         uniqueness: number;
     };
     isDuplicate: boolean;
@@ -187,7 +183,6 @@ export interface CherryPickResult {
     evaluations: CherryPickEvaluation[];
     poolSize: number;
     duplicatesRemoved: number;
-    intensityDistribution: Record<number, number>;
 }
 
 // =============================================================================
@@ -206,9 +201,6 @@ export interface TextAnalysis {
     suggested_text: string;
     suggested_partner_text: string | null;
     reason: string;
-    // Intensity suggestion (only if AI thinks current is wrong)
-    suggested_intensity?: number | null;
-    intensity_reason?: string | null;
 }
 
 export interface DeletionAnalysis {

@@ -79,7 +79,6 @@ export function AiSettingsPage() {
                 council_reviewer_model: config.council_reviewer_model || '',
                 council_reviewer_temperature: config.council_reviewer_temperature,
                 council_selection_mode: config.council_selection_mode || 'whole_set',
-                cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
                 classifier_temperature: config.classifier_temperature,
@@ -183,7 +182,6 @@ export function AiSettingsPage() {
                 council_reviewer_model: config.council_reviewer_model || '',
                 council_reviewer_temperature: config.council_reviewer_temperature,
                 council_selection_mode: config.council_selection_mode || 'whole_set',
-                cherry_pick_ensure_intensity_distribution: config.cherry_pick_ensure_intensity_distribution ?? true,
                 classifier_enabled: config.classifier_enabled ?? true,
                 classifier_model: config.classifier_model || 'openai/gpt-4o',
                 classifier_temperature: config.classifier_temperature,
@@ -850,24 +848,6 @@ export function AiSettingsPage() {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Cherry-pick intensity option */}
-                                {formData.council_selection_mode === 'cherry_pick' && (
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <Label className="text-sm">Ensure Intensity Variety</Label>
-                                            <p className="text-xs text-muted-foreground">
-                                                Balance across intensity levels 1-5
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={formData.cherry_pick_ensure_intensity_distribution ?? true}
-                                            onCheckedChange={(checked: boolean) =>
-                                                handleChange('cherry_pick_ensure_intensity_distribution', checked)
-                                            }
-                                        />
-                                    </div>
-                                )}
 
                                 <p className="text-xs text-muted-foreground">
                                     Uses {generators.length + 1} API calls ({generators.length} generator{generators.length > 1 ? 's' : ''} + reviewer)

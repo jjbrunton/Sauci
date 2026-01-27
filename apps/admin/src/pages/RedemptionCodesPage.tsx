@@ -303,15 +303,15 @@ export function RedemptionCodesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Redemption Codes</h1>
                     <p className="text-muted-foreground">
                         Generate and manage codes that grant premium access
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="relative w-64">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search codes..."
@@ -322,7 +322,7 @@ export function RedemptionCodesPage() {
                     </div>
                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button onClick={handleOpenAddDialog}>
+                            <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto">
                                 <Plus className="h-4 w-4 mr-2" />
                                 Generate Code
                             </Button>
@@ -337,7 +337,7 @@ export function RedemptionCodesPage() {
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
                                     <Label>Code</Label>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col gap-2 sm:flex-row">
                                         <Input
                                             value={formData.code}
                                             onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
@@ -399,12 +399,12 @@ export function RedemptionCodesPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Code</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Usage</TableHead>
-                            <TableHead>Expires</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead className="w-[150px]">Actions</TableHead>
+                            <TableHead className="hidden lg:table-cell">Description</TableHead>
+                            <TableHead className="hidden md:table-cell">Usage</TableHead>
+                            <TableHead className="hidden lg:table-cell">Expires</TableHead>
+                            <TableHead className="hidden md:table-cell">Status</TableHead>
+                            <TableHead className="hidden xl:table-cell">Created</TableHead>
+                            <TableHead className="hidden md:table-cell w-[150px]">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -421,70 +421,112 @@ export function RedemptionCodesPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            filteredCodes.map((code) => (
-                                <TableRow key={code.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <code className="font-mono font-medium text-sm bg-muted px-2 py-1 rounded">
-                                                {code.code}
-                                            </code>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6"
-                                                onClick={() => copyToClipboard(code.code)}
-                                                title="Copy code"
-                                            >
-                                                <Copy className="h-3 w-3" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {code.description || '—'}
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="font-medium">{code.current_uses}</span>
-                                        <span className="text-muted-foreground"> / {code.max_uses}</span>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {code.expires_at
-                                            ? format(new Date(code.expires_at), 'MMM d, yyyy HH:mm')
-                                            : 'Never'}
-                                    </TableCell>
-                                    <TableCell>
-                                        {getStatusBadge(code)}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">
-                                        {format(new Date(code.created_at), 'MMM d, yyyy')}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => handleViewRedemptions(code)}
-                                                title="View redemptions"
-                                            >
-                                                <Users className="h-4 w-4" />
-                                            </Button>
-                                            <Switch
-                                                checked={code.is_active}
-                                                onCheckedChange={() => handleToggleActive(code)}
-                                                title={code.is_active ? "Deactivate" : "Activate"}
-                                            />
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleDeleteCode(code)}
-                                                title="Delete code"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
+                            filteredCodes.map((code) => {
+                                const statusBadge = getStatusBadge(code);
+                                const expiresLabel = code.expires_at
+                                    ? format(new Date(code.expires_at), 'MMM d, yyyy HH:mm')
+                                    : 'Never';
+
+                                return (
+                                    <TableRow key={code.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <code className="font-mono font-medium text-sm bg-muted px-2 py-1 rounded">
+                                                    {code.code}
+                                                </code>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    onClick={() => copyToClipboard(code.code)}
+                                                    title="Copy code"
+                                                >
+                                                    <Copy className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                                                {statusBadge}
+                                                <span>
+                                                    {code.current_uses} / {code.max_uses} uses
+                                                </span>
+                                                <span>Expires {expiresLabel}</span>
+                                                {code.description && <span className="truncate max-w-[220px]">{code.description}</span>}
+                                            </div>
+                                            <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleViewRedemptions(code)}
+                                                >
+                                                    <Users className="h-3 w-3 mr-1" />
+                                                    Redemptions
+                                                </Button>
+                                                <div className="flex items-center gap-2 rounded-md border px-2 py-1">
+                                                    <Switch
+                                                        checked={code.is_active}
+                                                        onCheckedChange={() => handleToggleActive(code)}
+                                                        title={code.is_active ? "Deactivate" : "Activate"}
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {code.is_active ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleDeleteCode(code)}
+                                                >
+                                                    <Trash2 className="h-3 w-3 mr-1" />
+                                                    Delete
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell text-muted-foreground">
+                                            {code.description || '—'}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <span className="font-medium">{code.current_uses}</span>
+                                            <span className="text-muted-foreground"> / {code.max_uses}</span>
+                                        </TableCell>
+                                        <TableCell className="hidden lg:table-cell text-muted-foreground text-sm">
+                                            {expiresLabel}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            {statusBadge}
+                                        </TableCell>
+                                        <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
+                                            {format(new Date(code.created_at), 'MMM d, yyyy')}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleViewRedemptions(code)}
+                                                    title="View redemptions"
+                                                >
+                                                    <Users className="h-4 w-4" />
+                                                </Button>
+                                                <Switch
+                                                    checked={code.is_active}
+                                                    onCheckedChange={() => handleToggleActive(code)}
+                                                    title={code.is_active ? "Deactivate" : "Activate"}
+                                                />
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => handleDeleteCode(code)}
+                                                    title="Delete code"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })
                         )}
                     </TableBody>
                 </Table>

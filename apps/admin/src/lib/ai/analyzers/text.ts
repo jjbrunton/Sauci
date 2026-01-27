@@ -10,7 +10,7 @@ import type { TextAnalysis } from '../types';
  * Analyze question text and suggest improvements
  */
 export async function analyzeQuestionText(
-    questions: { id: string; text: string; partner_text?: string | null; intensity?: number }[],
+    questions: { id: string; text: string; partner_text?: string | null }[],
     isExplicit: boolean = false
 ): Promise<TextAnalysis[]> {
     const openai = getOpenAI();
@@ -19,7 +19,6 @@ export async function analyzeQuestionText(
         id: q.id,
         text: q.text,
         partner_text: q.partner_text,
-        intensity: q.intensity,
     }));
 
     const toneInstruction = isExplicit
@@ -83,17 +82,6 @@ Cards should be "Proposals" for specific actions, NOT interview questions.
 8. Skip questions that are ALREADY well-phrased
 </rules>
 
-<intensity_guide>
-Check if current intensity matches the activity:
-1 (Gentle): Emotional bonding, non-sexual (cooking, cuddling, foot massage)
-2 (Warm): Romantic, affectionate touch (slow dance, sensual massage, kissing)
-3 (Playful): Light sexual exploration (oral, mutual masturbation, light roleplay)
-4 (Steamy): Explicit sex, moderate adventure (intercourse, light bondage, anal play)
-5 (Intense): Advanced/BDSM/extreme (impact play, power dynamics, taboo kinks)
-
-If intensity seems wrong, include suggested_intensity and intensity_reason.
-</intensity_guide>
-
 <questions_to_analyze>
 ${JSON.stringify(simplifiedQuestions)}
 </questions_to_analyze>
@@ -105,14 +93,12 @@ ${JSON.stringify(simplifiedQuestions)}
       "id": string,                    // Question ID
       "suggested_text": string,        // Improved text (short, direct)
       "suggested_partner_text": string|null,  // Improved partner_text or null if symmetric
-      "reason": string,                // Brief explanation of text improvement
-      "suggested_intensity": number|null,  // 1-5 if intensity seems wrong, null if correct
-      "intensity_reason": string|null      // Why intensity should change (if applicable)
+      "reason": string                 // Brief explanation of text improvement
     }
   ]
 }
 
-Only include questions that need text improvement OR intensity adjustment.
+Only include questions that need text improvement.
 </output_format>`;
 
     const systemMessage = isExplicit

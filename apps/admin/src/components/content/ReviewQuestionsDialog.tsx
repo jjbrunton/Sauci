@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Sparkles, ArrowRight, Check, Wand2, ShieldCheck, Gauge, Trash2, Package } from 'lucide-react';
+import { Loader2, Sparkles, ArrowRight, Check, Wand2, ShieldCheck, Trash2, Package } from 'lucide-react';
 import {
     analyzeQuestionText,
     analyzeQuestionTargets,
@@ -51,7 +51,6 @@ interface ReviewQuestionsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     questions: Question[];
-    isExplicit?: boolean;
     onUpdated: () => void;
 }
 
@@ -64,14 +63,13 @@ interface CombinedSuggestion {
     deleteSuggestion?: DeletionAnalysis;
 }
 
-export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplicit = false, onUpdated }: ReviewQuestionsDialogProps) {
+export function ReviewQuestionsDialog({ open, onOpenChange, questions, onUpdated }: ReviewQuestionsDialogProps) {
     const [analyzing, setAnalyzing] = useState(false);
     const [suggestions, setSuggestions] = useState<CombinedSuggestion[]>([]);
     const [existingProps, setExistingProps] = useState<string[]>([]);
     const [selectedTextIds, setSelectedTextIds] = useState<Set<string>>(new Set());
     const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set());
     const [selectedPropsIds, setSelectedPropsIds] = useState<Set<string>>(new Set());
-    const [selectedIntensityIds, setSelectedIntensityIds] = useState<Set<string>>(new Set());
     const [selectedDeleteIds, setSelectedDeleteIds] = useState<Set<string>>(new Set());
     const [step, setStep] = useState<'initial' | 'review'>('initial');
     const [applying, setApplying] = useState(false);
@@ -134,10 +132,10 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
             const [textResults, targetResults, deleteResults, propsResults] = await Promise.all([
                 analyzeQuestionText(
                     questions.map(q => ({ ...q, intensity: q.intensity })),
-                    isExplicit
+                    false
                 ),
                 analyzeQuestionTargets(questions),
-                analyzeQuestionDeletions(questions, isExplicit),
+                analyzeQuestionDeletions(questions, false),
                 analyzeQuestionProps(
                     questions.map(q => ({
                         id: q.id,
@@ -192,10 +190,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
             setSelectedTargetIds(new Set(meaningfulTargetResults.map(r => r.id)));
             setSelectedPropsIds(new Set(meaningfulPropsResults.map(r => r.id)));
             setSelectedDeleteIds(new Set(deleteResults.map(r => r.id)));
-            // Select intensity suggestions by default
-            setSelectedIntensityIds(new Set(
-                textResults.filter(r => r.suggested_intensity != null).map(r => r.id)
-            ));
             setStep('review');
         } catch (error) {
             console.error(error);
@@ -211,17 +205,15 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
             const updates: { id: string; data: Record<string, unknown> }[] = [];
             const deleteIds = Array.from(selectedDeleteIds);
 
-            // Build update objects combining text, target, and intensity changes
+            // Build update objects combining text, target, and props changes
             suggestions.forEach(suggestion => {
                 if (selectedDeleteIds.has(suggestion.questionId)) return;
 
                 const textSelected = selectedTextIds.has(suggestion.questionId) && suggestion.textSuggestion;
                 const targetSelected = selectedTargetIds.has(suggestion.questionId) && suggestion.targetSuggestion;
                 const propsSelected = selectedPropsIds.has(suggestion.questionId) && suggestion.propsSuggestion;
-                const intensitySelected = selectedIntensityIds.has(suggestion.questionId) &&
-                    suggestion.textSuggestion?.suggested_intensity != null;
 
-                if (textSelected || targetSelected || propsSelected || intensitySelected) {
+                if (textSelected || targetSelected || propsSelected) {
                     const updateData: Record<string, unknown> = {};
 
                     if (textSelected && suggestion.textSuggestion) {
@@ -245,10 +237,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                             suggestion.propsSuggestion.suggested_required_props.length > 0
                             ? suggestion.propsSuggestion.suggested_required_props
                             : null;
-                    }
-
-                    if (intensitySelected && suggestion.textSuggestion?.suggested_intensity != null) {
-                        updateData.intensity = suggestion.textSuggestion.suggested_intensity;
                     }
 
                     if (Object.keys(updateData).length > 0) {
@@ -301,7 +289,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
             setSelectedTextIds(new Set());
             setSelectedTargetIds(new Set());
             setSelectedPropsIds(new Set());
-            setSelectedIntensityIds(new Set());
             setSelectedDeleteIds(new Set());
         }, 300);
     };
@@ -325,13 +312,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
         if (next.has(id)) next.delete(id);
         else next.add(id);
         setSelectedPropsIds(next);
-    };
-
-    const toggleIntensitySelection = (id: string) => {
-        const next = new Set(selectedIntensityIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSelectedIntensityIds(next);
     };
 
     const toggleDeleteSelection = (id: string) => {
@@ -387,14 +367,12 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
     const textSuggestionCount = suggestions.filter(s => s.textSuggestion).length;
     const targetSuggestionCount = suggestions.filter(s => s.targetSuggestion).length;
     const propsSuggestionCount = suggestions.filter(s => s.propsSuggestion).length;
-    const intensitySuggestionCount = suggestions.filter(s => s.textSuggestion?.suggested_intensity != null).length;
     const deleteSuggestionCount = suggestions.filter(s => s.deleteSuggestion).length;
     const effectiveTextCount = Array.from(selectedTextIds).filter(id => !selectedDeleteIds.has(id)).length;
     const effectiveTargetCount = Array.from(selectedTargetIds).filter(id => !selectedDeleteIds.has(id)).length;
     const effectivePropsCount = Array.from(selectedPropsIds).filter(id => !selectedDeleteIds.has(id)).length;
-    const effectiveIntensityCount = Array.from(selectedIntensityIds).filter(id => !selectedDeleteIds.has(id)).length;
-    const totalSelectedCount = effectiveTextCount + effectiveTargetCount + effectivePropsCount + effectiveIntensityCount + selectedDeleteIds.size;
-    const hasSuggestions = textSuggestionCount > 0 || targetSuggestionCount > 0 || propsSuggestionCount > 0 || intensitySuggestionCount > 0 || deleteSuggestionCount > 0;
+    const totalSelectedCount = effectiveTextCount + effectiveTargetCount + effectivePropsCount + selectedDeleteIds.size;
+    const hasSuggestions = textSuggestionCount > 0 || targetSuggestionCount > 0 || propsSuggestionCount > 0 || deleteSuggestionCount > 0;
 
     // Select all/none helpers
     const selectAllText = () => setSelectedTextIds(new Set(suggestions.filter(s => s.textSuggestion).map(s => s.questionId)));
@@ -403,24 +381,18 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
     const selectNoneTargets = () => setSelectedTargetIds(new Set());
     const selectAllProps = () => setSelectedPropsIds(new Set(suggestions.filter(s => s.propsSuggestion).map(s => s.questionId)));
     const selectNoneProps = () => setSelectedPropsIds(new Set());
-    const selectAllIntensity = () => setSelectedIntensityIds(new Set(
-        suggestions.filter(s => s.textSuggestion?.suggested_intensity != null).map(s => s.questionId)
-    ));
-    const selectNoneIntensity = () => setSelectedIntensityIds(new Set());
     const selectAllDeletes = () => setSelectedDeleteIds(new Set(suggestions.filter(s => s.deleteSuggestion).map(s => s.questionId)));
     const selectNoneDeletes = () => setSelectedDeleteIds(new Set());
     const selectAll = () => {
         selectAllText();
         selectAllTargets();
         selectAllProps();
-        selectAllIntensity();
         selectAllDeletes();
     };
     const selectNone = () => {
         selectNoneText();
         selectNoneTargets();
         selectNoneProps();
-        selectNoneIntensity();
         selectNoneDeletes();
     };
 
@@ -462,10 +434,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                     <Package className="h-5 w-5 text-cyan-400" />
                                     <span className="text-sm font-medium text-cyan-300">Required Props</span>
                                 </div>
-                                <div className="flex items-center gap-2 bg-amber-500/20 px-4 py-2 rounded-lg">
-                                    <Gauge className="h-5 w-5 text-amber-400" />
-                                    <span className="text-sm font-medium text-amber-300">Intensity Level</span>
-                                </div>
                                 <div className="flex items-center gap-2 bg-rose-500/20 px-4 py-2 rounded-lg">
                                     <Trash2 className="h-5 w-5 text-rose-400" />
                                     <span className="text-sm font-medium text-rose-300">Deletion Suggestions</span>
@@ -505,10 +473,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                             <span className="flex items-center gap-1">
                                                 <Package className="h-4 w-4 text-cyan-500" />
                                                 {propsSuggestionCount} props fixes
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <Gauge className="h-4 w-4 text-amber-500" />
-                                                {intensitySuggestionCount} intensity fixes
                                             </span>
                                             <span className="flex items-center gap-1">
                                                 <Trash2 className="h-4 w-4 text-rose-500" />
@@ -570,22 +534,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                             >
                                                                 {selectedPropsIds.size === propsSuggestionCount ? 'None' : 'All'}
                                                             </Button>
-                                                        </div>
-                                                    </TableHead>
-                                                    <TableHead className="w-[10%]">
-                                                        <div className="flex items-center gap-2">
-                                                            <Gauge className="h-4 w-4 text-amber-500" />
-                                                            Intensity
-                                                            {intensitySuggestionCount > 0 && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-6 px-2 text-xs"
-                                                                    onClick={() => selectedIntensityIds.size === intensitySuggestionCount ? selectNoneIntensity() : selectAllIntensity()}
-                                                                >
-                                                                    {selectedIntensityIds.size === intensitySuggestionCount ? 'None' : 'All'}
-                                                                </Button>
-                                                            )}
                                                         </div>
                                                     </TableHead>
                                                     <TableHead className="w-[10%]">
@@ -753,50 +701,6 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, isExplici
                                                                 <div className="text-xs text-muted-foreground p-2">
                                                                     <Check className="h-4 w-4 text-green-500 inline mr-1" />
                                                                     No changes needed
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-
-                                                        {/* Intensity Column */}
-                                                        <TableCell className="align-top py-3">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    Current: {suggestion.question.intensity}
-                                                                </Badge>
-                                                            </div>
-                                                            {suggestion.textSuggestion?.suggested_intensity != null ? (
-                                                                <div
-                                                                    className={`p-2 rounded-lg border cursor-pointer transition-colors ${selectedIntensityIds.has(suggestion.questionId)
-                                                                            ? 'bg-amber-500/20 border-amber-500/50'
-                                                                            : 'bg-muted/30 border-transparent hover:bg-muted/50'
-                                                                        }`}
-                                                                    onClick={() => toggleIntensitySelection(suggestion.questionId)}
-                                                                >
-                                                                    <div className="flex items-start gap-2">
-                                                                        <Checkbox
-                                                                            checked={selectedIntensityIds.has(suggestion.questionId)}
-                                                                            onCheckedChange={() => toggleIntensitySelection(suggestion.questionId)}
-                                                                            className="mt-0.5"
-                                                                        />
-                                                                        <div className="flex-1 min-w-0">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                                                <Badge className="text-xs bg-amber-500/30 text-amber-300 hover:bg-amber-500/30">
-                                                                                    {suggestion.textSuggestion.suggested_intensity}
-                                                                                </Badge>
-                                                                            </div>
-                                                                            {suggestion.textSuggestion.intensity_reason && (
-                                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                                    {suggestion.textSuggestion.intensity_reason}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="text-xs text-muted-foreground">
-                                                                    <Check className="h-4 w-4 text-green-500 inline mr-1" />
-                                                                    Correct
                                                                 </div>
                                                             )}
                                                         </TableCell>

@@ -146,26 +146,26 @@ export function Breadcrumbs() {
     if (breadcrumbs.length === 0 && !loading) return null;
 
     return (
-        <nav className="flex items-center space-x-1 text-sm">
+        <nav className="flex items-center gap-1 text-sm overflow-x-auto whitespace-nowrap max-w-full pr-2">
             <Link
                 to="/"
-                className="flex items-center text-muted-foreground hover:text-primary transition-colors p-1 rounded-md hover:bg-white/5"
+                className="flex items-center text-muted-foreground hover:text-primary transition-colors p-1 rounded-md hover:bg-white/5 flex-shrink-0"
             >
                 <Home className="h-4 w-4" />
             </Link>
 
             {breadcrumbs.map((item, index) => (
-                <div key={index} className="flex items-center">
+                <div key={index} className="flex items-center flex-shrink-0">
                     <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground/50" />
                     {item.href ? (
                         <Link
                             to={item.href}
-                            className="text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-white/5"
+                            className="text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-white/5 max-w-[160px] truncate"
                         >
                             {item.label}
                         </Link>
                     ) : (
-                        <span className="text-foreground font-medium px-2 py-1">
+                        <span className="text-foreground font-medium px-2 py-1 max-w-[180px] truncate">
                             {item.label}
                         </span>
                     )}

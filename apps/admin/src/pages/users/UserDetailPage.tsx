@@ -37,7 +37,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Heart, Sparkles, Flame, Trophy, Calendar } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Sparkles, Flame, Trophy, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { IconPreview } from '@/components/ui/icon-picker';
 
@@ -45,8 +45,6 @@ type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_conne
 type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
 
 // ... (interfaces and constants are the same)
-
-type IntensityLevel = 1 | 2 | 3 | 4 | 5;
 
 interface Profile {
     id: string;
@@ -58,9 +56,8 @@ interface Profile {
     created_at: string | null;
     gender: Gender | null;
     usage_reason: UsageReason | null;
-    show_explicit_content: boolean | null;
+    hide_nsfw: boolean | null;
     onboarding_completed: boolean | null;
-    max_intensity: IntensityLevel | null;
 }
 
 const usageReasonLabels: Record<UsageReason, { label: string; icon: string }> = {
@@ -76,14 +73,6 @@ const genderLabels: Record<Gender, string> = {
     female: 'Female',
     'non-binary': 'Non-binary',
     'prefer-not-to-say': 'Prefer not to say',
-};
-
-const intensityLabels: Record<IntensityLevel, { label: string; emoji: string }> = {
-    1: { label: 'Gentle', emoji: '💭' },
-    2: { label: 'Warm', emoji: '💕' },
-    3: { label: 'Playful', emoji: '😏' },
-    4: { label: 'Steamy', emoji: '🔥' },
-    5: { label: 'Intense', emoji: '🌶️' },
 };
 
 interface Partner {
@@ -556,11 +545,10 @@ export function UserDetailPage() {
                 </div>
             </div></CardContent></Card>
             {/* Onboarding Details */}
-            <Card><CardHeader className="pb-3"><CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" />Onboarding Details</CardTitle><CardDescription>Information collected during user onboarding</CardDescription></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <Card><CardHeader className="pb-3"><CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" />Onboarding Details</CardTitle><CardDescription>Information collected during user onboarding</CardDescription></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900"><User className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Gender</p><p className="font-medium">{profile.gender ? genderLabels[profile.gender] : 'Not set'}</p></div></div>
                 <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900"><Target className="h-4 w-4 text-purple-600 dark:text-purple-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Why using Sauci</p><p className="font-medium">{profile.usage_reason ? usageReasonLabels[profile.usage_reason]?.label : 'Not set'}</p></div></div>
-                <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-pink-100 dark:bg-pink-900"><Heart className="h-4 w-4 text-pink-600 dark:text-pink-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Comfort Zone</p><p className="font-medium">{profile.max_intensity ? `${intensityLabels[profile.max_intensity].emoji} ${intensityLabels[profile.max_intensity].label} (${profile.max_intensity})` : 'Not set'}</p></div></div>
-                <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.show_explicit_content ? 'bg-amber-100 dark:bg-amber-900' : 'bg-gray-100 dark:bg-gray-800'}`}>{profile.show_explicit_content ? <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" /> : <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" />}</div><div><p className="text-sm font-medium text-muted-foreground">Explicit Content</p><p className="font-medium">{profile.show_explicit_content === null ? 'Not set' : profile.show_explicit_content ? 'Enabled' : 'Disabled'}</p></div></div>
+                <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.hide_nsfw ? 'bg-gray-100 dark:bg-gray-800' : 'bg-amber-100 dark:bg-amber-900'}`}>{profile.hide_nsfw ? <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" />}</div><div><p className="text-sm font-medium text-muted-foreground">Hide NSFW</p><p className="font-medium">{profile.hide_nsfw === null ? 'Not set' : profile.hide_nsfw ? 'Yes' : 'No'}</p></div></div>
                 <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}><CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} /></div><div><p className="text-sm font-medium text-muted-foreground">Onboarding</p><p className="font-medium">{profile.onboarding_completed ? 'Completed' : 'Not completed'}</p></div></div>
             </div></CardContent></Card>
             {/* Streak Info */}
@@ -674,15 +662,15 @@ export function UserDetailPage() {
                                                     <CardTitle className="text-base">{ep.pack.name}</CardTitle>
                                                 </div>
                                                 <div className="flex gap-1">
+                                                    {ep.pack.is_explicit && (
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            NSFW
+                                                        </Badge>
+                                                    )}
                                                     {ep.pack.is_premium && (
                                                         <Badge className="bg-amber-500 text-xs">
                                                             <Crown className="h-3 w-3 mr-1" />
                                                             Premium
-                                                        </Badge>
-                                                    )}
-                                                    {ep.pack.is_explicit && (
-                                                        <Badge variant="destructive" className="text-xs">
-                                                            18+
                                                         </Badge>
                                                     )}
                                                 </div>

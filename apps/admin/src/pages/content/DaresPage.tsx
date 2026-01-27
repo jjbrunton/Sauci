@@ -47,7 +47,6 @@ interface DarePack {
     name: string;
     description: string | null;
     icon: string | null;
-    is_explicit: boolean;
 }
 
 interface Dare {
@@ -69,8 +68,6 @@ const DURATION_OPTIONS = [
     { value: '72', label: '3 days' },
     { value: '168', label: '1 week' },
 ];
-
-const getDefaultIntensity = (isExplicit?: boolean) => (isExplicit ? 4 : 2);
 
 // Format duration for display
 const formatDuration = (hours: number | null): string => {
@@ -101,11 +98,9 @@ export function DaresPage() {
     // Form state
     const [formData, setFormData] = useState<{
         text: string;
-        intensity: number;
         suggested_duration_hours: string;
     }>({
         text: '',
-        intensity: getDefaultIntensity(),
         suggested_duration_hours: '',
     });
 
@@ -117,7 +112,7 @@ export function DaresPage() {
             // Fetch pack info
             const { data: packData } = await supabase
                 .from('dare_packs')
-                .select('id, name, description, icon, is_explicit')
+                .select('id, name, description, icon')
                 .eq('id', packId)
                 .single();
 
@@ -167,7 +162,7 @@ export function DaresPage() {
 
     const openCreateDialog = () => {
         setEditingDare(null);
-        setFormData({ text: '', intensity: getDefaultIntensity(pack?.is_explicit), suggested_duration_hours: '' });
+        setFormData({ text: '', suggested_duration_hours: '' });
         setDialogOpen(true);
     };
 
@@ -175,7 +170,6 @@ export function DaresPage() {
         setEditingDare(dare);
         setFormData({
             text: dare.text,
-            intensity: dare.intensity,
             suggested_duration_hours: dare.suggested_duration_hours?.toString() || '',
         });
         setDialogOpen(true);
@@ -191,7 +185,6 @@ export function DaresPage() {
         try {
             const dareData = {
                 text: formData.text,
-                intensity: formData.intensity,
                 suggested_duration_hours: formData.suggested_duration_hours
                     ? parseInt(formData.suggested_duration_hours, 10)
                     : null,

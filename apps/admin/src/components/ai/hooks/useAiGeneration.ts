@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
     generatePack,
     generateQuestionsWithCouncil,
@@ -32,13 +32,10 @@ export interface GeneratorContext {
     existingCategories?: string[];
     existingPacks?: string[];
     existingQuestions?: string[];
-    isExplicit?: boolean;
 }
 
 export interface GenerationConfig {
     count: number;
-    isExplicit: boolean;
-    crudeLang: boolean;
     inspiration: string;
 }
 
@@ -76,8 +73,6 @@ export function useAiGeneration(
     // Config state
     const [config, setConfig] = useState<GenerationConfig>({
         count: 10,
-        isExplicit: Boolean(context?.isExplicit),
-        crudeLang: false,
         inspiration: '',
     });
 
@@ -117,25 +112,9 @@ export function useAiGeneration(
     // Council config
     const councilConfig = getCouncilConfig();
 
-    // Update explicit flag when context changes
-    useEffect(() => {
-        setConfig(prev => ({
-            ...prev,
-            isExplicit: Boolean(context?.isExplicit),
-        }));
-    }, [context?.isExplicit, type]);
-
     // Config setters
     const setCount = useCallback((count: number) => {
         setConfig(prev => ({ ...prev, count }));
-    }, []);
-
-    const setExplicit = useCallback((isExplicit: boolean) => {
-        setConfig(prev => ({ ...prev, isExplicit }));
-    }, []);
-
-    const setCrudeLang = useCallback((crudeLang: boolean) => {
-        setConfig(prev => ({ ...prev, crudeLang }));
     }, []);
 
     const setInspiration = useCallback((inspiration: string) => {
@@ -182,7 +161,7 @@ export function useAiGeneration(
     const reset = useCallback(() => {
         setResults({ pack: null, questions: [], categoryIdeas: [], packIdeas: [] });
         setSelectedIndices(new Set());
-        setConfig(prev => ({ ...prev, crudeLang: false, inspiration: '' }));
+        setConfig(prev => ({ ...prev, inspiration: '' }));
         setReviewState({
             reviews: [],
             summary: null,
@@ -216,7 +195,8 @@ export function useAiGeneration(
         setFilter('all');
         setSourceModel(null);
 
-        const isExplicit = config.isExplicit;
+        const isExplicit = false;
+        const crudeLang = false;
 
         try {
             if (type === 'pack') {
@@ -232,7 +212,7 @@ export function useAiGeneration(
                 const result = await generatePack(
                     context?.categoryName,
                     isExplicit,
-                    config.crudeLang,
+                    crudeLang,
                     config.inspiration || undefined,
                     avoidNames
                 );
@@ -249,11 +229,10 @@ export function useAiGeneration(
                 const result = await generateQuestionsWithCouncil(
                     context.packName,
                     config.count,
-                    undefined,
-                    isExplicit ? 5 : 2,
+                    2,
                     context.packDescription || undefined,
                     context.existingQuestions,
-                    config.crudeLang,
+                    crudeLang,
                     config.inspiration || undefined,
                     setProgress
                 );
@@ -309,7 +288,7 @@ export function useAiGeneration(
                 const result = await suggestCategories(
                     context?.existingCategories || [],
                     isExplicit,
-                    config.crudeLang,
+                    crudeLang,
                     config.inspiration || undefined,
                     avoidNames
                 );
@@ -335,7 +314,7 @@ export function useAiGeneration(
                     context.categoryName,
                     context?.existingPacks || [],
                     isExplicit,
-                    config.crudeLang,
+                    crudeLang,
                     config.inspiration || undefined,
                     avoidNames
                 );
@@ -366,8 +345,6 @@ export function useAiGeneration(
         // Config
         config,
         setCount,
-        setExplicit,
-        setCrudeLang,
         setInspiration,
 
         // Results

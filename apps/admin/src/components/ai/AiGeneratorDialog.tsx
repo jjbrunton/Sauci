@@ -114,8 +114,6 @@ export function AiGeneratorDialog({
                         context={context}
                         config={generation.config}
                         onCountChange={generation.setCount}
-                        onExplicitChange={generation.setExplicit}
-                        onCrudeLangChange={generation.setCrudeLang}
                         onInspirationChange={generation.setInspiration}
                     />
 

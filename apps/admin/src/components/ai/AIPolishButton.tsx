@@ -10,10 +10,9 @@ interface AIPolishButtonProps {
     onPolished: (newText: string) => void;
     className?: string;
     disabled?: boolean;
-    explicit?: boolean;
 }
 
-export function AIPolishButton({ text, type, onPolished, className, disabled, explicit = false }: AIPolishButtonProps) {
+export function AIPolishButton({ text, type, onPolished, className, disabled }: AIPolishButtonProps) {
     const [loading, setLoading] = useState(false);
 
     const handlePolish = async (e: React.MouseEvent) => {
@@ -25,7 +24,7 @@ export function AIPolishButton({ text, type, onPolished, className, disabled, ex
 
         setLoading(true);
         try {
-            const polished = await polishContent(text, type, explicit);
+            const polished = await polishContent(text, type, false);
             onPolished(polished);
             toast.success('Text polished!');
         } catch (error) {
