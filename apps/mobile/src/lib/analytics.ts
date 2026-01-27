@@ -240,7 +240,7 @@ export const Events = {
       error_message: safeParam(errorMessage),
     }),
   purchaseCompleted: (packageType: string) =>
-    logEvent("purchase", { package_type: packageType }),
+    logEvent("purchase_completed", { package_type: packageType }),
   purchaseRestored: () => logEvent("purchase_restored"),
 
   // Pack events

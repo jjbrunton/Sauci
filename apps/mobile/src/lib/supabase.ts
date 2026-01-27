@@ -58,7 +58,7 @@ if (!isTestEnv && (!supabaseUrl || !supabaseAnonKey)) {
     if (!supabaseAnonKey) missing.push('EXPO_PUBLIC_SUPABASE_ANON_KEY');
     const errorMsg = `Missing required environment variables: ${missing.join(', ')}. App cannot start.`;
     console.error('[Supabase]', errorMsg);
-    // In production, this will be caught by Sentry before crashing
+    // In production, this will be caught by Crashlytics before crashing
     throw new Error(errorMsg);
 }
 

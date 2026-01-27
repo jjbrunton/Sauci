@@ -1,9 +1,9 @@
 // Polyfills must be imported FIRST before any other React Native imports
 import "../src/polyfills/web";
 
-// Initialize Sentry early to capture all errors
-import { initSentry, setUserContext, clearUserContext } from "../src/lib/sentry";
-initSentry();
+// Initialize Crashlytics early to capture all errors
+import { initCrashlytics, setUserContext, clearUserContext } from "../src/lib/crashlytics";
+initCrashlytics();
 
 // Analytics imports (initialization deferred until app mounts)
 import { initAnalytics, setUserId, clearUserId, logScreenView, Events } from "../src/lib/analytics";
@@ -212,7 +212,7 @@ export default function RootLayout() {
                 if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
                     console.log('[Auth] Calling fetchUser...');
                     fetchUser();
-                    // Set Sentry user context for error tracking
+                    // Set Crashlytics user context for error tracking
                     if (session?.user) {
                         setUserContext(session.user.id, session.user.email);
                         // Set Analytics user ID

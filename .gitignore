@@ -23,6 +23,7 @@ apps/mobile/.env.*
 
 # Supabase
 .supabase/
+supabase/.temp/
 
 # IDE
 .idea/

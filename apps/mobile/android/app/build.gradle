@@ -80,8 +80,6 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
-apply from: new File(["node", "--print", "require('path').dirname(require.resolve('@sentry/react-native/package.json'))"].execute().text.trim(), "sentry.gradle")
-
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -93,8 +91,8 @@ android {
         applicationId 'com.sauci.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 37
-        versionName "1.0.3"
+        versionCode 42
+        versionName "1.0.4"
     }
     signingConfigs {
         debug {
@@ -178,3 +176,4 @@ dependencies {
 }
 
 apply plugin: 'com.google.gms.google-services'
+apply plugin: 'com.google.firebase.crashlytics'

@@ -3,7 +3,7 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
-import { captureError } from "./sentry";
+import { captureError } from "./crashlytics";
 import { Events } from "./analytics";
 import { useMatchStore } from "../store/matchStore";
 
