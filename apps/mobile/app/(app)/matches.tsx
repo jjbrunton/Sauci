@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions, ScrollView } from "react-native";
+import { View, Text, StyleSheet, RefreshControl, TouchableOpacity, ActivityIndicator, Platform, useWindowDimensions, ScrollView } from "react-native";
 import { BlurView } from "expo-blur";
 import { useMatchStore, useAuthStore, type PendingQuestion } from "../../src/store";
 import { useEffect, useCallback, useState, useRef } from "react";
@@ -31,7 +31,7 @@ const SECONDARY_RGBA = 'rgba(155, 89, 182, ';
 const MAX_CONTENT_WIDTH = 500;
 const HEADER_SCROLL_DISTANCE = 100;
 
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+const AnimatedFlatList = Animated.FlatList;
 
 export default function MatchesScreen() {
     const {
