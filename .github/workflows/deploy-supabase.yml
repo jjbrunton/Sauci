@@ -41,7 +41,7 @@ jobs:
         run: supabase link --project-ref $SUPABASE_PROJECT_REF --workdir apps
 
       - name: Apply Database Migrations (${{ matrix.environment.name }})
-        run: supabase db push --workdir apps --include-all
+        run: supabase db push --workdir apps
 
       - name: Sync Edge Function Secrets (${{ matrix.environment.name }})
         env:
