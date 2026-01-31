@@ -67,36 +67,63 @@ When using Claude Code with MCP tools:
 - Use `mcp__sauci-non-prod__*` tools for development/staging database operations
 - **Always verify which environment you're targeting before running destructive operations**
 
-### Database Migrations - IMPORTANT
+### Database Migrations - CRITICAL
 
-**NEVER use MCP tools (`apply_migration`) for database migrations.** Always use the Supabase CLI instead.
+> **STOP: Read this entire section before making ANY database schema change.**
 
-**Why:** MCP migrations are tracked in the database but do NOT create local migration files. This means:
-- Migration history is not committed to git
-- Other developers won't get the schema changes
-- `supabase db reset` won't include MCP-applied migrations
-- Changes cannot be reproduced from scratch
+#### The Golden Rule
 
-**Correct workflow for schema changes:**
+**ALL schema changes MUST go through local migration files.** No exceptions.
+
+#### Forbidden Actions
+
+- **NEVER call `apply_migration` via MCP** (either `mcp__sauci-prod__apply_migration` or `mcp__sauci-non-prod__apply_migration`). This creates migration entries in the remote database with NO local file, which breaks `supabase db push` in CI and causes deployment failures that are painful to fix.
+- **NEVER run DDL statements (`CREATE`, `ALTER`, `DROP`) via `execute_sql`**. This changes the schema without any migration tracking at all.
+- **NEVER manually INSERT into `supabase_migrations.schema_migrations`** unless repairing a broken migration history (and only with explicit user approval).
+
+#### Why This Matters
+
+The CI/CD pipeline runs `supabase db push --include-all` which compares local migration files against the remote `schema_migrations` table. If the remote has migrations that don't exist locally, or local files exist without remote entries, the deployment **will fail** and block all subsequent deployments.
+
+**A single `apply_migration` call can break deployments for the entire project.**
+
+#### Correct Workflow for Schema Changes
+
 ```bash
 # 1. Create migration file locally
 supabase migration new <descriptive_name>
 
 # 2. Edit the migration file in apps/supabase/migrations/
 
-# 3. Test locally
+# 3. Make migrations idempotent where possible
+#    Use: CREATE OR REPLACE, IF NOT EXISTS, DROP IF EXISTS
+#    This prevents failures if re-run
+
+# 4. Test locally
 supabase db reset
 
-# 4. Deploy to remote (link to correct project first)
+# 5. Commit the migration file to git
+
+# 6. Deploy happens automatically via CI on push to master
+#    OR deploy manually:
 supabase link --project-ref <project_ref>
 supabase db push
 ```
 
-**MCP tools ARE appropriate for:**
-- Reading data (`execute_sql` for SELECT queries)
-- Exploring schema (`list_tables`, `list_migrations`)
-- Deploying edge functions (`deploy_edge_function`)
-- Generating types (`generate_typescript_types`)
+#### MCP Tools - What IS Allowed
+
+- **Reading data:** `execute_sql` with SELECT queries only
+- **Exploring schema:** `list_tables`, `list_migrations`, `list_extensions`
+- **Deploying edge functions:** `deploy_edge_function`
+- **Generating types:** `generate_typescript_types`
+- **Checking advisors:** `get_advisors`
+
+#### If You Accidentally Used `apply_migration`
+
+If a migration was applied via MCP, you must immediately:
+1. Retrieve the migration SQL from `schema_migrations.statements`
+2. Create a matching local file: `apps/supabase/migrations/<version>_<name>.sql`
+3. Commit and push the file so CI can reconcile
 
 ## Architecture
 
