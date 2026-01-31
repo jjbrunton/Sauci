@@ -493,96 +493,87 @@ export function UserDetailPage() {
                 // Use partner from state (set earlier in the first couple_id block)
                 const partnerProfile = partner || (await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).maybeSingle()).data;
                 if (partnerProfile) {
-                    const enabledPackIds = (enabledPacksData || []).map((ep: any) => ep.pack_id);
+                    // Get question IDs user has already answered
+                    const { data: userResponseIds } = await supabase
+                        .from('responses')
+                        .select('question_id')
+                        .eq('user_id', userId);
+                    const answeredIds = new Set((userResponseIds || []).map((r: any) => r.question_id));
 
-                    if (enabledPackIds.length > 0) {
-                        // Get question IDs user has already answered
-                        const { data: userResponseIds } = await supabase
-                            .from('responses')
-                            .select('question_id')
-                            .eq('user_id', userId);
-                        const answeredIds = new Set((userResponseIds || []).map((r: any) => r.question_id));
+                    // Get all partner responses in this couple
+                    const { data: partnerResponses } = await supabase
+                        .from('responses')
+                        .select(`
+                            question_id,
+                            answer,
+                            created_at
+                        `)
+                        .eq('user_id', partnerProfile.id)
+                        .eq('couple_id', profileData.couple_id)
+                        .order('created_at', { ascending: false });
 
-                        // Get all partner responses in this couple
-                        const { data: partnerResponses } = await supabase
-                            .from('responses')
-                            .select(`
-                                question_id,
-                                answer,
-                                created_at
-                            `)
-                            .eq('user_id', partnerProfile.id)
-                            .eq('couple_id', profileData.couple_id)
-                            .order('created_at', { ascending: false });
+                    // Filter to only questions user hasn't answered
+                    const unansweredPartnerResponses = (partnerResponses || []).filter((r: any) => !answeredIds.has(r.question_id));
+                    const unansweredQuestionIds = unansweredPartnerResponses.map((r: any) => r.question_id);
 
-                        // Filter to only questions user hasn't answered
-                        const unansweredPartnerResponses = (partnerResponses || []).filter((r: any) => !answeredIds.has(r.question_id));
-                        const unansweredQuestionIds = unansweredPartnerResponses.map((r: any) => r.question_id);
+                    if (unansweredQuestionIds.length > 0) {
+                        // Fetch question details (no pack filter — admin sees all)
+                        const { data: questionDetails } = await supabase
+                            .from('questions')
+                            .select('id, text, intensity, pack:question_packs(id, name)')
+                            .in('id', unansweredQuestionIds);
 
-                        if (unansweredQuestionIds.length > 0) {
-                            // Fetch question details, filtered to enabled packs
-                            const { data: questionDetails } = await supabase
-                                .from('questions')
-                                .select('id, text, intensity, pack:question_packs(id, name)')
-                                .in('id', unansweredQuestionIds)
-                                .in('pack_id', enabledPackIds);
+                        const questionMap = new Map((questionDetails || []).map((q: any) => [q.id, q]));
+                        const partnerResponseMap = new Map(unansweredPartnerResponses.map((r: any) => [r.question_id, r]));
 
-                            const questionMap = new Map((questionDetails || []).map((q: any) => [q.id, q]));
-                            const partnerResponseMap = new Map(unansweredPartnerResponses.map((r: any) => [r.question_id, r]));
-
-                            const outstanding: OutstandingQuestion[] = [];
-                            for (const qId of unansweredQuestionIds) {
-                                const q = questionMap.get(qId);
-                                const pr = partnerResponseMap.get(qId);
-                                if (q && pr) {
-                                    outstanding.push({
-                                        id: qId,
-                                        text: q.text || '',
-                                        intensity: q.intensity || null,
-                                        pack: { id: q.pack?.id || '', name: q.pack?.name || '' },
-                                        partner_response: { answer: pr.answer, created_at: pr.created_at },
-                                    });
-                                }
+                        const outstanding: OutstandingQuestion[] = [];
+                        for (const qId of unansweredQuestionIds) {
+                            const q = questionMap.get(qId);
+                            const pr = partnerResponseMap.get(qId);
+                            if (q && pr) {
+                                outstanding.push({
+                                    id: qId,
+                                    text: q.text || '',
+                                    intensity: q.intensity || null,
+                                    pack: { id: q.pack?.id || '', name: q.pack?.name || '' },
+                                    partner_response: { answer: pr.answer, created_at: pr.created_at },
+                                });
                             }
-
-                            setOutstandingTotal(outstanding.length);
-                            const outFrom = (outstandingPage - 1) * outstandingPageSize;
-                            setOutstandingQuestions(outstanding.slice(outFrom, outFrom + outstandingPageSize));
-                        } else {
-                            setOutstandingQuestions([]);
-                            setOutstandingTotal(0);
                         }
 
-                        // Calculate gap status
-                        const { data: appConfig } = await supabase
-                            .from('app_config')
-                            .select('answer_gap_threshold')
-                            .limit(1)
-                            .maybeSingle();
-
-                        const threshold = appConfig?.answer_gap_threshold ?? 10;
-                        setGapThreshold(threshold);
-
-                        if (threshold > 0) {
-                            // Count questions user answered that partner hasn't
-                            const partnerAllAnswered = new Set((partnerResponses || []).map((r: any) => r.question_id));
-                            const { data: userResponses } = await supabase
-                                .from('responses')
-                                .select('question_id')
-                                .eq('user_id', userId)
-                                .eq('couple_id', profileData.couple_id);
-                            const userAhead = (userResponses || []).filter((r: any) => !partnerAllAnswered.has(r.question_id)).length;
-                            const partnerAhead = (partnerResponses || []).filter((r: any) => !answeredIds.has(r.question_id)).length;
-                            const gap = Math.max(0, userAhead - partnerAhead);
-                            setNetGap(gap);
-                            setGapDisabled(gap >= threshold);
-                        } else {
-                            setNetGap(0);
-                            setGapDisabled(false);
-                        }
+                        setOutstandingTotal(outstanding.length);
+                        const outFrom = (outstandingPage - 1) * outstandingPageSize;
+                        setOutstandingQuestions(outstanding.slice(outFrom, outFrom + outstandingPageSize));
                     } else {
                         setOutstandingQuestions([]);
                         setOutstandingTotal(0);
+                    }
+
+                    // Calculate gap status
+                    const { data: appConfig } = await supabase
+                        .from('app_config')
+                        .select('answer_gap_threshold')
+                        .limit(1)
+                        .maybeSingle();
+
+                    const threshold = appConfig?.answer_gap_threshold ?? 10;
+                    setGapThreshold(threshold);
+
+                    if (threshold > 0) {
+                        // Count questions user answered that partner hasn't
+                        const partnerAllAnswered = new Set((partnerResponses || []).map((r: any) => r.question_id));
+                        const { data: userResponses } = await supabase
+                            .from('responses')
+                            .select('question_id')
+                            .eq('user_id', userId)
+                            .eq('couple_id', profileData.couple_id);
+                        const userAhead = (userResponses || []).filter((r: any) => !partnerAllAnswered.has(r.question_id)).length;
+                        const partnerAhead = unansweredPartnerResponses.length;
+                        const gap = Math.max(0, userAhead - partnerAhead);
+                        setNetGap(gap);
+                        setGapDisabled(gap >= threshold);
+                    } else {
+                        setNetGap(0);
                         setGapDisabled(false);
                     }
                 } else {
