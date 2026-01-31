@@ -37,7 +37,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Sparkles, Flame, Trophy, Calendar } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, ThumbsUp, ThumbsDown, Minus, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Sparkles, Flame, Trophy, Calendar, AlertCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { IconPreview } from '@/components/ui/icon-picker';
 
@@ -128,6 +128,20 @@ interface FeatureInterest {
     id: string;
     feature_name: string;
     created_at: string;
+}
+
+interface OutstandingQuestion {
+    id: string;
+    text: string;
+    intensity: number | null;
+    pack: {
+        id: string;
+        name: string;
+    };
+    partner_response: {
+        answer: 'yes' | 'no' | 'maybe';
+        created_at: string | null;
+    };
 }
 
 interface CoupleStreak {
@@ -277,6 +291,13 @@ export function UserDetailPage() {
     const [enabledPacks, setEnabledPacks] = useState<EnabledPack[]>([]);
     const [featureInterests, setFeatureInterests] = useState<FeatureInterest[]>([]);
     const [streak, setStreak] = useState<CoupleStreak | null>(null);
+    const [outstandingQuestions, setOutstandingQuestions] = useState<OutstandingQuestion[]>([]);
+    const [outstandingPage, setOutstandingPage] = useState(1);
+    const [outstandingPageSize, setOutstandingPageSize] = useState(10);
+    const [outstandingTotal, setOutstandingTotal] = useState(0);
+    const [gapDisabled, setGapDisabled] = useState(false);
+    const [gapThreshold, setGapThreshold] = useState(0);
+    const [netGap, setNetGap] = useState(0);
     const [responsesPage, setResponsesPage] = useState(1);
     const [responsesPageSize, setResponsesPageSize] = useState(10);
     const [responsesTotal, setResponsesTotal] = useState(0);
@@ -467,19 +488,124 @@ export function UserDetailPage() {
                 } else {
                     setEnabledPacks((enabledPacksData || []) as unknown as EnabledPack[]);
                 }
+
+                // Fetch outstanding questions (partner answered, user hasn't)
+                // Use partner from state (set earlier in the first couple_id block)
+                const partnerProfile = partner || (await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).maybeSingle()).data;
+                if (partnerProfile) {
+                    const enabledPackIds = (enabledPacksData || []).map((ep: any) => ep.pack_id);
+
+                    if (enabledPackIds.length > 0) {
+                        // Get question IDs user has already answered
+                        const { data: userResponseIds } = await supabase
+                            .from('responses')
+                            .select('question_id')
+                            .eq('user_id', userId);
+                        const answeredIds = new Set((userResponseIds || []).map((r: any) => r.question_id));
+
+                        // Get all partner responses in this couple
+                        const { data: partnerResponses } = await supabase
+                            .from('responses')
+                            .select(`
+                                question_id,
+                                answer,
+                                created_at
+                            `)
+                            .eq('user_id', partnerProfile.id)
+                            .eq('couple_id', profileData.couple_id)
+                            .order('created_at', { ascending: false });
+
+                        // Filter to only questions user hasn't answered
+                        const unansweredPartnerResponses = (partnerResponses || []).filter((r: any) => !answeredIds.has(r.question_id));
+                        const unansweredQuestionIds = unansweredPartnerResponses.map((r: any) => r.question_id);
+
+                        if (unansweredQuestionIds.length > 0) {
+                            // Fetch question details, filtered to enabled packs
+                            const { data: questionDetails } = await supabase
+                                .from('questions')
+                                .select('id, text, intensity, pack:question_packs(id, name)')
+                                .in('id', unansweredQuestionIds)
+                                .in('pack_id', enabledPackIds);
+
+                            const questionMap = new Map((questionDetails || []).map((q: any) => [q.id, q]));
+                            const partnerResponseMap = new Map(unansweredPartnerResponses.map((r: any) => [r.question_id, r]));
+
+                            const outstanding: OutstandingQuestion[] = [];
+                            for (const qId of unansweredQuestionIds) {
+                                const q = questionMap.get(qId);
+                                const pr = partnerResponseMap.get(qId);
+                                if (q && pr) {
+                                    outstanding.push({
+                                        id: qId,
+                                        text: q.text || '',
+                                        intensity: q.intensity || null,
+                                        pack: { id: q.pack?.id || '', name: q.pack?.name || '' },
+                                        partner_response: { answer: pr.answer, created_at: pr.created_at },
+                                    });
+                                }
+                            }
+
+                            setOutstandingTotal(outstanding.length);
+                            const outFrom = (outstandingPage - 1) * outstandingPageSize;
+                            setOutstandingQuestions(outstanding.slice(outFrom, outFrom + outstandingPageSize));
+                        } else {
+                            setOutstandingQuestions([]);
+                            setOutstandingTotal(0);
+                        }
+
+                        // Calculate gap status
+                        const { data: appConfig } = await supabase
+                            .from('app_config')
+                            .select('answer_gap_threshold')
+                            .limit(1)
+                            .maybeSingle();
+
+                        const threshold = appConfig?.answer_gap_threshold ?? 10;
+                        setGapThreshold(threshold);
+
+                        if (threshold > 0) {
+                            // Count questions user answered that partner hasn't
+                            const partnerAllAnswered = new Set((partnerResponses || []).map((r: any) => r.question_id));
+                            const { data: userResponses } = await supabase
+                                .from('responses')
+                                .select('question_id')
+                                .eq('user_id', userId)
+                                .eq('couple_id', profileData.couple_id);
+                            const userAhead = (userResponses || []).filter((r: any) => !partnerAllAnswered.has(r.question_id)).length;
+                            const partnerAhead = (partnerResponses || []).filter((r: any) => !answeredIds.has(r.question_id)).length;
+                            const gap = Math.max(0, userAhead - partnerAhead);
+                            setNetGap(gap);
+                            setGapDisabled(gap >= threshold);
+                        } else {
+                            setNetGap(0);
+                            setGapDisabled(false);
+                        }
+                    } else {
+                        setOutstandingQuestions([]);
+                        setOutstandingTotal(0);
+                        setGapDisabled(false);
+                    }
+                } else {
+                    setOutstandingQuestions([]);
+                    setOutstandingTotal(0);
+                    setGapDisabled(false);
+                }
             } else {
                 setMatches([]);
                 setMatchesTotal(0);
                 setMediaMessages([]);
                 setMediaTotal(0);
                 setEnabledPacks([]);
+                setOutstandingQuestions([]);
+                setOutstandingTotal(0);
+                setGapDisabled(false);
             }
         } catch (error) {
             console.error('Failed to load user data:', error);
         } finally {
             setLoading(false);
         }
-    }, [userId, responsesPage, responsesPageSize, matchesPage, matchesPageSize, mediaPage, mediaPageSize]);
+    }, [userId, responsesPage, responsesPageSize, matchesPage, matchesPageSize, mediaPage, mediaPageSize, outstandingPage, outstandingPageSize]);
 
     const { status: profileStatus } = useRealtimeSubscription<Profile>({ table: 'profiles', filter: userId ? `id=eq.${userId}` : undefined, enabled: !!userId, onUpdate: useCallback(({ new: updated }: { old: Profile; new: Profile }) => { setProfile(updated); }, []) });
     const { status: responsesStatus } = useRealtimeSubscription<Response>({ table: 'responses', filter: userId ? `user_id=eq.${userId}` : undefined, enabled: !!userId, onInsert: fetchData, onDelete: fetchData });
@@ -490,6 +616,7 @@ export function UserDetailPage() {
         setResponsesPage(1);
         setMatchesPage(1);
         setMediaPage(1);
+        setOutstandingPage(1);
     }, [userId]);
 
     useEffect(() => {
@@ -526,6 +653,8 @@ export function UserDetailPage() {
                         <h1 className="text-2xl font-bold">{profile.name || 'Unnamed User'}</h1>
                         <RealtimeStatusIndicator status={profileStatus === 'SUBSCRIBED' && responsesStatus === 'SUBSCRIBED' ? 'SUBSCRIBED' : profileStatus} showLabel />
                         {profile.is_premium && <Badge className="bg-amber-500"><Crown className="h-3 w-3 mr-1" />Premium</Badge>}
+                        {outstandingTotal > 0 && <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />{outstandingTotal} outstanding</Badge>}
+                        {gapDisabled && <Badge variant="destructive" className="gap-1"><AlertCircle className="h-3 w-3" />Gap blocked ({netGap}/{gapThreshold})</Badge>}
                         {!profile.is_premium && hasPermission(PERMISSION_KEYS.GIFT_PREMIUM) && <Dialog open={upgradeOpen} onOpenChange={setUpgradeOpen}><DialogTrigger asChild><Button size="sm" variant="outline" className="ml-2 gap-1 h-7"><Gift className="h-3.5 w-3.5" />Gift Premium</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Gift Premium Access</DialogTitle><DialogDescription>Manually upgrade this user to premium status.</DialogDescription></DialogHeader><div className="grid gap-4 py-4"><div className="grid gap-2"><Label htmlFor="expiry-type">Duration</Label><Select value={expiryType} onValueChange={setExpiryType}><SelectTrigger id="expiry-type"><SelectValue placeholder="Select duration" /></SelectTrigger><SelectContent><SelectItem value="forever">Lifetime (No Expiry)</SelectItem><SelectItem value="1_month">1 Month</SelectItem><SelectItem value="1_year">1 Year</SelectItem><SelectItem value="custom">Custom Date</SelectItem></SelectContent></Select></div>{expiryType === 'custom' && (<div className="grid gap-2"><Label htmlFor="custom-date">Expiry Date</Label><Input id="custom-date" type="datetime-local" value={customDate} onChange={(e) => setCustomDate(e.target.value)} /></div>)}</div><DialogFooter><Button variant="outline" onClick={() => setUpgradeOpen(false)}>Cancel</Button><Button onClick={handleUpgrade} disabled={upgrading}>{upgrading ? 'Upgrading...' : 'Confirm Upgrade'}</Button></DialogFooter></DialogContent></Dialog>}
                     </div>
                     <div className="text-muted-foreground mb-4 flex items-center gap-2">
@@ -633,6 +762,7 @@ export function UserDetailPage() {
                     {canViewResponses && <TabsTrigger value="responses">Responses ({responsesTotal})</TabsTrigger>}
                     {canViewMatches && <TabsTrigger value="matches" disabled={!profile.couple_id}>Matches ({matchesTotal})</TabsTrigger>}
                     {canViewMedia && <TabsTrigger value="media">Media ({mediaTotal})</TabsTrigger>}
+                    {canViewResponses && <TabsTrigger value="outstanding" disabled={!profile.couple_id || !partner}>Outstanding ({outstandingTotal}){gapDisabled && <AlertCircle className="h-3 w-3 ml-1 text-destructive" />}</TabsTrigger>}
                     <TabsTrigger value="packs" disabled={!profile.couple_id}>Enabled Packs ({enabledPacks.length})</TabsTrigger>
                 </TabsList>
                 {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="space-y-4"><div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-24">Answer</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md">{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="line-clamp-2 text-primary hover:underline cursor-pointer">{r.question.text}</Link>) : (<span className="line-clamp-2">{r.question.text}</span>)}</TableCell><TableCell>{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="text-primary hover:underline">{r.question.pack.name}</Link>) : (<span className="text-muted-foreground">{r.question.pack?.name || '—'}</span>)}</TableCell><TableCell><div className="flex items-center gap-2">{answerIcons[r.answer]}<span className="capitalize">{r.answer}</span></div></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div><PaginationControls page={responsesPage} pageSize={responsesPageSize} totalCount={responsesTotal} onPageChange={setResponsesPage} onPageSizeChange={(size) => { setResponsesPage(1); setResponsesPageSize(size); }} /></div>}</TabsContent>}
@@ -644,6 +774,86 @@ export function UserDetailPage() {
                         <AdminDecryptedImage messageId={message.id} alt={`Media from ${message.created_at}`} />
                     )}
                 </div><CardContent className="p-3"><div className="flex items-center justify-between text-sm"><div className="truncate text-muted-foreground">{message.media_type === 'video' ? 'Video' : 'Image'}</div>{canViewChats && message.match_id && <Link to={`/users/${userId}/matches/${message.match_id}`} className="text-primary hover:underline text-xs">View Chat</Link>}</div><div className="text-xs text-muted-foreground mt-1">{message.created_at ? format(new Date(message.created_at), 'MMM d, yyyy') : '—'}</div></CardContent></Card>))}</div><PaginationControls page={mediaPage} pageSize={mediaPageSize} totalCount={mediaTotal} onPageChange={setMediaPage} onPageSizeChange={(size) => { setMediaPage(1); setMediaPageSize(size); }} /></div>}</TabsContent>}
+                {canViewResponses && <TabsContent value="outstanding" className="mt-4">
+                    {gapDisabled && (
+                        <Card className="mb-4 border-destructive/50 bg-destructive/5">
+                            <CardContent className="pt-4 pb-4">
+                                <div className="flex items-center gap-2 text-destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <span className="font-medium">Gap disabled</span>
+                                    <span className="text-muted-foreground text-sm">- This user is {netGap} questions ahead of their partner (threshold: {gapThreshold}). They won't see new questions until their partner catches up.</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                    {outstandingQuestions.length === 0 ? (
+                        <Card className="flex flex-col items-center justify-center py-12">
+                            <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
+                            <p className="text-muted-foreground">No outstanding questions - all caught up!</p>
+                        </Card>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Question</TableHead>
+                                            <TableHead>Pack</TableHead>
+                                            <TableHead className="w-24">Intensity</TableHead>
+                                            <TableHead className="w-32">Partner's Answer</TableHead>
+                                            <TableHead className="w-36">Partner Answered</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {outstandingQuestions.map((q) => (
+                                            <TableRow key={q.id}>
+                                                <TableCell className="max-w-md">
+                                                    {q.pack?.id ? (
+                                                        <Link to={`/packs/${q.pack.id}/questions`} className="line-clamp-2 text-primary hover:underline cursor-pointer">{q.text}</Link>
+                                                    ) : (
+                                                        <span className="line-clamp-2">{q.text}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {q.pack?.id ? (
+                                                        <Link to={`/packs/${q.pack.id}/questions`} className="text-primary hover:underline">{q.pack.name}</Link>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">—</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {q.intensity ? (
+                                                        <div className="flex items-center gap-1">
+                                                            {Array.from({ length: q.intensity }, (_, i) => (
+                                                                <Flame key={i} className="h-3 w-3 text-orange-500" />
+                                                            ))}
+                                                        </div>
+                                                    ) : '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        {answerIcons[q.partner_response.answer]}
+                                                        <span className="capitalize">{q.partner_response.answer}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground text-sm">
+                                                    {q.partner_response.created_at ? format(new Date(q.partner_response.created_at), 'MMM d, yyyy') : '—'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <PaginationControls
+                                page={outstandingPage}
+                                pageSize={outstandingPageSize}
+                                totalCount={outstandingTotal}
+                                onPageChange={setOutstandingPage}
+                                onPageSizeChange={(size) => { setOutstandingPage(1); setOutstandingPageSize(size); }}
+                            />
+                        </div>
+                    )}
+                </TabsContent>}
                 <TabsContent value="packs" className="mt-4">
                     {enabledPacks.length === 0 ? (
                         <Card className="flex flex-col items-center justify-center py-12">
