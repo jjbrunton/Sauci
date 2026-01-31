@@ -38,6 +38,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         onPackChangesToggle: (value: boolean) => updatePreference('pack_changes_enabled', value),
         onNewPacksToggle: (value: boolean) => updatePreference('new_packs_enabled', value),
         onStreakMilestonesToggle: (value: boolean) => updatePreference('streak_milestones_enabled', value),
+        onWeeklySummaryToggle: (value: boolean) => updatePreference('weekly_summary_enabled', value),
     }), [updatePreference]);
 
     return (
@@ -131,6 +132,17 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                         description="Celebrate your streak achievements"
                         value={preferences.streak_milestones_enabled}
                         onValueChange={handlers.onStreakMilestonesToggle}
+                        disabled={isUpdating}
+                    />
+
+                    <View style={styles.itemDivider} />
+
+                    <SwitchItem
+                        icon="calendar-outline"
+                        label="Weekly Recap"
+                        description="Sunday summary of your weekly matches"
+                        value={preferences.weekly_summary_enabled}
+                        onValueChange={handlers.onWeeklySummaryToggle}
                         disabled={isUpdating}
                     />
                 </>

@@ -19,7 +19,7 @@ Notifications.setNotificationHandler({
 
 // Types
 export interface NotificationData {
-  type: "match" | "message" | "match_digest" | "partner_activity" | "nudge";
+  type: "match" | "message" | "match_digest" | "partner_activity" | "nudge" | "weekly_summary";
   match_id?: string;
   message_id?: string;
   count?: number;
@@ -231,7 +231,7 @@ export function handleNotificationResponse(
     return;
   }
 
-  if (data.type === "match_digest") {
+  if (data.type === "match_digest" || data.type === "weekly_summary") {
     router.push("/(app)/matches");
     return;
   }
