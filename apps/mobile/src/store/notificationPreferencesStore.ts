@@ -12,6 +12,8 @@ export interface NotificationPreferences {
     new_packs_enabled: boolean;
     streak_milestones_enabled: boolean;
     weekly_summary_enabled: boolean;
+    unpaired_reminders_enabled: boolean;
+    catchup_reminders_enabled: boolean;
     created_at: string;
     updated_at: string;
 }

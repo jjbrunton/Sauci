@@ -162,6 +162,8 @@ Edge functions in `apps/supabase/functions/` handle complex operations:
 - `delete-account` - Permanently deletes user account and all associated data (Apple App Store requirement)
 - `send-notification` - Push notifications for matches
 - `send-nudge-notification` - Partner nudge notifications (rate limited to once per 12 hours)
+- `send-unpaired-reminder` - Daily cron reminder for unpaired users to share invite code
+- `send-catchup-reminder` - Daily cron reminder for "behind" partners with escalating frequency
 - `revenuecat-webhook` - Subscription webhook handler
 - `sync-subscription` - Syncs RevenueCat subscription status
 - `redeem-code` - Redeems promotional codes for premium access (website only)
@@ -194,6 +196,8 @@ This approach:
 | `send-notification` | false | Internal trigger (no auth) |
 | `send-message-notification` | false | Internal trigger (no auth) |
 | `send-nudge-notification` | false | Manual via getUser() |
+| `send-unpaired-reminder` | false | Cron trigger (no auth) |
+| `send-catchup-reminder` | false | Cron trigger (no auth) |
 
 ### Database Best Practices
 - **Always use `.maybeSingle()` instead of `.single()`** when the row might not exist. `.single()` throws an error if 0 or >1 rows are returned.

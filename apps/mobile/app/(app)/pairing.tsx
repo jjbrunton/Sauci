@@ -7,6 +7,7 @@ import {
     Alert,
     ActivityIndicator,
     Share,
+    Linking,
     KeyboardAvoidingView,
     Platform,
     TouchableOpacity,
@@ -141,17 +142,36 @@ export default function PairingScreen() {
         }
     };
 
+    const shareMessage = couple?.invite_code
+        ? `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`
+        : "";
+
     const shareCode = async () => {
         if (couple?.invite_code) {
             try {
-                await Share.share({
-                    message: `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`,
-                });
+                await Share.share({ message: shareMessage });
                 Events.codeShared();
             } catch (error) {
                 console.error(error);
             }
         }
+    };
+
+    const shareViaWhatsApp = async () => {
+        const url = `whatsapp://send?text=${encodeURIComponent(shareMessage)}`;
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+            await Linking.openURL(url);
+            Events.codeShared();
+        } else {
+            shareCode();
+        }
+    };
+
+    const shareViaSMS = async () => {
+        const url = `sms:&body=${encodeURIComponent(shareMessage)}`;
+        await Linking.openURL(url);
+        Events.codeShared();
     };
 
     const handleCancelPairing = async () => {
@@ -256,7 +276,15 @@ export default function PairingScreen() {
                             </GlassCard>
                         </Animated.View>
 
-                        {/* Share Button */}
+                        {/* CTA Text */}
+                        <Animated.View
+                            entering={FadeInDown.delay(350).duration(500)}
+                            style={styles.ctaSection}
+                        >
+                            <Text style={styles.ctaText}>Send this to your partner to get started</Text>
+                        </Animated.View>
+
+                        {/* Primary Share Button */}
                         <Animated.View
                             entering={FadeInDown.delay(400).duration(500)}
                             style={styles.section}
@@ -264,10 +292,26 @@ export default function PairingScreen() {
                             <GlassButton
                                 onPress={shareCode}
                                 fullWidth
-                                icon={<Ionicons name="share-outline" size={20} color={colors.text} />}
+                                size="lg"
+                                icon={<Ionicons name="share-outline" size={22} color={colors.text} />}
                             >
-                                Share Code
+                                Share Invite Code
                             </GlassButton>
+                        </Animated.View>
+
+                        {/* Quick share buttons */}
+                        <Animated.View
+                            entering={FadeInDown.delay(450).duration(500)}
+                            style={styles.quickShareRow}
+                        >
+                            <TouchableOpacity style={styles.quickShareButton} onPress={shareViaSMS} activeOpacity={0.7}>
+                                <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+                                <Text style={styles.quickShareLabel}>Messages</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.quickShareButton} onPress={shareViaWhatsApp} activeOpacity={0.7}>
+                                <Ionicons name="logo-whatsapp" size={20} color={colors.text} />
+                                <Text style={styles.quickShareLabel}>WhatsApp</Text>
+                            </TouchableOpacity>
                         </Animated.View>
 
                         {/* Waiting indicator */}
@@ -558,5 +602,35 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         ...typography.subhead,
         color: colors.error,
+    },
+    ctaSection: {
+        alignItems: "center",
+        marginBottom: spacing.md,
+    },
+    ctaText: {
+        ...typography.callout,
+        color: colors.textSecondary,
+        textAlign: "center",
+    },
+    quickShareRow: {
+        flexDirection: "row",
+        justifyContent: "center",
+        gap: spacing.md,
+        marginBottom: spacing.md,
+    },
+    quickShareButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.backgroundLight,
+        paddingHorizontal: spacing.md,
+        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    quickShareLabel: {
+        ...typography.subhead,
+        color: colors.text,
     },
 });

@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, mcp__sauci-prod__execute_sql, mcp__sauci-prod__list_tables
-argument-hint: <pack-name> --category=<category> --intensity=<min-max> [--count=30] [--premium]
+argument-hint: <pack-name> --category=<category> [--count=30] [--premium] [--types=swipe,who_likely,audio,photo]
 description: Generate a question pack for Sauci following established content guidelines
 ---
 
@@ -18,6 +18,7 @@ First, read the pack generation guidelines:
 - Existing categories: can be retrieved from supabase with query: SELECT name, id FROM categories ORDER BY sort_order
 - Existing packs in target category: Will query once category is identified
 - Existing props: can be retrieved with: SELECT DISTINCT unnest(required_props) as prop FROM questions WHERE required_props IS NOT NULL ORDER BY prop
+- Current question type distribution in target pack (if adding to existing): SELECT question_type, count(*) FROM questions WHERE pack_id = '[pack_id]' AND deleted_at IS NULL GROUP BY question_type
 
 ## Task
 
@@ -28,26 +29,28 @@ Generate a complete question pack following all Sauci content guidelines.
 Extract from $ARGUMENTS:
 - **Pack name**: Required - the name for this pack
 - **Category**: Required - which category this belongs to (or "new" to create)
-- **Intensity range**: Required - e.g., "2-3", "3-4", "4-5"
 - **Question count**: Optional - default 30, can be 25-50
 - **Premium**: Optional flag - if pack should be premium
+- **Types**: Optional - comma-separated question types to generate. Default: `swipe,who_likely,audio,photo`. Options: `swipe`, `who_likely`, `audio`, `photo`
 
 ### Step 2: Understand Context
 
-1. If category exists, query existing packs to understand progression:
+1. If category exists, query existing packs to understand what's there:
    - What packs already exist?
-   - What intensity levels are covered?
-   - Where does this new pack fit in the progression?
+   - What question types are represented?
+   - Where does this new pack fit?
 
 2. Check if category is explicit:
    ```sql
    SELECT id, name, is_explicit FROM categories WHERE name ILIKE '%<category>%';
    ```
 
-3. If new category, establish the progression plan:
-   - What will the beginner pack cover?
-   - What will intermediate cover?
-   - What will advanced cover?
+3. Check the current type distribution if adding to an existing pack:
+   ```sql
+   SELECT question_type, count(*) FROM questions
+   WHERE pack_id = '[pack_id]' AND deleted_at IS NULL
+   GROUP BY question_type ORDER BY count DESC;
+   ```
 
 ### Step 3: Generate Questions
 
@@ -74,9 +77,60 @@ Follow these rules strictly:
 **For NON-EXPLICIT categories (is_explicit = false):**
 - CRITICAL: No sexual acts, crude language, or NSFW content
 - Keep language romantic, sensual, or playful without graphic terms
-- If intensity 3+ activities are needed, use suggestive but not explicit language
 
-#### 3.3 Partner Text Rules
+#### 3.3 Question Types
+
+Each question MUST have a `question_type`. The default mix should include variety across types.
+
+**`swipe`** (default) - Standard yes/no/maybe proposal
+- The classic Sauci format
+- Can be symmetric or asymmetric (with partner_text + inverse)
+- Example: "Give your partner a back massage"
+
+**`who_likely`** - "Who's more likely to..." format
+- ALWAYS symmetric (partner_text = NULL, no inverse needed)
+- Both partners pick who they think is more likely
+- Match created when both answer
+- Format: "Who is more likely to [activity/trait]?"
+- Keep fun and lighthearted — these are conversation starters
+- Examples:
+  - "Who is more likely to cry during a movie?"
+  - "Who is more likely to plan a surprise date?"
+  - "Who is more likely to fall asleep first?"
+
+**`audio`** - Voice recording prompt
+- ALWAYS symmetric (partner_text = NULL, no inverse needed)
+- Partners record a voice message in response
+- `config`: `{"max_duration_seconds": 60}` (default 60)
+- Great for: confessions, storytelling, impressions, compliments, singing
+- Format: prompts that invite a spoken response
+- Examples:
+  - "Record your best impression of your partner"
+  - "Describe your favourite memory together"
+  - "Say something you've never told your partner"
+
+**`photo`** - Photo prompt
+- ALWAYS symmetric (partner_text = NULL, no inverse needed)
+- Partners take or share a photo in response
+- No special config needed
+- Great for: selfies, throwbacks, showing something, creative challenges
+- Format: prompts that invite a photo response
+- Examples:
+  - "Share a photo from your camera roll that makes you think of your partner"
+  - "Take a selfie showing how you feel right now"
+  - "Share a screenshot of your last text about your partner"
+
+#### 3.4 Type Distribution Guidelines
+
+For a standard 30-question pack, aim for roughly:
+- **20-22 swipe** questions (the core experience)
+- **4-5 who_likely** questions
+- **2-3 audio** questions
+- **2-3 photo** questions
+
+Adjust based on what fits the pack's theme. Some packs may lean heavier on certain types.
+
+#### 3.5 Partner Text Rules (swipe questions only)
 
 - **NULL** for symmetric activities (both partners do the same thing together)
 - **Filled** for asymmetric activities (one does something to/for the other)
@@ -91,9 +145,11 @@ Follow these rules strictly:
 - BAD: "Receive oral from your partner" (clinical)
 - GOOD: "Let your partner pleasure you with their mouth" (enticing)
 
-#### 3.4 Critical: Inverse Questions and Database Linking
+#### 3.6 Critical: Inverse Questions and Database Linking (swipe questions only)
 
-For EVERY asymmetric question, create its inverse AND link them using the `inverse_of` column:
+Non-swipe types (who_likely, audio, photo) are ALWAYS symmetric — no inverse needed.
+
+For EVERY asymmetric **swipe** question, create its inverse AND link them using the `inverse_of` column:
 
 ```
 Original (PRIMARY - inverse_of = NULL):
@@ -114,12 +170,9 @@ This ensures:
 2. The database tracks which questions are inverses of each other
 3. Accurate unique question counts (200 questions = 100 unique concepts with inverses)
 
-**Database Schema:**
-- `inverse_of` column: UUID referencing the primary question's ID
-- Primary questions have `inverse_of = NULL`
-- Inverse questions have `inverse_of = <primary_question_id>`
+#### 3.7 Intensity Guidelines
 
-#### 3.5 Intensity Guidelines
+Each question still needs an `intensity` value (1-5) for backend filtering, even though it's not shown in the UI.
 
 | Level | Name | Description | Examples |
 |-------|------|-------------|----------|
@@ -129,7 +182,7 @@ This ensures:
 | 4 | Steamy | Explicit sex, moderate adventure | intercourse, light bondage, anal play |
 | 5 | Intense | Advanced/BDSM/extreme | impact play, power dynamics, taboo kinks |
 
-#### 3.6 Targeting Rules
+#### 3.8 Targeting Rules
 
 **Couple Targeting (allowed_couple_genders):**
 - DEFAULT: null (ALL couples) unless explicit anatomical requirement
@@ -140,19 +193,13 @@ This ensures:
 
 **Initiator Targeting (target_user_genders):**
 - DEFAULT: null (anyone can initiate)
-- Only for asymmetric questions (those with partner_text)
-- Set based on who does the action in "text" field:
-  - "Swallow your partner's cum" -> partner has penis -> initiator: `['female']` in M+F couples
-  - "Deep throat your partner" -> partner has penis -> `['female']` in M+F couples
-  - "Give your partner a massage" -> gender-neutral -> null
+- Only for asymmetric swipe questions (those with partner_text)
+- Set based on who does the action in "text" field
 - When in doubt, use null
 
-**Anatomical Consistency:**
-- NEVER mix male-specific and female-specific acts as alternatives
-- BAD: "Finger or give your partner a handjob" (mixed anatomy)
-- GOOD: Pick one activity per question
+**Note:** who_likely, audio, and photo questions are always NULL for both targeting fields (they're symmetric and gender-neutral).
 
-#### 3.7 Required Props
+#### 3.9 Required Props
 
 Identify physical items/accessories needed:
 - Props are items like: blindfold, remote vibrator, handcuffs, massage oil, ice cubes
@@ -167,15 +214,22 @@ Before outputting, verify each question against this checklist:
 
 **Language & Format:**
 - [ ] Uses "your partner" (no gendered pronouns)
-- [ ] Is a proposal, not an interview question
+- [ ] Swipe questions are proposals, not interview questions
 - [ ] No wishy-washy language
 - [ ] No time-specific words
 - [ ] 5-12 words (concise)
 - [ ] No cheesy/cliche language
 - [ ] Varied sentence structures
 
+**Question Types:**
+- [ ] who_likely questions use "Who is more likely to..." format
+- [ ] audio questions prompt a natural spoken response
+- [ ] photo questions prompt something visual and shareable
+- [ ] Non-swipe types have partner_text = NULL and no inverse
+- [ ] Type distribution is balanced (see 3.4)
+
 **Structure:**
-- [ ] All asymmetric questions have inverses (these are NOT duplicates - they're required pairs)
+- [ ] All asymmetric swipe questions have inverses (these are NOT duplicates - they're required pairs)
 - [ ] Partner text is appealing (not clinical)
 - [ ] Partner text frames responses as "allowing" not forced
 - [ ] No actual duplicates (same `text` appearing twice)
@@ -190,7 +244,7 @@ Before outputting, verify each question against this checklist:
 **Consistency:**
 - [ ] No mixed anatomy in alternatives
 - [ ] Tone matches explicit/non-explicit category
-- [ ] Fits progression within category
+- [ ] Fits within the category
 
 ### Step 5: Output
 
@@ -207,41 +261,37 @@ VALUES (
 )
 RETURNING id;
 
--- Then insert questions with inverse_of linking
--- For inverse pairs: insert primary first (inverse_of = NULL), then inverse pointing to primary
+-- Then insert questions
+-- For swipe inverse pairs: insert primary first (inverse_of = NULL), then inverse pointing to primary
 
--- Generate UUIDs for inverse pairs upfront
--- Pair 1: Primary and its inverse
+-- Swipe pair example
 WITH pair1_primary AS (
-  INSERT INTO questions (pack_id, text, partner_text, intensity, inverse_of)
-  VALUES ('[pack_id]', 'Spank your partner', 'Be spanked by your partner', 3, NULL)
+  INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of)
+  VALUES ('[pack_id]', 'Spank your partner', 'Be spanked by your partner', 3, 'swipe', '{}', NULL)
   RETURNING id
 )
-INSERT INTO questions (pack_id, text, partner_text, intensity, inverse_of)
-SELECT '[pack_id]', 'Be spanked by your partner', 'Spank your partner', 3, id
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of)
+SELECT '[pack_id]', 'Be spanked by your partner', 'Spank your partner', 3, 'swipe', '{}', id
 FROM pair1_primary;
 
--- Symmetric questions (no inverse_of needed)
-INSERT INTO questions (pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, inverse_of) VALUES
-('[pack_id]', 'Symmetric question text', NULL, 2, NULL, NULL, NULL, NULL);
+-- Symmetric swipe (no inverse needed)
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
+('[pack_id]', 'Cook dinner together', NULL, 1, 'swipe', '{}', NULL);
 
--- Or bulk insert with explicit UUIDs for pairs:
-INSERT INTO questions (id, pack_id, text, partner_text, intensity, inverse_of) VALUES
--- Pair 1
-('uuid-primary-1', '[pack_id]', 'Give your partner a massage', 'Receive a massage from your partner', 2, NULL),
-('uuid-inverse-1', '[pack_id]', 'Receive a massage from your partner', 'Give your partner a massage', 2, 'uuid-primary-1'),
--- Pair 2
-('uuid-primary-2', '[pack_id]', 'Blindfold your partner', 'Be blindfolded by your partner', 3, NULL),
-('uuid-inverse-2', '[pack_id]', 'Be blindfolded by your partner', 'Blindfold your partner', 3, 'uuid-primary-2'),
--- Symmetric (no pair)
-(gen_random_uuid(), '[pack_id]', 'Cook dinner together', NULL, 1, NULL);
+-- who_likely questions (always symmetric, no inverse)
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
+('[pack_id]', 'Who is more likely to plan a surprise date?', NULL, 1, 'who_likely', '{}', NULL),
+('[pack_id]', 'Who is more likely to cry during a movie?', NULL, 1, 'who_likely', '{}', NULL);
+
+-- audio questions (always symmetric, no inverse)
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
+('[pack_id]', 'Describe your favourite memory together', NULL, 1, 'audio', '{"max_duration_seconds": 60}', NULL),
+('[pack_id]', 'Record your best impression of your partner', NULL, 1, 'audio', '{"max_duration_seconds": 60}', NULL);
+
+-- photo questions (always symmetric, no inverse)
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
+('[pack_id]', 'Share a photo that makes you think of your partner', NULL, 1, 'photo', '{}', NULL);
 ```
-
-**Field notes:**
-- `inverse_of`: NULL for primary/symmetric questions, UUID of primary question for inverses
-- `allowed_couple_genders`: NULL for all couples, or array like `ARRAY['male+male', 'female+male']`
-- `target_user_genders`: NULL for any initiator, or array like `ARRAY['female']`
-- `required_props`: NULL if no props needed, or array like `ARRAY['blindfold', 'ice cubes']`
 
 Also provide a summary table:
 
@@ -249,13 +299,12 @@ Also provide a summary table:
 |--------|-------|
 | Total questions | X |
 | Unique question concepts | X (total - inverse count) |
-| Intensity 1 | X |
-| Intensity 2 | X |
-| Intensity 3 | X |
-| Intensity 4 | X |
-| Intensity 5 | X |
+| Swipe questions | X |
+| who_likely questions | X |
+| audio questions | X |
+| photo questions | X |
 | Symmetric (null partner_text) | X |
-| Asymmetric pairs (with inverse_of links) | X pairs (X questions) |
+| Asymmetric swipe pairs (with inverse_of links) | X pairs (X questions) |
 | With couple targeting | X |
 | With initiator targeting | X |
 | With required props | X |
@@ -263,21 +312,24 @@ Also provide a summary table:
 ## Example Usage
 
 ```
-/generate-pack "Testing the Waters" --category="Public Thrills" --intensity=2-3 --count=30
-/generate-pack "Kink Discovery" --category="The Kink Lab" --intensity=3-5 --count=50
-/generate-pack "Staying Close" --category=new:"Long Distance" --intensity=1 --count=30
+/generate-pack "Testing the Waters" --category="Public Thrills" --count=30
+/generate-pack "Kink Discovery" --category="The Kink Lab" --count=50 --premium
+/generate-pack "Staying Close" --category=new:"Long Distance" --count=30
+/generate-pack "Date Night" --category="Quality Time" --types=who_likely,audio,photo
 ```
 
 ## Guidelines
 
 - DO ask clarifying questions if the pack concept is unclear
 - DO check existing packs in the category first
-- DO create inverse questions for ALL asymmetric content AND link them with inverse_of
+- DO create inverse questions for ALL asymmetric swipe content AND link them with inverse_of
+- DO include a mix of question types (swipe, who_likely, audio, photo)
 - DO vary sentence structure and openers
 - DO use the inverse_of column to link inverse pairs (inverse points to primary's UUID)
 - DON'T use cheesy or cliche language
 - DON'T assume heterosexual couples
-- DON'T skip the inverse question requirement
-- DON'T forget to set inverse_of - this is how we track unique question concepts
+- DON'T skip the inverse question requirement for asymmetric swipe questions
+- DON'T create inverses for who_likely, audio, or photo questions (they're always symmetric)
+- DON'T forget to set question_type - every question needs one
 - DON'T use interview-style questions ("Would you like to...")
 - DON'T treat inverse pairs as duplicates - they are REQUIRED (one's `text` = other's `partner_text`)

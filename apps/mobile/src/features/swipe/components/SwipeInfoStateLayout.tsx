@@ -27,6 +27,11 @@ interface SwipeInfoStateLayoutProps {
         onPress: () => void;
         variant?: "primary" | "secondary";
     };
+    secondaryAction?: {
+        label: string;
+        onPress: () => void;
+        icon?: keyof typeof Ionicons.glyphMap;
+    };
 }
 
 export const SwipeInfoStateLayout = ({
@@ -41,6 +46,7 @@ export const SwipeInfoStateLayout = ({
     separatorVariant = "rose",
     labelStyle,
     action,
+    secondaryAction,
 }: SwipeInfoStateLayoutProps) => (
     <GradientBackground>
         <View style={styles.centerContainer}>
@@ -86,6 +92,17 @@ export const SwipeInfoStateLayout = ({
                         style={{ marginTop: spacing.lg }}
                     >
                         {action.label}
+                    </GlassButton>
+                )}
+
+                {secondaryAction && (
+                    <GlassButton
+                        variant="secondary"
+                        onPress={secondaryAction.onPress}
+                        style={{ marginTop: spacing.sm }}
+                        icon={secondaryAction.icon ? <Ionicons name={secondaryAction.icon} size={18} color={colors.text} /> : undefined}
+                    >
+                        {secondaryAction.label}
                     </GlassButton>
                 )}
             </Animated.View>

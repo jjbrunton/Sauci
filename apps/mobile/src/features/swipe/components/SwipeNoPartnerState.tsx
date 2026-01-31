@@ -1,4 +1,7 @@
+import { Share } from "react-native";
 import { colors } from "../../../theme";
+import { useAuthStore } from "../../../store";
+import { Events } from "../../../lib/analytics";
 import { SwipeInfoStateLayout } from "./SwipeInfoStateLayout";
 
 interface SwipeNoPartnerStateProps {
@@ -8,6 +11,19 @@ interface SwipeNoPartnerStateProps {
 
 export const SwipeNoPartnerState = ({ hasCouple, onPairPress }: SwipeNoPartnerStateProps) => {
     const accent = colors.premium.rose;
+    const { couple } = useAuthStore();
+
+    const handleShareCode = async () => {
+        if (!couple?.invite_code) return;
+        try {
+            await Share.share({
+                message: `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`,
+            });
+            Events.codeShared();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     return (
         <SwipeInfoStateLayout
@@ -30,6 +46,11 @@ export const SwipeNoPartnerState = ({ hasCouple, onPairPress }: SwipeNoPartnerSt
                 label: hasCouple ? "View Invite Code" : "Pair Now",
                 onPress: onPairPress,
             }}
+            secondaryAction={hasCouple && couple?.invite_code ? {
+                label: "Share Code",
+                onPress: handleShareCode,
+                icon: "share-outline",
+            } : undefined}
         />
     );
 };

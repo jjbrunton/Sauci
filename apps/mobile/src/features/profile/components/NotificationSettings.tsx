@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { colors, spacing, typography } from '../../../theme';
-import { useNotificationPreferencesStore } from '../../../store';
-import { useAuthStore } from '../../../store';
+import { useNotificationPreferencesStore, useAuthStore } from '../../../store';
 import { SettingsSection } from './SettingsSection';
 import { SwitchItem } from './SwitchItem';
 
@@ -19,7 +18,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     onPushToggle,
     delay = 360,
 }) => {
-    const { user } = useAuthStore();
+    const { user, partner } = useAuthStore();
     const { preferences, isUpdating, fetchPreferences, updatePreference } = useNotificationPreferencesStore();
 
     // Fetch notification preferences on mount when user is available
@@ -39,6 +38,8 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         onNewPacksToggle: (value: boolean) => updatePreference('new_packs_enabled', value),
         onStreakMilestonesToggle: (value: boolean) => updatePreference('streak_milestones_enabled', value),
         onWeeklySummaryToggle: (value: boolean) => updatePreference('weekly_summary_enabled', value),
+        onUnpairedRemindersToggle: (value: boolean) => updatePreference('unpaired_reminders_enabled', value),
+        onCatchupRemindersToggle: (value: boolean) => updatePreference('catchup_reminders_enabled', value),
     }), [updatePreference]);
 
     return (
@@ -145,6 +146,36 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                         onValueChange={handlers.onWeeklySummaryToggle}
                         disabled={isUpdating}
                     />
+
+                    {partner && (
+                        <>
+                            <View style={styles.itemDivider} />
+
+                            <SwitchItem
+                                icon="time-outline"
+                                label="Catch-up Reminders"
+                                description="Reminders when your partner is ahead"
+                                value={preferences.catchup_reminders_enabled}
+                                onValueChange={handlers.onCatchupRemindersToggle}
+                                disabled={isUpdating}
+                            />
+                        </>
+                    )}
+
+                    {!partner && (
+                        <>
+                            <View style={styles.itemDivider} />
+
+                            <SwitchItem
+                                icon="people-outline"
+                                label="Pairing Reminders"
+                                description="Reminders to share your invite code"
+                                value={preferences.unpaired_reminders_enabled}
+                                onValueChange={handlers.onUnpairedRemindersToggle}
+                                disabled={isUpdating}
+                            />
+                        </>
+                    )}
                 </>
             )}
         </SettingsSection>
