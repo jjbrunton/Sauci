@@ -204,6 +204,35 @@ This approach:
 - **Profile creation trigger**: The `on_auth_user_created` trigger automatically creates a profile when a user signs up. Never assume a profile exists without checking.
 - **Check for null profiles** in edge functions before performing operations.
 
+### Cron Jobs (pg_cron) - IMPORTANT
+
+**NEVER hardcode Supabase URLs in cron job migrations.** Migrations run on both prod and non-prod, so a hardcoded production URL will cause non-prod cron jobs to hit production (double-firing notifications, duplicate processing, etc.).
+
+**Correct pattern** — use `get_supabase_edge_function_url()`:
+```sql
+SELECT cron.schedule(
+    'my-cron-job',
+    '*/5 * * * *',
+    format(
+        $cmd$
+        SELECT net.http_post(
+            url := %L,
+            headers := jsonb_build_object('Content-Type', 'application/json'),
+            body := '{}'::jsonb
+        )
+        $cmd$,
+        get_supabase_edge_function_url('my-edge-function')
+    )
+);
+```
+
+This resolves the URL from `app_config.supabase_url` at migration-time, so each environment targets its own edge functions.
+
+**If adding a new environment**, you must seed the URL before running migrations:
+```sql
+UPDATE app_config SET supabase_url = 'https://<project-ref>.supabase.co';
+```
+
 ### Key Patterns
 - Responses use UPSERT with `onConflict: "user_id,question_id"`
 - Match detection happens in `submit-response` edge function after each response

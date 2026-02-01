@@ -79,13 +79,27 @@ Partners take or share a photo. Great for selfies, throwbacks, creative challeng
   - "Share a screenshot of your last text about your partner"
   - "Show the view from where you are right now"
 
+### `text_answer` - Written Response Prompt
+Partners type a written response. Great for reflections, love notes, confessions, creative writing, finish-the-sentence prompts.
+
+- **ALWAYS symmetric** — partner_text = NULL, no inverse needed
+- `config`: `{"max_length": 500}`
+- Writing can feel safer than speaking for vulnerable topics
+- Format: prompts that invite a thoughtful written response
+- Examples:
+  - "Describe your partner in three words"
+  - "Write a short love letter to your partner"
+  - "Finish this sentence: When I'm with you I feel..."
+  - "Write down a fantasy you haven't said out loud"
+
 ### Type Distribution
 
 For a standard 30-question pack, aim for roughly:
-- **20-22 swipe** questions (the core experience)
+- **18-20 swipe** questions (the core experience)
 - **4-5 who_likely** questions
 - **2-3 audio** questions
 - **2-3 photo** questions
+- **2-3 text_answer** questions
 
 Adjust based on the pack's theme. A "Getting to Know You" pack might lean heavier on who_likely and audio. An explicit pack might be mostly swipe.
 
@@ -97,7 +111,7 @@ Each question has:
 - `text` - What Partner A sees
 - `partner_text` - What Partner B sees (NULL for symmetric questions and all non-swipe types)
 - `intensity` - 1-5 scale (for backend filtering, not shown in UI)
-- `question_type` - `swipe`, `who_likely`, `audio`, or `photo`
+- `question_type` - `swipe`, `who_likely`, `audio`, `photo`, or `text_answer`
 - `config` - JSONB for type-specific settings (e.g., `{"max_duration_seconds": 60}` for audio)
 - `allowed_couple_genders` - Which couple types see this (NULL = all)
 - `target_user_genders` - Which gender initiates (NULL = any)
@@ -148,7 +162,7 @@ This ensures:
 
 **IMPORTANT:**
 - Inverse pairs are NOT duplicates. When one question's `text` matches another's `partner_text`, they form a valid inverse pair. This is intentional and required - do not flag or remove these as duplicates.
-- Non-swipe types (who_likely, audio, photo) NEVER have inverses — they are always symmetric.
+- Non-swipe types (who_likely, audio, photo, text_answer) NEVER have inverses — they are always symmetric.
 
 ---
 
@@ -167,7 +181,7 @@ Controls which couple types see the question. Options: `male+male`, `female+male
 | Requires vagina | `['female+male', 'female+female']` | Exclude M+M |
 | Sex toys | NULL | Toys work for everyone |
 
-**Note:** who_likely, audio, and photo questions are always NULL (they're gender-neutral by nature).
+**Note:** who_likely, audio, photo, and text_answer questions are always NULL (they're gender-neutral by nature).
 
 ### Initiator Targeting (target_user_genders)
 
@@ -278,7 +292,7 @@ Advanced/BDSM/extreme exploration
 - Use cheesy phrases ("make love", "intimate connection", "souls intertwining")
 - Assume heterosexual couples by default
 - Create one-sided asymmetric swipe questions (always make the inverse)
-- Create inverses for who_likely, audio, or photo (they're symmetric)
+- Create inverses for who_likely, audio, photo, or text_answer (they're symmetric)
 - Use time-specific language
 - Be preachy or educational in tone
 - Include judgment about activities
@@ -309,7 +323,7 @@ When asked to create a pack:
    - What question types fit best for this theme?
 
 3. **Generate questions**
-   - Mix of swipe, who_likely, audio, and photo types
+   - Mix of swipe, who_likely, audio, photo, and text_answer types
    - For swipe: mix of symmetric (null partner_text) and asymmetric questions
    - For EVERY asymmetric swipe question, immediately create its inverse
    - Vary sentence structure and openers
@@ -349,7 +363,9 @@ INSERT INTO questions (id, pack_id, text, partner_text, intensity, question_type
 -- audio (always symmetric, no inverse)
 (gen_random_uuid(), '[pack_id]', 'Describe your perfect date in 30 seconds', NULL, 1, 'audio', '{"max_duration_seconds": 60}', NULL, NULL, NULL, NULL),
 -- photo (always symmetric, no inverse)
-(gen_random_uuid(), '[pack_id]', 'Share a photo that makes you smile', NULL, 1, 'photo', '{}', NULL, NULL, NULL, NULL);
+(gen_random_uuid(), '[pack_id]', 'Share a photo that makes you smile', NULL, 1, 'photo', '{}', NULL, NULL, NULL, NULL),
+-- text_answer (always symmetric, no inverse)
+(gen_random_uuid(), '[pack_id]', 'Describe your partner in three words', NULL, 1, 'text_answer', '{"max_length": 500}', NULL, NULL, NULL, NULL);
 ```
 
 ---
@@ -424,6 +440,15 @@ question_type: photo
 config: {}
 ```
 
+### text_answer
+```
+text: "Write a short love letter to your partner"
+partner_text: NULL
+intensity: 1
+question_type: text_answer
+config: {"max_length": 500}
+```
+
 ### Swipe - Steamy (Intensity 4) - With Couple Targeting
 ```
 text: "Give your partner a blowjob in a risky location"
@@ -470,7 +495,7 @@ config: {}
 - [ ] who_likely uses "Who is more likely to..." format
 - [ ] audio prompts invite a natural spoken response
 - [ ] photo prompts invite a visual response
-- [ ] Non-swipe types have partner_text = NULL and inverse_of = NULL
+- [ ] Non-swipe types (who_likely, audio, photo, text_answer) have partner_text = NULL and inverse_of = NULL
 - [ ] Type distribution is balanced
 
 **Structure:**

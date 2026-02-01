@@ -1,6 +1,6 @@
 ---
 allowed-tools: Read, mcp__sauci-prod__execute_sql, mcp__sauci-prod__list_tables
-argument-hint: <pack-name> --category=<category> [--count=30] [--premium] [--types=swipe,who_likely,audio,photo]
+argument-hint: <pack-name> --category=<category> [--count=30] [--premium] [--types=swipe,who_likely,audio,photo,text_answer]
 description: Generate a question pack for Sauci following established content guidelines
 ---
 
@@ -31,7 +31,7 @@ Extract from $ARGUMENTS:
 - **Category**: Required - which category this belongs to (or "new" to create)
 - **Question count**: Optional - default 30, can be 25-50
 - **Premium**: Optional flag - if pack should be premium
-- **Types**: Optional - comma-separated question types to generate. Default: `swipe,who_likely,audio,photo`. Options: `swipe`, `who_likely`, `audio`, `photo`
+- **Types**: Optional - comma-separated question types to generate. Default: `swipe,who_likely,audio,photo,text_answer`. Options: `swipe`, `who_likely`, `audio`, `photo`, `text_answer`
 
 ### Step 2: Understand Context
 
@@ -120,13 +120,26 @@ Each question MUST have a `question_type`. The default mix should include variet
   - "Take a selfie showing how you feel right now"
   - "Share a screenshot of your last text about your partner"
 
+**`text_answer`** - Written response prompt
+- ALWAYS symmetric (partner_text = NULL, no inverse needed)
+- Partners type a written response
+- `config`: `{"max_length": 500}` (default 500)
+- Great for: reflections, love notes, confessions, creative writing, finish-the-sentence prompts
+- Writing can feel safer than speaking for vulnerable topics
+- Format: prompts that invite a thoughtful written response
+- Examples:
+  - "Describe your partner in three words"
+  - "Write a short love letter to your partner"
+  - "Finish this sentence: When I'm with you I feel..."
+
 #### 3.4 Type Distribution Guidelines
 
 For a standard 30-question pack, aim for roughly:
-- **20-22 swipe** questions (the core experience)
+- **18-20 swipe** questions (the core experience)
 - **4-5 who_likely** questions
 - **2-3 audio** questions
 - **2-3 photo** questions
+- **2-3 text_answer** questions
 
 Adjust based on what fits the pack's theme. Some packs may lean heavier on certain types.
 
@@ -147,7 +160,7 @@ Adjust based on what fits the pack's theme. Some packs may lean heavier on certa
 
 #### 3.6 Critical: Inverse Questions and Database Linking (swipe questions only)
 
-Non-swipe types (who_likely, audio, photo) are ALWAYS symmetric — no inverse needed.
+Non-swipe types (who_likely, audio, photo, text_answer) are ALWAYS symmetric — no inverse needed.
 
 For EVERY asymmetric **swipe** question, create its inverse AND link them using the `inverse_of` column:
 
@@ -225,7 +238,7 @@ Before outputting, verify each question against this checklist:
 - [ ] who_likely questions use "Who is more likely to..." format
 - [ ] audio questions prompt a natural spoken response
 - [ ] photo questions prompt something visual and shareable
-- [ ] Non-swipe types have partner_text = NULL and no inverse
+- [ ] Non-swipe types (who_likely, audio, photo, text_answer) have partner_text = NULL and no inverse
 - [ ] Type distribution is balanced (see 3.4)
 
 **Structure:**
@@ -291,6 +304,11 @@ INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, co
 -- photo questions (always symmetric, no inverse)
 INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
 ('[pack_id]', 'Share a photo that makes you think of your partner', NULL, 1, 'photo', '{}', NULL);
+
+-- text_answer questions (always symmetric, no inverse)
+INSERT INTO questions (pack_id, text, partner_text, intensity, question_type, config, inverse_of) VALUES
+('[pack_id]', 'Describe your partner in three words', NULL, 1, 'text_answer', '{"max_length": 500}', NULL),
+('[pack_id]', 'Write a short love letter to your partner', NULL, 1, 'text_answer', '{"max_length": 500}', NULL);
 ```
 
 Also provide a summary table:
@@ -303,6 +321,7 @@ Also provide a summary table:
 | who_likely questions | X |
 | audio questions | X |
 | photo questions | X |
+| text_answer questions | X |
 | Symmetric (null partner_text) | X |
 | Asymmetric swipe pairs (with inverse_of links) | X pairs (X questions) |
 | With couple targeting | X |
@@ -329,7 +348,7 @@ Also provide a summary table:
 - DON'T use cheesy or cliche language
 - DON'T assume heterosexual couples
 - DON'T skip the inverse question requirement for asymmetric swipe questions
-- DON'T create inverses for who_likely, audio, or photo questions (they're always symmetric)
+- DON'T create inverses for who_likely, audio, photo, or text_answer questions (they're always symmetric)
 - DON'T forget to set question_type - every question needs one
 - DON'T use interview-style questions ("Would you like to...")
 - DON'T treat inverse pairs as duplicates - they are REQUIRED (one's `text` = other's `partner_text`)
