@@ -15,12 +15,6 @@ AS $$
            || function_name;
 $$;
 
--- Re-register all cron jobs using the helper function.
--- format() resolves at migration-time, baking the URL into the cron command.
--- IMPORTANT: app_config.supabase_url MUST be set before this migration runs.
--- CI should run: UPDATE app_config SET supabase_url = '...' before db push,
--- or it can be seeded manually per environment.
-
 -- For safety, abort if supabase_url is not set
 DO $$
 BEGIN
@@ -31,7 +25,34 @@ BEGIN
 END;
 $$;
 
-SELECT cron.unschedule('send-pack-change-notifications');
+-- Safely unschedule all existing cron jobs (ignore if they don't exist)
+DO $$
+DECLARE
+    job_names TEXT[] := ARRAY[
+        'send-pack-change-notifications',
+        'send-partner-activity-notifications',
+        'process-scheduled-releases',
+        'check-streak-milestones',
+        'send-match-notification-digests',
+        'send-weekly-summary',
+        'send-unpaired-reminders',
+        'send-catchup-reminders'
+    ];
+    j TEXT;
+BEGIN
+    FOREACH j IN ARRAY job_names LOOP
+        BEGIN
+            PERFORM cron.unschedule(j);
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'Job % not found, skipping unschedule', j;
+        END;
+    END LOOP;
+END;
+$$;
+
+-- Re-register all cron jobs using dynamic URLs.
+-- format() resolves at migration-time, baking the correct URL into the cron command.
+
 SELECT cron.schedule(
     'send-pack-change-notifications',
     '*/5 * * * *',
@@ -47,7 +68,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('send-partner-activity-notifications');
 SELECT cron.schedule(
     'send-partner-activity-notifications',
     '*/5 * * * *',
@@ -63,7 +83,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('process-scheduled-releases');
 SELECT cron.schedule(
     'process-scheduled-releases',
     '*/5 * * * *',
@@ -79,7 +98,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('check-streak-milestones');
 SELECT cron.schedule(
     'check-streak-milestones',
     '5 0 * * *',
@@ -95,7 +113,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('send-match-notification-digests');
 SELECT cron.schedule(
     'send-match-notification-digests',
     '* * * * *',
@@ -111,7 +128,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('send-weekly-summary');
 SELECT cron.schedule(
     'send-weekly-summary',
     '0 10 * * 0',
@@ -127,7 +143,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('send-unpaired-reminders');
 SELECT cron.schedule(
     'send-unpaired-reminders',
     '0 18 * * *',
@@ -143,7 +158,6 @@ SELECT cron.schedule(
     )
 );
 
-SELECT cron.unschedule('send-catchup-reminders');
 SELECT cron.schedule(
     'send-catchup-reminders',
     '0 17 * * *',
