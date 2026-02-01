@@ -16,6 +16,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sauci.app",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.sauci.app"]
+      },
       "buildNumber": "35",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -237,7 +240,31 @@
           "iosUrlScheme": "com.googleusercontent.apps.861972684340-0u2as8i5equfhmhmvjihottkf0ig7237"
         }
       ],
-      "./plugins/withKotlinVersion.js"
+      "./plugins/withKotlinVersion.js",
+      [
+        "@bacons/apple-targets",
+        {
+          "appleTeamId": "BXVPBATDZY"
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "LiveDraw",
+              "label": "Live Draw",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "description": "See your shared drawing with your partner.",
+              "previewImage": "./assets/widget-preview/live-draw.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

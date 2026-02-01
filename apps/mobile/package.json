@@ -2,7 +2,7 @@
   "name": "@sauci/mobile",
   "version": "1.0.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "./index.js",
   "scripts": {
     "dev": "expo start",
     "android": "expo run:android",
@@ -19,9 +19,12 @@
     "release:android:preview": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile preview --local"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^0.1.6",
+    "@bittingz/expo-widgets": "^3.0.2",
     "@expo/ngrok": "^4.1.0",
     "@expo/vector-icons": "~14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-community/cli": "^20.1.1",
     "@react-native-firebase/analytics": "^23.8.2",
     "@react-native-firebase/app": "^23.8.2",
     "@react-native-firebase/crashlytics": "^23.8.4",
@@ -29,6 +32,7 @@
     "@react-navigation/bottom-tabs": "^7.0.0",
     "@react-navigation/native": "^7.0.0",
     "@react-navigation/native-stack": "^7.0.0",
+    "@shopify/react-native-skia": "^1.12.4",
     "@supabase/supabase-js": "^2.39.0",
     "@tanstack/react-query": "^5.17.0",
     "babel-preset-expo": "~12.0.0",
@@ -59,6 +63,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-native": "0.76.9",
+    "react-native-android-widget": "^0.20.1",
     "react-native-compressor": "^1.13.0",
     "react-native-gesture-handler": "~2.20.0",
     "react-native-purchases": "^9.6.12",

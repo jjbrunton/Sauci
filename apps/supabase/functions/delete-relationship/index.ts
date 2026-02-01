@@ -120,6 +120,12 @@ Deno.serve(async (req) => {
             }
         }
 
+        // Delete live draw sessions for this couple
+        await supabase
+            .from("live_draw_sessions")
+            .delete()
+            .eq("couple_id", coupleId);
+
         // Clear couple_id from both partners' profiles first
         const { error: updateError } = await supabase
             .from("profiles")
