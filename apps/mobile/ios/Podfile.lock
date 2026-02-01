@@ -264,7 +264,7 @@ PODS:
     - SDWebImageSVGCoder (~> 1.7.0)
   - ExpoImagePicker (16.0.6):
     - ExpoModulesCore
-  - ExpoKeepAwake (15.0.8):
+  - ExpoKeepAwake (14.0.3):
     - ExpoModulesCore
   - ExpoLinearGradient (14.0.2):
     - ExpoModulesCore
@@ -303,6 +303,8 @@ PODS:
   - ExpoSharing (13.0.1):
     - ExpoModulesCore
   - ExpoWidgets (3.0.2):
+    - ExpoModulesCore
+  - ExtensionStorage (1.0.0):
     - ExpoModulesCore
   - EXUpdatesInterface (1.0.0):
     - ExpoModulesCore
@@ -433,8 +435,8 @@ PODS:
   - PromisesObjC (2.4.0)
   - PromisesSwift (2.4.0):
     - PromisesObjC (= 2.4.0)
-  - PurchasesHybridCommon (17.28.0):
-    - RevenueCat (= 5.55.1)
+  - PurchasesHybridCommon (17.30.1):
+    - RevenueCat (= 5.56.0)
   - RCT-Folly (2024.10.14.00):
     - boost
     - DoubleConversion
@@ -2052,10 +2054,10 @@ PODS:
     - React-logger
     - React-perflogger
     - React-utils (= 0.76.9)
-  - RevenueCat (5.55.1)
+  - RevenueCat (5.56.0)
   - RNCAsyncStorage (1.23.1):
     - React-Core
-  - RNFBAnalytics (23.8.3):
+  - RNFBAnalytics (23.8.5):
     - DoubleConversion
     - FirebaseAnalytics/Core (= 12.8.0)
     - FirebaseAnalytics/IdentitySupport (= 12.8.0)
@@ -2079,7 +2081,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - RNFBApp
     - Yoga
-  - RNFBApp (23.8.4):
+  - RNFBApp (23.8.5):
     - DoubleConversion
     - Firebase/CoreOnly (= 12.8.0)
     - glog
@@ -2101,7 +2103,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNFBCrashlytics (23.8.4):
+  - RNFBCrashlytics (23.8.5):
     - DoubleConversion
     - Firebase/Crashlytics (= 12.8.0)
     - FirebaseCoreExtension
@@ -2149,8 +2151,8 @@ PODS:
   - RNGoogleSignin (16.1.1):
     - GoogleSignIn (~> 9.0)
     - React-Core
-  - RNPurchases (9.7.1):
-    - PurchasesHybridCommon (= 17.28.0)
+  - RNPurchases (9.7.5):
+    - PurchasesHybridCommon (= 17.30.1)
     - React-Core
   - RNReanimated (3.16.7):
     - DoubleConversion
@@ -2286,7 +2288,7 @@ DEPENDENCIES:
   - EXJSONUtils (from `../../../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../../../node_modules/expo-manifests/ios`)
   - EXNotifications (from `../../../node_modules/expo-notifications/ios`)
-  - Expo (from `../node_modules/expo`)
+  - Expo (from `../../../node_modules/expo`)
   - expo-dev-client (from `../../../node_modules/expo-dev-client/ios`)
   - expo-dev-launcher (from `../../../node_modules/expo-dev-launcher`)
   - expo-dev-menu (from `../../../node_modules/expo-dev-menu`)
@@ -2309,8 +2311,9 @@ DEPENDENCIES:
   - ExpoMediaLibrary (from `../../../node_modules/expo-media-library/ios`)
   - ExpoModulesCore (from `../../../node_modules/expo-modules-core`)
   - ExpoSecureStore (from `../../../node_modules/expo-secure-store/ios`)
-  - ExpoSharing (from `../node_modules/expo-sharing/ios`)
+  - ExpoSharing (from `../../../node_modules/expo-sharing/ios`)
   - "ExpoWidgets (from `../../../node_modules/@bittingz/expo-widgets/ios`)"
+  - "ExtensionStorage (from `../../../node_modules/@bacons/apple-targets/ios`)"
   - EXUpdatesInterface (from `../../../node_modules/expo-updates-interface/ios`)
   - fast_float (from `../../../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
   - FBLazyVector (from `../../../node_modules/react-native/Libraries/FBLazyVector`)
@@ -2388,7 +2391,7 @@ DEPENDENCIES:
   - RNPurchases (from `../../../node_modules/react-native-purchases`)
   - RNReanimated (from `../../../node_modules/react-native-reanimated`)
   - RNScreens (from `../../../node_modules/react-native-screens`)
-  - RNSVG (from `../node_modules/react-native-svg`)
+  - RNSVG (from `../../../node_modules/react-native-svg`)
   - WidgetBridge (from `../modules/widget-bridge/ios`)
   - Yoga (from `../../../node_modules/react-native/ReactCommon/yoga`)
 
@@ -2443,7 +2446,7 @@ EXTERNAL SOURCES:
   EXNotifications:
     :path: "../../../node_modules/expo-notifications/ios"
   Expo:
-    :path: "../node_modules/expo"
+    :path: "../../../node_modules/expo"
   expo-dev-client:
     :path: "../../../node_modules/expo-dev-client/ios"
   expo-dev-launcher:
@@ -2489,9 +2492,11 @@ EXTERNAL SOURCES:
   ExpoSecureStore:
     :path: "../../../node_modules/expo-secure-store/ios"
   ExpoSharing:
-    :path: "../node_modules/expo-sharing/ios"
+    :path: "../../../node_modules/expo-sharing/ios"
   ExpoWidgets:
     :path: "../../../node_modules/@bittingz/expo-widgets/ios"
+  ExtensionStorage:
+    :path: "../../../node_modules/@bacons/apple-targets/ios"
   EXUpdatesInterface:
     :path: "../../../node_modules/expo-updates-interface/ios"
   fast_float:
@@ -2644,7 +2649,7 @@ EXTERNAL SOURCES:
   RNScreens:
     :path: "../../../node_modules/react-native-screens"
   RNSVG:
-    :path: "../node_modules/react-native-svg"
+    :path: "../../../node_modules/react-native-svg"
   WidgetBridge:
     :path: "../modules/widget-bridge/ios"
   Yoga:
@@ -2678,7 +2683,7 @@ SPEC CHECKSUMS:
   ExpoHead: 2a14db58219c0a506e4a409ea83f884eab23f555
   ExpoImage: d840b256050f4428d2942bc2b6e9251f9e0d7021
   ExpoImagePicker: 24e5ba8da111f74519b1e6dc556e0b438b2b8464
-  ExpoKeepAwake: 55f75eca6499bb9e4231ebad6f3e9cb8f99c0296
+  ExpoKeepAwake: b0171a73665bfcefcfcc311742a72a956e6aa680
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
   ExpoLocalAuthentication: eb2be9c7bcdc68e9434d4be4bb5aa5cf7943e816
@@ -2687,6 +2692,7 @@ SPEC CHECKSUMS:
   ExpoSecureStore: 9a3665d7161dd1031be386e278bffd623658f316
   ExpoSharing: 849a5ce9985c22598c16ec027e32969be8062e8e
   ExpoWidgets: 366fe61c681044e13b7cc344bdbd319ff5d54b28
+  ExtensionStorage: 5796de20bf181317c376d693fedb64c6781a33ba
   EXUpdatesInterface: 7c977640bdd8b85833c19e3959ba46145c5719db
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6
   FBLazyVector: 7605ea4810e0e10ae4815292433c09bf4324ba45
@@ -2713,7 +2719,7 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   PromisesSwift: 9d77319bbe72ebf6d872900551f7eeba9bce2851
-  PurchasesHybridCommon: c2f8f5fcd2e472c585fccd1ab2fe317a3dc1171e
+  PurchasesHybridCommon: c0bc3edee10a8742e9a238247944b4be044ff177
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
   RCTRequired: ca91e5dd26b64f577b528044c962baf171c6b716
@@ -2774,14 +2780,14 @@ SPEC CHECKSUMS:
   React-utils: 59c5bbbc0e72be22c9d6eceb40afadf9be872819
   ReactCodegen: 52b654894b5771d0085b24d4b1b897ebeaf939dc
   ReactCommon: b2eb96a61b826ff327a773a74357b302cf6da678
-  RevenueCat: 347221fad5ab0ed5636546867deae2c32c64749f
+  RevenueCat: 9e2a13bead55198a72272ff105a7265e9510cd11
   RNCAsyncStorage: aa75595c1aefa18f868452091fa0c411a516ce11
-  RNFBAnalytics: d1c906bbb01b3a6f6b99d6eaa977f04b1ae5d279
-  RNFBApp: 5c07dbcf30f00d7ea5400c3faae4e88e000b7685
-  RNFBCrashlytics: bd6ae7c83468c749e986707c0e54365832b3d237
+  RNFBAnalytics: 0213dc76b4bf1f83a687376be2ce4e8e395e270b
+  RNFBApp: 02a70215550d9890516c3b381019f6b0f0543b7c
+  RNFBCrashlytics: 8ae23057fe4254c5804225f5c328cd05312cc3bf
   RNGestureHandler: 2dd124adb171aab16629e9387cf1830957d242c2
   RNGoogleSignin: 5782dd7dad559608a06f3c6b1d4142c395fb5308
-  RNPurchases: e265e2ed27349b567b91b89d8712aa8c9c57f5b0
+  RNPurchases: ae1f8f522674a7938dd26eba6c103c40d049dfee
   RNReanimated: 38e033fd1790c817678bc8a075277cdc49d6817c
   RNScreens: ad2d0cfb3f15c9ed56ffb43651366ec0dcd70c36
   RNSVG: 8542aa11770b27563714bbd8494a8436385fc85f

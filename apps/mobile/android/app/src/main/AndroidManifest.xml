@@ -40,7 +40,7 @@
         <data android:scheme="exp+sauci"/>
       </intent-filter>
     </activity>
-    <receiver android:name=".widget.LiveDraw" android:exported="false" android:label="Live Draw">
+    <receiver android:name=".widget.LiveDraw" android:exported="true" android:label="Live Draw">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
         <action android:name="com.sauci.app.WIDGET_CLICK"/>

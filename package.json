@@ -17,6 +17,7 @@
     "typecheck": "turbo typecheck"
   },
   "devDependencies": {
+    "patch-package": "^8.0.1",
     "pg": "^8.17.2",
     "turbo": "^2.3.3",
     "typescript": "^5.3.3"
@@ -27,7 +28,8 @@
   },
   "overrides": {
     "rollup": "4.54.0",
-    "react-native": "0.76.9"
+    "react-native": "0.76.9",
+    "expo": "~52.0.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-arm64-musl": "4.54.0",

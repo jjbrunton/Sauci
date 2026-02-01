@@ -19,7 +19,9 @@ const ROOT_NM = path.join(ROOT, 'node_modules');
 
 // Packages that must live in apps/mobile/node_modules, not root
 const PACKAGES_TO_FIX = [
+  '@react-native-firebase/app',
   '@react-native-firebase/analytics',
+  '@react-native-firebase/crashlytics',
   '@shopify/react-native-skia',
 ];
 
