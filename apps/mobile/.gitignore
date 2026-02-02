@@ -9,3 +9,7 @@ expo-env.d.ts
 *.apk
 *.jks
 *.keystore
+# Fastlane
+fastlane-key.json
+fastlane/report.xml
+fastlane/README.md

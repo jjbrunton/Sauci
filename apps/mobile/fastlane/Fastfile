@@ -1,0 +1,48 @@
+default_platform(:android)
+
+platform :android do
+  desc "Upload AAB to Google Play internal testing track"
+  lane :upload do |options|
+    track = options[:track] || "internal"
+
+    # Find the AAB file - check project root for EAS builds or gradle output
+    project_root = File.expand_path("..", __dir__)
+    aab_path = options[:aab]
+
+    unless aab_path
+      # Check for EAS build AABs in project root, pick the newest
+      eas_builds = Dir.glob(File.join(project_root, "build-*.aab")).sort_by { |f| File.mtime(f) }
+      gradle_builds = Dir.glob(File.join(project_root, "android/app/build/outputs/bundle/release/*.aab"))
+      aab_path = eas_builds.last || gradle_builds.first
+    end
+
+    # Resolve relative paths from project root
+    aab_path = File.expand_path(aab_path, project_root) if aab_path && !aab_path.start_with?("/")
+
+    UI.user_error!("No AAB file found. Build first or specify with aab: parameter") unless aab_path && File.exist?(aab_path)
+
+    UI.message("Uploading #{aab_path} to #{track} track...")
+
+    upload_to_play_store(
+      track: track,
+      aab: aab_path,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: false,
+      release_status: "draft",
+    )
+
+    UI.success("Successfully uploaded to #{track} track!")
+  end
+
+  desc "Upload AAB to production track"
+  lane :upload_production do |options|
+    upload(options.merge(track: "production"))
+  end
+
+  desc "Upload AAB to beta track"
+  lane :upload_beta do |options|
+    upload(options.merge(track: "beta"))
+  end
+end

@@ -82,11 +82,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             const isAnonymous = !!(authUser as any).is_anonymous;
 
-            set({
-                user: profile,
-                isAuthenticated: true,
-                isAnonymous,
-            });
+            // Only update user if data actually changed to avoid unnecessary re-renders
+            const currentUser = get().user;
+            const userChanged = !currentUser || JSON.stringify(currentUser) !== JSON.stringify(profile);
+            if (userChanged) {
+                set({
+                    user: profile,
+                    isAuthenticated: true,
+                    isAnonymous,
+                });
+            } else if (!get().isAuthenticated) {
+                set({ isAuthenticated: true, isAnonymous });
+            }
 
             // If user has a couple, fetch couple data; otherwise clear couple/partner
             if (profile?.couple_id) {

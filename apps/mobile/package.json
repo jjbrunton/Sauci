@@ -15,7 +15,7 @@
     "test:ci": "jest --runInBand --ci",
     "release:ios": "dotenv -e .env -- npx expo prebuild --platform ios && dotenv -e .env -- eas build --platform ios --profile production --local",
     "release:ios:preview": "dotenv -e .env -- npx expo prebuild --platform ios && dotenv -e .env -- eas build --platform ios --profile preview --local",
-    "release:android": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile production --local",
+    "release:android": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile production --local && bundle exec fastlane android upload",
     "release:android:preview": "dotenv -e .env -- npx expo prebuild --platform android && dotenv -e .env -- eas build --platform android --profile preview --local"
   },
   "dependencies": {

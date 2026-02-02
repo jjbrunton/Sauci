@@ -64,12 +64,15 @@ type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'content' | 'notificatio
 
 export default function OnboardingScreen() {
     const router = useRouter();
-    const { user, fetchUser } = useAuthStore();
+    // Only subscribe to stable values to prevent re-renders from background fetchUser calls
+    const userId = useAuthStore((s) => s.user?.id);
+    const fetchUser = useAuthStore((s) => s.fetchUser);
+    const initialUser = useRef(useAuthStore.getState().user);
     const [stage, setStage] = useState<Stage>('avatar');
-    const [name, setName] = useState(user?.name || '');
-    const [gender, setGender] = useState<Gender | null>(user?.gender || null);
+    const [name, setName] = useState(initialUser.current?.name || '');
+    const [gender, setGender] = useState<Gender | null>(initialUser.current?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
-    const [hideNsfw, setHideNsfw] = useState(user?.hide_nsfw ?? false);
+    const [hideNsfw, setHideNsfw] = useState(initialUser.current?.hide_nsfw ?? false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
@@ -82,7 +85,7 @@ export default function OnboardingScreen() {
         showPicker: handleAvatarPress,
         uploadAvatar,
     } = useAvatarPicker({
-        userId: user?.id,
+        userId,
         onSelect: () => setError(null),
     });
 
@@ -147,8 +150,8 @@ export default function OnboardingScreen() {
         setIsLoading(true);
         try {
             const token = await registerForPushNotificationsAsync();
-            if (token && user?.id) {
-                await savePushToken(user.id, token);
+            if (token && userId) {
+                await savePushToken(userId, token);
             }
         } catch (err) {
             console.error('Failed to enable notifications:', err);
@@ -159,8 +162,8 @@ export default function OnboardingScreen() {
     };
 
     const handleComplete = async () => {
-        console.log('[Onboarding] handleComplete called, user:', user?.id, 'name:', name);
-        if (!user?.id) {
+        console.log('[Onboarding] handleComplete called, user:', userId, 'name:', name);
+        if (!userId) {
             console.error('[Onboarding] No user ID available');
             setError('Not logged in. Please restart the app.');
             return;
@@ -204,7 +207,7 @@ export default function OnboardingScreen() {
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update(updateData)
-                .eq('id', user.id);
+                .eq('id', userId);
 
             if (updateError) {
                 console.error('[Onboarding] Profile update error:', updateError);

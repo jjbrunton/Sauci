@@ -1,0 +1,2 @@
+json_key_file(ENV["GOOGLE_PLAY_KEY_FILE"] || File.expand_path("../fastlane-key.json", __dir__))
+package_name("com.sauci.app")
