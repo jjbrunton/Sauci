@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { PaginationControls } from '@/components/ui/pagination';
+import { MATCH_TYPE_LABELS } from '@/lib/questionResponses';
 
 interface Profile {
     id: string;
@@ -22,7 +23,7 @@ interface Profile {
 
 interface Match {
     id: string;
-    match_type: 'yes_yes' | 'yes_maybe' | 'maybe_maybe';
+    match_type: keyof typeof MATCH_TYPE_LABELS;
     question: {
         id: string;
         text: string;
@@ -48,6 +49,7 @@ const matchTypeLabels = {
     yes_yes: 'Both Yes!',
     yes_maybe: 'Yes + Maybe',
     maybe_maybe: 'Both Maybe',
+    both_answered: MATCH_TYPE_LABELS.both_answered,
 };
 
 function formatMessageTime(date: Date): string {

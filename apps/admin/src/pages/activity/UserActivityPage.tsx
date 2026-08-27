@@ -23,11 +23,12 @@ import {
 } from '@/components/ui/tabs';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
+import type { AnswerType, QuestionType } from '@sauci/shared';
+import { ResponseAnswer } from '@/components/content/ResponseAnswer';
+import { MATCH_TYPE_LABELS, type AdminResponseData } from '@/lib/questionResponses';
 import {
     Activity,
     ThumbsUp,
-    ThumbsDown,
-    Minus,
     Heart,
     MessageCircle,
     UserPlus,
@@ -38,7 +39,8 @@ import {
 interface ResponseActivity {
     id: string;
     user_id: string;
-    answer: 'yes' | 'no' | 'maybe';
+    answer: AnswerType;
+    response_data: AdminResponseData;
     created_at: string;
     profile: {
         id: string;
@@ -48,6 +50,7 @@ interface ResponseActivity {
     question: {
         id: string;
         text: string;
+        question_type: QuestionType;
         pack: {
             id: string;
             name: string;
@@ -58,7 +61,7 @@ interface ResponseActivity {
 interface MatchActivity {
     id: string;
     couple_id: string;
-    match_type: 'yes_yes' | 'yes_maybe' | 'maybe_maybe';
+    match_type: keyof typeof MATCH_TYPE_LABELS;
     is_new: boolean;
     created_at: string;
     question: {
@@ -104,17 +107,11 @@ interface SignupActivity {
 
 type ActivityTab = 'responses' | 'matches' | 'messages' | 'signups';
 
-// Answer icons
-const answerConfig = {
-    yes: { icon: <ThumbsUp className="h-4 w-4" />, color: 'text-green-500', bg: 'bg-green-500/10' },
-    no: { icon: <ThumbsDown className="h-4 w-4" />, color: 'text-red-500', bg: 'bg-red-500/10' },
-    maybe: { icon: <Minus className="h-4 w-4" />, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-};
-
 const matchTypeLabels = {
     yes_yes: { label: 'Both Yes!', variant: 'default' as const },
     yes_maybe: { label: 'Yes + Maybe', variant: 'secondary' as const },
     maybe_maybe: { label: 'Both Maybe', variant: 'outline' as const },
+    both_answered: { label: MATCH_TYPE_LABELS.both_answered, variant: 'secondary' as const },
 };
 
 export function UserActivityPage() {
@@ -152,10 +149,10 @@ export function UserActivityPage() {
             const { data, error, count } = await supabase
                 .from('responses')
                 .select(`
-                    id, user_id, answer, created_at,
+                    id, user_id, answer, response_data, created_at,
                     profile:profiles!responses_user_id_fkey(id, name, email),
                     question:questions(
-                        id, text,
+                        id, text, question_type,
                         pack:question_packs(id, name)
                     )
                 `, { count: 'exact' })
@@ -171,11 +168,13 @@ export function UserActivityPage() {
                 id: item.id,
                 user_id: item.user_id,
                 answer: item.answer,
+                response_data: item.response_data,
                 created_at: item.created_at,
                 profile: item.profile,
                 question: item.question ? {
                     id: item.question.id,
                     text: item.question.text,
+                    question_type: item.question.question_type ?? 'swipe',
                     pack: item.question.pack,
                 } : null,
             }));
@@ -426,17 +425,6 @@ export function UserActivityPage() {
         );
     };
 
-    // Render answer badge
-    const renderAnswerBadge = (answer: 'yes' | 'no' | 'maybe') => {
-        const config = answerConfig[answer];
-        return (
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${config.bg} ${config.color}`}>
-                {config.icon}
-                <span className="text-sm font-medium capitalize">{answer}</span>
-            </span>
-        );
-    };
-
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -533,7 +521,13 @@ export function UserActivityPage() {
                                                     </Badge>
                                                 )}
                                             </TableCell>
-                                            <TableCell>{renderAnswerBadge(item.answer)}</TableCell>
+                                            <TableCell>
+                                                <ResponseAnswer
+                                                    answer={item.answer}
+                                                    questionType={item.question?.question_type}
+                                                    responseData={item.response_data}
+                                                />
+                                            </TableCell>
                                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                                                 {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                                             </TableCell>
