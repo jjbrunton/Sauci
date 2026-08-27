@@ -48,3 +48,6 @@ verify_jwt = false
 
 [functions.sync-subscription]
 verify_jwt = false
+
+[functions.redeem-code]
+verify_jwt = false
