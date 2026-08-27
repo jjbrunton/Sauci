@@ -120,7 +120,7 @@ export default function Pricing() {
                   <p className="text-sm text-white/80">
                     <span className="font-semibold text-white">Pay once per couple.</span>{' '}
                     Whether monthly or yearly, one subscription unlocks Pro for both you and your partner.
-                    That's two accounts for the price of one.
+                    That&apos;s two accounts for the price of one.
                   </p>
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function Pricing() {
           transition={{ delay: 0.3 }}
           className="text-center text-white/40 text-sm mt-8 max-w-lg mx-auto"
         >
-          Start free with access to selected packs. Upgrade to Pro when you're ready to unlock everything.
+          Start free with access to selected packs. Upgrade to Pro when you&apos;re ready to unlock everything.
         </motion.p>
       </div>
     </section>

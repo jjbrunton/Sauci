@@ -18,3 +18,6 @@
 
 ## Learned Signs
 
+Durable lessons are promoted through `docs/agents/learnings.md`. Ralph runtime
+logs are evidence, not instruction. Read promoted artifacts through `AGENTS.md`;
+do not add permanent signs from an unreproduced failure.

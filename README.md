@@ -1,90 +1,51 @@
 # Sauci
 
-![Node 20+](https://img.shields.io/badge/node-20%2B-339933)
-![npm 10+](https://img.shields.io/badge/npm-10%2B-CB3837)
-![Turborepo](https://img.shields.io/badge/monorepo-turborepo-0F1115)
+Sauci is a couples connection product built as a full-stack npm/Turborepo
+workspace.
 
-Sauci is a couples intimacy app where partners swipe question packs, match on shared interests, and chat about what they unlock together.
+## Applications
 
-## What lives here
+| Path | Surface |
+|---|---|
+| `apps/mobile` | Expo React Native customer app |
+| `apps/admin` | Vite/React administration app |
+| `apps/web` | Next.js marketing and redemption app |
+| `apps/supabase` | database, auth, realtime, storage, and Edge Functions |
+| `apps/mcp` | authenticated internal MCP service |
+| `packages/shared` | shared TypeScript contracts |
 
-```
-sauci/
-├── apps/
-│   ├── mobile/     # Expo React Native app
-│   ├── admin/      # Admin dashboard (Vite + React)
-│   ├── web/        # Marketing website (Next.js)
-│   └── supabase/   # Supabase project (migrations, edge functions)
-├── packages/
-│   └── shared/     # Shared TypeScript types
-```
+## Bootstrap and run
 
-## Core product flows
-
-- **Couple pairing** via invite codes and profile linking
-- **Question packs** with two-part phrasing and smart selection bias
-- **Matches + chat** when both partners answer positively
-- **Notifications** for new matches and messages
-- **Subscriptions** via RevenueCat with couple-level premium sharing
-
-## Prerequisites
-
-- Node.js 20+
-- npm 10+
-- Supabase CLI (`npm install -g supabase`)
-- Expo CLI (`npm install -g expo-cli`)
-
-## Quickstart
+Use Node `20.10.0` from `.nvmrc`, Docker-compatible containers, and tmux.
 
 ```bash
-npm install
-npm run dev
+npm ci
+scripts/dev-local.sh reset
+scripts/dev-local.sh up
 ```
 
-## App commands
+The launcher starts local Supabase, Edge Functions, web, admin, MCP, and Expo in
+one tmux session. See [local stack documentation](docs/development/local-stack.md)
+for ports, logs, native launch commands, and troubleshooting.
 
-From each app directory:
+## Verify
 
-- **Mobile** (`apps/mobile`): `npm run dev`, `npm run ios`, `npm run android`, `npm run web`
-- **Admin** (`apps/admin`): `npm run dev`, `npm run build`, `npm run typecheck`
-- **Web** (`apps/web`): `npm run dev`, `npm run build`, `npm run start`
+```bash
+npm run verify:fast  # lint, typecheck, unit/contract tests
+npm run verify:full  # fast checks, builds, Supabase integration
+npm run verify:e2e   # running-stack Playwright journeys
+npm run verify       # complete pre-PR gate
+```
 
-## Environment setup
+Native black-box flows use `npm run test:mobile:e2e`. Pull requests run static
+and full-stack gates and retain browser traces/screenshots/videos on failure.
 
-Copy the example files and fill in values:
+## Agent harness
 
-- Mobile: `apps/mobile/.env.example`
-- Admin: `apps/admin/.env.example`
-- Web: `apps/web/.env.local.example`
+Start with [AGENTS.md](AGENTS.md) and [the documentation index](docs/index.md).
+Task/risk agent routing lives in [docs/agents/routing.md](docs/agents/routing.md),
+repository skills live under `.codex/skills`, and verified lessons follow the
+[learning promotion lifecycle](docs/agents/learnings.md).
 
-## Supabase (local)
-
-- Config lives in `apps/supabase/config.toml`.
-- Use the Supabase CLI for local services and migrations.
-
-## Scripts (root)
-
-- `npm run dev` - run all apps in dev mode
-- `npm run build` - build all apps
-- `npm run lint` - lint all apps
-- `npm run typecheck` - typecheck all apps
-- `npm run clean` - clean build artifacts
-
-## Docs
-
-- Auth: `docs/authentication.md`
-- Schema: `docs/schema.md`
-- Pairing: `docs/couple-pairing.md`
-- Questions: `docs/question-selection.md`
-- Matches/notifications: `docs/match-notifications.md`
-- Subscriptions: `docs/subscription-system.md`
-- Mobile release guide: `apps/mobile/RELEASING.md`
-
-## Tech stack
-
-- **Mobile**: Expo (React Native)
-- **Backend**: Supabase (Postgres, Auth, Edge Functions, Realtime)
-- **Admin**: React + Vite
-- **Web**: Next.js
-- **Monorepo**: Turborepo
-
+Database schema changes must use committed files in `apps/supabase/migrations`.
+Remote migration tools and DDL through MCP SQL execution are forbidden.

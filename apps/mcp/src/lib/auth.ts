@@ -1,24 +1,20 @@
 import { Context, Next } from 'hono';
 
 export const authMiddleware = async (c: Context, next: Next) => {
-  const authHeader = c.req.header('Authorization');
   const apiKey = process.env.SAUCI_MCP_API_KEY;
 
   if (!apiKey) {
-    // If no API key is set in env, allow access (warn in logs)
-    // Ideally this should default to deny, but for dev ease we might want to warn
-    console.warn('SAUCI_MCP_API_KEY not set in environment - allowing all requests');
-    return next();
+    console.error('SAUCI_MCP_API_KEY is not configured; refusing MCP access');
+    return c.json({ error: 'Service authentication is not configured' }, 503);
   }
 
-  let token = c.req.header('Authorization')?.replace('Bearer ', '');
-  
-  if (!token) {
-    token = c.req.query('apiKey');
-  }
+  const authHeader = c.req.header('Authorization');
+  const token = authHeader?.startsWith('Bearer ')
+    ? authHeader.slice('Bearer '.length)
+    : undefined;
 
   if (!token) {
-    return c.json({ error: 'Unauthorized: Missing or invalid Authorization header or apiKey query param' }, 401);
+    return c.json({ error: 'Unauthorized: Bearer token required' }, 401);
   }
 
   if (token !== apiKey) {

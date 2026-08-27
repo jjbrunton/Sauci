@@ -40,7 +40,8 @@ If the story details are empty or missing, STOP and report that the PRD story fo
 - Implement completely; no placeholders or stubs.
 - If No-commit is true, do NOT commit or push changes.
 - Do NOT edit the PRD JSON (status is handled by the loop).
-- All changes made during the run must be committed (including updates to progress/logs).
+- Commit only task-owned source, tests, and maintained documentation. Runtime logs
+  and evidence remain ignored.
  - Before committing, perform a final **security**, **performance**, and **regression** review of your changes.
 
 ## Your Task (Do this in order)
@@ -60,7 +61,7 @@ If the story details are empty or missing, STOP and report that the PRD story fo
    - **Performance:** check for avoidable regressions (extra queries, heavy loops, unnecessary re-renders).
    - **Regression:** verify existing behavior that could be impacted still works.
 10. If No-commit is false, commit changes using the `$commit` skill.
-    - Stage everything: `git add -A`
+    - Stage only the files owned by this story; never blanket-stage unrelated work.
     - Confirm a clean working tree after commit: `git status --porcelain` should be empty.
     - After committing, capture the commit hash and subject using:
       `git show -s --format="%h %s" HEAD`.
@@ -103,7 +104,9 @@ Otherwise, end normally without the signal.
 - When authoring documentation, capture the why (tests + implementation intent).
 - If you learn how to run/build/test the project, update {{AGENTS_PATH}} briefly (operational only).
 - Keep AGENTS operational only; progress notes belong in {{PROGRESS_PATH}}.
-- If you hit repeated errors, log them in {{ERRORS_LOG_PATH}} and add a Sign to {{GUARDRAILS_PATH}} using {{GUARDRAILS_REF}} as the template.
+- If you reproduce a reusable failure, record it using
+  `.agents/learnings/TEMPLATE.md`. Promote it only after review into a maintained
+  doc, skill, fixture, or executable invariant; do not add speculative Signs.
 
 ## Activity Logging (Required)
 Log major actions to {{ACTIVITY_LOG_PATH}} using the helper:

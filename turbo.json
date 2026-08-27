@@ -29,6 +29,16 @@
                 "^build"
             ]
         },
+        "test": {
+            "dependsOn": [
+                "^build"
+            ],
+            "outputs": [
+                "coverage/**",
+                "test-results/**",
+                "playwright-report/**"
+            ]
+        },
         "clean": {
             "cache": false
         }

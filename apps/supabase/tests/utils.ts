@@ -64,7 +64,7 @@ export async function createRedemptionCode() {
     const { data, error } = await adminClient.from("redemption_codes").insert({
         code,
         max_uses: 1,
-        active: true,
+        is_active: true,
         expires_at: new Date(Date.now() + 3600000).toISOString() // 1 hour
     }).select().single();
 

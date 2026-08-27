@@ -9,6 +9,8 @@
         "./types": "./src/types/index.ts"
     },
     "scripts": {
+        "build": "tsc --noEmit",
+        "test": "vitest run --passWithNoTests",
         "typecheck": "tsc --noEmit",
         "lint": "eslint \"src/**/*.{ts,tsx}\""
     },

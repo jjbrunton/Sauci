@@ -2,6 +2,12 @@ name: Deploy Supabase to Production
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: Promote the verified change to production after non-production
+        required: false
+        type: boolean
+        default: false
   push:
     branches:
       - master
@@ -11,22 +17,33 @@ on:
       - '.github/workflows/deploy-supabase.yml'
 
 jobs:
+  quality:
+    name: Verify deployable source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:fast
+      - run: npm run build
+
   deploy-database:
     name: Deploy Migrations & Functions
     runs-on: ubuntu-latest
+    needs: quality
+    environment: ${{ matrix.environment }}
     strategy:
       max-parallel: 1
       matrix:
-        environment:
-          - name: non-prod
-            project_ref: itbzhrvlgvdmzbnhzhyx
-          - name: prod
-            project_ref: ckjcrkjpmhqhiucifukx
+        environment: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.deploy_production && '["non-prod","prod"]' || '["non-prod"]') }}
 
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_PROJECT_REF: ${{ matrix.environment.project_ref }}
-      ENVIRONMENT_NAME: ${{ matrix.environment.name }}
+      SUPABASE_PROJECT_REF: ${{ matrix.environment == 'prod' && 'ckjcrkjpmhqhiucifukx' || 'itbzhrvlgvdmzbnhzhyx' }}
+      ENVIRONMENT_NAME: ${{ matrix.environment }}
 
     steps:
       - name: Checkout repository
@@ -37,13 +54,13 @@ jobs:
         with:
           version: latest
 
-      - name: Link to ${{ matrix.environment.name }} Project
+      - name: Link to ${{ matrix.environment }} Project
         run: supabase link --project-ref $SUPABASE_PROJECT_REF --workdir apps
 
-      - name: Apply Database Migrations (${{ matrix.environment.name }})
+      - name: Apply Database Migrations (${{ matrix.environment }})
         run: supabase db push --workdir apps --include-all
 
-      - name: Sync Edge Function Secrets (${{ matrix.environment.name }})
+      - name: Sync Edge Function Secrets (${{ matrix.environment }})
         env:
           # Add secrets from GitHub Secrets
           REVENUECAT_WEBHOOK_SECRET: ${{ secrets.REVENUECAT_WEBHOOK_SECRET }}
@@ -72,7 +89,7 @@ jobs:
             echo "No secrets to sync"
           fi
 
-      - name: Deploy Edge Functions (${{ matrix.environment.name }})
+      - name: Deploy Edge Functions (${{ matrix.environment }})
         run: |
           # Deploy all edge functions (excluding _shared directory)
           for dir in apps/supabase/functions/*/; do
@@ -88,7 +105,7 @@ jobs:
             supabase functions deploy "$function_name" --no-verify-jwt --project-ref $SUPABASE_PROJECT_REF --workdir apps
           done
 
-      - name: Remove Deleted Functions (${{ matrix.environment.name }})
+      - name: Remove Deleted Functions (${{ matrix.environment }})
         run: |
           # Get list of functions deployed on Supabase (skip header lines, extract slug column)
           deployed=$(supabase functions list --project-ref $SUPABASE_PROJECT_REF | grep -E '^[a-z]' | awk '{print $1}')
@@ -111,6 +128,7 @@ jobs:
   deploy-infrastructure:
     name: Deploy Infrastructure (Terraform)
     runs-on: ubuntu-latest
+    needs: quality
 
     env:
       TF_VAR_supabase_access_token: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -147,17 +165,21 @@ jobs:
 
       # Production Environment
       - name: Terraform Init (Prod)
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_production
         working-directory: terraform/environments/prod
         run: terraform init
 
       - name: Terraform Validate (Prod)
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_production
         working-directory: terraform/environments/prod
         run: terraform validate
 
       - name: Terraform Plan (Prod)
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_production
         working-directory: terraform/environments/prod
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply (Prod)
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_production
         working-directory: terraform/environments/prod
         run: terraform apply -auto-approve tfplan

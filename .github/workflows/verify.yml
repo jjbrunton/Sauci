@@ -1,0 +1,78 @@
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run learn:check
+      - run: npm run verify:fast
+      - run: npm run build
+
+  full-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Start local Supabase
+        env:
+          GOOGLE_CLIENT_ID: local
+          GOOGLE_CLIENT_SECRET: local
+          APPLE_CLIENT_ID: local
+          APPLE_CLIENT_SECRET: local
+        run: npx supabase start --workdir apps
+      - name: Reset and seed
+        run: |
+          npx supabase db reset --workdir apps
+          scripts/with-local-supabase-env.sh tests node scripts/seed-e2e.mjs
+      - name: Start application services
+        run: |
+          npx supabase functions serve --workdir apps > /tmp/sauci-functions.log 2>&1 &
+          scripts/with-local-supabase-env.sh web npm run dev -w @sauci/web -- --port 3000 > /tmp/sauci-web.log 2>&1 &
+          scripts/with-local-supabase-env.sh admin npm run dev -w @sauci/admin -- --host 127.0.0.1 --port 3001 > /tmp/sauci-admin.log 2>&1 &
+          scripts/with-local-supabase-env.sh mcp npm run dev -w sauci-mcp-server > /tmp/sauci-mcp.log 2>&1 &
+      - name: Wait for services
+        run: |
+          for url in http://127.0.0.1:3000 http://127.0.0.1:3001/login http://127.0.0.1:3002/health; do
+            for attempt in $(seq 1 60); do
+              curl --fail --silent "$url" >/dev/null && break
+              sleep 2
+            done
+            curl --fail --silent "$url" >/dev/null
+          done
+      - run: npm run test:supabase
+      - run: npm run verify:e2e
+      - name: Upload E2E proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-proof
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+            /tmp/sauci-*.log
+          if-no-files-found: ignore
+          retention-days: 14

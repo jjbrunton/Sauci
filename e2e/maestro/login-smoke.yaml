@@ -1,0 +1,14 @@
+appId: com.sauci.app
+name: Local fixture login reaches authenticated app
+---
+- launchApp:
+    clearState: true
+- tapOn: "Password"
+- tapOn: "Enter your email"
+- inputText: "e2e.alex@example.test"
+- tapOn: "Enter your password"
+- inputText: "Sauci-e2e-only-2026!"
+- tapOn: "Sign In"
+- extendedWaitUntil:
+    notVisible: "Sign In"
+    timeout: 15000

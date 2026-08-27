@@ -2,4 +2,10 @@
 module.exports = {
   extends: 'expo',
   ignorePatterns: ['/dist/*'],
+  overrides: [
+    {
+      files: ['plugins/**/*.js'],
+      env: { node: true },
+    },
+  ],
 };

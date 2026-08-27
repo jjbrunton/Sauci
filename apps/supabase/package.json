@@ -1,5 +1,11 @@
 {
   "name": "@sauci/supabase",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "lint": "node ../../scripts/lint-harness.mjs --scope supabase",
+    "test": "node -e \"console.log('Supabase integration tests run through npm run test:supabase')\"",
+    "typecheck": "node -e \"console.log('Edge Functions are checked by Deno during test:supabase')\"",
+    "build": "node -e \"console.log('Supabase deployables do not require a build step')\""
+  }
 }

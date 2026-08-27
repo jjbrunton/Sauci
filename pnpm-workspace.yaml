@@ -1,5 +1,0 @@
-packages:
-  - "apps/admin"
-  - "apps/mobile"
-  - "apps/supabase"
-  - "packages/*"

@@ -51,6 +51,10 @@ pnpm-debug.log*
 coverage/
 .nyc_output/
 *.lcov
+evidence/
+e2e/.auth/
+e2e/test-results/
+e2e/playwright-report/
 
 # Misc
 *.pem
@@ -62,3 +66,7 @@ nul
 
 # Opencode
 .opencode/
+
+# Agent runtime evidence (maintained lessons remain tracked)
+.ralph/activity.log
+.ralph/runs/
