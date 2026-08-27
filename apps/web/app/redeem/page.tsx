@@ -114,7 +114,7 @@ export default function RedeemPage() {
         </p>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="glass-light p-6 sm:p-8">
+        <form noValidate onSubmit={handleSubmit} className="glass-light p-6 sm:p-8">
           {/* Error Message */}
           {error && (
             <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
