@@ -34,7 +34,7 @@ Deno.test("redeem-code: successfully redeems code for user", async () => {
     });
 
     const data = await res.json();
-    assertEquals(res.status, 200);
+    assertEquals(res.status, 200, JSON.stringify(data));
     assertEquals(data.success, true);
 
     // 4. Verify Profile is Premium
