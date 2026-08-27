@@ -31,6 +31,7 @@ export function formatAdminResponse(
     questionType: QuestionType | null | undefined,
     answer: AnswerType,
     responseData: AdminResponseData,
+    context?: { responderId?: string; responderName?: string | null },
 ): { label: string; detail: string | null } {
     const resolvedType = resolveQuestionType(questionType);
 
@@ -61,6 +62,28 @@ export function formatAdminResponse(
 
     if (resolvedType === 'photo') {
         return { label: 'Photo submitted', detail: null };
+    }
+
+    const chosenUserId = responseData && 'chosen_user_id' in responseData
+        && typeof responseData.chosen_user_id === 'string'
+        ? responseData.chosen_user_id
+        : null;
+    const choseSelf = chosenUserId && context?.responderId
+        ? chosenUserId === context.responderId
+        : null;
+
+    if (choseSelf === true) {
+        return {
+            label: 'Chose themselves',
+            detail: context?.responderName ? `${context.responderName} chose themselves` : null,
+        };
+    }
+
+    if (choseSelf === false) {
+        return {
+            label: 'Chose their partner',
+            detail: context?.responderName ? `${context.responderName} chose their partner` : null,
+        };
     }
 
     return { label: 'Choice submitted', detail: null };

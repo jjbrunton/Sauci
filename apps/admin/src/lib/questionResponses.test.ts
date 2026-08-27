@@ -24,4 +24,20 @@ describe('admin question response formatting', () => {
     it('labels non-swipe matches', () => {
         expect(MATCH_TYPE_LABELS.both_answered).toBe('Both Answered');
     });
+
+    it('shows who was chosen without exposing user identifiers', () => {
+        expect(formatAdminResponse(
+            'who_likely',
+            'yes',
+            { type: 'who_likely', chosen_user_id: 'user-1' },
+            { responderId: 'user-1', responderName: 'Alex' },
+        )).toEqual({ label: 'Chose themselves', detail: 'Alex chose themselves' });
+
+        expect(formatAdminResponse(
+            'who_likely',
+            'yes',
+            { type: 'who_likely', chosen_user_id: 'user-2' },
+            { responderId: 'user-1', responderName: 'Alex' },
+        )).toEqual({ label: 'Chose their partner', detail: 'Alex chose their partner' });
+    });
 });

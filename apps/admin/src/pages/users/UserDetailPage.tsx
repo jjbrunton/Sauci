@@ -145,6 +145,7 @@ interface OutstandingQuestion {
         name: string;
     };
     partner_response: {
+        id: string;
         answer: AnswerType;
         response_data: AdminResponseData;
         created_at: string | null;
@@ -646,6 +647,7 @@ export function UserDetailPage() {
                     const { data: partnerResponses } = await supabase
                         .from('responses')
                         .select(`
+                            id,
                             question_id,
                             answer,
                             response_data,
@@ -681,6 +683,7 @@ export function UserDetailPage() {
                                     question_type: q.question_type ?? 'swipe',
                                     pack: { id: q.pack?.id || '', name: q.pack?.name || '' },
                                     partner_response: {
+                                        id: pr.id,
                                         answer: pr.answer,
                                         response_data: pr.response_data,
                                         created_at: pr.created_at,
@@ -905,7 +908,7 @@ export function UserDetailPage() {
                     <TabsTrigger value="packs" disabled={!profile.couple_id}>Enabled Packs ({enabledPacks.length})</TabsTrigger>
                     <TabsTrigger value="livedraw" disabled={!profile.couple_id}>Live Draw</TabsTrigger>
                 </TabsList>
-                {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="space-y-4"><div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-64">Response</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md">{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="line-clamp-2 text-primary hover:underline cursor-pointer">{r.question.text}</Link>) : (<span className="line-clamp-2">{r.question.text}</span>)}</TableCell><TableCell>{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="text-primary hover:underline">{r.question.pack.name}</Link>) : (<span className="text-muted-foreground">{r.question.pack?.name || '—'}</span>)}</TableCell><TableCell><ResponseAnswer answer={r.answer} questionType={r.question.question_type} responseData={r.response_data} /></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div><PaginationControls page={responsesPage} pageSize={responsesPageSize} totalCount={responsesTotal} onPageChange={setResponsesPage} onPageSizeChange={(size) => { setResponsesPage(1); setResponsesPageSize(size); }} /></div>}</TabsContent>}
+                {canViewResponses && <TabsContent value="responses" className="mt-4">{responses.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No responses yet</p></Card> : <div className="space-y-4"><div className="rounded-md border"><Table><TableHeader><TableRow><TableHead>Question</TableHead><TableHead>Pack</TableHead><TableHead className="w-64">Response</TableHead><TableHead className="w-32">Date</TableHead></TableRow></TableHeader><TableBody>{responses.map((r) => (<TableRow key={r.id}><TableCell className="max-w-md">{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="line-clamp-2 text-primary hover:underline cursor-pointer">{r.question.text}</Link>) : (<span className="line-clamp-2">{r.question.text}</span>)}</TableCell><TableCell>{r.question.pack?.id ? (<Link to={`/packs/${r.question.pack.id}/questions`} className="text-primary hover:underline">{r.question.pack.name}</Link>) : (<span className="text-muted-foreground">{r.question.pack?.name || '—'}</span>)}</TableCell><TableCell><ResponseAnswer answer={r.answer} responseId={r.id} questionType={r.question.question_type} responseData={r.response_data} responderId={userId} responderName={profile.name || profile.email} /></TableCell><TableCell className="text-muted-foreground text-sm">{r.created_at ? format(new Date(r.created_at), 'MMM d, yyyy') : '—'}</TableCell></TableRow>))}</TableBody></Table></div><PaginationControls page={responsesPage} pageSize={responsesPageSize} totalCount={responsesTotal} onPageChange={setResponsesPage} onPageSizeChange={(size) => { setResponsesPage(1); setResponsesPageSize(size); }} /></div>}</TabsContent>}
                 {canViewMatches && <TabsContent value="matches" className="mt-4">{matches.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><p className="text-muted-foreground">No matches yet</p></Card> : <div className="space-y-4"><div className="grid gap-4 md:grid-cols-2">{matches.map((match) => (<Card key={match.id} className="hover:shadow-md transition-shadow"><CardHeader className="pb-2"><div className="flex items-start justify-between"><Badge variant="secondary">{matchTypeLabels[match.match_type]}</Badge>{match.is_new && <Badge variant="default" className="text-xs">New</Badge>}</div><CardDescription className="line-clamp-2 mt-2">{match.question?.text || 'Unknown question'}</CardDescription></CardHeader><CardContent><div className="flex items-center justify-between"><div className="flex items-center gap-1 text-sm text-muted-foreground"><MessageCircle className="h-4 w-4" />{match.message_count} message{match.message_count !== 1 ? 's' : ''}</div>{canViewChats && <Link to={`/users/${userId}/matches/${match.id}`}><Button variant="ghost" size="sm">View Chat<ChevronRight className="ml-1 h-4 w-4" /></Button></Link>}</div></CardContent></Card>))}</div><PaginationControls page={matchesPage} pageSize={matchesPageSize} totalCount={matchesTotal} onPageChange={setMatchesPage} onPageSizeChange={(size) => { setMatchesPage(1); setMatchesPageSize(size); }} /></div>}</TabsContent>}
                 {canViewMedia && <TabsContent value="media" className="mt-4">{mediaMessages.length === 0 ? <Card className="flex flex-col items-center justify-center py-12"><Image className="h-12 w-12 text-muted-foreground mb-4" /><p className="text-muted-foreground">No media uploaded</p></Card> : <div className="space-y-4"><div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">{mediaMessages.map((message) => (<Card key={message.id} className="overflow-hidden"><div className="aspect-square bg-muted relative">
                     {message.media_type === 'video' ? (
@@ -974,8 +977,11 @@ export function UserDetailPage() {
                                                     <div className="flex items-center gap-2">
                                                         <ResponseAnswer
                                                             answer={q.partner_response.answer}
+                                                            responseId={q.partner_response.id}
                                                             questionType={q.question_type}
                                                             responseData={q.partner_response.response_data}
+                                                            responderId={partner?.id}
+                                                            responderName={partner?.name}
                                                         />
                                                     </div>
                                                 </TableCell>

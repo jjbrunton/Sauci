@@ -524,8 +524,11 @@ export function UserActivityPage() {
                                             <TableCell>
                                                 <ResponseAnswer
                                                     answer={item.answer}
+                                                    responseId={item.id}
                                                     questionType={item.question?.question_type}
                                                     responseData={item.response_data}
+                                                    responderId={item.user_id}
+                                                    responderName={item.profile?.name || item.profile?.email}
                                                 />
                                             </TableCell>
                                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
