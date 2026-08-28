@@ -3,8 +3,8 @@ import { CONTENT_STATUS_LABELS } from '@/lib/contentReviewStatus';
 
 const { update } = vi.hoisted(() => ({ update: vi.fn() }));
 
-vi.mock('@/hooks/useAuditedSupabase', () => ({
-    auditedSupabase: { update },
+vi.mock('@/hooks/useAuditedAdminData', () => ({
+    auditedAdminData: { update },
 }));
 
 import { updateContentReviewStatus } from './contentReviews';

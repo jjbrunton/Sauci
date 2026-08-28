@@ -18,12 +18,15 @@ function setup(denied = false) {
     giftPremium: vi.fn(async () => ({ subscription_id: 'sub', expires_at: 'later' })),
     featureInterestCounts: vi.fn(async () => []), users: vi.fn(async () => []), close: vi.fn(async () => undefined),
     authorizeMedia: vi.fn(async () => undefined),
+    responseMedia: vi.fn(async () => ({ storageKey: 'response/test.jpg', mimeType: 'image/jpeg' })),
     decryptMessage: vi.fn(async () => ({ content: 'plain' })),
     decryptMedia: vi.fn(async () => ({ bytes: Buffer.from('media'), mimeType: 'image/png' })),
   };
   const app = new Hono<{ Variables: { identity: AuthIdentity } }>();
   app.use('/v1/*', async (c, next) => { c.set('identity', identity); await next(); });
-  registerAdminRoutes(app, repository, undefined, new FilesystemMediaStorage('/tmp/admin-route-media', 'test-signing-secret', 'http://localhost:8787'));
+  const mediaStorage = new FilesystemMediaStorage('/tmp/admin-route-media', 'test-signing-secret', 'http://localhost:8787');
+  vi.spyOn(mediaStorage, 'read').mockResolvedValue(Buffer.from('response-media'));
+  registerAdminRoutes(app, repository, undefined, mediaStorage);
   return { app, repository };
 }
 
@@ -78,5 +81,24 @@ describe('admin routes', () => {
     });
     expect(response.status).toBe(201);
     expect(repository.giftPremium).toHaveBeenCalledWith(expect.objectContaining({ userId: identity.id }), identity.id, null, undefined);
+  });
+
+  it('streams response media only after response-scoped repository authorization', async () => {
+    const { app, repository } = setup();
+    const responseId = '44444444-4444-4444-8444-444444444444';
+    const response = await app.request(`/v1/admin/responses/${responseId}/media`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/jpeg');
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(await response.text()).toBe('response-media');
+    expect(repository.responseMedia).toHaveBeenCalledWith(expect.objectContaining({ userId: identity.id }), responseId);
+  });
+
+  it('rejects malformed response media identifiers before repository access', async () => {
+    const { app, repository } = setup();
+    const response = await app.request('/v1/admin/responses/not-a-uuid/media');
+    expect(response.status).toBe(400);
+    expect(repository.responseMedia).not.toHaveBeenCalled();
   });
 });

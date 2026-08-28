@@ -15,6 +15,12 @@ describe.skipIf(!databaseUrl || !isLocal)('admin repository authorization + audi
   const superUser = '22222222-2222-4222-8222-222222222222';
   const ordinaryUser = '33333333-3333-4333-8333-333333333333';
   const moderatorUser = '44444444-4444-4444-8444-444444444444';
+  const responseCouple = '55555555-5555-4555-8555-555555555555';
+  const responseCategory = '66666666-6666-4666-8666-666666666666';
+  const responsePack = '77777777-7777-4777-8777-777777777777';
+  const responseQuestion = '88888888-8888-4888-8888-888888888888';
+  const responseId = '99999999-9999-4999-8999-999999999999';
+  const responseMediaId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   let pool: Pool; let repository: PostgresAdminRepository;
 
   beforeAll(async () => {
@@ -121,6 +127,38 @@ describe.skipIf(!databaseUrl || !isLocal)('admin repository authorization + audi
     expect((await repository.query(moderator, 'message_reports', {})).count).toBe(0);
     await expect(repository.authorizeMedia(creator, randomUUID())).rejects.toMatchObject({ code: 'forbidden' });
     await expect(repository.authorizeMedia(moderator, randomUUID())).rejects.toMatchObject({ code: 'media_not_found' });
+  });
+
+  it('requires view_responses and resolves only media linked to the response owner and couple', async () => {
+    await pool.query('insert into couples(id,invite_code) values($1,$2)', [responseCouple, 'ADMINMED']);
+    await pool.query('update profiles set couple_id=$2 where id=$1', [ordinaryUser, responseCouple]);
+    await pool.query("insert into categories(id,name) values($1,'Response media')", [responseCategory]);
+    await pool.query("insert into question_packs(id,name,category_id) values($1,'Response media',$2)", [responsePack, responseCategory]);
+    await pool.query("insert into questions(id,pack_id,text,question_type) values($1,$2,'Share a photo','photo')", [responseQuestion, responsePack]);
+    await pool.query(
+      `insert into media_objects(id,owner_id,couple_id,kind,storage_key,mime_type,byte_size,question_id)
+       values($1,$2,$3,'response','response/test.jpg','image/jpeg',14,$4)`,
+      [responseMediaId, ordinaryUser, responseCouple, responseQuestion],
+    );
+    await pool.query(
+      `insert into responses(id,user_id,question_id,couple_id,answer,response_data)
+       values($1,$2,$3,$4,'yes',$5)`,
+      [responseId, ordinaryUser, responseQuestion, responseCouple, { type: 'photo', media_path: `media:${responseMediaId}` }],
+    );
+
+    const creator = await repository.principal(creatorUser);
+    const moderatorWithoutPermission = await repository.principal(moderatorUser);
+    await expect(repository.responseMedia(creator, responseId)).rejects.toMatchObject({ code: 'forbidden' });
+    await expect(repository.responseMedia(moderatorWithoutPermission, responseId)).rejects.toMatchObject({ code: 'forbidden' });
+
+    await pool.query("update admin_users set permissions=array_append(permissions,'view_responses') where user_id=$1", [moderatorUser]);
+    const responseViewer = await repository.principal(moderatorUser);
+    await expect(repository.responseMedia(responseViewer, responseId)).resolves.toEqual({
+      storageKey: 'response/test.jpg', mimeType: 'image/jpeg',
+    });
+
+    await pool.query('update media_objects set owner_id=$2 where id=$1', [responseMediaId, superUser]);
+    await expect(repository.responseMedia(responseViewer, responseId)).rejects.toMatchObject({ code: 'response_media_not_found' });
   });
 
   it('creates all legacy admin and dare cutover tables with preserved foreign keys', async () => {

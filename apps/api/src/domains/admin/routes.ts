@@ -97,6 +97,26 @@ export function registerAdminRoutes(app: App, repository: AdminRepository, auth?
     return result.ok ? c.json(result.value, 200, { 'cache-control': 'private, no-store' }) : c.json(failure(result.cause.code, result.cause.message), result.cause.status);
   });
 
+  app.get('/v1/admin/responses/:responseId/media', async (c) => {
+    const parsed = z.string().uuid().safeParse(c.req.param('responseId'));
+    if (!parsed.success) return c.json(failure('invalid_response_id', 'A valid response ID is required'), 400);
+    if (!mediaStorage) return c.json(failure('media_unavailable', 'Media storage is unavailable'), 503);
+    const result = await execute(async () => {
+      const media = await repository.responseMedia(await repository.principal(c.get('identity').id), parsed.data);
+      const bytes = await mediaStorage.read(media.storageKey).catch(() => {
+        throw new AdminError('response_media_not_found', 'Response media not found', 404);
+      });
+      return { ...media, bytes };
+    });
+    if (!result.ok) return c.json(failure(result.cause.code, result.cause.message), result.cause.status);
+    return c.body(new Uint8Array(result.value.bytes), 200, {
+      'content-type': result.value.mimeType,
+      'content-length': String(result.value.bytes.byteLength),
+      'cache-control': 'private, no-store',
+      'x-content-type-options': 'nosniff',
+    });
+  });
+
   app.post('/v1/admin/users/:userId/gift-premium', async (c) => {
     const parsed = z.object({ days: z.number().int().min(1).max(3650).nullable(), reason: z.string().trim().max(500).optional() }).strict()
       .safeParse(await c.req.json().catch(() => ({})));

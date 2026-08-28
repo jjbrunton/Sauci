@@ -1,5 +1,5 @@
 import type { ContentReviewStatus } from '@sauci/shared';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 export { CONTENT_STATUS_LABELS } from '@/lib/contentReviewStatus';
 
 export type ReviewableContentTable =
@@ -20,7 +20,7 @@ export async function updateContentReviewStatus(
         throw new Error('A review reason is required');
     }
 
-    const { error } = await auditedSupabase.update(table, id, {
+    const { error } = await auditedAdminData.update(table, id, {
         content_status: status,
         content_review_reason: normalizedReason,
     });

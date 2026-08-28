@@ -3,8 +3,7 @@ import type { AnswerType, QuestionType } from '@sauci/shared';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Image as ImageIcon, Music2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabaseConfig } from '@/config';
+import { getAdminResponseMedia } from '@/lib/adminApi';
 import { formatAdminResponse, QUESTION_TYPE_LABELS, type AdminResponseData } from '@/lib/questionResponses';
 
 interface ResponseAnswerProps {
@@ -62,38 +61,17 @@ function ProtectedResponseMedia({
     mediaType: 'photo' | 'audio';
     label: string;
 }) {
-    const { session } = useAuth();
     const [url, setUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!session?.access_token) {
-            setError('Sign in to load media');
-            return;
-        }
-
         let cancelled = false;
         let objectUrl: string | null = null;
 
         const load = async () => {
             try {
                 setError(null);
-                const response = await fetch(`${supabaseConfig.url}/functions/v1/admin-response-media`, {
-                    method: 'POST',
-                    headers: {
-                        apikey: supabaseConfig.anonKey,
-                        Authorization: `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ responseId }),
-                });
-
-                if (!response.ok) {
-                    const body = await response.json().catch(() => ({}));
-                    throw new Error(body?.error || `Failed to load media (${response.status})`);
-                }
-
-                objectUrl = URL.createObjectURL(await response.blob());
+                objectUrl = URL.createObjectURL(await getAdminResponseMedia(responseId));
                 if (!cancelled) setUrl(objectUrl);
             } catch (loadError) {
                 if (!cancelled) {
@@ -108,7 +86,7 @@ function ProtectedResponseMedia({
             cancelled = true;
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [responseId, session?.access_token]);
+    }, [responseId]);
 
     if (error) {
         return (

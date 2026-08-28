@@ -48,6 +48,10 @@ export async function adminBinaryRequest(path: string, options: RequestOptions =
     return response.blob();
 }
 
+export function getAdminResponseMedia(responseId: string): Promise<Blob> {
+    return adminBinaryRequest(`/v1/admin/responses/${encodeURIComponent(responseId)}/media`);
+}
+
 export type AdminFilter = { column: string; op: 'eq' | 'neq' | 'in' | 'is' | 'gte' | 'lte' | 'ilike'; value: unknown };
 export type AdminQuery = {
     filters?: AdminFilter[];

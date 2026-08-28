@@ -131,6 +131,7 @@ export interface AdminRepository {
   }>>;
   users(principal: AdminPrincipal, userId?: string): Promise<Record<string, unknown>[]>;
   authorizeMedia(principal: AdminPrincipal, mediaId: string): Promise<void>;
+  responseMedia(principal: AdminPrincipal, responseId: string): Promise<{ storageKey: string; mimeType: string }>;
   decryptMessage(principal: AdminPrincipal, messageId: string): Promise<{ content: string | null }>;
   decryptMedia(principal: AdminPrincipal, messageId: string): Promise<{ bytes: Buffer; mimeType: string }>;
   close(): Promise<void>;
@@ -285,6 +286,25 @@ export class PostgresAdminRepository implements AdminRepository {
     requirePermission(principal, 'view_media');
     const result = await this.pool.query('select 1 from media_objects where id=$1 and deleted_at is null', [mediaId]);
     if (!result.rows[0]) throw new AdminError('media_not_found', 'Media not found', 404);
+  }
+
+  async responseMedia(principal: AdminPrincipal, responseId: string): Promise<{ storageKey: string; mimeType: string }> {
+    requirePermission(principal, 'view_responses');
+    const result = await this.pool.query<{ storage_key: string; mime_type: string }>(
+      `select mo.storage_key,mo.mime_type
+         from responses r
+         join media_objects mo
+           on r.response_data->>'media_path'='media:'||mo.id::text
+          and mo.kind='response'
+          and mo.owner_id=r.user_id
+          and mo.couple_id=r.couple_id
+          and (mo.question_id is null or mo.question_id=r.question_id)
+        where r.id=$1 and mo.deleted_at is null and (mo.expires_at is null or mo.expires_at>now())`,
+      [responseId],
+    );
+    const row = result.rows[0];
+    if (!row) throw new AdminError('response_media_not_found', 'Response media not found', 404);
+    return { storageKey: row.storage_key, mimeType: row.mime_type };
   }
 
   private async messageForDecryption(messageId: string) {
