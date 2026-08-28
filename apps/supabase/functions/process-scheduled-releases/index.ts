@@ -61,8 +61,9 @@ Deno.serve(async (req) => {
         // Get all packs due for release
         const { data: duePacks, error: fetchError } = await supabase
             .from("question_packs")
-            .select("id, name, description")
+            .select("id, name, description, category_id, category:categories(content_status)")
             .eq("is_public", false)
+            .eq("content_status", "allowed")
             .eq("release_notified", false)
             .not("scheduled_release_at", "is", null)
             .lte("scheduled_release_at", new Date().toISOString());
@@ -75,14 +76,22 @@ Deno.serve(async (req) => {
             );
         }
 
-        if (!duePacks || duePacks.length === 0) {
+        const eligibleDuePacks = (duePacks ?? []).filter((pack) => {
+            const category = Array.isArray(pack.category)
+                ? pack.category[0]
+                : pack.category;
+            return pack.category_id === null
+                || category?.content_status === "allowed";
+        });
+
+        if (eligibleDuePacks.length === 0) {
             return new Response(
                 JSON.stringify({ released: 0, message: "No packs due for release" }),
                 { headers: { "Content-Type": "application/json" } }
             );
         }
 
-        const packIds = duePacks.map(p => p.id);
+        const packIds = eligibleDuePacks.map(p => p.id);
 
         // Make packs public
         const { error: updateError } = await supabase
@@ -133,7 +142,7 @@ Deno.serve(async (req) => {
                 }
 
                 // Send notification for each released pack
-                for (const pack of duePacks) {
+                for (const pack of eligibleDuePacks) {
                     messages.push({
                         to: user.push_token!,
                         title: "New pack available",
@@ -150,12 +159,12 @@ Deno.serve(async (req) => {
             await sendExpoPushNotifications(messages);
         }
 
-        console.log(`Released ${duePacks.length} packs, sent ${messages.length} notifications`);
+        console.log(`Released ${eligibleDuePacks.length} packs, sent ${messages.length} notifications`);
 
         return new Response(
             JSON.stringify({
-                released: duePacks.length,
-                packNames: duePacks.map(p => p.name),
+                released: eligibleDuePacks.length,
+                packNames: eligibleDuePacks.map(p => p.name),
                 notificationsSent: messages.length,
             }),
             { headers: { "Content-Type": "application/json" } }

@@ -37,7 +37,7 @@ erDiagram
         text icon
         boolean is_premium
         boolean is_public
-        content_review_status content_status "metadata only; not yet enforced"
+        content_review_status content_status "allowed required for customer access"
         int sort_order
         timestamptz created_at
     }
@@ -51,7 +51,7 @@ erDiagram
         text[] allowed_couple_genders "couple composition filter"
         text[] target_user_genders "individual user filter"
         text[] required_props "props/accessories required"
-        content_review_status content_status "metadata only; not yet enforced"
+        content_review_status content_status "allowed required for customer access"
         timestamptz created_at
     }
 
@@ -179,9 +179,12 @@ make an authenticated decision, reviewer identity/time are database-managed,
 and visible content edits reset an unchanged decision to `unreviewed`.
 
 `content_reviews` is the append-only status-change history. Only super-admins
-may read it through the authenticated API. The current migration is preparatory:
-existing RLS, RPCs, and customer applications do not filter `content_status`
-until the separately verified universal enforcement phase.
+may read it through the authenticated API. Customer catalogue RLS and the legacy
+recommendation/teaser RPCs fail closed: a category, pack, and question or dare
+must all be `allowed`. `unreviewed` and `archived` content remains available to
+administrators but is not returned to customer clients. Service-role response
+functions independently reject questions unless both question and pack are
+allowed.
 
 ## Key Flows
 
@@ -200,7 +203,8 @@ until the separately verified universal enforcement phase.
 
 ### Pack Selection Flow
 1. Couples can enable/disable packs via `couple_packs` junction table
-2. `get_recommended_questions()` function filters questions by enabled packs
+2. `get_recommended_questions()` filters by enabled packs and the universal
+   allowed-content boundary
 3. Two-part questions show `partner_text` to second responder
 
 ### Question Targeting System

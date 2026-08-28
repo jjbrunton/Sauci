@@ -185,23 +185,34 @@ Deno.serve(async (req) => {
 
                 const { data: safePacks, error: safePacksError } = await supabase
                     .from("question_packs")
-                    .select("id")
+                    .select("id, category_id, category:categories(content_status)")
                     .lte("avg_intensity", 2)
-                    .eq("is_public", true);
+                    .eq("is_public", true)
+                    .eq("content_status", "allowed");
 
                 if (safePacksError) {
                     console.error("Failed to fetch safe packs:", safePacksError);
-                } else if (safePacks?.length) {
-                    const { error: insertError } = await supabase
-                        .from("couple_packs")
-                        .insert(safePacks.map((pack: { id: string }) => ({
-                            couple_id: couple.id,
-                            pack_id: pack.id,
-                            enabled: true,
-                        })));
+                } else {
+                    const eligibleSafePacks = (safePacks ?? []).filter((pack) => {
+                        const category = Array.isArray(pack.category)
+                            ? pack.category[0]
+                            : pack.category;
+                        return pack.category_id === null
+                            || category?.content_status === "allowed";
+                    });
 
-                    if (insertError) {
-                        console.error("Failed to enable safe packs:", insertError);
+                    if (eligibleSafePacks.length) {
+                        const { error: insertError } = await supabase
+                            .from("couple_packs")
+                            .insert(eligibleSafePacks.map((pack: { id: string }) => ({
+                                couple_id: couple.id,
+                                pack_id: pack.id,
+                                enabled: true,
+                            })));
+
+                        if (insertError) {
+                            console.error("Failed to enable safe packs:", insertError);
+                        }
                     }
                 }
 

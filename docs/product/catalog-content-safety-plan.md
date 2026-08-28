@@ -1,8 +1,10 @@
 # Universal catalogue safety and store compliance implementation plan
 
 Status: product direction confirmed for one universal iOS/Android catalogue.
-The additive review-metadata preparation is implemented locally; no production
-schema, content visibility, or customer application behaviour has changed.
+The additive review metadata and conservative archive classification are live.
+The legacy-client cutover uses RLS, guarded RPCs, write rejection, match hiding,
+and pack-setting enforcement so installed iOS and Android clients receive the
+same explicitly allowed catalogue without a platform-specific fork.
 
 ## 1. Outcome and non-negotiable invariants
 

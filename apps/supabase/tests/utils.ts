@@ -4,9 +4,13 @@ import { assert } from "std/testing/asserts.ts";
 
 export const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "http://127.0.0.1:54321";
 export const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
 if (!SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
+}
+if (!SUPABASE_ANON_KEY) {
+  throw new Error("SUPABASE_ANON_KEY is required");
 }
 
 export const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -30,7 +34,10 @@ export async function createTestUser(email: string) {
 }
 
 export async function signInUser(email: string) {
-  const { data, error } = await adminClient.auth.signInWithPassword({
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await userClient.auth.signInWithPassword({
     email,
     password: "password123",
   });
@@ -41,6 +48,7 @@ export async function signInUser(email: string) {
 
 export async function createTestQuestion(packId?: string) {
     let finalPackId = packId;
+    let createdPack = false;
     if (!finalPackId) {
         const { data: pack } = await adminClient.from("question_packs").insert({
             name: "Test Pack " + Math.random(),
@@ -48,6 +56,7 @@ export async function createTestQuestion(packId?: string) {
             sort_order: 999
         }).select().single();
         finalPackId = pack!.id;
+        createdPack = true;
     }
 
     const { data: question } = await adminClient.from("questions").insert({
@@ -56,7 +65,42 @@ export async function createTestQuestion(packId?: string) {
         intensity: 1
     }).select().single();
 
-    return { question, packId: finalPackId };
+    const { data: archivedQuestion } = await adminClient.from("questions").insert({
+        pack_id: finalPackId,
+        text: "Archived Test Question?",
+        intensity: 1
+    }).select().single();
+
+    if (createdPack) {
+        const { error: packReviewError } = await adminClient
+            .from("question_packs")
+            .update({
+                content_status: "allowed",
+                content_review_reason: "Approved local integration-test fixture",
+            })
+            .eq("id", finalPackId);
+        if (packReviewError) throw packReviewError;
+    }
+
+    const { error: questionReviewError } = await adminClient
+        .from("questions")
+        .update({
+            content_status: "allowed",
+            content_review_reason: "Approved local integration-test fixture",
+        })
+        .eq("id", question!.id);
+    if (questionReviewError) throw questionReviewError;
+
+    const { error: archivedQuestionReviewError } = await adminClient
+        .from("questions")
+        .update({
+            content_status: "archived",
+            content_review_reason: "Archived local integration-test fixture",
+        })
+        .eq("id", archivedQuestion!.id);
+    if (archivedQuestionReviewError) throw archivedQuestionReviewError;
+
+    return { question, archivedQuestion, packId: finalPackId };
 }
 
 export async function createRedemptionCode() {

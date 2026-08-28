@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { assertEquals, assertMatch } from "std/assert/mod.ts";
+import { assert, assertEquals, assertMatch } from "std/assert/mod.ts";
 import {
   adminClient,
+  cleanup,
+  createCouple,
   createTestUser,
   SUPABASE_URL,
 } from "./utils.ts";
@@ -49,6 +51,283 @@ Deno.test("catalogue review migration stages the complete audited archive set", 
     ]
   ) {
     assertEquals(packIds.includes(auditedMixedPackId), true);
+  }
+});
+
+Deno.test("catalogue enforcement exposes only reviewed allowed content to existing clients", async () => {
+  const suffix = crypto.randomUUID();
+  const email1 = `catalogue-enforcement-1-${suffix}@example.com`;
+  const email2 = `catalogue-enforcement-2-${suffix}@example.com`;
+  const userIds: string[] = [];
+  const entityIds: string[] = [];
+  let coupleId: string | undefined;
+  let categoryId: string | undefined;
+  let packIds: string[] = [];
+  let questionIds: string[] = [];
+  let darePackIds: string[] = [];
+  let dareIds: string[] = [];
+
+  try {
+    const { data: category, error: categoryInsertError } = await adminClient
+      .from("categories")
+      .insert({ name: `Enforcement category ${suffix}`, is_public: true })
+      .select("id")
+      .single();
+    if (categoryInsertError) throw categoryInsertError;
+    categoryId = category.id;
+    entityIds.push(category.id);
+
+    const { data: packs, error: packInsertError } = await adminClient
+      .from("question_packs")
+      .insert([
+        {
+          name: `Allowed pack ${suffix}`,
+          category_id: categoryId,
+          is_public: true,
+        },
+        {
+          name: `Archived pack ${suffix}`,
+          category_id: categoryId,
+          is_public: true,
+        },
+        {
+          name: `Unreviewed pack ${suffix}`,
+          category_id: categoryId,
+          is_public: true,
+        },
+      ])
+      .select("id");
+    if (packInsertError) throw packInsertError;
+    packIds = packs.map((pack) => pack.id);
+    entityIds.push(...packIds);
+
+    const { data: questions, error: questionInsertError } = await adminClient
+      .from("questions")
+      .insert(packIds.map((packId, index) => ({
+        pack_id: packId,
+        text: `Enforcement question ${index} ${suffix}`,
+        intensity: 1,
+      })))
+      .select("id");
+    if (questionInsertError) throw questionInsertError;
+    questionIds = questions.map((question) => question.id);
+    entityIds.push(...questionIds);
+
+    const { data: darePacks, error: darePackInsertError } = await adminClient
+      .from("dare_packs")
+      .insert([
+        {
+          name: `Allowed dare pack ${suffix}`,
+          category_id: categoryId,
+          is_public: true,
+        },
+        {
+          name: `Archived dare pack ${suffix}`,
+          category_id: categoryId,
+          is_public: true,
+        },
+      ])
+      .select("id");
+    if (darePackInsertError) throw darePackInsertError;
+    darePackIds = darePacks.map((pack) => pack.id);
+    entityIds.push(...darePackIds);
+
+    const { data: dares, error: dareInsertError } = await adminClient
+      .from("dares")
+      .insert(darePackIds.map((packId, index) => ({
+        pack_id: packId,
+        text: `Enforcement dare ${index} ${suffix}`,
+        intensity: 1,
+      })))
+      .select("id");
+    if (dareInsertError) throw dareInsertError;
+    dareIds = dares.map((dare) => dare.id);
+    entityIds.push(...dareIds);
+
+    const reviewResults = await Promise.all([
+      adminClient.from("categories").update({
+        content_status: "allowed",
+        content_review_reason: "Allowed fixture category",
+      }).eq("id", categoryId),
+      adminClient.from("question_packs").update({
+        content_status: "allowed",
+        content_review_reason: "Allowed fixture pack",
+      }).eq("id", packIds[0]),
+      adminClient.from("question_packs").update({
+        content_status: "archived",
+        content_review_reason: "Archived fixture pack",
+      }).eq("id", packIds[1]),
+      adminClient.from("questions").update({
+        content_status: "allowed",
+        content_review_reason: "Allowed fixture question",
+      }).eq("id", questionIds[0]),
+      adminClient.from("questions").update({
+        content_status: "archived",
+        content_review_reason: "Archived fixture question",
+      }).eq("id", questionIds[1]),
+      adminClient.from("dare_packs").update({
+        content_status: "allowed",
+        content_review_reason: "Allowed fixture dare pack",
+      }).eq("id", darePackIds[0]),
+      adminClient.from("dare_packs").update({
+        content_status: "archived",
+        content_review_reason: "Archived fixture dare pack",
+      }).eq("id", darePackIds[1]),
+      adminClient.from("dares").update({
+        content_status: "allowed",
+        content_review_reason: "Allowed fixture dare",
+      }).eq("id", dareIds[0]),
+      adminClient.from("dares").update({
+        content_status: "archived",
+        content_review_reason: "Archived fixture dare",
+      }).eq("id", dareIds[1]),
+    ]);
+    for (const { error } of reviewResults) if (error) throw error;
+
+    const user1 = await createTestUser(email1);
+    const user2 = await createTestUser(email2);
+    userIds.push(user1.id, user2.id);
+    const couple = await createCouple(user1.id, user2.id);
+    coupleId = couple.id;
+
+    const { data: matches, error: matchInsertError } = await adminClient
+      .from("matches")
+      .insert([
+        {
+          couple_id: coupleId,
+          question_id: questionIds[0],
+          match_type: "yes_yes",
+        },
+        {
+          couple_id: coupleId,
+          question_id: questionIds[1],
+          match_type: "yes_yes",
+        },
+      ])
+      .select("id, question_id");
+    if (matchInsertError) throw matchInsertError;
+
+    const userClient = createClient(SUPABASE_URL, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { error: signInError } = await userClient.auth.signInWithPassword({
+      email: email1,
+      password: "password123",
+    });
+    if (signInError) throw signInError;
+
+    const [
+      { data: visiblePacks, error: packError },
+      { data: visibleQuestions, error: questionError },
+      { data: visibleDarePacks, error: darePackError },
+      { data: visibleDares, error: dareError },
+      { data: visibleMatches, error: matchError },
+    ] = await Promise.all([
+      userClient.from("question_packs").select("id, content_status").in(
+        "id",
+        packIds,
+      ),
+      userClient.from("questions").select("id, content_status").in(
+        "id",
+        questionIds,
+      ),
+      userClient.from("dare_packs").select("id, content_status").in(
+        "id",
+        darePackIds,
+      ),
+      userClient.from("dares").select("id, content_status").in("id", dareIds),
+      userClient.from("matches").select("id, question_id").in(
+        "id",
+        matches.map((match) => match.id),
+      ),
+    ]);
+    if (packError) throw packError;
+    if (questionError) throw questionError;
+    if (darePackError) throw darePackError;
+    if (dareError) throw dareError;
+    if (matchError) throw matchError;
+
+    assertEquals(visiblePacks.map((row) => row.id), [packIds[0]]);
+    assertEquals(visibleQuestions.map((row) => row.id), [questionIds[0]]);
+    assertEquals(visibleDarePacks.map((row) => row.id), [darePackIds[0]]);
+    assertEquals(visibleDares.map((row) => row.id), [dareIds[0]]);
+    assertEquals(visibleMatches.map((row) => row.question_id), [
+      questionIds[0],
+    ]);
+
+    const allowedPackId = packIds[0];
+    const archivedPackId = packIds[1];
+    const {
+      data: archivedRecommendations,
+      error: archivedRecommendationError,
+    } = await userClient.rpc("get_recommended_questions", {
+      target_pack_id: archivedPackId,
+    });
+    if (archivedRecommendationError) throw archivedRecommendationError;
+    assertEquals(archivedRecommendations.length, 0);
+
+    const { data: allowedRecommendations, error: allowedRecommendationError } =
+      await userClient.rpc(
+        "get_recommended_questions",
+        {
+          target_pack_id: allowedPackId,
+        },
+      );
+    if (allowedRecommendationError) throw allowedRecommendationError;
+    assertEquals(allowedRecommendations.map((row: { id: string }) => row.id), [
+      questionIds[0],
+    ]);
+
+    const [
+      { data: archivedTeasers, error: archivedTeaserError },
+      { data: allowedTeasers, error: allowedTeaserError },
+    ] = await Promise.all([
+      userClient.rpc("get_pack_teaser_questions", {
+        target_pack_id: archivedPackId,
+      }),
+      userClient.rpc("get_pack_teaser_questions", {
+        target_pack_id: allowedPackId,
+      }),
+    ]);
+    if (archivedTeaserError) throw archivedTeaserError;
+    if (allowedTeaserError) throw allowedTeaserError;
+    assertEquals(archivedTeasers.length, 0);
+    assertEquals(allowedTeasers.map((row: { id: string }) => row.id), [
+      questionIds[0],
+    ]);
+
+    const { error: archivedPackEnableError } = await userClient
+      .from("couple_packs")
+      .insert({ couple_id: coupleId, pack_id: archivedPackId, enabled: true });
+    assert(archivedPackEnableError);
+
+    const { error: allowedPackEnableError } = await userClient
+      .from("couple_packs")
+      .insert({ couple_id: coupleId, pack_id: allowedPackId, enabled: true });
+    if (allowedPackEnableError) throw allowedPackEnableError;
+  } finally {
+    await cleanup(userIds, coupleId);
+    if (entityIds.length > 0) {
+      await adminClient.from("content_reviews").delete().in(
+        "entity_id",
+        entityIds,
+      );
+    }
+    if (questionIds.length > 0) {
+      await adminClient.from("questions").delete().in("id", questionIds);
+    }
+    if (packIds.length > 0) {
+      await adminClient.from("question_packs").delete().in("id", packIds);
+    }
+    if (dareIds.length > 0) {
+      await adminClient.from("dares").delete().in("id", dareIds);
+    }
+    if (darePackIds.length > 0) {
+      await adminClient.from("dare_packs").delete().in("id", darePackIds);
+    }
+    if (categoryId) {
+      await adminClient.from("categories").delete().eq("id", categoryId);
+    }
   }
 });
 
@@ -113,15 +392,14 @@ Deno.test("catalogue review metadata is reversible, audited, and non-super-admin
     });
     if (signInError) throw signInError;
 
-    // The metadata-only migration must not hide content from existing clients.
-    const { data: stillVisible, error: visibilityError } = await userClient
+    // Enforcement is fail closed for existing clients: archived rows are hidden
+    // even when their legacy is_public flag remains true.
+    const { data: archivedRows, error: visibilityError } = await userClient
       .from("question_packs")
       .select("id, content_status")
-      .eq("id", packId)
-      .single();
+      .eq("id", packId);
     if (visibilityError) throw visibilityError;
-    assertEquals(stillVisible.id, packId);
-    assertEquals(stillVisible.content_status, "archived");
+    assertEquals(archivedRows.length, 0);
 
     const { error: adminError } = await adminClient.from("admin_users").insert({
       user_id: userId,
@@ -138,7 +416,9 @@ Deno.test("catalogue review metadata is reversible, audited, and non-super-admin
       .eq("id", packId);
 
     if (!forbiddenDecision) {
-      throw new Error("Expected pack creator catalogue decision to be rejected");
+      throw new Error(
+        "Expected pack creator catalogue decision to be rejected",
+      );
     }
     assertMatch(forbiddenDecision.message, /Only super admins/i);
 
@@ -163,7 +443,9 @@ Deno.test("catalogue review metadata is reversible, audited, and non-super-admin
 
     const { data: rereviewed, error: rereviewError } = await userClient
       .from("question_packs")
-      .update({ content_review_reason: "Test approval independently rechecked" })
+      .update({
+        content_review_reason: "Test approval independently rechecked",
+      })
       .eq("id", packId)
       .select("content_status, content_review_reason, content_reviewed_by")
       .single();
@@ -186,7 +468,9 @@ Deno.test("catalogue review metadata is reversible, audited, and non-super-admin
       .update({ content_review_reason: "Pack creator forged review reason" })
       .eq("id", packId);
     if (!forgedReason) {
-      throw new Error("Expected pack creator review metadata change to be rejected");
+      throw new Error(
+        "Expected pack creator review metadata change to be rejected",
+      );
     }
     assertMatch(forgedReason.message, /Only super admins/i);
 
@@ -195,7 +479,9 @@ Deno.test("catalogue review metadata is reversible, audited, and non-super-admin
       .update({ content_reviewed_by: null })
       .eq("id", packId);
     if (!forgedReviewer) {
-      throw new Error("Expected database-managed reviewer metadata to be rejected");
+      throw new Error(
+        "Expected database-managed reviewer metadata to be rejected",
+      );
     }
     assertMatch(forgedReviewer.message, /database-managed/i);
 
@@ -318,10 +604,12 @@ Deno.test("deleting a reviewer preserves the decision and clears its current rev
     const reviewerClient = createClient(SUPABASE_URL, anonKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const { error: signInError } = await reviewerClient.auth.signInWithPassword({
-      email,
-      password: "password123",
-    });
+    const { error: signInError } = await reviewerClient.auth.signInWithPassword(
+      {
+        email,
+        password: "password123",
+      },
+    );
     if (signInError) throw signInError;
 
     const { data: pack, error: packError } = await adminClient

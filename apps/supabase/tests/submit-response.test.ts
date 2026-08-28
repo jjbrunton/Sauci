@@ -10,6 +10,7 @@ Deno.test("submit-response: creates match when both users answer yes", async () 
   let coupleId: string | undefined;
   let questionId: string | undefined;
   let packId: string | undefined;
+  let archivedQuestionId: string | undefined;
   let users: string[] = [];
 
   try {
@@ -25,6 +26,7 @@ Deno.test("submit-response: creates match when both users answer yes", async () 
     const qData = await createTestQuestion();
     questionId = qData.question!.id;
     packId = qData.packId;
+    archivedQuestionId = qData.archivedQuestion!.id;
 
     // 3. Sign In Users to get tokens
     const session1 = await signInUser(email1);
@@ -32,6 +34,21 @@ Deno.test("submit-response: creates match when both users answer yes", async () 
 
     assert(session1?.access_token, "User 1 should have access token");
     assert(session2?.access_token, "User 2 should have access token");
+
+    // A stale installed client may still hold an archived question ID. The
+    // service-role Edge Function must reject it instead of bypassing RLS.
+    const archivedResponse = await fetch(FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${session1!.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        question_id: archivedQuestionId,
+        answer: "yes",
+      }),
+    });
+    assertEquals(archivedResponse.status, 404);
 
     // 4. User 1 submits 'yes'
     const res1 = await fetch(FUNCTION_URL, {
