@@ -12,7 +12,7 @@ name: Hosted Auth fixture reaches the standalone API-backed app
 - tapOn:
     point: "94%,44%"
 - extendedWaitUntil:
-    visible: "Explore intimacy together"
+    visible: "Password"
     timeout: 30000
 - tapOn: "Password"
 - tapOn: "Enter your email"
