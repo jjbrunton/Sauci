@@ -4,16 +4,6 @@ import { Events } from "../lib/analytics";
 import type { QuestionPack, Category } from "@/types";
 import { useAuthStore } from "./authStore";
 
-// Intensity thresholds derived from hide_nsfw for backwards compatibility
-// When hide_nsfw=true, max_intensity=2 (mild content only)
-// When hide_nsfw=false, max_intensity=5 (all content)
-const NSFW_OFF_INTENSITY = 2;
-const NSFW_ON_INTENSITY = 5;
-
-const getMaxIntensityFromHideNsfw = (hideNsfw: boolean) => {
-    return hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
-};
-
 // Progress data for a pack
 export interface PackProgressData {
     totalQuestions: number;
@@ -26,13 +16,11 @@ interface PacksState {
     enabledPackIds: string[];
     packProgress: Map<string, PackProgressData>;
     isLoading: boolean;
-    showAllIntensities: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
     fetchPackProgress: () => Promise<void>;
     ensureEnabledPacksLoaded: () => Promise<void>;
     togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
-    setShowAllIntensities: (value: boolean) => void;
     clearPacks: () => void;
     getPackProgress: (packId: string) => PackProgressData | undefined;
 }
@@ -43,15 +31,9 @@ export const usePacksStore = create<PacksState>((set, get) => ({
     enabledPackIds: [],
     packProgress: new Map(),
     isLoading: false,
-    showAllIntensities: false,
 
     fetchPacks: async () => {
         set({ isLoading: true });
-
-        // Get hide_nsfw preference and derive max_intensity from it
-        const hideNsfw = useAuthStore.getState().user?.hide_nsfw ?? false;
-        const maxIntensity = getMaxIntensityFromHideNsfw(hideNsfw);
-        const showAllIntensities = get().showAllIntensities;
 
         // Fetch categories
         const { data: categories } = await supabase
@@ -64,21 +46,11 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         const visibleCategoryIds = new Set(visibleCategories.map(category => category.id));
 
         // Fetch packs with category info and question count
-        let query = supabase
+        const query = supabase
             .from("question_packs")
             .select("*, category:categories(*), questions(count)")
             .eq("is_public", true)
             .order("sort_order");
-
-        // Filter out packs above user's intensity preference (unless showing all)
-        if (maxIntensity < 5 && !showAllIntensities) {
-            query = query.or(`max_intensity.is.null,max_intensity.lte.${maxIntensity}`);
-        }
-
-        // Filter out explicit packs when user has hide_nsfw enabled
-        if (hideNsfw) {
-            query = query.eq("is_explicit", false);
-        }
 
         const { data: packs } = await query;
 
@@ -169,12 +141,6 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         }
 
         return { success: true };
-    },
-
-    setShowAllIntensities: (value: boolean) => {
-        set({ showAllIntensities: value });
-        // Refetch packs with new filter setting
-        get().fetchPacks();
     },
 
     fetchPackProgress: async () => {

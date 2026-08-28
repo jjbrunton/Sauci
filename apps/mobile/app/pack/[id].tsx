@@ -242,14 +242,6 @@ export default function PackDetailsScreen() {
                     {category ? category.name.toUpperCase() : 'PREVIEW'}
                 </Text>
 
-                {/* Explicit badge */}
-                {pack?.is_explicit && (
-                    <View style={styles.explicitBadge}>
-                        <Ionicons name="flame" size={12} color={colors.text} />
-                        <Text style={styles.explicitBadgeText}>18+ EXPLICIT</Text>
-                    </View>
-                )}
-
                 {/* Icon with enhanced glow for premium */}
                 <View style={styles.iconWrapper}>
                     {pack?.is_premium && (
@@ -591,23 +583,6 @@ const styles = StyleSheet.create({
     labelPremium: {
         color: colors.premium.gold,
     },
-    explicitBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.error,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.full,
-        gap: spacing.xs,
-        marginBottom: spacing.md,
-    },
-    explicitBadgeText: {
-        ...typography.caption2,
-        fontWeight: '700',
-        color: colors.text,
-        letterSpacing: 1,
-    },
-
     // Removed glow styles
     iconGlowOuter: {
         display: 'none',

@@ -38,10 +38,10 @@ export const SwipeNoPartnerState = ({ hasCouple, onPairPress }: SwipeNoPartnerSt
             }
             features={[
                 { icon: "lock-closed-outline", text: "Private and secure", color: accent },
-                { icon: "sparkles", text: "Discover hidden desires", color: accent },
+                { icon: "sparkles", text: "Discover new things together", color: accent },
                 { icon: "chatbubble-ellipses-outline", text: "Chat about your matches", color: accent },
             ]}
-            teaser={hasCouple ? "Your partner is just a code away" : "Begin your intimate journey together"}
+            teaser={hasCouple ? "Your partner is just a code away" : "Begin your journey together"}
             action={{
                 label: hasCouple ? "View Invite Code" : "Pair Now",
                 onPress: onPairPress,

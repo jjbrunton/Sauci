@@ -160,9 +160,9 @@ export function ProfileScreen() {
                     />
                     <View style={styles.divider} />
                     <MenuItem
-                        icon="options-outline"
-                        label="Preferences"
-                        description="Comfort zone and security"
+                        icon="lock-closed-outline"
+                        label="App Lock"
+                        description="Biometric access controls"
                         onPress={() => router.push('/(app)/settings/preferences')}
                     />
                 </SettingsSection>

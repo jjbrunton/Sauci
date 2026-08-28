@@ -54,12 +54,6 @@ export function ContentTile({ pack, isLocked, isNew = false, progress, onPress }
             />
           </View>
           <View style={styles.badges}>
-            {pack.is_explicit && (
-              <View style={styles.explicitBadge}>
-                <Ionicons name="flame" size={10} color={colors.text} />
-                <Text style={styles.explicitBadgeText}>18+</Text>
-              </View>
-            )}
             {isNew && (
               <View style={styles.newBadge}>
                 <Text style={styles.newBadgeText}>NEW</Text>
@@ -128,20 +122,6 @@ const styles = StyleSheet.create({
   badges: {
     flexDirection: 'row',
     gap: spacing.xs,
-  },
-  explicitBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.xs,
-    gap: 2,
-  },
-  explicitBadgeText: {
-    ...typography.caption2,
-    fontWeight: '700',
-    color: colors.text,
   },
   newBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',

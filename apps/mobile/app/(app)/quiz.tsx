@@ -34,7 +34,7 @@ export default function QuizScreen() {
                     style={styles.content}
                 >
                     {/* Title section */}
-                    <Text style={styles.label}>INTIMACY</Text>
+                    <Text style={styles.label}>CONNECTION</Text>
                     <Text style={styles.title}>Quiz</Text>
 
                     {/* Decorative separator */}
@@ -61,7 +61,7 @@ export default function QuizScreen() {
                     <View style={styles.features}>
                         <View style={styles.featureItem}>
                             <Ionicons name="sparkles" size={16} color={ACCENT_COLOR} />
-                            <Text style={styles.featureText}>Uncover hidden desires</Text>
+                            <Text style={styles.featureText}>Learn what makes each other tick</Text>
                         </View>
                         <View style={styles.featureItem}>
                             <Ionicons name="flame-outline" size={16} color={ACCENT_COLOR} />

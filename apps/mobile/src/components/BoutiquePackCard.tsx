@@ -92,18 +92,6 @@ export function BoutiquePackCard({
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Explicit Badge (top-left) */}
-        {pack.is_explicit && (
-          <View style={styles.explicitBadge}>
-            <Ionicons
-              name="flame"
-              size={10}
-              color={colors.text}
-            />
-            <Text style={styles.explicitBadgeText}>18+</Text>
-          </View>
-        )}
-
         {/* PRO Badge (top-right) */}
         {pack.is_premium && (
           <View style={[
@@ -241,24 +229,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
     justifyContent: 'space-between',
-  },
-  explicitBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.error,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.xs,
-    gap: 3,
-    zIndex: 10,
-  },
-  explicitBadgeText: {
-    ...typography.caption2,
-    color: colors.text,
-    fontWeight: '700',
   },
   proBadge: {
     position: 'absolute',

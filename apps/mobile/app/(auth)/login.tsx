@@ -489,7 +489,7 @@ export default function LoginScreen() {
                             />
                             <Text style={styles.title}>Sauci</Text>
                             <Text style={styles.subtitle}>
-                                Explore intimacy together
+                                Grow closer together
                             </Text>
                         </Animated.View>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
-import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../store';
+import { useAuthStore, useSubscriptionStore } from '../../../store';
 import { supabase } from '../../../lib/supabase';
 import { Events } from '../../../lib/analytics';
 import { useAvatarPicker } from '../../../hooks/useAvatarPicker';
@@ -16,15 +16,8 @@ import {
     getBiometricType,
 } from '../../../lib/biometricAuth';
 
-// Intensity thresholds for backwards compatibility
-// When hide_nsfw=true, max_intensity=2 (mild content only)
-// When hide_nsfw=false, max_intensity=5 (all content)
-const NSFW_OFF_INTENSITY = 2;
-const NSFW_ON_INTENSITY = 5;
-
 export function useProfileSettings() {
     const { user, fetchUser } = useAuthStore();
-    const { fetchPacks } = usePacksStore();
     const { restorePurchases, isPurchasing } = useSubscriptionStore();
 
     // Name Editing
@@ -69,10 +62,6 @@ export function useProfileSettings() {
         onUploadError: handleAvatarUploadError,
     });
 
-    // Hide NSFW
-    const [hideNsfw, setHideNsfw] = useState(!!user?.hide_nsfw);
-    const [isUpdatingHideNsfw, setIsUpdatingHideNsfw] = useState(false);
-
     // Notifications
     const [pushEnabled, setPushEnabled] = useState(!!user?.push_token);
     const [isUpdatingPush, setIsUpdatingPush] = useState(false);
@@ -92,7 +81,6 @@ export function useProfileSettings() {
             setNewName(user.name);
         }
         setPushEnabled(!!user?.push_token);
-        setHideNsfw(!!user?.hide_nsfw);
     }, [user]);
 
     // Check biometric availability
@@ -229,43 +217,6 @@ export function useProfileSettings() {
         }
     };
 
-    const handleHideNsfwToggle = async (value: boolean) => {
-        if (!user?.id) return;
-
-        const previous = hideNsfw;
-        setHideNsfw(value);
-        setIsUpdatingHideNsfw(true);
-
-        // Derive intensity from hide_nsfw for backwards compatibility
-        const maxIntensity = value ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
-        const showExplicitContent = !value;
-
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    hide_nsfw: value,
-                    max_intensity: maxIntensity,
-                    show_explicit_content: showExplicitContent,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (error) throw error;
-
-            // Refresh user data and packs to reflect the change
-            await fetchUser();
-            await fetchPacks();
-            Events.profileUpdated(["hide_nsfw", "max_intensity", "show_explicit_content"]);
-        } catch (error) {
-            // Revert on error
-            setHideNsfw(previous);
-            Alert.alert("Error", "Failed to update preference. Please try again.");
-        } finally {
-            setIsUpdatingHideNsfw(false);
-        }
-    };
-
     // Subscription Actions
     const handleRestorePurchases = async () => {
         const restored = await restorePurchases();
@@ -294,8 +245,6 @@ export function useProfileSettings() {
         biometricEnabled: biometricEnabledState,
         biometricType,
         isUpdatingBiometric,
-        hideNsfw,
-        isUpdatingHideNsfw,
         showPaywall,
         setShowPaywall,
         isPurchasing,
@@ -306,7 +255,6 @@ export function useProfileSettings() {
         handleAvatarPress,
         handlePushToggle,
         handleBiometricToggle,
-        handleHideNsfwToggle,
         handleRestorePurchases,
         handleManageSubscription,
     };
