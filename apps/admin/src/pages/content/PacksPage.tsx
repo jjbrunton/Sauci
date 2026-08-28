@@ -14,6 +14,8 @@ import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { ExtractTopicsDialog } from '@/components/content/ExtractTopicsDialog';
 import { PackFormDialog, type PackFormData } from '@/components/content/PackFormDialog';
 import { IconPreview } from '@/components/ui/icon-picker';
+import { ContentReviewControl } from '@/components/content/ContentReviewControl';
+import type { ContentReviewStatus } from '@sauci/shared';
 
 // =============================================================================
 // Types
@@ -43,6 +45,8 @@ interface QuestionPack {
     created_at: string | null;
     scheduled_release_at?: string | null;  // Optional for backwards compatibility
     release_notified?: boolean;  // True if notifications have been sent or should be skipped
+    content_status?: ContentReviewStatus | null;
+    content_review_reason?: string | null;
     question_count?: number;
     topics?: Topic[];
 }
@@ -513,6 +517,15 @@ export function PacksPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        <ContentReviewControl
+                                            table="question_packs"
+                                            entityId={pack.id}
+                                            entityLabel={`pack “${pack.name}”`}
+                                            status={pack.content_status}
+                                            reason={pack.content_review_reason}
+                                            onChanged={fetchData}
+                                            compact
+                                        />
                                         {pack.is_explicit && (
                                             <Badge variant="destructive">
                                                 NSFW

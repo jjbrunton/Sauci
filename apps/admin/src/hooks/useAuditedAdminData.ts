@@ -5,6 +5,8 @@ const AUDITED_TABLES = [
     'question_packs',
     'questions',
     'categories',
+    'dare_packs',
+    'dares',
     'profiles',
     'couples',
     'responses',

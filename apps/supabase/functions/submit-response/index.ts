@@ -96,11 +96,31 @@ Deno.serve(async (req) => {
         // Fetch the question to get its type
         const { data: question, error: questionError } = await supabase
             .from("questions")
-            .select("id, question_type")
+            .select(`
+                id,
+                question_type,
+                content_status,
+                pack:question_packs!inner(
+                    content_status,
+                    category_id,
+                    category:categories(content_status)
+                )
+            `)
             .eq("id", question_id)
             .single();
 
-        if (questionError || !question) {
+        const questionPack = Array.isArray(question?.pack)
+            ? question.pack[0]
+            : question?.pack;
+        const questionCategory = Array.isArray(questionPack?.category)
+            ? questionPack.category[0]
+            : questionPack?.category;
+        const questionIsAllowed = question?.content_status === "allowed"
+            && questionPack?.content_status === "allowed"
+            && (questionPack.category_id === null
+                || questionCategory?.content_status === "allowed");
+
+        if (questionError || !question || !questionIsAllowed) {
             return new Response(
                 JSON.stringify({ error: "Question not found" }),
                 { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }

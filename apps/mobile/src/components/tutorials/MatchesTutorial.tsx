@@ -48,7 +48,7 @@ const STEPS: TutorialStep[] = [
     {
         key: "photos",
         title: "Share Pictures Privately",
-        description: "Send photos that only your partner can see. Your intimate moments stay between the two of you, safe and private.",
+        description: "Send photos that only your partner can see. Your shared moments stay between the two of you, safe and private.",
         icon: "images",
         gradient: gradients.premiumRose as [string, string],
     },

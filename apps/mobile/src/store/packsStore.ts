@@ -16,13 +16,11 @@ interface PacksState {
     enabledPackIds: string[];
     packProgress: Map<string, PackProgressData>;
     isLoading: boolean;
-    showAllIntensities: boolean;
     fetchPacks: () => Promise<void>;
     fetchEnabledPacks: () => Promise<void>;
     fetchPackProgress: () => Promise<void>;
     ensureEnabledPacksLoaded: () => Promise<void>;
     togglePack: (packId: string) => Promise<{ success: boolean; reason?: string }>;
-    setShowAllIntensities: (value: boolean) => void;
     clearPacks: () => void;
     getPackProgress: (packId: string) => PackProgressData | undefined;
 }
@@ -33,14 +31,12 @@ export const usePacksStore = create<PacksState>((set, get) => ({
     enabledPackIds: [],
     packProgress: new Map(),
     isLoading: false,
-    showAllIntensities: false,
 
     fetchPacks: async () => {
         set({ isLoading: true });
         try {
-            const showAllIntensities = get().showAllIntensities;
             const catalog = await apiClient.get<{ categories: Category[]; packs: QuestionPack[] }>(
-                `/v1/packs?showAllIntensities=${showAllIntensities}`,
+                '/v1/packs?showAllIntensities=false',
             );
             set({ packs: catalog.packs, categories: catalog.categories });
             await get().fetchEnabledPacks();
@@ -109,12 +105,6 @@ export const usePacksStore = create<PacksState>((set, get) => ({
         }
 
         return { success: true };
-    },
-
-    setShowAllIntensities: (value: boolean) => {
-        set({ showAllIntensities: value });
-        // Refetch packs with new filter setting
-        get().fetchPacks();
     },
 
     fetchPackProgress: async () => {

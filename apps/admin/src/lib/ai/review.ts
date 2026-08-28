@@ -52,7 +52,7 @@ Review each generated question against our quality guidelines.
 <pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
-- Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
+- Legacy Pack Flag: ${packContext.isExplicit ? 'Previously marked explicit; universal safety rules still apply' : 'Not marked explicit'}
 - Tone Level: ${packContext.tone} (${toneDescription})
 </pack_context>
 
@@ -63,7 +63,7 @@ ${REVIEW_GUIDELINES}
 <verdict_rules>
 - PASS: All scores >= 7, no major issues
 - FLAG: Any score 5-7, or minor issues worth noting (admin should review but can use)
-- REJECT: Any score < 5, or major violations (mixed anatomy, severe guideline violation)
+- REJECT: Any score < 5, any sexual/explicit content, or another major guideline violation
 </verdict_rules>
 
 <questions_to_review>
@@ -104,7 +104,7 @@ Review ALL questions against ALL 7 criteria. Be thorough but fair - only flag/re
         messages: [
             {
                 role: 'system',
-                content: 'You are a quality assurance reviewer for a couples intimacy app. You evaluate generated questions for guideline compliance, creativity, clarity, and accuracy. Be thorough but fair. Always respond with valid JSON only.',
+                content: 'You are a quality assurance reviewer for a couples connection app. Reject sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, and public sexual activity. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],
@@ -213,7 +213,7 @@ Compare ${candidates.length} different sets of generated questions from differen
 <pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
-- Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
+- Legacy Pack Flag: ${packContext.isExplicit ? 'Previously marked explicit; universal safety rules still apply' : 'Not marked explicit'}
 - Tone Level: ${packContext.tone} (${toneDescription})
 </pack_context>
 
@@ -270,7 +270,7 @@ Select the best set and review ALL questions in that set against ALL 7 criteria.
         messages: [
             {
                 role: 'system',
-                content: 'You are a quality assurance reviewer for a couples intimacy app. You compare multiple AI-generated question sets and select the best one, then provide detailed reviews. Be thorough but fair. Always respond with valid JSON only.',
+                content: 'You are a quality assurance reviewer for a couples connection app. Reject sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, and public sexual activity. Compare candidate sets and always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],

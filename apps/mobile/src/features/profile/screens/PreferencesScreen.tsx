@@ -7,14 +7,14 @@ import { useProfileSettings } from '../hooks';
 import { ScreenHeader, PrivacySettings } from '../components';
 
 /**
- * Preferences sub-screen for content and biometric settings.
+ * App-lock settings shared by iOS and Android.
  */
 export function PreferencesScreen() {
     const settings = useProfileSettings();
 
     return (
         <GradientBackground>
-            <ScreenHeader title="Preferences" />
+            <ScreenHeader title="App Lock" />
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.content}
@@ -26,9 +26,6 @@ export function PreferencesScreen() {
                     biometricType={settings.biometricType}
                     isUpdatingBiometric={settings.isUpdatingBiometric}
                     onBiometricToggle={settings.handleBiometricToggle}
-                    hideNsfw={settings.hideNsfw}
-                    isUpdatingHideNsfw={settings.isUpdatingHideNsfw}
-                    onHideNsfwToggle={settings.handleHideNsfwToggle}
                 />
             </ScrollView>
         </GradientBackground>

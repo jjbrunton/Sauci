@@ -7,7 +7,7 @@ describe('packsStore standalone API integration', () => {
         jest.restoreAllMocks();
         usePacksStore.setState({
             packs: [], categories: [], enabledPackIds: [], packProgress: new Map(),
-            isLoading: false, showAllIntensities: false,
+            isLoading: false,
         } as any);
         useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: true } } as any);
     });

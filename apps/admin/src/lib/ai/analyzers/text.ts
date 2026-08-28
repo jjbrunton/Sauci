@@ -22,18 +22,17 @@ export async function analyzeQuestionText(
     }));
 
     const toneInstruction = isExplicit
-        ? 'TONE: This is an EXPLICIT pack with NUANCED language. Use tasteful phrasing for common acts: "Have sex in X" (not "fuck in X"), "Perform oral" or "go down on" (not crude oral terms). BUT keep crude/specific terms when they ARE the activity: "Cum on your partner\'s tits" (cum is the act), "Use a cock ring" (that\'s the name), "Edge until they beg". The rule: crude terms for specific acts/objects, tasteful terms for general sex/oral. NEVER sanitize "cum" to "come" - they have different meanings.'
-        : 'TONE: This is a NON-EXPLICIT pack. CRITICAL: Do NOT include any sexual acts, crude language, or NSFW content. Keep language romantic, sensual, or playful without crude/graphic terms. If explicit sexual content appears, replace with tasteful romantic alternatives or flag for removal.';
+        ? 'LEGACY EXPLICIT FLAG: It does not override the universal catalogue safety ceiling. Replace explicit wording with a high-level proposal about curiosity, trust, anticipation, comfort, or relationship dynamics. If that would invent a materially different proposal, omit it so deletion review can archive it.'
+        : 'Keep language romantic, playful, flirty, or daring without naming or describing sexual content. Replace explicit wording with a safe high-level proposal, or omit it when that would change the proposal materially.';
 
-    // Use different examples based on explicit/non-explicit
     const symmetricExamples = isExplicit
-        ? 'GOOD: "Have sex in a public place", "Roleplay a new scenario together", "Shower together", "Have a threesome"'
+        ? 'GOOD SAFE REPLACEMENTS: "Explore a new dynamic together", "Share a private desire in your own words", "Try something daring together"'
         : 'GOOD: "Cook a romantic dinner together", "Stargaze and share your dreams", "Give each other massages", "Dance together at home"';
 
     const asymmetricExamples = isExplicit
-        ? `text (The Doer): Active command/proposal (e.g., "Tie your partner up", "Give your partner a massage").
-   - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Be tied up by your partner", "Receive a massage from your partner").
-   - GOOD: "Spank your partner" / "Be spanked by your partner"`
+        ? `text (The Doer): Active safe proposal (e.g., "Let your partner take the lead").
+   - partner_text (The Receiver): Reciprocal safe proposal (e.g., "Take the lead with your partner").
+   - GOOD: "Plan a bold surprise for your partner" / "Let your partner plan a bold surprise"`
         : `text (The Doer): Active command/proposal (e.g., "Write a love letter to your partner", "Plan a surprise date for your partner").
    - partner_text (The Receiver): Passive/Receiving proposal (e.g., "Receive a love letter from your partner", "Be surprised with a date by your partner").
    - GOOD: "Give your partner a massage" / "Receive a massage from your partner"`;
@@ -66,17 +65,15 @@ Cards should be "Proposals" for specific actions, NOT interview questions.
 
    Partner text rules:
    - Describe RECEIVER's experience clearly
-   - When initiator CAUSES a response (moan, cum, beg), frame as ALLOWING:
-     * text: "Make your partner moan" -> partner_text: "Let your partner make you moan"
-     * NOT: "Moan for your partner" (sounds forced, not natural)
+   - Keep both perspectives inside the same universal safety ceiling
 </question_types>
 
 <rules>
-1. PRESERVE THE CORE ACTION - only improve phrasing, don't change what it's about
+1. Preserve the core relationship intent only when it is catalogue-safe
 2. Keep SHORT and DIRECT - aim for 5-12 words, no parentheticals
 3. Remove wishy-washy: "Would you want to...", "Have you ever...", "Do you think..."
 4. Use "your partner" instead of "me", "you", "him", "her"
-5. NEVER mix anatomically incompatible activities in same question
+5. Keep allowed catalogue proposals anatomy-neutral by default
 6. Make partner_text APPEALING - don't just grammatically flip, make receiver feel excited
 7. FLAG CLICHES: "candlelit dinner", "rose petals", "bubble bath", "Netflix and chill"
 8. Skip questions that are ALREADY well-phrased
@@ -102,8 +99,8 @@ Only include questions that need text improvement.
 </output_format>`;
 
     const systemMessage = isExplicit
-        ? 'You are an adult content editor for a couples intimacy app. Use nuanced language: tasteful phrasing for general acts (have sex, perform oral) but crude specific terms when relevant (cum, cock ring, etc). Preserve original intent. Always respond with valid JSON only.'
-        : 'You are a professional content editor for a couples app. You improve question phrasing to be direct, actionable, and engaging while preserving the original intent. Always respond with valid JSON only.';
+        ? 'You are a content editor for a couples connection app. A legacy explicit flag never overrides the universal safety ceiling. Never output sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity. Always respond with valid JSON only.'
+        : 'You are a professional content editor for a couples connection app. Improve phrasing while never outputting sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity. Always respond with valid JSON only.';
 
     const response = await openai.chat.completions.create({
         model: getModel('fix'),

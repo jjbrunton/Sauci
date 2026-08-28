@@ -50,7 +50,7 @@ Evaluate a pool of ${pooledQuestions.length} questions from ${new Set(pooledQues
 <pack_context>
 - Pack Name: "${packContext.name}"
 ${packContext.description ? `- Pack Description: "${packContext.description}"` : ''}
-- Content Type: ${packContext.isExplicit ? 'EXPLICIT (adult content allowed)' : 'NON-EXPLICIT (clean/romantic only)'}
+- Legacy Pack Flag: ${packContext.isExplicit ? 'Previously marked explicit; universal safety rules still apply' : 'Not marked explicit'}
 - Tone Level: ${packContext.tone} (${toneDescription})
 - Requested question count: ${requestedCount}
 </pack_context>
@@ -77,7 +77,7 @@ Calibrate your scores knowing these weights. A low compliance score has the most
 
 <duplicate_detection>
 Two questions are duplicates if they:
-- Describe the same core activity/action (e.g., "Have sex outdoors" vs "Make love outside")
+- Describe the same core activity/action (e.g., "Plan a surprise date" vs "Arrange a mystery date")
 - Differ only in minor phrasing variations
 - Would feel repetitive if both appeared in the same pack
 

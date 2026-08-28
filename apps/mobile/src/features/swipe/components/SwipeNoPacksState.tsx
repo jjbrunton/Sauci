@@ -17,7 +17,7 @@ export const SwipeNoPacksState = ({ onBrowsePacks }: SwipeNoPacksStateProps) => 
             badgeText="NO PACKS ENABLED"
             description="Select the question packs that interest you and your partner. Each pack explores different aspects of your relationship."
             features={[
-                { icon: "flame-outline", text: "From playful to passionate", color: accent },
+                { icon: "flame-outline", text: "From playful to adventurous", color: accent },
                 { icon: "shield-checkmark-outline", text: "Safe space to explore", color: accent },
                 { icon: "infinite-outline", text: "New packs added regularly", color: accent },
             ]}

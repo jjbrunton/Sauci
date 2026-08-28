@@ -19,4 +19,8 @@ All schema changes are versioned local files under `apps/supabase/migrations/`.
 - Never insert migration history manually except an explicitly approved repair.
 - Never hardcode a production URL in a migration or cron definition.
 
-CI deploys committed migrations. Local verification must not link a remote project.
+CI deploys committed migrations and Edge Functions to non-production after relevant
+pushes. Production promotion is a manual workflow dispatch. Terraform is applied
+only when files under `terraform/` change, or when `deploy_infrastructure` is
+explicitly selected during a manual deployment. Local verification must not link a
+remote project.

@@ -34,7 +34,7 @@ const FEATURES = [
     {
         icon: "layers" as const,
         title: "All Premium Packs",
-        description: "Unlock every intimate collection",
+        description: "Unlock every question collection",
     },
     {
         icon: "sparkles" as const,
@@ -206,7 +206,7 @@ export function Paywall({ visible, onClose, onSuccess, offeringId }: PaywallProp
 
                             <Text style={styles.title}>Sauci Pro</Text>
                             <Text style={styles.subtitle}>
-                                Unlock the full intimate experience
+                                Unlock the full couples experience
                             </Text>
                         </View>
 

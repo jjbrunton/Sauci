@@ -22,7 +22,7 @@ export interface NotificationPreferences extends Record<NotificationPreferenceKe
 export interface ProfileUpdate {
   name?: string;
   gender?: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null;
-  usage_reason?: 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship' | null;
+  usage_reason?: 'improve_communication' | 'reconnect' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship' | null;
   max_intensity?: 1 | 2 | 3 | 4 | 5;
   show_explicit_content?: boolean;
   hide_nsfw?: boolean;

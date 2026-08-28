@@ -54,7 +54,7 @@ export default function DaresScreen() {
 
                     {/* Description */}
                     <Text style={styles.description}>
-                        Push your boundaries together with tantalising challenges designed to ignite passion and create unforgettable moments.
+                        Try playful challenges together and create unforgettable moments.
                     </Text>
 
                     {/* Feature hints */}

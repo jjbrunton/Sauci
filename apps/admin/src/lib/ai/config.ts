@@ -62,9 +62,9 @@ export async function initializeAiConfig(): Promise<AiConfig | null> {
 export const TONE_LEVELS = [
     { level: 1, label: 'Gentle', description: 'Pure emotional connection & non-sexual bonding' },
     { level: 2, label: 'Warm', description: 'Romantic atmosphere & affectionate touch' },
-    { level: 3, label: 'Playful', description: 'Light sexual exploration & sensual discovery' },
-    { level: 4, label: 'Steamy', description: 'Explicit sexual activities & moderate adventure' },
-    { level: 5, label: 'Intense', description: 'Advanced/BDSM/Extreme exploration' },
+    { level: 3, label: 'Playful', description: 'Flirty anticipation, novelty & playful connection' },
+    { level: 4, label: 'Bold', description: 'Trust, leadership & suggestive relationship dynamics' },
+    { level: 5, label: 'Daring', description: 'Comfort zones, control & user-led curiosity' },
 ] as const;
 
 // =============================================================================
@@ -92,30 +92,26 @@ REVIEW CRITERIA - Score each 1-10:
    - Partner text (if present) clearly describes receiver's experience
    - No confusing or ambiguous phrasing
 
-4. ANATOMICAL CONSISTENCY:
-   - No mixed male/female anatomy in alternatives
-   - BAD: "Finger or give your partner a handjob"
-   - GOOD: Pick one activity
+4. CATALOGUE SAFETY:
+   - REJECT named or described sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity
+   - REJECT sexual instructions disguised with euphemisms
+   - ALLOW non-graphic romance, anticipation, trust, leadership, following, novelty, and user-led curiosity
+   - The highest tone changes emotional boldness, never the explicitness ceiling
 
 5. PARTNER TEXT QUALITY (if applicable):
    - Engaging and enticing, not clinical
-   - BAD: "Receive oral from your partner"
-   - GOOD: "Let your partner pleasure you with their mouth"
-   - When initiator causes a response, frame as allowing: "Let your partner make you moan"
+   - Describes the reciprocal perspective without adding sexual detail
+   - Preserves the same safe proposal and emotional intensity
 
 6. COUPLE TARGETING (flag if incorrect):
-   - Default: ALL couples (null) unless explicit anatomical requirement
-   - Restrict to ['male+male', 'female+male'] ONLY if activity requires penis
-   - Restrict to ['female+male', 'female+female'] ONLY if activity requires vagina
-   - Sex toys are GENDER-NEUTRAL (vibrators, dildos, plugs work for anyone)
-   - Flag if targeting seems too restrictive or missing needed restrictions
+   - Default: ALL couples (null)
+   - Safe catalogue proposals should not require anatomical targeting
+   - Flag unnecessary or exclusionary targeting
 
 7. INITIATOR TARGETING (for asymmetric questions only):
-   - Default: null (anyone can initiate) unless explicit anatomical requirement
-   - Set initiator based on WHO DOES the action in "text" field
-   - "Swallow your partner's cum" -> initiator: female (in M+F, receiver of cum)
-   - "Give your partner a massage" -> initiator: null (anyone can give)
-   - Flag if initiator seems incorrectly assigned
+   - Default: null (anyone can initiate)
+   - Set initiator only when a legitimate non-anatomical product rule requires it
+   - Flag unnecessary targeting
 `;
 
 // =============================================================================
@@ -125,10 +121,10 @@ REVIEW CRITERIA - Score each 1-10:
 
 export const TONE_INSTRUCTIONS: Record<ToneLevel, string> = {
     1: 'INTIMACY LEVEL: GENTLE. Focus on emotional safety, friendship-based activities, and quality time. Examples: "Cook a new recipe together", "Take a walk holding hands", "Give non-sexual foot massages", "Watch a movie cuddling". Pure emotional connection & non-sexual bonding.',
-    2: 'INTIMACY LEVEL: WARM. Focus on creating romantic moments, sensual but non-sexual touch, and building anticipation. Examples: "Slow dance in the living room", "Candlelit bath together (non-sexual)", "Extended kissing sessions", "Sensual massage with oils". Romantic atmosphere & affectionate touch.',
-    3: 'INTIMACY LEVEL: PLAYFUL. Focus on sexual touch without penetration, playful experimentation, and building arousal. Examples: "Mutual masturbation", "Oral sex", "Light roleplay (doctor/patient)", "Using basic toys together". Light sexual exploration & sensual discovery.',
-    4: 'INTIMACY LEVEL: STEAMY. Focus on full sexual intercourse with adventurous elements and moderate BDSM/kink. Examples: "Sex in different locations/positions", "Light bondage", "Anal play with toys", "Recording consensual intimate moments". Explicit sexual activities & moderate adventure.',
-    5: 'INTIMACY LEVEL: INTENSE. Focus on edge play, power dynamics, and intense physical experiences. Examples: "Heavy impact play", "Advanced bondage", "Consensual non-consent scenes", "Multi-partner activities". Advanced/BDSM/Extreme exploration.',
+    2: 'INTIMACY LEVEL: WARM. Focus on romantic moments, affectionate touch, and anticipation. Examples: "Slow dance in the living room", "Plan a surprise date", "Share a longer kiss", "Give your partner a relaxing massage". Romantic atmosphere without sexual instructions.',
+    3: 'INTIMACY LEVEL: PLAYFUL. Focus on flirtation, novelty, private signals, playful rules, and keeping a partner guessing. Examples: "Create a private signal together", "Plan a playful surprise", "Choose a bold outfit for your partner". Suggestive relationship energy without sexual acts.',
+    4: 'INTIMACY LEVEL: BOLD. Focus on trust, taking the lead, following a partner, and switching relationship dynamics. Examples: "Let your partner lead the whole date", "Set a playful rule for an evening", "Switch who makes every decision". No named fetishes, gear, sexual acts, anatomy, nudity, or arousal instructions.',
+    5: 'INTIMACY LEVEL: DARING. Focus on comfort zones, control, vulnerability, and user-led curiosity. Examples: "Share something you are curious to try", "Let your partner plan a bold surprise", "Try a new dynamic together". Emotionally daring but never sexually explicit or instructional.',
 };
 
 // =============================================================================
@@ -142,8 +138,10 @@ export const CORE_LANGUAGE_RULES = `
 2. Cards are PROPOSALS/ACTIVITIES, NOT interview questions - "Give your partner a massage" not "Would you like to give a massage?"
 3. Avoid wishy-washy language - NO "Would you...", "Have you ever...", "Do you think...", "Maybe we could..."
 4. No time-specific words - NO "tonight", "now", "today", "right now" - activities should be timeless
-5. Maintain anatomical consistency - NEVER combine male-specific and female-specific acts as alternatives
+5. Keep allowed catalogue proposals anatomy-neutral and suitable for every couple by default
 6. Keep concise - ideal length is 5-12 words per question
+7. UNIVERSAL SAFETY CEILING - never name or describe sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity
+8. Higher tone levels increase trust, anticipation, control, novelty, and vulnerability; they never override rule 7
 </language_rules>
 `;
 
@@ -164,32 +162,32 @@ export const SYSTEM_MESSAGES: Record<ToneLevel, string> = {
     2: `You are an expert content writer for Sauci, a couples intimacy app where partners swipe on activity proposals.
 
 <role>Generate warm, romantic activities with affectionate touch.</role>
-<constraint>Sensual but NOT explicit sex. Building anticipation without crossing into explicit territory.</constraint>
+<constraint>Romantic and suggestive but not sexual or instructional. Build anticipation without naming sexual content.</constraint>
 <style>Romantic, intimate, sensual. Create atmosphere and connection.</style>
 <format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
 <audience>Adults aged 25-45 in committed relationships.</audience>`,
 
     3: `You are an expert content writer for Sauci, a couples intimacy app where partners swipe on activity proposals.
 
-<role>Generate playful, sexually exploratory activities.</role>
-<constraint>Focus on foreplay, oral, toys, and light exploration. Avoid extreme kinks.</constraint>
-<style>Playful, sexy, adventurous. Encourage exploration in a fun way.</style>
+<role>Generate playful, flirty activities about anticipation and novelty.</role>
+<constraint>No sexual acts, anatomy, toys, nudity, fetishes, BDSM acts, or arousal instructions.</constraint>
+<style>Playful, suggestive, and adventurous without supplying the sexual act.</style>
 <format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
 <audience>Adults aged 25-45 in committed relationships.</audience>`,
 
-    4: `You are an expert content writer for Sauci, an adult couples intimacy app where partners swipe on activity proposals.
+    4: `You are an expert content writer for Sauci, a couples connection app where partners swipe on activity proposals.
 
-<role>Generate steamy, explicit sexual activities with moderate adventure.</role>
-<constraint>Full sexual content allowed including intercourse, light bondage, and moderate kinks.</constraint>
-<style>Passionate, explicit, adventurous. Bold but not extreme.</style>
+<role>Generate bold activities about trust, leadership, following, and switching dynamics.</role>
+<constraint>No sexual acts, anatomy, toys, nudity, fetishes, BDSM acts, or arousal instructions.</constraint>
+<style>Confident, suggestive, and adventurous without explicit content.</style>
 <format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
 <audience>Adults aged 25-45 in committed relationships.</audience>`,
 
-    5: `You are an expert content writer for Sauci, an adult couples intimacy app where partners swipe on activity proposals.
+    5: `You are an expert content writer for Sauci, a couples connection app where partners swipe on activity proposals.
 
-<role>Generate intense, advanced sexual activities including BDSM and kinks.</role>
-<constraint>Edge play, power dynamics, and intense physical experiences allowed. All content is consensual adult activity.</constraint>
-<style>Intense, commanding, unapologetic. Push boundaries while maintaining consent.</style>
+<role>Generate emotionally daring activities about comfort zones, control, vulnerability, and user-led curiosity.</role>
+<constraint>No sexual acts, anatomy, toys, nudity, fetishes, BDSM acts, or arousal instructions. Never turn curiosity into a developer-supplied sexual example.</constraint>
+<style>Bold and intriguing while preserving the universal safety ceiling.</style>
 <format>Activities are proposals users swipe on (Like/Dislike/Maybe), not interview questions. Always respond with valid JSON only.</format>
 <audience>Adults aged 25-45 in committed relationships seeking adventurous experiences.</audience>`,
 };

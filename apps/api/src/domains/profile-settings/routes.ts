@@ -10,7 +10,7 @@ type ProfileSettingsApp = Hono<{ Variables: { identity: AuthIdentity } }>;
 const profileUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   gender: z.enum(['male', 'female', 'non-binary', 'prefer-not-to-say']).nullable().optional(),
-  usage_reason: z.enum(['improve_communication', 'spice_up_intimacy', 'deeper_connection', 'have_fun', 'strengthen_relationship']).nullable().optional(),
+  usage_reason: z.enum(['improve_communication', 'reconnect', 'spice_up_intimacy', 'deeper_connection', 'have_fun', 'strengthen_relationship']).nullable().optional(),
   max_intensity: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
   show_explicit_content: z.boolean().optional(),
   hide_nsfw: z.boolean().optional(),

@@ -24,7 +24,6 @@ import Animated, {
 import { GradientBackground } from '../../src/components/ui/GradientBackground';
 import { GlassCard } from '../../src/components/ui/GlassCard';
 import { GlassButton } from '../../src/components/ui/GlassButton';
-import { GlassToggle } from '../../src/components/ui/GlassToggle';
 import { Paywall } from '../../src/components/paywall';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
@@ -44,23 +43,17 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'prefer-not-to-say', label: 'Skip', icon: 'remove-circle-outline' },
 ];
 
-type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
+type UsageReason = 'improve_communication' | 'reconnect' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
 
 const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
     { value: 'improve_communication', label: 'Improve communication', icon: 'chatbubbles' },
-    { value: 'spice_up_intimacy', label: 'Spice up intimacy', icon: 'flame' },
+    { value: 'reconnect', label: 'Feel more connected', icon: 'flame' },
     { value: 'deeper_connection', label: 'Build deeper connection', icon: 'heart' },
     { value: 'have_fun', label: 'Have fun together', icon: 'happy' },
     { value: 'strengthen_relationship', label: 'Strengthen our relationship', icon: 'shield-checkmark' },
 ];
 
-// Intensity thresholds for backwards compatibility
-// When hide_nsfw=true, max_intensity=2 (mild content only)
-// When hide_nsfw=false, max_intensity=5 (all content)
-const NSFW_OFF_INTENSITY = 2;
-const NSFW_ON_INTENSITY = 5;
-
-type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'content' | 'notifications';
+type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'notifications';
 
 export default function OnboardingScreen() {
     const router = useRouter();
@@ -72,7 +65,6 @@ export default function OnboardingScreen() {
     const [name, setName] = useState(initialUser.current?.name || '');
     const [gender, setGender] = useState<Gender | null>(initialUser.current?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
-    const [hideNsfw, setHideNsfw] = useState(initialUser.current?.hide_nsfw ?? false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showPaywall, setShowPaywall] = useState(false);
@@ -137,13 +129,8 @@ export default function OnboardingScreen() {
             setError('Please select what brings you to Sauci');
             return;
         }
-        setStage('content');
-        Events.onboardingStageComplete('purpose');
-    };
-
-    const handleContentContinue = () => {
         setStage('notifications');
-        Events.onboardingStageComplete('content');
+        Events.onboardingStageComplete('purpose');
     };
 
     const handleEnableNotifications = async () => {
@@ -182,18 +169,17 @@ export default function OnboardingScreen() {
                 }
             }
 
-            // Derive intensity from hide_nsfw for backwards compatibility
-            const maxIntensity: 2 | 5 = hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
-            const showExplicitContent = !hideNsfw;
             const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content", "hide_nsfw"];
 
             const updateData = {
                 name: name.trim(),
                 gender,
                 usage_reason: usageReason,
-                max_intensity: maxIntensity,
-                show_explicit_content: showExplicitContent,
-                hide_nsfw: hideNsfw,
+                // Preserve the safest legacy profile values. Catalogue
+                // eligibility is enforced centrally by reviewed status.
+                max_intensity: 2 as const,
+                show_explicit_content: false,
+                hide_nsfw: true,
                 onboarding_completed: true,
                 onboarding_version: REQUIRED_ONBOARDING_VERSION,
             };
@@ -495,73 +481,6 @@ export default function OnboardingScreen() {
                     </Animated.View>
                 );
 
-            case 'content':
-                return (
-                    <Animated.View
-                        key="content"
-                        entering={SlideInRight.duration(400)}
-                        exiting={FadeOut.duration(200)}
-                        style={styles.stageContainer}
-                    >
-                        <View style={styles.header}>
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.iconContainer}
-                            >
-                                <Ionicons name="flame" size={44} color={colors.text} />
-                            </LinearGradient>
-                            <Text style={styles.title}>Content Preferences</Text>
-                            <Text style={styles.subtitle}>
-                                Choose what type of content you'd like to see
-                            </Text>
-                        </View>
-
-                        <GlassCard style={styles.card}>
-                            <View style={styles.contentToggleRow}>
-                                <View style={styles.contentToggleLeft}>
-                                    <LinearGradient
-                                        colors={gradients.primary as [string, string]}
-                                        style={styles.contentToggleIcon}
-                                    >
-                                        <Ionicons name="eye-off" size={24} color={colors.text} />
-                                    </LinearGradient>
-                                    <View style={styles.contentToggleText}>
-                                        <Text style={styles.contentToggleLabel}>Hide Adult Content</Text>
-                                        <Text style={styles.contentToggleDescription}>
-                                            Only show mild, family-friendly question packs
-                                        </Text>
-                                    </View>
-                                </View>
-                                <GlassToggle
-                                    value={hideNsfw}
-                                    onValueChange={setHideNsfw}
-                                />
-                            </View>
-
-                            <Text style={styles.contentNote}>
-                                You can change this anytime in settings
-                            </Text>
-
-                            {error && (
-                                <View style={styles.errorContainer}>
-                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
-                                    <Text style={styles.errorText}>{error}</Text>
-                                </View>
-                            )}
-                        </GlassCard>
-
-                        <View style={styles.footer}>
-                            <GlassButton
-                                onPress={handleContentContinue}
-                                fullWidth
-                                size="lg"
-                            >
-                                Continue
-                            </GlassButton>
-                        </View>
-                    </Animated.View>
-                );
-
             case 'notifications':
                 return (
                     <Animated.View
@@ -650,8 +569,7 @@ export default function OnboardingScreen() {
                             style={styles.backButton}
                             onPress={() => {
                                 setError(null);
-                                if (stage === 'notifications') setStage('content');
-                                else if (stage === 'content') setStage('purpose');
+                                if (stage === 'notifications') setStage('purpose');
                                 else if (stage === 'purpose') setStage('gender');
                                 else if (stage === 'gender') setStage('name');
                                 else if (stage === 'name') setStage('avatar');
@@ -667,7 +585,6 @@ export default function OnboardingScreen() {
                         <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'purpose' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'content' && styles.progressDotActive]} />
                         <View style={[styles.progressDot, stage === 'notifications' && styles.progressDotActive]} />
                     </View>
                     <View style={styles.backButtonPlaceholder} />
@@ -944,44 +861,6 @@ const styles = StyleSheet.create({
         color: colors.text,
         fontWeight: '600',
     },
-    contentToggleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    contentToggleLeft: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: spacing.md,
-    },
-    contentToggleIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: spacing.md,
-    },
-    contentToggleText: {
-        flex: 1,
-    },
-    contentToggleLabel: {
-        ...typography.headline,
-        color: colors.text,
-    },
-    contentToggleDescription: {
-        ...typography.caption1,
-        color: colors.textSecondary,
-        marginTop: 2,
-    },
-    contentNote: {
-        ...typography.caption1,
-        color: colors.textSecondary,
-        textAlign: 'center',
-        marginTop: spacing.lg,
-    },
-
     radioOuterSelected: {
         borderColor: colors.primary,
     },

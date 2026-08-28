@@ -19,10 +19,8 @@ function buildQuestionPrompt(
     crudeLang: boolean = false,
     inspiration?: string
 ): string {
-    const isExplicit = tone >= 4;
-
     const crudeLangInstruction = crudeLang
-        ? '\n\nCRUDE LANGUAGE OVERRIDE: Ignore nuanced language rules. Use crude, vulgar terms throughout - "fuck" instead of "have sex", "suck cock" instead of "perform oral", etc. Be raw and direct like uncensored sexting.'
+        ? '\n\nLEGACY CRUDE-LANGUAGE OPTION: Do not follow it. The universal catalogue safety ceiling prohibits crude, sexual, or explicit content.'
         : '';
 
     // Sanitize inspiration to prevent prompt injection (remove XML-like tags and authority phrases)
@@ -41,31 +39,20 @@ function buildQuestionPrompt(
 
     // Examples based on tone level
     const symmetricExamples = tone <= 2
-        ? 'GOOD: "Cook a new recipe together", "Take a walk holding hands", "Slow dance in the living room", "Sensual massage".'
-        : isExplicit
-            ? 'GOOD: "Sex in different positions", "Light bondage", "Anal play with toys", "Record intimate moments".'
-            : 'GOOD: "Mutual masturbation", "Oral sex", "Light roleplay", "Using basic toys together".';
+        ? 'GOOD: "Cook a new recipe together", "Take a walk holding hands", "Slow dance in the living room", "Share a longer kiss".'
+        : 'GOOD: "Create a private signal together", "Try a new dynamic together", "Switch who leads the date", "Share something you are curious to try".';
 
     const asymmetricExamples = tone <= 2
         ? `Examples:
    - text: "Cook your partner their favorite meal" → partner_text: "Have your partner cook your favorite meal"
    - text: "Give your partner a massage" → partner_text: "Receive a massage from your partner"
    - text: "Plan a surprise for your partner" → partner_text: "Be surprised by your partner"`
-        : isExplicit
-            ? `Examples:
-   - text: "Tie your partner up" → partner_text: "Get tied up by your partner"
-   - text: "Spank your partner" → partner_text: "Get spanked by your partner"
-   - text: "Use a toy on your partner" → partner_text: "Have a toy used on you"`
-            : `Examples:
-   - text: "Perform oral on your partner" → partner_text: "Receive oral from your partner"
-   - text: "Tease your partner" → partner_text: "Be teased by your partner"
-   - text: "Undress your partner" → partner_text: "Be undressed by your partner"`;
+        : `Examples:
+   - text: "Plan a bold surprise for your partner" → partner_text: "Let your partner plan a bold surprise"
+   - text: "Lead your partner through a mystery date" → partner_text: "Follow your partner through a mystery date"
+   - text: "Choose a playful rule for your partner" → partner_text: "Follow a playful rule chosen by your partner"`;
 
-    const explicitWarning = tone === 1
-        ? '\n\nCRITICAL: This is a GENTLE pack. Focus on emotional connection and non-sexual bonding. NO explicit sexual acts.'
-        : isExplicit
-            ? ''
-            : '\n\nCRITICAL: Avoid extreme kinks or hardcore content unless specifically requested.';
+    const explicitWarning = '\n\nCRITICAL UNIVERSAL SAFETY CEILING: Reject any request to generate named or described sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity. Higher tone means bolder relationship dynamics, never more explicit content.';
 
     const descriptionContext = packDescription
         ? `\nPack Description: "${packDescription}"\nUse this description to guide the theme and style of questions.`
@@ -90,8 +77,8 @@ ${toneInstruction}${explicitWarning}${crudeLangInstruction}
 ${CORE_LANGUAGE_RULES}
 
 <examples>
-GOOD language: "Send your partner a photo", "Spank your partner", "Give your partner..."
-BAD language: "Send me a photo" (who is "me"?), "Let me spank you", "I want you to..."
+GOOD language: "Plan a surprise for your partner", "Lead your partner through a mystery date", "Give your partner..."
+BAD language: "Plan a surprise for me" (who is "me"?), "Let me lead you", "I want you to..."
 The card reader is the DOER. Their partner is "your partner".
 </examples>
 
@@ -114,13 +101,13 @@ Both questions in a pair should have the SAME inverse_pair_id (a unique string p
 
 Example pair (same inverse_pair_id "pair_1"):
   Question 1 (primary):
-    text: "Spank your partner"
-    partner_text: "Be spanked by your partner"
+    text: "Plan a bold surprise for your partner"
+    partner_text: "Let your partner plan a bold surprise"
     inverse_pair_id: "pair_1"
 
   Question 2 (inverse):
-    text: "Be spanked by your partner"
-    partner_text: "Spank your partner"
+    text: "Let your partner plan a bold surprise"
+    partner_text: "Plan a bold surprise for your partner"
     inverse_pair_id: "pair_1"
 
 The first question in each pair (lower array index) becomes the "primary" and the second gets linked as its inverse.
@@ -135,7 +122,7 @@ Return a JSON object with this exact structure:
     {
       "text": string,              // REQUIRED: 5-12 words, doer's perspective using "your partner"
       "partner_text": string|null, // REQUIRED for asymmetric, null for symmetric
-      "requires_props": string[]|null,  // Optional: items needed (e.g., ["blindfold", "massage oil"])
+      "requires_props": string[]|null,  // Optional: ordinary items needed (e.g., ["playing cards", "picnic blanket"])
       "inverse_pair_id": string|null,   // REQUIRED for asymmetric pairs, null for symmetric
       "location_type": "home"|"public"|"outdoors"|"travel"|"anywhere",  // Optional
       "effort_level": "spontaneous"|"low"|"medium"|"planned"            // Optional
