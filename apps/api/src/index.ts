@@ -17,6 +17,7 @@ import {
 } from './domains/account-operations/index.js';
 import { PostgresAnswersRepository } from './domains/answers/repository.js';
 import { PostgresChatRepository } from './domains/chat/repository.js';
+import { PostgresDaresRepository } from './domains/dares/repository.js';
 import { PostgresCoupleRepository } from './domains/couples/repository.js';
 import { CoupleService } from './domains/couples/service.js';
 import { PostgresPacksRepository } from './domains/packs/repository.js';
@@ -30,6 +31,7 @@ const coupleRepository = new PostgresCoupleRepository(config.databaseUrl);
 const packsRepository = new PostgresPacksRepository(config.databaseUrl);
 const answersRepository = new PostgresAnswersRepository(config.databaseUrl);
 const chatRepository = new PostgresChatRepository(config.databaseUrl);
+const daresRepository = new PostgresDaresRepository(config.databaseUrl);
 const profileSettingsRepository = new PostgresProfileSettingsRepository(config.databaseUrl);
 const accountOperationsRepository = new PostgresAccountOperationsRepository(config.databaseUrl);
 const accountOperationsService = new AccountOperationsService(
@@ -59,6 +61,7 @@ const app = createApp({
   packsRepository,
   answersRepository,
   chatRepository,
+  daresRepository,
   profileSettingsRepository,
   accountOperationsService,
   mediaRepository,
@@ -97,6 +100,7 @@ async function shutdown(signal: string): Promise<void> {
         packsRepository.close(),
         answersRepository.close(),
         chatRepository.close(),
+        daresRepository.close(),
         profileSettingsRepository.close(),
         accountOperationsRepository.close(),
         mediaRepository.close(),

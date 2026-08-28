@@ -48,4 +48,5 @@ export interface ProducerSummary {
   weeklySummaries: number;
   unpairedReminders: number;
   catchupReminders: number;
+  daresExpired: number;
 }
