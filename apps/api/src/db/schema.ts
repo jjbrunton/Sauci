@@ -6,6 +6,7 @@ export const profiles = pgTable('profiles', {
   email: text('email'),
   avatarUrl: text('avatar_url'),
   pushToken: text('push_token'),
+  timezone: text('timezone'),
   isPremium: boolean('is_premium').notNull().default(false),
   coupleId: uuid('couple_id'),
   gender: text('gender').$type<'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null>(),

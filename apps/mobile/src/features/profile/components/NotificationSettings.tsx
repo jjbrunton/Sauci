@@ -37,6 +37,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         onPackChangesToggle: (value: boolean) => updatePreference('pack_changes_enabled', value),
         onNewPacksToggle: (value: boolean) => updatePreference('new_packs_enabled', value),
         onStreakMilestonesToggle: (value: boolean) => updatePreference('streak_milestones_enabled', value),
+        onStreakRemindersToggle: (value: boolean) => updatePreference('streak_reminders_enabled', value),
         onWeeklySummaryToggle: (value: boolean) => updatePreference('weekly_summary_enabled', value),
         onUnpairedRemindersToggle: (value: boolean) => updatePreference('unpaired_reminders_enabled', value),
         onCatchupRemindersToggle: (value: boolean) => updatePreference('catchup_reminders_enabled', value),
@@ -137,6 +138,21 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                     />
 
                     <View style={styles.itemDivider} />
+
+                    {partner && (
+                        <>
+                            <SwitchItem
+                                icon="alarm-outline"
+                                label="Streak Reminders"
+                                description="An evening nudge while your streak is still open"
+                                value={preferences.streak_reminders_enabled}
+                                onValueChange={handlers.onStreakRemindersToggle}
+                                disabled={isUpdating}
+                            />
+
+                            <View style={styles.itemDivider} />
+                        </>
+                    )}
 
                     <SwitchItem
                         icon="calendar-outline"

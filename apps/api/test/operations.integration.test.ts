@@ -12,7 +12,7 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
   const pack='44444444-4444-4444-8444-444444444444',question='55555555-5555-4555-8555-555555555555';let pool:Pool;let repo:PostgresOperationsRepository;let repo2:PostgresOperationsRepository;
   beforeAll(async()=>{
     await admin.query(`create schema "${schema}"`);const url=new URL(databaseUrl!);url.searchParams.set('options',`-c search_path=${schema}`);pool=new Pool({connectionString:url.toString()});repo=new PostgresOperationsRepository(url.toString());repo2=new PostgresOperationsRepository(url.toString());
-    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql']){
+    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql','0013_daily_limit_local_reset.sql','0015_couple_streak_locality.sql','0016_streak_reminder_preference.sql']){
       const sql=await readFile(new URL(`../drizzle/${name}`,import.meta.url),'utf8');for(const statement of sql.split('--> statement-breakpoint'))if(statement.trim())await pool.query(statement);
     }
     await pool.query('insert into couples(id,invite_code) values($1,$2)',[couple,'ABCD2345']);
@@ -66,6 +66,44 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
     expect((await pool.query('select is_public,release_notified from question_packs where id=$1',[pack])).rows[0]).toEqual({is_public:true,release_notified:true});
     const before=(await pool.query('select count(*)::int count from operations_outbox')).rows[0].count;
     await repo.produce(new Date(Date.now()+10*60*1000),100);expect((await pool.query('select count(*)::int count from operations_outbox')).rows[0].count).toBe(before);
+  });
+
+  it('nudges only the partner who still owes an answer, in the couple evening',async()=>{
+    // Alice sorts below Bob, so Alice is user1. She has answered today; Bob has not.
+    await pool.query("update profiles set timezone='UTC' where couple_id=$1",[couple]);
+    const evening=new Date('2026-08-27T21:00:00Z');
+    await pool.query(`insert into couple_streaks(couple_id,current_streak,longest_streak,last_active_date,last_completed_date,user1_answered_today,user2_answered_today,streak_celebrated_at)
+      values($1,6,6,'2026-08-27','2026-08-26',true,false,6) on conflict(couple_id) do update set current_streak=6,longest_streak=6,
+      last_active_date='2026-08-27',last_completed_date='2026-08-26',user1_answered_today=true,user2_answered_today=false,streak_celebrated_at=6`,[couple]);
+
+    expect((await repo.produce(evening,100)).streakReminders).toBe(1);
+    const queued=await pool.query<{recipient_id:string;title:string;body:string}>(
+      `select recipient_id,payload->>'title' title,payload->>'body' body from operations_outbox where dedupe_key like 'streak_risk:%'`);
+    expect(queued.rows).toHaveLength(1);
+    expect(queued.rows[0]).toMatchObject({recipient_id:bob,title:'Alice answered today'});
+    expect(queued.rows[0].body).toContain('6 days in');
+    expect((await pool.query('select 1 from operations_outbox where dedupe_key=$1',[`streak_risk:${couple}:2026-08-27:${bob}`])).rowCount).toBe(1);
+
+    // A second tick inside the same couple-local evening must not queue a second nudge.
+    expect((await repo.produce(evening,100)).streakReminders).toBe(0);
+  });
+
+  it('addresses both partners when neither has answered and honours the preference',async()=>{
+    const next=new Date('2026-08-28T21:00:00Z');
+    await pool.query(`update couple_streaks set last_active_date='2026-08-27',last_completed_date='2026-08-27',
+      user1_answered_today=true,user2_answered_today=true where couple_id=$1`,[couple]);
+    expect((await repo.produce(next,100)).streakReminders).toBe(2);
+    const both=await pool.query<{title:string;body:string}>(
+      `select payload->>'title' title,payload->>'body' body from operations_outbox where dedupe_key like $1 order by recipient_id`,
+      [`streak_risk:${couple}:2026-08-28:%`]);
+    expect(both.rows.map(r=>r.title)).toEqual(['Your 6-day streak','Your 6-day streak']);
+    expect(both.rows[0].body).toContain('One question each');
+
+    await pool.query(`insert into notification_preferences(user_id,streak_reminders_enabled) values($1,false),($2,false)
+      on conflict(user_id) do update set streak_reminders_enabled=false`,[alice,bob]);
+    await pool.query(`update couple_streaks set last_active_date='2026-08-28',last_completed_date='2026-08-28' where couple_id=$1`,[couple]);
+    expect((await repo.produce(new Date('2026-08-29T21:00:00Z'),100)).streakReminders).toBe(0);
+    await pool.query('update notification_preferences set streak_reminders_enabled=true where user_id in ($1,$2)',[alice,bob]);
   });
 
   it('uses skip-locked claims so concurrent workers never receive the same item',async()=>{

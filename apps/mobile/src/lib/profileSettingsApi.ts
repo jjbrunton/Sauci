@@ -13,6 +13,7 @@ export interface ProfileUpdate {
     onboarding_version?: number;
     public_key_jwk?: Record<string, unknown> | null;
     push_token?: string | null;
+    timezone?: string | null;
 }
 
 type PreferenceKey = keyof Omit<NotificationPreferences, 'user_id' | 'created_at' | 'updated_at'>;

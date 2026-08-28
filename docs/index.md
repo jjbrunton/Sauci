@@ -15,6 +15,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Authentication](authentication.md)
 - [Database schema](schema.md)
 - [Couple pairing](couple-pairing.md)
+- [Couple streaks](couple-streaks.md)
 - [Question selection](question-selection.md)
 - [Match notifications](match-notifications.md)
 - [Subscriptions](subscription-system.md)

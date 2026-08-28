@@ -36,7 +36,7 @@ export class PostgresOperationsRepository implements OperationsRepository {
   async produce(now: Date, limit=100): Promise<ProducerSummary> {
     return transaction(this.pool, async (client) => {
       const lock=await client.query<{locked:boolean}>("select pg_try_advisory_xact_lock(hashtext('sauci-operations-producers')) locked");
-      const empty={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0};
+      const empty={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0,streakReminders:0};
       if (!lock.rows[0]?.locked) return empty;
 
       const released=await client.query<{id:string;name:string}>(
@@ -139,9 +139,64 @@ export class PostgresOperationsRepository implements OperationsRepository {
          ) update profiles p set last_unpaired_reminder_at=$1 from queued q where p.id=q.recipient_id returning p.id`, [now,limit]);
 
       const catchup=await this.produceCatchups(client,now,limit);
+      const streakReminders=await this.produceStreakReminders(client,now);
       return {releasedPacks:released.rowCount??0,streakMilestones:milestones.rowCount??0,digests:digests.rowCount??0,
-        packChanges:packChanges.rowCount??0,weeklySummaries:weekly.rowCount??0,unpairedReminders:unpaired.rowCount??0,catchupReminders:catchup};
+        packChanges:packChanges.rowCount??0,weeklySummaries:weekly.rowCount??0,unpairedReminders:unpaired.rowCount??0,
+        catchupReminders:catchup,streakReminders};
     });
+  }
+
+  /**
+   * A shared streak only changes behaviour if somebody hears that it is open before the day
+   * closes, so this fires in the couple's own late evening rather than on a server clock.
+   * Only the partner who still owes an answer is notified, and the copy names the other
+   * partner as an invitation rather than as a debt: guilt between partners is the failure
+   * mode for this mechanic, not the goal.
+   */
+  private async produceStreakReminders(client: PoolClient, now: Date): Promise<number> {
+    const result=await client.query(
+      `with zones as (select name from pg_timezone_names),
+       couple_zone as (
+         select r.couple_id,coalesce(z.name,'UTC') zone from (
+           select p.couple_id,(array_agg(p.timezone order by p.id) filter (where p.timezone is not null))[1] reported
+           from profiles p join couple_streaks cs on cs.couple_id=p.couple_id and cs.current_streak>0
+           group by p.couple_id
+         ) r left join zones z on z.name=r.reported
+       ),
+       at_risk as (
+         select cs.couple_id,cs.current_streak,cs.last_active_date,cs.user1_answered_today,cs.user2_answered_today,
+           ($1::timestamptz at time zone cz.zone)::date local_date
+         from couple_streaks cs join couple_zone cz on cz.couple_id=cs.couple_id
+         where cs.current_streak>0
+           and cs.last_completed_date=($1::timestamptz at time zone cz.zone)::date-1
+           and extract(hour from ($1::timestamptz at time zone cz.zone))>=20
+       ),
+       sides as (
+         select ar.couple_id,ar.current_streak,to_char(ar.local_date,'YYYY-MM-DD') local_date,
+           me.id me_id,me.push_token,nullif(btrim(partner.name),'') partner_name,
+           case when ar.last_active_date is distinct from ar.local_date then false
+                when me.id<partner.id then ar.user1_answered_today else ar.user2_answered_today end me_answered,
+           case when ar.last_active_date is distinct from ar.local_date then false
+                when me.id<partner.id then ar.user2_answered_today else ar.user1_answered_today end partner_answered
+         from at_risk ar
+         join profiles me on me.couple_id=ar.couple_id
+         join profiles partner on partner.couple_id=ar.couple_id and partner.id<>me.id
+       )
+       insert into operations_outbox(kind,dedupe_key,recipient_id,payload)
+       select 'expo','streak_risk:'||s.couple_id||':'||s.local_date||':'||s.me_id,s.me_id,
+         jsonb_build_object(
+           'title',case when s.partner_answered then coalesce(s.partner_name,'Your partner')||' answered today'
+                        else 'Your '||s.current_streak||'-day streak' end,
+           'body',case when s.partner_answered
+                       then 'You two are '||s.current_streak||' days in together. One question keeps it going.'
+                       else 'You and '||coalesce(s.partner_name,'your partner')||' are '||s.current_streak||' days in. One question each keeps it going.' end,
+           'data',jsonb_build_object('type','streak_reminder','streak',s.current_streak))
+       from sides s left join notification_preferences np on np.user_id=s.me_id
+       where not s.me_answered and s.push_token is not null and coalesce(np.streak_reminders_enabled,true)
+         and not exists(select 1 from operations_outbox o
+           where o.dedupe_key='streak_risk:'||s.couple_id||':'||s.local_date||':'||s.me_id)
+       on conflict(dedupe_key) do nothing`,[now]);
+    return result.rowCount??0;
   }
 
   private async produceCatchups(client: PoolClient, now: Date, limit: number): Promise<number> {
@@ -202,6 +257,7 @@ export class PostgresOperationsRepository implements OperationsRepository {
                when 'pack_change' then case when coalesce(np.pack_changes_enabled,true) then p.push_token end
                when 'new_pack' then case when coalesce(np.new_packs_enabled,true) then p.push_token end
                when 'streak_milestone' then case when coalesce(np.streak_milestones_enabled,true) then p.push_token end
+               when 'streak_reminder' then case when coalesce(np.streak_reminders_enabled,true) then p.push_token end
                when 'weekly_summary' then case when coalesce(np.weekly_summary_enabled,true) then p.push_token end
                when 'unpaired_reminder' then case when coalesce(np.unpaired_reminders_enabled,true) then p.push_token end
                when 'catchup_reminder' then case when coalesce(np.catchup_reminders_enabled,true) then p.push_token end

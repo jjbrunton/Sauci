@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { useDrawingSync } from '@/features/live-draw/hooks/useDrawingSync';
+import { useDrawingSync, dedupeById, mergeDrawingChanges } from '@/features/live-draw/hooks/useDrawingSync';
 import { appDataApi } from '@/lib/appDataApi';
 import { ApiError } from '@/lib/apiClient';
 
@@ -45,5 +45,39 @@ describe('useDrawingSync API polling', () => {
     expect(appDataApi.putLiveDraw).toHaveBeenNthCalledWith(1, [stroke, mine], 1);
     expect(appDataApi.putLiveDraw).toHaveBeenNthCalledWith(2, [stroke, partnerStroke, mine], 2);
     expect(onLoadStrokes).toHaveBeenLastCalledWith([stroke, partnerStroke, mine]);
+  });
+});
+
+describe('useDrawingSync stroke deduplication', () => {
+  const at = (id: string, points: number, userId = 'u1') => ({
+    id, userId, points: Array.from({ length: points }, (_, i) => ({ x: i, y: i })),
+    color: '#fff', width: 2, timestamp: 1, isEraser: false,
+  });
+
+  it('keeps the most complete copy of a stroke at its original z-position', () => {
+    // Mid-draw writes persist a truncated copy; touch-end appends the full one.
+    const out = dedupeById([at('a', 3), at('mine', 5), at('b', 3), at('mine', 40)]);
+    expect(out.map(s => s.id)).toEqual(['a', 'mine', 'b']);
+    expect(out[1].points).toHaveLength(40);
+  });
+
+  it('leaves a set of unique strokes untouched', () => {
+    const input = [at('a', 1), at('b', 1)];
+    expect(dedupeById(input)).toEqual(input);
+  });
+
+  it('never emits duplicate ids after a conflict merge', () => {
+    const merged = mergeDrawingChanges(
+      [at('a', 2)],
+      [at('a', 2), at('mine', 3), at('mine', 30)],
+      [at('a', 2), at('partner', 4)],
+    );
+    expect(merged.map(s => s.id)).toEqual(['a', 'partner', 'mine']);
+    expect(merged.find(s => s.id === 'mine')!.points).toHaveLength(30);
+  });
+
+  it('still drops strokes removed locally', () => {
+    const merged = mergeDrawingChanges([at('a', 2), at('gone', 2)], [at('a', 2)], [at('a', 2), at('gone', 2)]);
+    expect(merged.map(s => s.id)).toEqual(['a']);
   });
 });

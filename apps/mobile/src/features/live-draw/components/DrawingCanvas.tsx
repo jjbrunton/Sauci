@@ -1,26 +1,28 @@
-import React, { useMemo, useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useMemo, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
   Canvas,
   Path,
   Skia,
 } from '@shopify/react-native-skia';
-import type { SkImage } from '@shopify/react-native-skia';
+import type { SkImage, SkPath } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
+import { runOnJS, useDerivedValue, useSharedValue } from 'react-native-reanimated';
 import type { StrokeSegment, StrokePoint } from '../types';
 import { CANVAS_BACKGROUND } from '../constants';
 
 export interface DrawingCanvasHandle {
-  startStroke: (stroke: StrokeSegment) => void;
-  addPoint: (point: StrokePoint) => void;
-  endStroke: () => StrokeSegment | null;
+  /** Drops the in-progress stroke rendered on the UI thread. */
+  clearLiveStroke: () => void;
 }
 
 interface DrawingCanvasProps {
   strokes: StrokeSegment[];
   canvasWidth: number;
   canvasHeight: number;
+  strokeColor: string;
+  strokeWidth: number;
+  isEraser: boolean;
   onTouchStart: (point: StrokePoint) => void;
   onTouchMove: (point: StrokePoint) => void;
   onTouchEnd: () => void;
@@ -85,41 +87,15 @@ const StrokePath = React.memo(function StrokePath({
   );
 });
 
-// Renders the in-progress stroke from a ref, re-rendered only via rafTick
-const CurrentStrokePath = React.memo(function CurrentStrokePath({
-  strokeRef,
-  canvasWidth,
-  canvasHeight,
-  _tick,
-}: {
-  strokeRef: React.RefObject<StrokeSegment | null>;
-  canvasWidth: number;
-  canvasHeight: number;
-  _tick: number; // forces re-render at RAF cadence
-}) {
-  const stroke = strokeRef.current;
-  if (!stroke) return null;
-
-  const path = buildPath(stroke.points, canvasWidth, canvasHeight);
-
-  return (
-    <Path
-      path={path}
-      color={stroke.isEraser ? CANVAS_BACKGROUND : stroke.color}
-      style="stroke"
-      strokeWidth={stroke.width}
-      strokeCap="round"
-      strokeJoin="round"
-    />
-  );
-});
-
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(
   function DrawingCanvas(
     {
       strokes,
       canvasWidth,
       canvasHeight,
+      strokeColor,
+      strokeWidth,
+      isEraser,
       onTouchStart,
       onTouchMove,
       onTouchEnd,
@@ -128,9 +104,23 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     ref
   ) {
     const canvasRef = useRef<any>(null);
-    const currentStrokeRef = useRef<StrokeSegment | null>(null);
-    const rafScheduled = useRef(false);
-    const [rafTick, setRafTick] = useState(0);
+
+    // The in-progress stroke lives entirely on the UI thread: the pan gesture
+    // extends the path in place, so ink never waits on the JS thread.
+    const livePath = useSharedValue<SkPath | null>(null);
+    const livePrev = useSharedValue<StrokePoint | null>(null);
+    // Doubles as the invalidation signal: the path is mutated in place, so this
+    // counter is what tells the derived value to re-read it.
+    const livePointCount = useSharedValue(0);
+
+    const liveColor = isEraser ? CANVAS_BACKGROUND : strokeColor;
+
+    // Re-derived once per frame that the path changed — not once per point.
+    const renderedLivePath = useDerivedValue(() => {
+      const count = livePointCount.value;
+      const path = livePath.value;
+      return count > 0 && path ? path.copy() : Skia.Path.Make();
+    });
 
     useEffect(() => {
       if (onCanvasReady) {
@@ -140,52 +130,67 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       }
     }, [onCanvasReady]);
 
-    const scheduleRafUpdate = useCallback(() => {
-      if (rafScheduled.current) return;
-      rafScheduled.current = true;
-      requestAnimationFrame(() => {
-        rafScheduled.current = false;
-        setRafTick((t) => t + 1);
-      });
-    }, []);
-
     useImperativeHandle(ref, () => ({
-      startStroke(stroke: StrokeSegment) {
-        currentStrokeRef.current = stroke;
-        scheduleRafUpdate();
+      clearLiveStroke() {
+        livePath.value = null;
+        livePrev.value = null;
+        livePointCount.value = 0;
       },
-      addPoint(point: StrokePoint) {
-        const s = currentStrokeRef.current;
-        if (!s) return;
-        // Mutate in place — no React state involved
-        s.points.push(point);
-        scheduleRafUpdate();
-      },
-      endStroke(): StrokeSegment | null {
-        const s = currentStrokeRef.current;
-        currentStrokeRef.current = null;
-        scheduleRafUpdate();
-        return s;
-      },
-    }), [scheduleRafUpdate]);
+    }), [livePath, livePrev, livePointCount]);
 
-    const pan = Gesture.Pan()
-      .minDistance(0)
-      .onStart((e) => {
-        runOnJS(onTouchStart)({
-          x: e.x / canvasWidth,
-          y: e.y / canvasHeight,
-        });
-      })
-      .onUpdate((e) => {
-        runOnJS(onTouchMove)({
-          x: e.x / canvasWidth,
-          y: e.y / canvasHeight,
-        });
-      })
-      .onEnd(() => {
-        runOnJS(onTouchEnd)();
-      });
+    const pan = useMemo(
+      () =>
+        Gesture.Pan()
+          .minDistance(0)
+          .onStart((e) => {
+            'worklet';
+            const path = Skia.Path.Make();
+            path.moveTo(e.x, e.y);
+            livePath.value = path;
+            livePrev.value = { x: e.x, y: e.y };
+            livePointCount.value = 1;
+            runOnJS(onTouchStart)({ x: e.x / canvasWidth, y: e.y / canvasHeight });
+          })
+          .onUpdate((e) => {
+            'worklet';
+            const path = livePath.value;
+            const prev = livePrev.value;
+            if (path && prev) {
+              // Same quadratic smoothing as buildPath, applied incrementally.
+              const midX = (prev.x + e.x) / 2;
+              const midY = (prev.y + e.y) / 2;
+              if (livePointCount.value === 1) {
+                path.lineTo(midX, midY);
+              } else {
+                path.quadTo(prev.x, prev.y, midX, midY);
+              }
+              livePrev.value = { x: e.x, y: e.y };
+              livePointCount.value += 1;
+            }
+            runOnJS(onTouchMove)({ x: e.x / canvasWidth, y: e.y / canvasHeight });
+          })
+          .onEnd(() => {
+            'worklet';
+            const path = livePath.value;
+            const prev = livePrev.value;
+            if (path && prev) {
+              // Close the half-segment the incremental midpoints leave at the tip.
+              path.lineTo(prev.x, prev.y);
+              livePointCount.value += 1;
+            }
+            runOnJS(onTouchEnd)();
+          }),
+      [
+        canvasWidth,
+        canvasHeight,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
+        livePath,
+        livePrev,
+        livePointCount,
+      ]
+    );
 
     return (
       <GestureDetector gesture={pan}>
@@ -199,11 +204,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
                 canvasHeight={canvasHeight}
               />
             ))}
-            <CurrentStrokePath
-              strokeRef={currentStrokeRef}
-              canvasWidth={canvasWidth}
-              canvasHeight={canvasHeight}
-              _tick={rafTick}
+            <Path
+              path={renderedLivePath}
+              color={liveColor}
+              style="stroke"
+              strokeWidth={strokeWidth}
+              strokeCap="round"
+              strokeJoin="round"
             />
           </Canvas>
         </View>

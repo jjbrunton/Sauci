@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 
-import { useAuthStore, usePacksStore } from "../../../store";
+import { useAuthStore, usePacksStore, useStreakStore } from "../../../store";
 import { skipQuestion, getSkippedQuestionIds } from "../../../lib/skippedQuestions";
-import { apiClient } from "../../../lib/apiClient";
+import { ApiError, apiClient } from "../../../lib/apiClient";
 import { Events } from "../../../lib/analytics";
 import type { AnswerType } from "../../../types";
 import type { DailyLimitInfo, PackInfo, ResponseData } from "../types";
@@ -128,8 +128,16 @@ export const useSwipeScreen = () => {
                 filtered = data;
             }
 
-            if (partner && !packId) {
-                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
+            if (partner) {
+                // The daily limit applies to pack browsing too, so it is read in both
+                // modes; the answer gap is deliberately only enforced outside packs.
+                if (packId) {
+                    setIsBlocked(false);
+                    setGapInfo(null);
+                    await checkDailyLimit();
+                } else {
+                    await Promise.all([checkAnswerGap(), checkDailyLimit()]);
+                }
             } else {
                 setIsBlocked(false);
                 setGapInfo(null);
@@ -334,8 +342,40 @@ export const useSwipeScreen = () => {
                 }
 
                 await Promise.all([checkAnswerGap(), checkDailyLimit()]);
+            } else {
+                // Catch-up answers are exempt from the cap, but the partner may have
+                // answered after this screen loaded, so re-read rather than assume.
+                await checkDailyLimit();
             }
+
+            // The shared streak turns on today's answers, so a stale badge would show the
+            // wrong partner state for the rest of the session. Refreshing it must never
+            // interfere with recording the answer, so it stays off the critical path.
+            void useStreakStore.getState().fetchStreak().catch(() => undefined);
         } catch (error) {
+            // A 429 means the server rejected this answer outright. Do not advance the
+            // index, or the question is silently skipped and lost for the day.
+            if (error instanceof ApiError && error.status === 429) {
+                // ApiError.details carries the whole response body: { error, details }.
+                const body = (error.details ?? {}) as {
+                    details?: {
+                        daily_limit?: number;
+                        responses_today?: number;
+                        remaining?: number;
+                        reset_at?: string;
+                    };
+                };
+                const details = body.details ?? {};
+                setDailyLimitInfo(prev => ({
+                    responses_today: details.responses_today ?? prev?.responses_today ?? 0,
+                    limit_value: details.daily_limit ?? prev?.limit_value ?? 0,
+                    remaining: details.remaining ?? 0,
+                    reset_at: details.reset_at ?? prev?.reset_at ?? '',
+                    is_blocked: true,
+                }));
+                return;
+            }
+
             console.error("Failed to submit response", error);
             setCurrentIndex(prev => prev + 1);
         }

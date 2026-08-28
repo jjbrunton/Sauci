@@ -115,6 +115,7 @@ const SwipeScreen = () => {
                     packContext={packContext}
                     showBackButton={!!packId || mode === 'pending'}
                     onBack={() => router.back()}
+                    dailyLimitInfo={dailyLimitInfo}
                 />
 
                 <SwipeCardStack

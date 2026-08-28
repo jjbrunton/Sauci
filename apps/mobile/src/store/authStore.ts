@@ -3,6 +3,7 @@ import { ApiError, apiClient } from "../lib/apiClient";
 import { authClient } from "../lib/authClient";
 import { coupleApi } from "../lib/coupleApi";
 import { profileSettingsApi } from "../lib/profileSettingsApi";
+import { syncTimezone } from "../lib/reportedTimezone";
 import { Events } from "../lib/analytics";
 import type { Profile, Couple } from "@/types";
 
@@ -200,6 +201,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Silently fail - this is not critical
             console.error("Failed to update last_active_at:", error);
         }
+
+        // Keep the server's idea of the user's timezone current so the daily
+        // response limit resets at their local midnight, not 00:00 UTC.
+        void syncTimezone(userId);
     },
 }));
 
