@@ -7,7 +7,7 @@ import { BlurView } from 'expo-blur';
 import { useAuthStore, usePacksStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
-import { CompactHeader, ContentRow, LiveDrawTile } from '../../src/components/discovery';
+import { CompactHeader, ContentRow, DaresTile, LiveDrawTile } from '../../src/components/discovery';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import type { QuestionPack, Category } from '../../src/types';
 
@@ -116,6 +116,9 @@ export default function DiscoveryScreen() {
         <View style={[styles.innerContainer, isWideScreen && styles.innerContainerWide]}>
           {/* Live Draw Activity Tile */}
           <LiveDrawTile delay={100} />
+
+          {/* Dares */}
+          <DaresTile delay={150} />
 
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (

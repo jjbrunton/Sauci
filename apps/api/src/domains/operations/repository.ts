@@ -36,7 +36,7 @@ export class PostgresOperationsRepository implements OperationsRepository {
   async produce(now: Date, limit=100): Promise<ProducerSummary> {
     return transaction(this.pool, async (client) => {
       const lock=await client.query<{locked:boolean}>("select pg_try_advisory_xact_lock(hashtext('sauci-operations-producers')) locked");
-      const empty={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0};
+      const empty={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0,daresExpired:0};
       if (!lock.rows[0]?.locked) return empty;
 
       const released=await client.query<{id:string;name:string}>(
@@ -138,9 +138,19 @@ export class PostgresOperationsRepository implements OperationsRepository {
            from eligible e on conflict(dedupe_key) do nothing returning recipient_id
          ) update profiles p set last_unpaired_reminder_at=$1 from queued q where p.id=q.recipient_id returning p.id`, [now,limit]);
 
+      // Expiring pending dares too: the original design only swept `active`, so an
+      // invitation the recipient never opened stayed open forever.
+      const expiredDares=await client.query(
+        `with due as (
+           select id from sent_dares
+            where expires_at is not null and expires_at<=$1
+              and status in ('pending','active','submitted')
+            order by expires_at for update skip locked limit $2
+         ) update sent_dares sd set status='expired' from due d where sd.id=d.id returning sd.id`, [now,limit]);
+
       const catchup=await this.produceCatchups(client,now,limit);
       return {releasedPacks:released.rowCount??0,streakMilestones:milestones.rowCount??0,digests:digests.rowCount??0,
-        packChanges:packChanges.rowCount??0,weeklySummaries:weekly.rowCount??0,unpairedReminders:unpaired.rowCount??0,catchupReminders:catchup};
+        packChanges:packChanges.rowCount??0,weeklySummaries:weekly.rowCount??0,unpairedReminders:unpaired.rowCount??0,catchupReminders:catchup,daresExpired:expiredDares.rowCount??0};
     });
   }
 
