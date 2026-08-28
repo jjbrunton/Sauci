@@ -103,10 +103,23 @@ jest.mock('expo-image-picker', () => ({
     },
 }));
 
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
     readAsStringAsync: jest.fn(async () => ''),
     EncodingType: {
         Base64: 'base64',
+    },
+}));
+
+jest.mock('expo-av', () => ({
+    Audio: {
+        requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+        setAudioModeAsync: jest.fn(async () => undefined),
+        Recording: {
+            createAsync: jest.fn(),
+        },
+        RecordingOptionsPresets: {
+            HIGH_QUALITY: {},
+        },
     },
 }));
 

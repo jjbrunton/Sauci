@@ -44,8 +44,9 @@ export const LiveDrawScreen: React.FC = () => {
   const [shareDrawingUri, setShareDrawingUri] = useState<string | null>(null);
 
   const canvasRef = useRef<DrawingCanvasHandle>(null);
-  // Keep track of the current stroke id for sync broadcasts
-  const currentStrokeIdRef = useRef<string | null>(null);
+  // The stroke under the finger. Points are pushed in place — nothing about the
+  // in-progress stroke goes through React state until it is finished.
+  const currentStrokeRef = useRef<StrokeSegment | null>(null);
 
   const canvasWidth = screenWidth - spacing.md * 2;
   const canvasHeight = canvasWidth * 1.2;
@@ -63,6 +64,16 @@ export const LiveDrawScreen: React.FC = () => {
   } = useDrawingHistory();
 
   const { makeSnapshot, captureToFile } = useCanvasCapture();
+
+  // Mirrors of state read inside the touch handlers. Keeping them in refs means
+  // the handlers (and therefore the pan gesture) keep a stable identity instead
+  // of being rebuilt mid-stroke on every render.
+  const strokesRef = useRef(strokes);
+  strokesRef.current = strokes;
+  const strokeStyleRef = useRef({ color: selectedColor, width: brushWidth, isEraser });
+  strokeStyleRef.current = { color: selectedColor, width: brushWidth, isEraser };
+  const userIdRef = useRef(user?.id);
+  userIdRef.current = user?.id;
 
   const handleStrokeStartFromPartner = useCallback(
     (stroke: StrokeSegment) => addStroke(stroke),
@@ -95,57 +106,66 @@ export const LiveDrawScreen: React.FC = () => {
 
   const handleTouchStart = useCallback(
     (point: StrokePoint) => {
-      if (!user?.id) return;
-      if (strokes.length >= MAX_STROKES) {
+      const userId = userIdRef.current;
+      // The gesture starts the live path on the UI thread before we get here,
+      // so a refused stroke has to be wiped rather than simply not started.
+      if (!userId) {
+        canvasRef.current?.clearLiveStroke();
+        return;
+      }
+      if (strokesRef.current.length >= MAX_STROKES) {
+        canvasRef.current?.clearLiveStroke();
         Alert.alert('Canvas Full', 'Save your drawing and start fresh.');
         return;
       }
 
+      const style = strokeStyleRef.current;
       const stroke: StrokeSegment = {
-        id: `${user.id}_${Date.now()}`,
-        userId: user.id,
+        id: `${userId}_${Date.now()}`,
+        userId,
         points: [point],
-        color: selectedColor,
-        width: brushWidth,
+        color: style.color,
+        width: style.width,
         timestamp: Date.now(),
-        isEraser,
+        isEraser: style.isEraser,
       };
-      currentStrokeIdRef.current = stroke.id;
-      canvasRef.current?.startStroke(stroke);
-      sync.broadcastStrokeStart(stroke);
+      currentStrokeRef.current = stroke;
+      sync.beginLocalStroke(stroke);
     },
-    [user?.id, selectedColor, brushWidth, isEraser, strokes.length, sync]
+    [sync]
   );
 
   const handleTouchMove = useCallback(
     (point: StrokePoint) => {
-      if (!currentStrokeIdRef.current) return;
-      canvasRef.current?.addPoint(point);
-      sync.broadcastStrokeContinue(currentStrokeIdRef.current, [point]);
+      const stroke = currentStrokeRef.current;
+      if (!stroke) return;
+      stroke.points.push(point);
+      sync.appendLocalPoint(point);
     },
     [sync]
   );
 
   const handleTouchEnd = useCallback(() => {
-    if (!currentStrokeIdRef.current) return;
-    const finished = canvasRef.current?.endStroke() ?? null;
-    currentStrokeIdRef.current = null;
-    if (finished) {
-      addStroke(finished);
-      sync.broadcastStrokeEnd(finished.id);
-      sync.persistStrokes([...strokes, finished]);
-    }
-  }, [addStroke, strokes, sync]);
+    const finished = currentStrokeRef.current;
+    currentStrokeRef.current = null;
+    if (!finished) return;
+    addStroke(finished);
+    void sync.endLocalStroke(finished);
+    // Drop the UI-thread copy only after React has painted the committed
+    // stroke, otherwise the line blinks out for a frame.
+    requestAnimationFrame(() => canvasRef.current?.clearLiveStroke());
+  }, [addStroke, sync]);
 
   const handleUndo = useCallback(() => {
     if (!user?.id) return;
     const removed = undo(user.id);
     if (removed) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      canvasRef.current?.clearLiveStroke();
       sync.broadcastUndo(removed.id);
-      sync.persistStrokes(strokes.filter((s) => s.id !== removed.id));
+      void sync.persistStrokes(strokesRef.current.filter((s) => s.id !== removed.id));
     }
-  }, [user?.id, undo, strokes, sync]);
+  }, [user?.id, undo, sync]);
 
   const handleRedo = useCallback(() => {
     if (!user?.id) return;
@@ -153,9 +173,9 @@ export const LiveDrawScreen: React.FC = () => {
     if (restored) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       sync.broadcastRedo(restored);
-      sync.persistStrokes([...strokes, restored]);
+      void sync.persistStrokes([...strokesRef.current, restored]);
     }
-  }, [user?.id, redo, strokes, sync]);
+  }, [user?.id, redo, sync]);
 
   const handleClear = useCallback(() => {
     Alert.alert('Clear Canvas', 'This will erase the entire drawing.', [
@@ -165,8 +185,9 @@ export const LiveDrawScreen: React.FC = () => {
         style: 'destructive',
         onPress: () => {
           clearAll();
+          canvasRef.current?.clearLiveStroke();
           sync.broadcastClearCanvas();
-          sync.persistStrokes([]);
+          void sync.persistStrokes([]);
         },
       },
     ]);
@@ -203,6 +224,9 @@ export const LiveDrawScreen: React.FC = () => {
           strokes={strokes}
           canvasWidth={canvasWidth}
           canvasHeight={canvasHeight}
+          strokeColor={selectedColor}
+          strokeWidth={brushWidth}
+          isEraser={isEraser}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}

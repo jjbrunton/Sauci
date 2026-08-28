@@ -4,10 +4,11 @@ import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useAuthStore, usePacksStore, useSubscriptionStore } from '../../src/store';
+import { useAuthStore, usePacksStore, useStreakStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
-import { CompactHeader, ContentRow, LiveDrawTile } from '../../src/components/discovery';
+import { CompactHeader, ContentRow, DaresTile, LiveDrawTile } from '../../src/components/discovery';
+import { StreakDisplay } from '../../src/components/StreakDisplay';
 import { colors, spacing, typography, radius } from '../../src/theme';
 import type { QuestionPack, Category } from '../../src/types';
 
@@ -68,6 +69,7 @@ function groupPacksByCategory(
 export default function DiscoveryScreen() {
   const { user, partner, couple } = useAuthStore();
   const { packs, categories, fetchPacks, getPackProgress } = usePacksStore();
+  const { fetchStreak } = useStreakStore();
   const { subscription } = useSubscriptionStore();
   const { width } = useWindowDimensions();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -81,7 +83,8 @@ export default function DiscoveryScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchPacks();
-    }, [])
+      fetchStreak();
+    }, [fetchStreak])
   );
 
   // Group packs by category
@@ -114,8 +117,16 @@ export default function DiscoveryScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.innerContainer, isWideScreen && styles.innerContainerWide]}>
+          {/* Shared streak - hidden entirely for couples with nothing running */}
+          <View style={styles.streakSlot}>
+            <StreakDisplay delay={50} />
+          </View>
+
           {/* Live Draw Activity Tile */}
           <LiveDrawTile delay={100} />
+
+          {/* Dares */}
+          <DaresTile delay={150} />
 
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (
@@ -209,6 +220,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+  streakSlot: {
+    paddingHorizontal: spacing.lg,
+  },
   bottomSpacer: {
     height: spacing.lg,
   },
@@ -227,4 +241,3 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -MAX_CONTENT_WIDTH / 2 }],
   },
 });
-

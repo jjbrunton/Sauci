@@ -16,7 +16,9 @@ interface StorageObject {
 const BUCKET_KIND: Record<string, 'avatar' | 'response' | 'chat' | 'feedback'> = {
   avatars: 'avatar', 'response-media': 'response', 'chat-media': 'chat', 'feedback-screenshots': 'feedback',
 };
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// PostgreSQL's uuid type accepts legacy UUID-shaped identifiers whose version
+// nibble is not RFC 4122 (the production fixture profile uses version 0).
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
 function safeStorageKey(bucket: string, name: string): string {
@@ -50,22 +52,57 @@ export function createSupabaseDownloader(baseUrl: string, serviceRoleKey: string
   };
 }
 
-async function mediaRelation(target: Pool, object: StorageObject, key: string) {
-  const first = object.name.split('/')[0];
-  const owner = object.owner_id && uuidPattern.test(object.owner_id) ? object.owner_id : (uuidPattern.test(first) && object.bucket_id !== 'chat-media' ? first : null);
-  if (!owner) throw new Error(`Cannot determine owner for ${key}`);
-  const profile = await target.query<{ couple_id: string | null }>('select couple_id from profiles where id=$1', [owner]);
-  if (!profile.rows[0]) throw new Error(`Storage owner does not exist in target for ${key}`);
-  let matchId: string | null = null; let questionId: string | null = null;
-  if (object.bucket_id === 'chat-media' && uuidPattern.test(first)) matchId = first;
-  if (object.bucket_id === 'response-media') {
-    const candidate = object.name.split('/').at(-1)?.split('_')[0] ?? '';
-    if (uuidPattern.test(candidate)) questionId = candidate;
+const legacyPredicate = (column: string) => `(
+  ${column}=$1 or ${column}=$2 or
+  (right(${column},length($1))=$1 and position('/'||$3||'/' in ${column})>0)
+)`;
+
+async function sourceReference(source: Pool, object: StorageObject) {
+  const values = [object.name, `${object.bucket_id}/${object.name}`, object.bucket_id];
+  if (object.bucket_id === 'avatars') {
+    return (await source.query<{ owner_id: string; match_id: null; question_id: null }>(
+      `select id owner_id,null::uuid match_id,null::uuid question_id from profiles where ${legacyPredicate('avatar_url')} limit 1`, values,
+    )).rows[0] ?? null;
   }
-  return { ownerId: owner, coupleId: profile.rows[0].couple_id, matchId, questionId };
+  if (object.bucket_id === 'chat-media') {
+    return (await source.query<{ owner_id: string; match_id: string; question_id: null }>(
+      `select user_id owner_id,match_id,null::uuid question_id from messages where ${legacyPredicate('media_path')} limit 1`, values,
+    )).rows[0] ?? null;
+  }
+  if (object.bucket_id === 'feedback-screenshots') {
+    return (await source.query<{ owner_id: string; match_id: null; question_id: null }>(
+      `select user_id owner_id,null::uuid match_id,null::uuid question_id from feedback where ${legacyPredicate('screenshot_url')} limit 1`, values,
+    )).rows[0] ?? null;
+  }
+  return (await source.query<{ owner_id: string; match_id: null; question_id: string }>(
+    `select user_id owner_id,null::uuid match_id,question_id from responses
+      where response_data is not null and ${legacyPredicate("response_data->>'media_path'")} limit 1`, values,
+  )).rows[0] ?? null;
 }
 
-async function rewriteLegacyReference(target: Pool, object: StorageObject): Promise<void> {
+async function mediaRelation(source: Pool, target: Pool, object: StorageObject) {
+  const first = object.name.split('/')[0];
+  const reference = await sourceReference(source, object);
+  const ownerCandidates = [object.owner_id, reference?.owner_id, object.bucket_id === 'chat-media' ? null : first]
+    .filter((value): value is string => Boolean(value && uuidPattern.test(value)));
+  let ownerId: string | null = null; let coupleId: string | null = null;
+  for (const candidate of ownerCandidates) {
+    const profile = await target.query<{ couple_id: string | null }>('select couple_id from profiles where id=$1', [candidate]);
+    if (profile.rows[0]) { ownerId = candidate; coupleId = profile.rows[0].couple_id; break; }
+  }
+  let matchId = reference?.match_id && uuidPattern.test(reference.match_id) ? reference.match_id : null;
+  if (!matchId && object.bucket_id === 'chat-media' && uuidPattern.test(first)) matchId = first;
+  if (matchId && !(await target.query('select 1 from matches where id=$1', [matchId])).rowCount) matchId = null;
+  let questionId = reference?.question_id && uuidPattern.test(reference.question_id) ? reference.question_id : null;
+  if (object.bucket_id === 'response-media') {
+    const candidate = object.name.split('/').at(-1)?.split('_')[0] ?? '';
+    if (!questionId && uuidPattern.test(candidate)) questionId = candidate;
+  }
+  if (questionId && !(await target.query('select 1 from questions where id=$1', [questionId])).rowCount) questionId = null;
+  return { ownerId, coupleId, matchId, questionId };
+}
+
+async function rewriteLegacyReference(source: Pool, target: Pool, object: StorageObject): Promise<void> {
   const reference = `media:${object.id}`;
   const legacyName = object.name;
   const legacyKey = `${object.bucket_id}/${legacyName}`;
@@ -78,7 +115,11 @@ async function rewriteLegacyReference(target: Pool, object: StorageObject): Prom
   } else if (object.bucket_id === 'chat-media') {
     await target.query(`update messages set media_path=$1 where ${matchesLegacy('media_path')}`, [reference, legacyName, legacyKey]);
   } else if (object.bucket_id === 'feedback-screenshots') {
-    await target.query(`update feedback set screenshot_url=$1 where ${matchesLegacy('screenshot_url')}`, [reference, legacyName, legacyKey]);
+    const sourceRows = await source.query<{ id: string }>(
+      `select id from feedback where ${legacyPredicate('screenshot_url')}`,
+      [legacyName, legacyKey, object.bucket_id],
+    );
+    if (sourceRows.rows.length) await target.query('update feedback set screenshot_media_id=$1 where id=any($2::uuid[])', [object.id, sourceRows.rows.map((row) => row.id)]);
   } else if (object.bucket_id === 'response-media') {
     await target.query(`
       update responses
@@ -92,7 +133,7 @@ export async function migrateStorage(source: Pool, target: Pool, options: Storag
   const schema = options.storageSchema ?? 'storage';
   if (!/^[a-z_][a-z0-9_]*$/i.test(schema)) throw new Error('Invalid storage schema');
   const objects = await source.query<StorageObject>(`select id,bucket_id,name,owner_id,metadata,created_at,updated_at from ${quote(schema)}.objects where bucket_id=any($1::text[]) order by bucket_id,name`, [Object.keys(BUCKET_KIND)]);
-  const result: StorageResult = { sourceFiles: objects.rowCount ?? objects.rows.length, targetFiles: 0, copiedFiles: 0, skippedFiles: 0, prunedFiles: 0, failedFiles: 0, sourceBytes: 0, copiedBytes: 0, missingOnDisk: [], failures: [] };
+  const result: StorageResult = { sourceFiles: objects.rowCount ?? objects.rows.length, targetFiles: 0, preservedTargetFiles: 0, copiedFiles: 0, quarantinedFiles: 0, skippedFiles: 0, prunedFiles: 0, failedFiles: 0, sourceBytes: 0, copiedBytes: 0, missingOnDisk: [], failures: [] };
   const sourceKeys = new Set<string>();
   for (const object of objects.rows) {
     const key = safeStorageKey(object.bucket_id, object.name); const expectedSize = metadataSize(object.metadata); result.sourceBytes += expectedSize;
@@ -101,10 +142,11 @@ export async function migrateStorage(source: Pool, target: Pool, options: Storag
     const marker = options.checkpoint.storage[key];
     if (marker && marker.updatedAt === updatedAt && (!expectedSize || marker.byteSize === expectedSize)) {
       if (options.dryRun) { result.skippedFiles += 1; continue; }
-      const registered = await target.query('select 1 from media_objects where id=$1 and storage_key=$2 and byte_size=$3', [object.id, key, marker.byteSize]);
+      const registered = await target.query(`select 1 from media_objects where id=$1 and storage_key=$2 and byte_size=$3
+        union all select 1 from legacy_media_quarantine where id=$1 and original_storage_key=$2 and byte_size=$3`, [object.id, key, marker.byteSize]);
       try {
         if (registered.rowCount && (await stat(destination(options.mediaRoot, key))).size === marker.byteSize) {
-          await rewriteLegacyReference(target, object);
+          await rewriteLegacyReference(source, target, object);
           result.skippedFiles += 1;
           continue;
         }
@@ -112,16 +154,25 @@ export async function migrateStorage(source: Pool, target: Pool, options: Storag
     }
     if (options.dryRun) continue;
     try {
+      const relation = await mediaRelation(source, target, object);
       const bytes = await options.download(object.bucket_id, object.name);
       if (expectedSize && bytes.byteLength !== expectedSize) throw new Error(`Size mismatch for ${key}: expected ${expectedSize}, received ${bytes.byteLength}`);
-      const relation = await mediaRelation(target, object, key);
       const path = destination(options.mediaRoot, key); await mkdir(dirname(path), { recursive: true });
       const temporary = `${path}.${process.pid}.tmp`; await writeFile(temporary, bytes, { mode: 0o600 }); await rename(temporary, path);
       const mime = metadataString(object.metadata, 'mimetype', 'contentType') ?? 'application/octet-stream';
-      await target.query(`insert into media_objects(id,owner_id,couple_id,kind,storage_key,mime_type,byte_size,question_id,match_id,created_at)
-        values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do update set owner_id=excluded.owner_id,couple_id=excluded.couple_id,kind=excluded.kind,storage_key=excluded.storage_key,mime_type=excluded.mime_type,byte_size=excluded.byte_size,question_id=excluded.question_id,match_id=excluded.match_id,created_at=excluded.created_at`,
-      [object.id, relation.ownerId, relation.coupleId, BUCKET_KIND[object.bucket_id], key, mime, bytes.byteLength, relation.questionId, relation.matchId, object.created_at]);
-      await rewriteLegacyReference(target, object);
+      if (relation.ownerId) {
+        await target.query(`insert into media_objects(id,owner_id,couple_id,kind,storage_key,mime_type,byte_size,question_id,match_id,created_at)
+          values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict(id) do update set owner_id=excluded.owner_id,couple_id=excluded.couple_id,kind=excluded.kind,storage_key=excluded.storage_key,mime_type=excluded.mime_type,byte_size=excluded.byte_size,question_id=excluded.question_id,match_id=excluded.match_id,created_at=excluded.created_at`,
+        [object.id, relation.ownerId, relation.coupleId, BUCKET_KIND[object.bucket_id], key, mime, bytes.byteLength, relation.questionId, relation.matchId, object.created_at]);
+        await target.query('delete from legacy_media_quarantine where id=$1', [object.id]);
+        await rewriteLegacyReference(source, target, object);
+      } else {
+        await target.query(`insert into legacy_media_quarantine(id,original_storage_key,bucket_id,object_name,source_owner_id,metadata,mime_type,byte_size,reason,source_created_at,source_updated_at)
+          values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) on conflict(id) do update set original_storage_key=excluded.original_storage_key,bucket_id=excluded.bucket_id,object_name=excluded.object_name,source_owner_id=excluded.source_owner_id,metadata=excluded.metadata,mime_type=excluded.mime_type,byte_size=excluded.byte_size,reason=excluded.reason,source_created_at=excluded.source_created_at,source_updated_at=excluded.source_updated_at`,
+        [object.id, key, object.bucket_id, object.name, object.owner_id, object.metadata, mime, bytes.byteLength, 'legacy object has no verifiable owner or live reference', object.created_at, object.updated_at]);
+        await target.query('delete from media_objects where id=$1', [object.id]);
+        result.quarantinedFiles += 1;
+      }
       options.checkpoint.storage[key] = { updatedAt, byteSize: bytes.byteLength };
       await options.saveCheckpoint?.(options.checkpoint); result.copiedFiles += 1; result.copiedBytes += bytes.byteLength;
     } catch (error) {
@@ -131,16 +182,21 @@ export async function migrateStorage(source: Pool, target: Pool, options: Storag
   }
   if (!options.dryRun) {
     if (options.prune) {
-      const existing = await target.query<{ id: string; storage_key: string }>("select id,storage_key from media_objects where kind=any($1::text[])", [Object.values(BUCKET_KIND)]);
+      const existing = await target.query<{ id: string; storage_key: string; quarantined: boolean }>(`
+        select id,storage_key,false quarantined from media_objects where kind=any($1::text[])
+        union all select id,original_storage_key storage_key,true quarantined from legacy_media_quarantine
+      `, [Object.values(BUCKET_KIND)]);
       for (const row of existing.rows) if (!sourceKeys.has(row.storage_key)) {
         await rm(destination(options.mediaRoot, row.storage_key), { force: true });
-        await target.query('delete from media_objects where id=$1', [row.id]);
+        await target.query(row.quarantined ? 'delete from legacy_media_quarantine where id=$1' : 'delete from media_objects where id=$1', [row.id]);
         delete options.checkpoint.storage[row.storage_key]; result.prunedFiles += 1;
       }
       await options.saveCheckpoint?.(options.checkpoint);
     }
-    const registered = await target.query<{ storage_key: string; byte_size: number }>("select storage_key,byte_size from media_objects where deleted_at is null and kind=any($1::text[])", [Object.values(BUCKET_KIND)]);
-    result.targetFiles = registered.rows.length;
+    const registered = await target.query<{ storage_key: string; byte_size: number }>(`select storage_key,byte_size from media_objects where deleted_at is null and kind=any($1::text[])
+      union all select original_storage_key storage_key,byte_size from legacy_media_quarantine`, [Object.values(BUCKET_KIND)]);
+    result.targetFiles = registered.rows.filter((row) => sourceKeys.has(row.storage_key)).length;
+    result.preservedTargetFiles = registered.rows.length - result.targetFiles;
     for (const row of registered.rows) {
       try { if ((await stat(destination(options.mediaRoot, row.storage_key))).size !== row.byte_size) result.missingOnDisk.push(row.storage_key); }
       catch { result.missingOnDisk.push(row.storage_key); }

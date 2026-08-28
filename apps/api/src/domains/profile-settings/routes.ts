@@ -18,6 +18,8 @@ const profileUpdateSchema = z.object({
   onboarding_version: z.number().int().min(0).optional(),
   public_key_jwk: z.record(z.unknown()).nullable().optional(),
   push_token: z.string().trim().min(1).max(512).nullable().optional(),
+  // IANA zone from the client; the daily response limit buckets on the user's local day.
+  timezone: z.string().trim().min(1).max(64).nullable().optional(),
 }).strict().refine((body) => Object.keys(body).length > 0, 'At least one profile field is required');
 
 const preferenceSchema = z.object({

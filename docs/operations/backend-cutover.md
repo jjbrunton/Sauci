@@ -27,6 +27,10 @@ order, preserves common IDs/timestamps, maps legacy-to-target schema differences
 by explicit target-column intersection, and upserts on stable primary/business
 keys. An initial interrupted run resumes from its atomic JSON checkpoint. A
 `--final-sync` always replays every table, ignoring initial-run table checkpoints.
+Initial merges preserve target-only rows, the live target singleton configuration,
+and newer target profile fields. When an established source couple conflicts with
+a one-person target couple, only the couple membership is restored so historical
+relationship data stays isolated while newer profile settings remain intact.
 The manifest includes the complete supported legacy product and administrative
 set: `couples`, `profiles`, `admin_users`, `master_keys`, `categories`,
 `question_packs`, `topics`, `pack_topics`, `questions`, `app_config`,
@@ -35,8 +39,14 @@ set: `couples`, `profiles`, `admin_users`, `master_keys`, `categories`,
 `match_archives`, `message_deletions`, `message_reports`,
 `notification_preferences`, `feedback`, `subscriptions`,
 `revenuecat_webhook_events`, `redemption_codes`, `code_redemptions`,
-`feature_interests`, `live_draw_sessions`, `catchup_reminder_tracking`, and
-`audit_logs`. A missing source or target table is reported as skipped rather
+`feature_interests`, `live_draw_sessions`, `catchup_reminder_tracking`,
+`content_reviews`, and `audit_logs`. The importer maps the legacy
+`feature_interests.feature_name` column to `feature`, canonicalizes legacy
+invite codes to the uppercase format accepted by the standalone API, derives
+the standalone live-draw updater from the couple's profiles, imports question
+inverse links in a second pass, and separates the legacy audit actor identity
+into the standalone actor/admin fields. A missing source or target table is
+reported as skipped rather
 than silently treated as copied.
 
 Supported storage buckets are `avatars`, `response-media`, `chat-media`, and
@@ -44,12 +54,14 @@ Supported storage buckets are `avatars`, `response-media`, `chat-media`, and
 through temporary files and atomic renames. Unsafe paths are rejected. Imported
 objects are registered in `media_objects`; object ID, owner, creation time, MIME
 type, and byte size are retained. The checkpoint uses object update time and size
-so retries do not redownload completed objects.
+so retries do not redownload completed objects. Ownerless, unreferenced legacy
+objects are retained in `legacy_media_quarantine` and on disk, but are deliberately
+not registered with the authenticated media API.
 
 After each copied **or checkpoint-resumed** object, the importer rewrites legacy
 object names, bucket paths, and Supabase public/signed URLs to the canonical
 `media:<uuid>` reference. This covers `profiles.avatar_url`,
-`messages.media_path`, `feedback.screenshot_url`, and
+`messages.media_path`, `feedback.screenshot_media_id`, and
 `responses.response_data.media_path`. Treat any remaining legacy storage URL in
 those fields as a failed migration even when file counts match.
 

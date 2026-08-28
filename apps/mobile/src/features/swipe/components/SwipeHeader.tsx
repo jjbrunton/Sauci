@@ -4,7 +4,12 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { colors, spacing, typography } from "../../../theme";
+import { StreakDisplay } from "../../../components/StreakDisplay";
 import { useProgressShimmer } from "../hooks/useProgressShimmer";
+import type { DailyLimitInfo } from "../types";
+
+/** Remaining answers at or below this switch the meter to its "running out" treatment. */
+const SCARCITY_THRESHOLD = 3;
 
 interface SwipeHeaderProps {
     currentIndex: number;
@@ -14,6 +19,7 @@ interface SwipeHeaderProps {
     packContext: { name: string } | null;
     showBackButton: boolean;
     onBack: () => void;
+    dailyLimitInfo?: DailyLimitInfo | null;
 }
 
 export const SwipeHeader = ({
@@ -24,10 +30,19 @@ export const SwipeHeader = ({
     packContext,
     showBackButton,
     onBack,
+    dailyLimitInfo,
 }: SwipeHeaderProps) => {
     const shimmerStyle = useProgressShimmer();
     const total = effectiveTotal || totalQuestions;
     const progressPercent = total > 0 ? ((currentIndex + 1) / total) * 100 : 0;
+
+    // Catch-up answers are exempt from the cap, so the meter is hidden in pending mode.
+    const showMeter = mode !== 'pending'
+        && !!dailyLimitInfo
+        && dailyLimitInfo.limit_value > 0
+        && !dailyLimitInfo.is_blocked;
+    const remaining = dailyLimitInfo?.remaining ?? 0;
+    const isRunningOut = showMeter && remaining <= SCARCITY_THRESHOLD;
 
     return (
         <Animated.View
@@ -47,6 +62,16 @@ export const SwipeHeader = ({
                     <Text style={styles.progressText}>
                         {currentIndex + 1} of {total}
                     </Text>
+                    {showMeter && (
+                        <View style={[styles.meter, isRunningOut && styles.meterUrgent]}>
+                            {isRunningOut && (
+                                <Ionicons name="hourglass-outline" size={12} color={colors.premium.gold} />
+                            )}
+                            <Text style={[styles.meterText, isRunningOut && styles.meterTextUrgent]}>
+                                {remaining === 1 ? '1 left today' : `${remaining} left today`}
+                            </Text>
+                        </View>
+                    )}
                     <View style={[styles.progressBar, styles.progressBarPremium]}>
                         <Animated.View
                             style={[
@@ -65,6 +90,11 @@ export const SwipeHeader = ({
                             </Animated.View>
                         </Animated.View>
                     </View>
+                </View>
+                {/* The shared streak sits opposite the back button so the centred
+                    progress column keeps its position. */}
+                <View style={styles.streakBadge} pointerEvents="none">
+                    <StreakDisplay compact delay={200} />
                 </View>
             </View>
         </Animated.View>
@@ -87,6 +117,10 @@ const styles = StyleSheet.create({
         left: 0,
         padding: spacing.sm,
     },
+    streakBadge: {
+        position: 'absolute',
+        right: 0,
+    },
     progressContainer: {
         alignItems: "center",
     },
@@ -100,7 +134,30 @@ const styles = StyleSheet.create({
     progressText: {
         ...typography.subhead,
         color: colors.textSecondary,
+        marginBottom: spacing.xs,
+    },
+    meter: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: spacing.sm,
+    },
+    meterUrgent: {
+        paddingHorizontal: spacing.sm,
+        paddingVertical: 2,
+        borderRadius: 999,
+        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+        borderWidth: 1,
+        borderColor: 'rgba(212, 175, 55, 0.2)',
+    },
+    meterText: {
+        ...typography.caption2,
+        letterSpacing: 0.5,
+        color: colors.textTertiary,
+    },
+    meterTextUrgent: {
+        color: colors.premium.gold,
+        fontWeight: '600',
+        marginLeft: spacing.xs,
     },
     progressBar: {
         width: 160,

@@ -5,7 +5,7 @@ import { OperationsRunner } from '../src/domains/operations/runner.js';
 import type { OperationItem } from '../src/domains/operations/types.js';
 import { loadWorkerConfig } from '../src/workers/config.js';
 
-const summary={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0};
+const summary={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0,streakReminders:0,daresExpired:0};
 function repository(items:OperationItem[]):OperationsRepository {
   return {produce:vi.fn(async()=>summary),claim:vi.fn(async()=>items),complete:vi.fn(async()=>undefined),fail:vi.fn(async()=>undefined),
     message:vi.fn(async()=>null),classifierConfig:vi.fn(async()=>null),classify:vi.fn(async()=>undefined),close:vi.fn(async()=>undefined)};

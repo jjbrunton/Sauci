@@ -16,9 +16,11 @@ interface PreferencesRow extends QueryResultRow {
   pack_changes_enabled: boolean;
   new_packs_enabled: boolean;
   streak_milestones_enabled: boolean;
+  streak_reminders_enabled: boolean;
   weekly_summary_enabled: boolean;
   unpaired_reminders_enabled: boolean;
   catchup_reminders_enabled: boolean;
+  dares_enabled: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -49,6 +51,7 @@ const profileColumns: Record<keyof ProfileUpdate, string> = {
   onboarding_version: 'onboarding_version',
   public_key_jwk: 'public_key_jwk',
   push_token: 'push_token',
+  timezone: 'timezone',
 };
 
 function toPreferences(row: PreferencesRow): NotificationPreferences {
@@ -61,9 +64,11 @@ function toPreferences(row: PreferencesRow): NotificationPreferences {
     pack_changes_enabled: row.pack_changes_enabled,
     new_packs_enabled: row.new_packs_enabled,
     streak_milestones_enabled: row.streak_milestones_enabled,
+    streak_reminders_enabled: row.streak_reminders_enabled,
     weekly_summary_enabled: row.weekly_summary_enabled,
     unpaired_reminders_enabled: row.unpaired_reminders_enabled,
     catchup_reminders_enabled: row.catchup_reminders_enabled,
+    dares_enabled: row.dares_enabled,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };

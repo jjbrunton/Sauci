@@ -2,13 +2,22 @@ import { create } from "zustand";
 import { apiClient } from "../lib/apiClient";
 import { useAuthStore } from "./authStore";
 
+/**
+ * Resolved from the signed-in partner's point of view by the API. The stored row is
+ * positional (user1/user2 by member id), which a client cannot act on without
+ * re-deriving that ordering, so the endpoint answers in you/partner terms instead.
+ */
 export interface CoupleStreak {
     couple_id: string;
     current_streak: number;
     longest_streak: number;
     last_active_date: string | null;
-    user1_answered_today: boolean;
-    user2_answered_today: boolean;
+    last_completed_date: string | null;
+    you_answered_today: boolean;
+    partner_answered_today: boolean;
+    partner_name: string | null;
+    /** The couple's shared IANA zone, which is the day boundary the streak is counted in. */
+    timezone: string;
     streak_celebrated_at: number;
     created_at: string;
     updated_at: string;

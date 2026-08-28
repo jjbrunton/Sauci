@@ -6,9 +6,11 @@ export const notificationPreferenceKeys = [
   'pack_changes_enabled',
   'new_packs_enabled',
   'streak_milestones_enabled',
+  'streak_reminders_enabled',
   'weekly_summary_enabled',
   'unpaired_reminders_enabled',
   'catchup_reminders_enabled',
+  'dares_enabled',
 ] as const;
 
 export type NotificationPreferenceKey = typeof notificationPreferenceKeys[number];
@@ -30,6 +32,7 @@ export interface ProfileUpdate {
   onboarding_version?: number;
   public_key_jwk?: Record<string, unknown> | null;
   push_token?: string | null;
+  timezone?: string | null;
 }
 
 export interface FeedbackSubmission {

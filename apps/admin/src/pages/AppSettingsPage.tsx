@@ -187,7 +187,7 @@ export function AppSettingsPage() {
                         Daily Response Limit (Free Users)
                     </CardTitle>
                     <CardDescription>
-                        Limit the number of questions non-premium users can answer per day (UTC 00:00-23:59)
+                        Limit the number of questions non-premium users can answer per day, on their own local calendar day
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -203,14 +203,19 @@ export function AppSettingsPage() {
                             className="max-w-[200px]"
                         />
                         <p className="text-xs text-muted-foreground">
-                            Maximum number of questions a non-premium user can answer per UTC day.
+                            Maximum number of questions a non-premium user can answer per day.
                             Premium users (via personal or partner subscription) bypass this limit.
                         </p>
                         <p className="text-xs text-muted-foreground">
                             Set to <strong>0</strong> to disable daily limits entirely.
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Limit resets daily at 00:00 UTC. Editing existing answers does not count toward the limit.
+                            Resets at midnight in the user's own timezone, as reported by their device.
+                            Users who have not reported a timezone yet fall back to 00:00 UTC.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            <strong>Does not count toward the limit:</strong> editing an existing answer, or
+                            answering a question the partner had already answered (catching up is always free).
                         </p>
                     </div>
                 </CardContent>

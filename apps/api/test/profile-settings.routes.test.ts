@@ -20,9 +20,11 @@ const preferences = {
   pack_changes_enabled: true,
   new_packs_enabled: true,
   streak_milestones_enabled: true,
+  streak_reminders_enabled: true,
   weekly_summary_enabled: true,
   unpaired_reminders_enabled: true,
   catchup_reminders_enabled: true,
+  dares_enabled: true,
   created_at: '2026-08-27T10:00:00.000Z',
   updated_at: '2026-08-27T10:00:00.000Z',
 };

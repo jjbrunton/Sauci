@@ -22,7 +22,9 @@ export interface TableResult {
 export interface StorageResult {
   sourceFiles: number;
   targetFiles: number;
+  preservedTargetFiles: number;
   copiedFiles: number;
+  quarantinedFiles: number;
   skippedFiles: number;
   prunedFiles: number;
   failedFiles: number;

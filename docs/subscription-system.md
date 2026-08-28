@@ -28,7 +28,10 @@ The `RevenueCatService` class wraps the `react-native-purchases` SDK.
 
 **Platform Support:**
 - iOS: Full support with native SDK
-- Android: Not yet implemented
+- Android: Full support with native SDK. `getApiKey()` selects the Android key,
+  `com.android.vending.BILLING` is declared in `app.json`, and the paywall has no
+  platform gating. The backend is store-agnostic: the webhook passes `event.store`
+  through unchanged, so `PLAY_STORE` events need no separate handling.
 - Web/Expo Go: Gracefully disabled (returns defaults)
 
 **Key Methods:**
@@ -201,10 +204,17 @@ The `get_recommended_questions()` function also filters premium packs:
 |----------|----------|---------|
 | `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` | Mobile app | RevenueCat iOS public SDK key |
 | `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` | Mobile app | RevenueCat Android public SDK key |
-| `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID` | Mobile app | Entitlement identifier (default: "pro") |
+| `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID` | Mobile app | Entitlement identifier (code default: `"pro"`; builds set `"Sauci Pro"` — see warning below) |
 | `REVENUECAT_API_KEY` | Edge functions | RevenueCat secret API key |
 | `REVENUECAT_ENTITLEMENT_ID` | Edge functions | Server-side entitlement check |
 | `REVENUECAT_WEBHOOK_SECRET` | Edge functions | Webhook auth verification |
+
+> **Entitlement ID mismatch risk.** The fallback in `src/lib/revenuecat.ts` is
+> `"pro"`, but `eas.json` sets `EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID` to
+> `"Sauci Pro"`. If that variable is missing from a build profile, the SDK looks up
+> an entitlement that does not exist, `parseCustomerInfo()` returns
+> `isProUser: false`, and paying users silently appear unsubscribed with no error.
+> Confirm the variable is set on every iOS and Android build profile.
 
 ## Subscription Flow Diagrams
 

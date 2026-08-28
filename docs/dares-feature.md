@@ -1,5 +1,10 @@
 # Dares Feature - Architecture & Implementation Plan
 
+> **SUPERSEDED.** This is the original 2026-01 plan, kept for its competitor analysis
+> and decision history. It describes a Supabase Edge Function + RLS architecture that
+> the product no longer uses: mobile talks only to the standalone API. For the shipped
+> contract see [Dares loop](dares-loop.md).
+
 > **Status**: Phase 1 Complete (Database + Admin Portal)  
 > **Created**: 2026-01-08  
 > **Updated**: 2026-01-08  

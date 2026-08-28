@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { type AnimatedStyleProp } from 'react-native-reanimated';
+import Animated, { type AnimatedStyle } from 'react-native-reanimated';
 import type { ViewStyle } from 'react-native';
 import type { IntensityLevel } from '@/types';
 import { HEAT_COLORS } from './constants';
@@ -9,7 +9,7 @@ import { styles } from './styles';
 
 interface IntensitySliderTrackProps {
     value: IntensityLevel;
-    progressStyle: AnimatedStyleProp<ViewStyle>;
+    progressStyle: AnimatedStyle<ViewStyle>;
 }
 
 export function IntensitySliderTrack({ value, progressStyle }: IntensitySliderTrackProps) {

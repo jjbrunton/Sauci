@@ -5,19 +5,19 @@
   },
   "build": {
     "development": {
-      "node": "20.10.0",
+      "node": "20.19.4",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
-      "node": "20.10.0",
+      "node": "20.19.4",
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.preprod.sauci.app"
       }
     },
     "production": {
-      "node": "20.10.0",
+      "node": "20.19.4",
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.sauci.app",

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Alert, Platform, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { uploadMedia } from '../lib/mediaApi';
 
 export interface UseAvatarPickerOptions {

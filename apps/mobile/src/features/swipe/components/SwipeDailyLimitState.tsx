@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
@@ -6,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { DecorativeSeparator, GradientBackground } from "../../../components/ui";
 import { Paywall } from "../../../components/paywall";
 import { colors, radius, spacing, typography } from "../../../theme";
+import { Events } from "../../../lib/analytics";
 import type { DailyLimitInfo } from "../types";
 
 interface SwipeDailyLimitStateProps {
@@ -26,6 +28,11 @@ export const SwipeDailyLimitState = ({
     onPaywallSuccess,
 }: SwipeDailyLimitStateProps) => {
     const accent = colors.premium.gold;
+
+    // The meter exists to convert; without these the funnel is unmeasurable.
+    useEffect(() => {
+        Events.paywallShown('daily_limit');
+    }, []);
 
     return (
         <GradientBackground>
@@ -59,7 +66,7 @@ export const SwipeDailyLimitState = ({
                     </Animated.View>
 
                     <Text style={styles.dailyLimitDescription}>
-                        You've answered {dailyLimitInfo.limit_value} questions today!{'\n'}
+                        You've answered {dailyLimitInfo.responses_today} questions today!{'\n'}
                         Let the anticipation build while you wait.
                     </Text>
 
@@ -100,8 +107,14 @@ export const SwipeDailyLimitState = ({
 
             <Paywall
                 visible={showPaywall}
-                onClose={onClosePaywall}
-                onSuccess={onPaywallSuccess}
+                onClose={() => {
+                    Events.paywallClosed('daily_limit', 'dismissed');
+                    onClosePaywall();
+                }}
+                onSuccess={() => {
+                    Events.paywallClosed('daily_limit', 'purchased');
+                    onPaywallSuccess();
+                }}
             />
         </GradientBackground>
     );
