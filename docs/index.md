@@ -21,6 +21,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Subscriptions](subscription-system.md)
 - [Redemption codes](product/redemption.md)
 - [Mobile release process](releasing.md)
+- [Dares loop](dares-loop.md)
 
 ## Feature and implementation references
 
@@ -30,7 +31,7 @@ partially implemented states. Confirm claims against current code.
 - `admin-question-types-plan.md`
 - [Universal catalogue safety plan](product/catalog-content-safety-plan.md)
 - `content-balance-implementation.md`
-- `dares-feature.md`
+- `dares-feature.md` (superseded by [Dares loop](dares-loop.md))
 - `live-draw-feature-plan.md`
 - `NEW_QUESTION_TYPES.md`
 - `oversized-file-inventory.md`

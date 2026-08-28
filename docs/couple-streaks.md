@@ -94,5 +94,5 @@ the old `couple_streaks` table. The API owns both jobs now. Those legacy writers
 stopped as part of the cutover procedure in
 [backend deployment and branching](operations/backend-deployments.md); if any hosted
 project still has them scheduled, an operator unschedules them directly — agents do not
-execute remote DDL. Migration `0015_couple_streak_locality.sql` drops the equivalent
+execute remote DDL. Migration `0016_couple_streak_locality.sql` drops the equivalent
 trigger and functions from the product database defensively.

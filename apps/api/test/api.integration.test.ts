@@ -28,7 +28,7 @@ describe.skipIf(!databaseUrl || !localDatabase)('API + PostgreSQL integration', 
     isolatedUrl.searchParams.set('options', `-c search_path=${schema}`);
     pool = new Pool({ connectionString: isolatedUrl.toString() });
     repository = new PostgresRepository(isolatedUrl.toString());
-    const migration = (await Promise.all(['0000_identity_and_feature_interests.sql','0013_daily_limit_local_reset.sql']
+    const migration = (await Promise.all(['0000_identity_and_feature_interests.sql','0014_daily_limit_local_reset.sql']
       .map((name) => readFile(new URL(`../drizzle/${name}`, import.meta.url), 'utf8')))).join('\n--> statement-breakpoint\n');
     for (const statement of migration.split('--> statement-breakpoint')) {
       if (statement.trim()) await pool.query(statement);

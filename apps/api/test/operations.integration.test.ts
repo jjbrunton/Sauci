@@ -12,7 +12,7 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
   const pack='44444444-4444-4444-8444-444444444444',question='55555555-5555-4555-8555-555555555555';let pool:Pool;let repo:PostgresOperationsRepository;let repo2:PostgresOperationsRepository;
   beforeAll(async()=>{
     await admin.query(`create schema "${schema}"`);const url=new URL(databaseUrl!);url.searchParams.set('options',`-c search_path=${schema}`);pool=new Pool({connectionString:url.toString()});repo=new PostgresOperationsRepository(url.toString());repo2=new PostgresOperationsRepository(url.toString());
-    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql','0013_daily_limit_local_reset.sql','0015_couple_streak_locality.sql','0016_streak_reminder_preference.sql']){
+    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql','0014_daily_limit_local_reset.sql','0016_couple_streak_locality.sql','0017_streak_reminder_preference.sql']){
       const sql=await readFile(new URL(`../drizzle/${name}`,import.meta.url),'utf8');for(const statement of sql.split('--> statement-breakpoint'))if(statement.trim())await pool.query(statement);
     }
     await pool.query('insert into couples(id,invite_code) values($1,$2)',[couple,'ABCD2345']);
