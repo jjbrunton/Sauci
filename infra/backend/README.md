@@ -21,6 +21,13 @@ API and worker, PostgreSQL, and a one-shot migration service. Configure Dokploy 
 Compose file from the repository root and route the public API hostname to the
 `api` service on port `3003`. Do not publish PostgreSQL.
 
+Create separate Dokploy Compose applications for `staging` and `main`, both using
+`infra/backend/compose.production.yaml`; enable push-triggered auto-deploy for
+their respective branch. The file intentionally omits a top-level Compose project
+name so Dokploy isolates networks and named volumes per application. See
+[`docs/operations/backend-deployments.md`](../../docs/operations/backend-deployments.md)
+for the promotion contract.
+
 Copy the variable names from `.env.production.example` into Dokploy's secret
 configuration. `POSTGRES_PASSWORD` and the password embedded (URL encoded) in
 `DATABASE_URL` must match. Generate them for the deployment; never reuse the

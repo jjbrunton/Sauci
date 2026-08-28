@@ -1,18 +1,19 @@
 # Sauci agent map
 
 Sauci is a couples connection product: an Expo mobile app, React admin, Next.js
-web app, Supabase backend, and an internal MCP service in one npm/Turborepo
-workspace.
+web app, standalone Node/PostgreSQL backend, hosted Supabase Auth, and an internal
+MCP service in one npm/Turborepo workspace.
 
 ## Golden rules
 
 1. Read the nearest `AGENTS.md` before changing a scoped area.
 2. Preserve tenant and couple isolation. Never bypass RLS, role checks, or auth.
-3. All schema changes are local files in `apps/supabase/migrations/` created with
-   `npm run db:migration:new -- <name>`. Never use remote `apply_migration`, never
-   execute DDL through MCP SQL tools, and use those SQL tools for `SELECT` only.
-4. Never target production from local development or E2E. Local tests must fail
-   closed when a configured Supabase URL is not localhost.
+3. Product-data schema changes are committed SQL files in `apps/api/drizzle/`.
+   Hosted Supabase owns Auth only; do not deploy product-data migrations or Edge
+   Functions there. Never execute remote DDL through MCP or provider tools.
+4. Never target production from local development or E2E. Database integration
+   tests must fail closed unless `DATABASE_URL` resolves to loopback. Authenticated
+   native acceptance may use only the designated non-production Auth project.
 5. Read `apps/mobile/DESIGN.md` before mobile UI work.
 6. Keep shared package exports type-only and route them through `src/index.ts`.
 7. Do not commit secrets, generated evidence, local logs, or runtime state.
@@ -26,7 +27,8 @@ workspace.
 | `apps/mobile` | Expo React Native product | `apps/mobile/AGENTS.md` |
 | `apps/admin` | Vite administration UI | `apps/admin/AGENTS.md` |
 | `apps/web` | Next.js marketing/redemption UI | `apps/web/AGENTS.md` |
-| `apps/supabase` | migrations, functions, local backend | `apps/supabase/AGENTS.md` |
+| `apps/api` | standalone API, worker, PostgreSQL migrations | repository rules |
+| `apps/supabase` | legacy data-plane history; hosted Auth configuration only | `apps/supabase/AGENTS.md` |
 | `apps/mcp` | internal administrative MCP service | `apps/mcp/AGENTS.md` |
 | `packages/shared` | shared TypeScript contracts | `packages/shared/AGENTS.md` |
 | `e2e` | cross-application Playwright flows | `e2e/README.md` |

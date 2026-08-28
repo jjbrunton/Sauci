@@ -31,7 +31,7 @@ for (const file of allFiles) {
   if (!/\.(md|sql)$/.test(file)) continue;
   const source = await readFile(file, 'utf8');
   if (/^\s*[-*]\s*Use\s+.*apply_migration/im.test(source)) {
-    fail(file, 'instruction authorizes untracked remote migrations', 'create a local apps/supabase/migrations file instead');
+    fail(file, 'instruction authorizes untracked remote migrations', 'create a committed apps/api/drizzle migration instead');
   }
 }
 
@@ -53,7 +53,7 @@ if (!scoped) {
   const duplicateMigrations = path.join(root, 'supabase', 'migrations');
   if (await exists(duplicateMigrations)) {
     const entries = await readdir(duplicateMigrations);
-    if (entries.length) fail(duplicateMigrations, 'second migration tree can bypass deployment', 'move migrations to apps/supabase/migrations and remove the duplicate');
+    if (entries.length) fail(duplicateMigrations, 'second migration tree can bypass deployment', 'move active migrations to apps/api/drizzle and remove the duplicate');
   }
 
   const cutoff = '20260201100806';
@@ -76,6 +76,21 @@ if (!scoped) {
   const mcpAuth = await readFile(path.join(root, 'apps', 'mcp', 'src', 'lib', 'auth.ts'), 'utf8');
   if (/allowing all requests|query\(['"]apiKey/i.test(mcpAuth)) {
     fail(path.join(root, 'apps', 'mcp', 'src', 'lib', 'auth.ts'), 'MCP authentication can leak or fail open', 'require a configured Bearer token and fail closed');
+  }
+
+  for (const directory of [
+    path.join(root, 'apps', 'mobile'),
+    path.join(root, 'apps', 'admin', 'src'),
+    path.join(root, 'apps', 'web'),
+    path.join(root, 'apps', 'mcp', 'src'),
+  ]) {
+    for (const file of await walk(directory, [])) {
+      if (!/\.(?:ts|tsx|js|jsx)$/.test(file) || /(?:\.test\.|__tests__)/.test(file)) continue;
+      const source = await readFile(file, 'utf8');
+      if (/\/functions\/v1\/|\.functions\.invoke\s*\(/.test(source)) {
+        fail(file, 'runtime code calls the retired Supabase Edge Function data plane', 'call the standalone versioned API instead');
+      }
+    }
   }
 }
 
