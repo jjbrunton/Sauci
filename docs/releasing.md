@@ -22,13 +22,29 @@ The `--local` flag runs the EAS build process on your machine instead of Expo's 
 cd apps/mobile
 
 # Android - produces .aab file (for Play Store)
-eas build --platform android --profile production --local
+npm run release:android
 
 # iOS - produces .ipa file (for App Store)
-eas build --platform ios --profile production --local
+npm run release:ios
 ```
 
 Output files are placed in the current directory by default.
+
+These scripts create signed artifacts only. They do not upload or submit them.
+Store mutation always requires a separate, explicitly authorized command.
+
+### Source integrity
+
+Sauci commits its native `ios/` and `android/` projects. Start a release from a
+clean worktree whose `HEAD` matches its fetched upstream, and do not run
+`expo prebuild` before a routine release build. EAS detects the native projects
+and packages the checked-in sources directly.
+
+After the build, inspect `git diff`. Only the expected local EAS version fields
+may change: `app.json`, the platform native version file, and the iOS widget
+`Info.plist` for an iOS build. Any widget implementation, resource, or Xcode
+project rewrite means the source was regenerated and the artifact must be rebuilt
+from the clean tracked sources.
 
 ### Building an APK (for Testing)
 
@@ -116,13 +132,11 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 cd android && ./gradlew --stop && cd ..
 ```
 
-**Clean build after dependency changes:**
-```bash
-# Remove native folders and rebuild
-rm -rf android ios
-npx expo prebuild --clean
-eas build --platform android --profile production --local
-```
+**Native regeneration after dependency changes:**
+
+Treat `expo prebuild` as a source change, not a release step. Run it separately
+only when native dependencies intentionally changed, review the full native diff,
+verify it, and commit it before starting the release from a clean worktree.
 
 **Out of memory:**
 ```bash
@@ -163,13 +177,10 @@ MYAPP_UPLOAD_KEY_PASSWORD=<password from EAS>
 
 **Important:** Never commit these credentials to git.
 
-### Step 3: Prebuild (if needed)
+### Step 3: Confirm tracked native sources
 
-If the `android/` folder doesn't exist or native dependencies changed:
-
-```bash
-npx expo prebuild --platform android --clean
-```
+The committed `android/` project is the release source. If native dependencies
+changed, regenerate and review that project as a separate change before release.
 
 ### Step 4: Build the Release Bundle
 
@@ -206,11 +217,10 @@ Expected SHA1: `C3:70:C5:8C:85:E5:B5:92:97:82:A9:B0:47:98:40:99:AC:C8:47:43`
 
 ## iOS Release Build
 
-### Step 1: Prebuild (if needed)
+### Step 1: Confirm tracked native sources
 
-```bash
-npx expo prebuild --platform ios --clean
-```
+The committed `ios/` project is the release source. If native dependencies
+changed, regenerate and review that project as a separate change before release.
 
 ### Step 2: Install Pods
 
@@ -245,9 +255,11 @@ cd ..
 
 ## Version Management
 
-Version is managed by EAS with `appVersionSource: "remote"` in `eas.json`.
+Version is managed locally by EAS with `appVersionSource: "local"` in
+`apps/mobile/eas.json`. Production builds auto-increment the platform build
+number and synchronize the tracked native version file.
 
-To sync or bump versions:
+To inspect or deliberately set versions:
 
 ```bash
 # Check current version
@@ -258,7 +270,7 @@ eas build:version:set --platform android --version 1.0.1
 eas build:version:set --platform ios --version 1.0.1
 ```
 
-For local builds, you may need to update `app.json` version manually:
+The user-facing version remains in `app.json`:
 
 ```json
 {
@@ -291,11 +303,13 @@ If Play Store rejects with "signed with wrong key":
 ### Build Failures After Dependency Changes
 
 ```bash
-# Clean and rebuild
+# Clean the existing tracked Android project and rebuild it
 cd android && ./gradlew clean && cd ..
-npx expo prebuild --platform android --clean
 cd android && ./gradlew bundleRelease
 ```
+
+If native regeneration is genuinely required, do it as a separate reviewed and
+committed source change before running the release build.
 
 ### iOS Signing Issues
 

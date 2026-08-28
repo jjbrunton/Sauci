@@ -37,6 +37,27 @@ for (const file of allFiles) {
 
 if (!scoped) {
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const mobilePackageFile = path.join(root, 'apps', 'mobile', 'package.json');
+  const mobilePackageJson = JSON.parse(await readFile(mobilePackageFile, 'utf8'));
+  const releaseBuildScripts = Object.entries(mobilePackageJson.scripts ?? {})
+    .filter(([name]) => /^release:(ios|android)(:preview)?$/.test(name));
+  for (const [name, command] of releaseBuildScripts) {
+    if (/\bexpo\s+prebuild\b/.test(command)) {
+      fail(
+        mobilePackageFile,
+        `${name} regenerates tracked native projects before packaging`,
+        'keep native regeneration as an explicit reviewed change and let the release script build the checked-in native sources',
+      );
+    }
+    if (/\b(?:fastlane|eas)\b[^\n]*(?:upload|submit)|\bupload_to_/.test(command)) {
+      fail(
+        mobilePackageFile,
+        `${name} combines build creation with store mutation`,
+        'keep build scripts artifact-only and expose upload or submission as a separately authorized command',
+      );
+    }
+  }
+
   for (const app of (await readdir(path.join(root, 'apps'), { withFileTypes: true })).filter((entry) => entry.isDirectory())) {
     const packageFile = path.join(root, 'apps', app.name, 'package.json');
     if (!(await exists(packageFile))) continue;
