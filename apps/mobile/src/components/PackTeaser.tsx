@@ -18,7 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { appDataApi } from "../lib/appDataApi";
 import { getPackIconName } from "../lib/packIcons";
 import { colors, gradients, spacing, radius, typography } from "../theme";
 
@@ -84,14 +84,7 @@ export function PackTeaser({
     const fetchQuestions = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase.rpc("get_pack_teaser_questions", {
-                target_pack_id: packId,
-            });
-
-            if (error) {
-                console.error("Error fetching teaser questions:", error);
-                return;
-            }
+            const { questions: data } = await appDataApi.packTeaser(packId);
 
             // Take only the first 3 questions for the teaser
             const previewQuestions = (data || [])

@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { supabase } from "../../src/lib/supabase";
+import { appDataApi } from "../../src/lib/appDataApi";
 import { usePacksStore, useSubscriptionStore, useAuthStore } from "../../src/store";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -69,14 +69,8 @@ export default function PackDetailsScreen() {
 
     const fetchPackDetails = async () => {
         try {
-            const { data, error } = await supabase
-                .from("questions")
-                .select("id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, created_at")
-                .eq("pack_id", id)
-                .order("created_at");
-
-            if (error) throw error;
-            setQuestions(data || []);
+            const { questions } = await appDataApi.packQuestions(String(id));
+            setQuestions(questions);
         } catch (error) {
             console.error("Error fetching questions:", error);
         } finally {

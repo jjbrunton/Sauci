@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
-import { invokeWithAuthRetry } from "../lib/authErrorHandler";
+import { apiClient } from "../lib/apiClient";
 import type { Question, QuestionPack, AnswerType, ResponseData } from "@/types";
 import { useAuthStore } from "./authStore";
 import { useMatchStore } from "./matchStore";
@@ -87,51 +86,9 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
 
         try {
             const currentPage = refresh ? 0 : state.page;
-            const from = currentPage * BATCH_SIZE;
-            const to = from + BATCH_SIZE - 1;
-
-            // Fetch total count on refresh
-            let totalCount = state.totalCount;
-            if (refresh) {
-                const { count, error: countError } = await supabase
-                    .from("responses")
-                    .select("*, question:questions!inner(pack:question_packs!inner(id))", { count: "exact", head: true })
-                    .eq("user_id", userId);
-
-                if (!countError) {
-                    totalCount = count ?? 0;
-                }
-            }
-
-            // Fetch all user's responses with questions and packs
-            const { data: responses, error: responsesError } = await supabase
-                .from("responses")
-                .select(`
-                    id,
-                    question_id,
-                    answer,
-                    response_data,
-                    created_at,
-                    question:questions!inner(
-                        id,
-                        text,
-                        partner_text,
-                        intensity,
-                        pack_id,
-                        question_type,
-                        config,
-                        pack:question_packs!inner(id, name, icon)
-                    )
-                `)
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false })
-                .range(from, to);
-
-            if (responsesError) {
-                console.error("Error fetching responses:", responsesError);
-                set({ isLoading: false, isLoadingMore: false });
-                return;
-            }
+            const result = await apiClient.get<{responses: ResponseWithQuestion[];totalCount:number}>(`/v1/me/responses?page=${currentPage}&limit=${BATCH_SIZE}`);
+            const responses = result.responses;
+            const totalCount = result.totalCount;
 
             if (!responses || responses.length === 0) {
                 if (refresh) {
@@ -142,71 +99,7 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
                 return;
             }
 
-            // Get question IDs for match lookup
-            const questionIds = responses.map((r) => r.question_id);
-
-            // Fetch matches for these questions
-            const { data: matches } = await supabase
-                .from("matches")
-                .select("id, question_id")
-                .eq("couple_id", coupleId)
-                .in("question_id", questionIds);
-
-            // Create a map of question_id -> match_id
-            const matchMap = new Map<string, string>();
-            matches?.forEach((m) => matchMap.set(m.question_id, m.id));
-
-            // Fetch partner's responses to check if they've answered
-            const { data: partnerResponses } = await supabase
-                .from("responses")
-                .select("question_id")
-                .eq("couple_id", coupleId)
-                .neq("user_id", userId)
-                .in("question_id", questionIds);
-
-            // Create a set of question IDs that partner has answered
-            const partnerAnsweredSet = new Set<string>(
-                partnerResponses?.map((r) => r.question_id) || []
-            );
-
-            // Transform responses with match and partner info
-            const transformedResponses: ResponseWithQuestion[] = responses
-                .filter((r) => {
-                    // Supabase returns single relations as objects, but TypeScript may infer arrays
-                    const question = r.question as any;
-                    return question && question.pack;
-                })
-                .map((r) => {
-                    // Cast to any to handle Supabase's nested select typing
-                    const question = r.question as any;
-                    const pack = question.pack as any;
-
-                    return {
-                        id: r.id,
-                        question_id: r.question_id,
-                        answer: r.answer as AnswerType,
-                        response_data: (r as any).response_data as ResponseData | null,
-                        created_at: r.created_at,
-                        question: {
-                            id: question.id,
-                            text: question.text,
-                            partner_text: question.partner_text,
-                            intensity: question.intensity,
-                            pack_id: question.pack_id,
-                            question_type: question.question_type,
-                            config: question.config ?? null,
-                            created_at: question.created_at || "",
-                            pack: {
-                                id: pack.id,
-                                name: pack.name,
-                                icon: pack.icon,
-                            },
-                        },
-                        has_match: matchMap.has(r.question_id),
-                        match_id: matchMap.get(r.question_id),
-                        partner_answered: partnerAnsweredSet.has(r.question_id),
-                    };
-                });
+            const transformedResponses = responses;
             
             set((state) => ({
                 responses: refresh
@@ -230,21 +123,12 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
         confirmDelete = false,
         responseData?: ResponseData | null
     ): Promise<UpdateResponseResult> => {
-        const { data, error } = await invokeWithAuthRetry("update-response", {
-            body: {
-                question_id: questionId,
+        try {
+            const result = await apiClient.patch<UpdateResponseResult>(`/v1/responses/${questionId}`, {
                 new_answer: newAnswer,
                 confirm_delete_match: confirmDelete,
                 response_data: responseData,
-            },
-        });
-
-        if (error) {
-            console.error("Error updating response:", error);
-            return { success: false, error: error.message || "Failed to update response" };
-        }
-
-        const result = data as UpdateResponseResult;
+            });
 
         // If update was successful (not just requiring confirmation), update local state
         if (result.success && !result.requires_confirmation) {
@@ -285,7 +169,11 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
             }
         }
 
-        return result;
+            return result;
+        } catch (error) {
+            console.error("Error updating response:", error);
+            return { success: false, error: error instanceof Error ? error.message : "Failed to update response" };
+        }
     },
 
     setGroupBy: (groupBy: GroupByOption) => {

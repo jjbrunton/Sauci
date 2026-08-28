@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { Button } from '@/components/ui/button';
@@ -150,12 +150,12 @@ export function QuestionsPage() {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
-            const packPromise = supabase
+            const packPromise = adminData
                 .from('question_packs')
                 .select('id, name, description, icon')
                 .eq('id', packId)
                 .single();
-            let questionsQuery = supabase
+            let questionsQuery = adminData
                 .from('questions')
                 .select('*', { count: 'exact' })
                 .eq('pack_id', packId)
@@ -167,7 +167,7 @@ export function QuestionsPage() {
             }
 
             const questionsPromise = questionsQuery;
-            const allPackPromise = supabase
+            const allPackPromise = adminData
                 .from('questions')
                 .select('id, text, inverse_of')
                 .eq('pack_id', packId)
@@ -250,7 +250,7 @@ export function QuestionsPage() {
     // Fetch all questions in pack for inverse_of dropdown
     const fetchAllPackQuestions = useCallback(async () => {
         if (!packId) return;
-        const { data } = await supabase
+        const { data } = await adminData
             .from('questions')
             .select('id, text, inverse_of')
             .eq('pack_id', packId)
@@ -317,7 +317,7 @@ export function QuestionsPage() {
         setSaving(true);
         try {
             if (editingQuestion) {
-                const { error } = await auditedSupabase.update('questions', editingQuestion.id, {
+                const { error } = await auditedAdminData.update('questions', editingQuestion.id, {
                     text: formData.text,
                     partner_text: formData.partner_text || null,
                     allowed_couple_genders: formData.allowed_couple_genders.length > 0 ? formData.allowed_couple_genders : null,
@@ -331,7 +331,7 @@ export function QuestionsPage() {
                 if (error) throw error;
                 toast.success('Question updated');
             } else {
-                const { error } = await auditedSupabase.insert('questions', {
+                const { error } = await auditedAdminData.insert('questions', {
                     pack_id: packId,
                     text: formData.text,
                     partner_text: formData.partner_text || null,
@@ -363,7 +363,7 @@ export function QuestionsPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('questions', question.id);
+            const { error } = await auditedAdminData.delete('questions', question.id);
 
             if (error) throw error;
             toast.success('Question deleted');
@@ -396,7 +396,7 @@ export function QuestionsPage() {
 
                 // Insert standalone questions first (no inverse_of)
                 if (standaloneQuestions.length > 0) {
-                    const { error: standaloneError } = await auditedSupabase.insert(
+                    const { error: standaloneError } = await auditedAdminData.insert(
                         'questions',
                         standaloneQuestions.map(q => ({
                             pack_id: packId,
@@ -415,7 +415,7 @@ export function QuestionsPage() {
                     if (pair.length >= 2) {
                         // First question is primary (inverse_of = NULL)
                         const primary = pair[0];
-                        const { data: primaryData, error: primaryError } = await auditedSupabase.insert(
+                        const { data: primaryData, error: primaryError } = await auditedAdminData.insert(
                             'questions',
                             [{
                                 pack_id: packId,
@@ -432,7 +432,7 @@ export function QuestionsPage() {
                         const primaryId = primaryData?.[0]?.id;
                         if (primaryId) {
                             const inverse = pair[1];
-                            const { error: inverseError } = await auditedSupabase.insert(
+                            const { error: inverseError } = await auditedAdminData.insert(
                                 'questions',
                                 [{
                                     pack_id: packId,
@@ -449,7 +449,7 @@ export function QuestionsPage() {
                         // Handle any additional questions in the pair (shouldn't happen, but just in case)
                         for (let i = 2; i < pair.length; i++) {
                             const extra = pair[i];
-                            const { error: extraError } = await auditedSupabase.insert(
+                            const { error: extraError } = await auditedAdminData.insert(
                                 'questions',
                                 [{
                                     pack_id: packId,
@@ -464,7 +464,7 @@ export function QuestionsPage() {
                         }
                     } else if (pair.length === 1) {
                         // Single question with pair_id but no pair - treat as standalone
-                        const { error } = await auditedSupabase.insert(
+                        const { error } = await auditedAdminData.insert(
                             'questions',
                             [{
                             pack_id: packId,
@@ -497,7 +497,7 @@ export function QuestionsPage() {
 
         setReviewLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await adminData
                 .from('questions')
                 .select('id, pack_id, text, partner_text, intensity, allowed_couple_genders, target_user_genders, required_props, question_type, created_at')
                 .eq('pack_id', packId)
@@ -544,7 +544,7 @@ export function QuestionsPage() {
         setBulkDeleting(true);
         try {
             await Promise.all(
-                Array.from(selectedIds).map(id => auditedSupabase.delete('questions', id))
+                Array.from(selectedIds).map(id => auditedAdminData.delete('questions', id))
             );
             toast.success(`${count} question${count !== 1 ? 's' : ''} deleted`);
             setSelectedIds(new Set());

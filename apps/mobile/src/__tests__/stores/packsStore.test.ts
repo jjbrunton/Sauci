@@ -1,64 +1,67 @@
-import { usePacksStore } from '@/store/packsStore';
+import { apiClient } from '@/lib/apiClient';
 import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/lib/supabase';
+import { usePacksStore } from '@/store/packsStore';
 
-function createThenableQuery(result: any) {
-    const query: any = {
-        select: jest.fn(() => query),
-        eq: jest.fn(() => query),
-        or: jest.fn(() => query),
-        order: jest.fn(() => query),
-        upsert: jest.fn(() => query),
-        then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
-    };
-    return query;
-}
-
-describe('packsStore', () => {
+describe('packsStore standalone API integration', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
-        usePacksStore.setState({ packs: [], categories: [], enabledPackIds: [], packProgress: new Map(), isLoading: false } as any);
-        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: false } } as any);
+        jest.restoreAllMocks();
+        usePacksStore.setState({
+            packs: [], categories: [], enabledPackIds: [], packProgress: new Map(),
+            isLoading: false, showAllIntensities: false,
+        } as any);
+        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: true } } as any);
     });
 
-    it('fetches categories/packs and filters by hide_nsfw', async () => {
-        // Set hide_nsfw to true - should filter intensity to max 2
-        useAuthStore.setState({ user: { id: 'me', couple_id: 'c1', hide_nsfw: true } } as any);
-
-        const categoriesQuery = createThenableQuery({ data: [{ id: 'cat1' }] });
-        const packsQuery = createThenableQuery({ data: [{ id: 'pack1', is_explicit: false }] });
-        const enabledQuery = createThenableQuery({ data: [{ pack_id: 'pack1' }] });
-        const responsesQuery = createThenableQuery({ data: [] });
-
-        (supabase.from as jest.Mock)
-            .mockReturnValueOnce(categoriesQuery)
-            .mockReturnValueOnce(packsQuery)
-            .mockReturnValueOnce(enabledQuery)
-            .mockReturnValueOnce(responsesQuery);
+    it('loads the server-filtered catalog, couple selection, and user progress', async () => {
+        const getSpy = jest.spyOn(apiClient, 'get')
+            .mockResolvedValueOnce({
+                categories: [{ id: 'cat1', is_public: true }],
+                packs: [{ id: 'pack1', questions: [{ count: 3 }] }],
+            })
+            .mockResolvedValueOnce({ enabledPackIds: ['pack1'] })
+            .mockResolvedValueOnce({
+                progress: [{ packId: 'pack1', totalQuestions: 3, answeredQuestions: 1 }],
+            });
 
         await usePacksStore.getState().fetchPacks();
 
-        // When hide_nsfw=true, max_intensity=2, so or filter is called
-        expect(packsQuery.or).toHaveBeenCalledWith('max_intensity.is.null,max_intensity.lte.2');
-        // When hide_nsfw=true, explicit packs are filtered out
-        expect(packsQuery.eq).toHaveBeenCalledWith('is_explicit', false);
-
-        const state = usePacksStore.getState();
-        expect(state.categories).toEqual([{ id: 'cat1' }]);
-        expect(state.packs).toEqual([{ id: 'pack1', is_explicit: false }]);
-        expect(state.enabledPackIds).toEqual(['pack1']);
-        expect(state.isLoading).toBe(false);
+        expect(getSpy).toHaveBeenNthCalledWith(1, '/v1/packs?showAllIntensities=false');
+        expect(getSpy).toHaveBeenNthCalledWith(2, '/v1/me/enabled-packs');
+        expect(getSpy).toHaveBeenNthCalledWith(3, '/v1/me/pack-progress');
+        expect(usePacksStore.getState()).toMatchObject({ enabledPackIds: ['pack1'], isLoading: false });
+        expect(usePacksStore.getState().packProgress.get('pack1')).toEqual({
+            totalQuestions: 3, answeredQuestions: 1,
+        });
     });
 
-    it('togglePack performs optimistic update and returns success on upsert', async () => {
+    it('sends an authenticated toggle and accepts the authoritative enabled list', async () => {
         usePacksStore.setState({ enabledPackIds: [] } as any);
+        const putSpy = jest.spyOn(apiClient, 'put').mockResolvedValueOnce({ enabledPackIds: ['pack1'] });
 
-        const upsertQuery = createThenableQuery({ error: null });
-        (supabase.from as jest.Mock).mockReturnValueOnce(upsertQuery);
+        await expect(usePacksStore.getState().togglePack('pack1')).resolves.toEqual({ success: true });
 
-        const result = await usePacksStore.getState().togglePack('pack1');
-
-        expect(result.success).toBe(true);
+        expect(putSpy).toHaveBeenCalledWith('/v1/me/enabled-packs/pack1', { enabled: true });
         expect(usePacksStore.getState().enabledPackIds).toEqual(['pack1']);
+    });
+
+    it('rolls back an optimistic toggle when the API rejects it', async () => {
+        usePacksStore.setState({ enabledPackIds: ['pack1'] } as any);
+        jest.spyOn(apiClient, 'put').mockRejectedValueOnce(new Error('offline'));
+        jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        await expect(usePacksStore.getState().togglePack('pack1')).resolves.toEqual({
+            success: false, reason: 'error',
+        });
+        expect(usePacksStore.getState().enabledPackIds).toEqual(['pack1']);
+    });
+
+    it('does not issue couple requests when the user has no couple', async () => {
+        useAuthStore.setState({ user: { id: 'me', couple_id: null } } as any);
+        const getSpy = jest.spyOn(apiClient, 'get');
+
+        await usePacksStore.getState().fetchEnabledPacks();
+
+        expect(getSpy).not.toHaveBeenCalled();
+        expect(usePacksStore.getState().enabledPackIds).toEqual([]);
     });
 });

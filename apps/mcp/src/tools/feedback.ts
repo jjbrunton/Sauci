@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerFeedbackTools(server: McpServer) {
@@ -14,7 +14,7 @@ export function registerFeedbackTools(server: McpServer) {
       offset: z.number().default(0)
     },
     async ({ type, status, limit, offset }) => {
-      let query = supabase
+      let query = adminData
         .from('feedback')
         .select(`
           *,
@@ -41,7 +41,7 @@ export function registerFeedbackTools(server: McpServer) {
     'Get full feedback details',
     { id: z.string() },
     async ({ id }) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('feedback')
         .select(`
           *,
@@ -67,9 +67,9 @@ export function registerFeedbackTools(server: McpServer) {
       status: z.enum(['new', 'reviewed', 'in_progress', 'resolved', 'closed'])
     },
     async ({ id, status }) => {
-      const { data: oldData } = await supabase.from('feedback').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('feedback').select('*').eq('id', id).single();
       
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('feedback')
         .update({ status })
         .eq('id', id)
@@ -97,9 +97,9 @@ export function registerFeedbackTools(server: McpServer) {
     'Add admin notes to feedback',
     { id: z.string(), notes: z.string() },
     async ({ id, notes }) => {
-      const { data: oldData } = await supabase.from('feedback').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('feedback').select('*').eq('id', id).single();
       
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('feedback')
         .update({ admin_notes: notes })
         .eq('id', id)

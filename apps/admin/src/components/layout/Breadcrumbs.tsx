@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 
 interface BreadcrumbItem {
     label: string;
@@ -32,7 +32,7 @@ function useBreadcrumbs(): { breadcrumbs: BreadcrumbItem[]; loading: boolean } {
             if (params.packId && !params.categoryId) {
                 setLoading(true);
                 try {
-                    const { data } = await supabase
+                    const { data } = await adminData
                         .from('question_packs')
                         .select('category_id, categories(name)')
                         .eq('id', params.packId)
@@ -63,7 +63,7 @@ function useBreadcrumbs(): { breadcrumbs: BreadcrumbItem[]; loading: boolean } {
             if (params.userId) {
                 setLoading(true);
                 try {
-                    const { data } = await supabase
+                    const { data } = await adminData
                         .from('profiles')
                         .select('id, name')
                         .eq('id', params.userId)

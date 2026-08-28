@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { useEntityForm } from '@/hooks/useEntityForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -103,7 +103,7 @@ export function PacksPage() {
         try {
             // Fetch category info
             if (categoryId) {
-                const { data: cat } = await supabase
+                const { data: cat } = await adminData
                     .from('categories')
                     .select('id, name, icon')
                     .eq('id', categoryId)
@@ -111,7 +111,7 @@ export function PacksPage() {
                 setCategory(cat);
             }
 
-            const { data: categoriesData } = await supabase
+            const { data: categoriesData } = await adminData
                 .from('categories')
                 .select('id, name')
                 .order('name');
@@ -121,7 +121,7 @@ export function PacksPage() {
             const to = from + pageSize - 1;
 
             // Fetch packs
-            let query = supabase
+            let query = adminData
                 .from('question_packs')
                 .select('*', { count: 'exact' })
                 .order('sort_order', { ascending: true })
@@ -141,7 +141,7 @@ export function PacksPage() {
             const questionCounts: Record<string, number> = {};
 
             if (packIds.length > 0) {
-                const { data: questions } = await supabase
+                const { data: questions } = await adminData
                     .from('questions')
                     .select('pack_id')
                     .in('pack_id', packIds);
@@ -152,7 +152,7 @@ export function PacksPage() {
             }
 
             // Fetch all topics
-            const { data: topicsData } = await supabase
+            const { data: topicsData } = await adminData
                 .from('topics')
                 .select('id, name')
                 .order('name');
@@ -161,7 +161,7 @@ export function PacksPage() {
             // Fetch pack_topics relationships
             let packTopicsData: any[] = [];
             if (packIds.length > 0) {
-                const { data } = await supabase
+                const { data } = await adminData
                     .from('pack_topics')
                     .select('pack_id, topic_id, topics(id, name)')
                     .in('pack_id', packIds);
@@ -236,7 +236,7 @@ export function PacksPage() {
                     ? true
                     : (form.formData.scheduled_release_at ? false : undefined);
 
-                const { error } = await auditedSupabase.update('question_packs', form.editingItem.id, {
+                const { error } = await auditedAdminData.update('question_packs', form.editingItem.id, {
                     name: form.formData.name,
                     description: form.formData.description || null,
                     icon: form.formData.icon || null,
@@ -254,7 +254,7 @@ export function PacksPage() {
                 if (error) throw error;
                 packId = form.editingItem.id;
             } else {
-                const { data, error } = await supabase
+                const { data, error } = await adminData
                     .from('question_packs')
                     .insert({
                         name: form.formData.name,
@@ -279,10 +279,10 @@ export function PacksPage() {
             }
 
             // Update topics
-            await supabase.from('pack_topics').delete().eq('pack_id', packId);
+            await adminData.from('pack_topics').delete().eq('pack_id', packId);
 
             if (selectedTopicIds.size > 0) {
-                const { error: topicsError } = await supabase
+                const { error: topicsError } = await adminData
                     .from('pack_topics')
                     .insert(
                         Array.from(selectedTopicIds).map(topicId => ({
@@ -310,7 +310,7 @@ export function PacksPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('question_packs', pack.id);
+            const { error } = await auditedAdminData.delete('question_packs', pack.id);
             if (error) throw error;
             toast.success('Pack deleted');
             fetchData();
@@ -351,8 +351,8 @@ export function PacksPage() {
             const targetOrder = targetPack.sort_order ?? targetIndex;
 
             const [currentUpdate, targetUpdate] = await Promise.all([
-                auditedSupabase.update('question_packs', pack.id, { sort_order: targetOrder }),
-                auditedSupabase.update('question_packs', targetPack.id, { sort_order: currentOrder }),
+                auditedAdminData.update('question_packs', pack.id, { sort_order: targetOrder }),
+                auditedAdminData.update('question_packs', targetPack.id, { sort_order: currentOrder }),
             ]);
 
             if (currentUpdate.error || targetUpdate.error) {

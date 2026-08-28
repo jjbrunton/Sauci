@@ -2,6 +2,7 @@
   "name": "sauci",
   "private": true,
   "workspaces": [
+    "apps/api",
     "apps/admin",
     "apps/mcp",
     "apps/mobile",

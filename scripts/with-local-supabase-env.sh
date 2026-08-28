@@ -6,6 +6,15 @@ PROFILE="${1:?usage: with-local-supabase-env.sh <web|admin|mobile|mcp|tests> <co
 shift
 [ "$#" -gt 0 ] || { echo "command is required" >&2; exit 2; }
 
+if [ "$PROFILE" = "mcp" ]; then
+  : "${SAUCI_ADMIN_API_URL:?SAUCI_ADMIN_API_URL is required for MCP}"
+  : "${SAUCI_ADMIN_API_TOKEN:?SAUCI_ADMIN_API_TOKEN is required for MCP}"
+  : "${SAUCI_MCP_API_KEY:?SAUCI_MCP_API_KEY is required for MCP}"
+  exec env SAUCI_ADMIN_API_URL="$SAUCI_ADMIN_API_URL" \
+    SAUCI_ADMIN_API_TOKEN="$SAUCI_ADMIN_API_TOKEN" \
+    SAUCI_MCP_API_KEY="$SAUCI_MCP_API_KEY" "$@"
+fi
+
 STATUS_ENV="$(cd "$ROOT" && npx supabase status --workdir apps -o env 2>/dev/null)" || {
   echo "Local Supabase is not running. Run scripts/dev-local.sh up." >&2
   exit 1
@@ -26,11 +35,6 @@ case "$PROFILE" in
     ;;
   mobile)
     exec env EXPO_PUBLIC_SUPABASE_URL="$API_URL" EXPO_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" "$@"
-    ;;
-  mcp)
-    exec env PORT=3002 SUPABASE_URL="$API_URL" \
-      SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" \
-      SAUCI_MCP_API_KEY="local-sauci-mcp-only" "$@"
     ;;
   tests)
     exec env SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$ANON_KEY" \

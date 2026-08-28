@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+import { apiClient } from "../lib/apiClient";
 import { useAuthStore } from "./authStore";
 
 export interface CoupleStreak {
@@ -39,15 +39,8 @@ export const useStreakStore = create<StreakState>((set) => ({
         set({ isLoading: true, error: null });
 
         try {
-            const { data, error } = await supabase
-                .from("couple_streaks")
-                .select("*")
-                .eq("couple_id", coupleId)
-                .maybeSingle();
-
-            if (error) throw error;
-
-            set({ streak: data, isLoading: false });
+            const { streak } = await apiClient.get<{streak: CoupleStreak | null}>("/v1/me/streak");
+            set({ streak, isLoading: false });
         } catch (error) {
             console.error("Error fetching streak:", error);
             set({ error: "Failed to load streak", isLoading: false });

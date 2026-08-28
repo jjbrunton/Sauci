@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Target, Users, MessageSquare, Flame, Heart, Smile, Shield, TrendingUp, PieChart } from 'lucide-react';
@@ -65,14 +65,14 @@ export function UsageInsightsPage() {
         const fetchStats = async () => {
             try {
                 // Get total users count
-                const { count: total } = await supabase
+                const { count: total } = await adminData
                     .from('profiles')
                     .select('*', { count: 'exact', head: true });
 
                 setTotalUsers(total || 0);
 
                 // Get onboarded users count
-                const { count: onboarded } = await supabase
+                const { count: onboarded } = await adminData
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
                     .eq('onboarding_completed', true);
@@ -80,7 +80,7 @@ export function UsageInsightsPage() {
                 setOnboardedUsers(onboarded || 0);
 
                 // Get usage reason breakdown
-                const { data: usageData } = await supabase
+                const { data: usageData } = await adminData
                     .from('profiles')
                     .select('usage_reason')
                     .not('usage_reason', 'is', null);
@@ -103,7 +103,7 @@ export function UsageInsightsPage() {
                 setUsageStats(usageStatsArray);
 
                 // Get gender breakdown
-                const { data: genderData } = await supabase
+                const { data: genderData } = await adminData
                     .from('profiles')
                     .select('gender')
                     .not('gender', 'is', null);

@@ -2,7 +2,8 @@
 
 Hono service exposing privileged administrative tools.
 
-- Treat the service-role key and `SAUCI_MCP_API_KEY` as secrets.
+- Treat `SAUCI_ADMIN_API_TOKEN` and `SAUCI_MCP_API_KEY` as secrets. MCP must
+  never receive a Supabase service-role key or a direct database credential.
 - Fail closed when MCP authentication is missing outside explicit local mode.
 - Every mutation validates inputs, authorizes the operation, and writes audit
   evidence where the product contract requires it.

@@ -55,6 +55,7 @@ evidence/
 e2e/.auth/
 e2e/test-results/
 e2e/playwright-report/
+.playwright-mcp/
 
 # Misc
 *.pem
@@ -70,3 +71,4 @@ nul
 # Agent runtime evidence (maintained lessons remain tracked)
 .ralph/activity.log
 .ralph/runs/
+.migration-state/

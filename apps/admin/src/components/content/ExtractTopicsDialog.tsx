@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Tags, Check, Plus, X } from 'lucide-react';
 import { extractTopicsFromPack, ExtractedTopic } from '@/lib/openai';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { toast } from 'sonner';
 
 interface ExtractTopicsDialogProps {
@@ -37,7 +37,7 @@ export function ExtractTopicsDialog({ open, onOpenChange, pack, onUpdated }: Ext
         setAnalyzing(true);
         try {
             // Fetch questions for this pack
-            const { data: questions, error: questionsError } = await supabase
+            const { data: questions, error: questionsError } = await adminData
                 .from('questions')
                 .select('text')
                 .eq('pack_id', pack.id);
@@ -50,7 +50,7 @@ export function ExtractTopicsDialog({ open, onOpenChange, pack, onUpdated }: Ext
             }
 
             // Fetch existing topics
-            const { data: existingTopics, error: topicsError } = await supabase
+            const { data: existingTopics, error: topicsError } = await adminData
                 .from('topics')
                 .select('id, name')
                 .order('name');
@@ -93,7 +93,7 @@ export function ExtractTopicsDialog({ open, onOpenChange, pack, onUpdated }: Ext
                 .map(t => t.existingTopicId!);
 
             if (newTopics.length > 0) {
-                const { data: createdTopics, error: createError } = await supabase
+                const { data: createdTopics, error: createError } = await adminData
                     .from('topics')
                     .insert(newTopics.map(t => ({ name: t.name })))
                     .select('id');
@@ -106,14 +106,14 @@ export function ExtractTopicsDialog({ open, onOpenChange, pack, onUpdated }: Ext
             }
 
             // Remove existing pack_topics for this pack
-            await supabase
+            await adminData
                 .from('pack_topics')
                 .delete()
                 .eq('pack_id', pack.id);
 
             // Insert new pack_topics relationships
             if (existingTopicIds.length > 0) {
-                const { error: linkError } = await supabase
+                const { error: linkError } = await adminData
                     .from('pack_topics')
                     .insert(existingTopicIds.map(topicId => ({
                         pack_id: pack.id,

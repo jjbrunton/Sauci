@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase, supabaseConfig } from '@/config';
+import { adminData, adminRequest, adminBinaryRequest } from '@/lib/adminApi';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,29 +87,9 @@ function ChatImage({ messageId }: { messageId: string }) {
                 setError(null);
                 setUrl(null);
 
-                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        apikey: supabaseConfig.anonKey,
-                        Authorization: `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ messageId }),
+                const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                    method: 'POST', body: { messageId },
                 });
-
-                if (!res.ok) {
-                    const raw = await res.text().catch(() => '');
-                    let message = raw;
-                    try {
-                        const parsed = JSON.parse(raw) as { error?: unknown };
-                        if (typeof parsed?.error === 'string') message = parsed.error;
-                    } catch {
-                        // ignore
-                    }
-                    throw new Error(message || `Failed to load media (${res.status})`);
-                }
-
-                const blob = await res.blob();
                 objectUrl = URL.createObjectURL(blob);
 
                 if (cancelled) return;
@@ -178,29 +158,9 @@ function ChatVideo({ messageId }: { messageId: string }) {
                 setError(null);
                 setUrl(null);
 
-                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        apikey: supabaseConfig.anonKey,
-                        Authorization: `Bearer ${session.access_token}`,
-                    },
-                    body: JSON.stringify({ messageId }),
+                const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                    method: 'POST', body: { messageId },
                 });
-
-                if (!res.ok) {
-                    const raw = await res.text().catch(() => '');
-                    let message = raw;
-                    try {
-                        const parsed = JSON.parse(raw) as { error?: unknown };
-                        if (typeof parsed?.error === 'string') message = parsed.error;
-                    } catch {
-                        // ignore
-                    }
-                    throw new Error(message || `Failed to load media (${res.status})`);
-                }
-
-                const blob = await res.blob();
                 objectUrl = URL.createObjectURL(blob);
 
                 if (cancelled) return;
@@ -287,18 +247,13 @@ function DecryptedMessageText({ message }: { message: Message }) {
         const decrypt = async () => {
             setIsDecrypting(true);
             try {
-                const { data, error } = await supabase.functions.invoke('admin-decrypt-message', {
-                    body: { messageId: message.id },
+                const data = await adminRequest<{ content?: string | null }>('/v1/admin/actions/decrypt-message', {
+                    method: 'POST', body: { messageId: message.id },
                 });
 
                 if (cancelled) return;
 
-                if (error) {
-                    setText('[Unable to decrypt]');
-                    return;
-                }
-
-                setText((data as { content?: string | null } | null)?.content ?? null);
+                setText(data.content ?? null);
             } catch (err) {
                 if (cancelled) return;
                 setText('[Unable to decrypt]');
@@ -342,7 +297,7 @@ export function MatchChatPage() {
         setLoading(true);
         try {
             // Fetch user profile
-            const { data: userData } = await supabase
+            const { data: userData } = await adminData
                 .from('profiles')
                 .select('id, name, avatar_url, couple_id')
                 .eq('id', userId)
@@ -352,7 +307,7 @@ export function MatchChatPage() {
 
             // Fetch partner
             if (userData?.couple_id) {
-                const { data: partnerData } = await supabase
+                const { data: partnerData } = await adminData
                     .from('profiles')
                     .select('id, name, avatar_url')
                     .eq('couple_id', userData.couple_id)
@@ -365,7 +320,7 @@ export function MatchChatPage() {
             }
 
             // Fetch match with question
-            const { data: matchData } = await supabase
+            const { data: matchData } = await adminData
                 .from('matches')
                 .select(`
             id, match_type,
@@ -380,7 +335,7 @@ export function MatchChatPage() {
             const to = from + pageSize - 1;
 
             // Fetch messages
-            const { data: messageData, error: messagesError, count } = await supabase
+            const { data: messageData, error: messagesError, count } = await adminData
                 .from('messages')
                 .select('*', { count: 'exact' })
                 .eq('match_id', matchId)

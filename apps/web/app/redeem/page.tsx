@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Gift, Mail, Key, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { redeemCode } from './redemptionApi'
 
 export default function RedeemPage() {
   const [email, setEmail] = useState('')
@@ -35,21 +36,7 @@ export default function RedeemPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/redeem-code`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: email.trim(),
-            code: code.trim(),
-          }),
-        }
-      )
-
-      const data = await response.json()
+      const data = await redeemCode(email.trim(), code.trim())
 
       if (data.success) {
         setIsRedeemed(true)

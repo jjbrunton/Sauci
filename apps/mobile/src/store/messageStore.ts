@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+import { chatApi } from "../lib/chatApi";
 import type { Database } from "@/types/supabase";
 import { useAuthStore } from "./authStore";
 import { useMatchStore } from "./matchStore";
@@ -39,13 +39,8 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             return;
         }
 
-        const { count } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .neq("user_id", userId)
-            .is("read_at", null);
-
-        set({ unreadCount: count || 0 });
+        const { total } = await chatApi.unread();
+        set({ unreadCount: total });
     },
 
     addMessage: (message) => {
@@ -73,26 +68,13 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const userId = useAuthStore.getState().user?.id;
         if (!userId) return;
 
-        // Get count of unread messages before marking them read
-        const { count: unreadInMatch } = await supabase
-            .from("messages")
-            .select("*", { count: "exact", head: true })
-            .eq("match_id", matchId)
-            .neq("user_id", userId)
-            .is("read_at", null);
-
-        await supabase
-            .from("messages")
-            .update({ read_at: new Date().toISOString() })
-            .eq("match_id", matchId)
-            .neq("user_id", userId)
-            .is("read_at", null);
+        const { updated: unreadInMatch } = await chatApi.markRead(matchId);
 
         // Refetch global unread count
         await get().fetchUnreadCount();
 
         // Sync per-match unread count in matchStore
-        if (unreadInMatch && unreadInMatch > 0) {
+        if (unreadInMatch > 0) {
             useMatchStore.getState().updateMatchUnreadCount(matchId, -unreadInMatch);
         }
     },

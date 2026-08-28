@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -100,7 +100,7 @@ export function RedemptionCodesPage() {
             const to = from + pageSize - 1;
             const trimmedSearch = search.trim();
 
-            let query = supabase
+            let query = adminData
                 .from('redemption_codes')
                 .select('*', { count: 'exact' })
                 .order('created_at', { ascending: false });
@@ -129,7 +129,7 @@ export function RedemptionCodesPage() {
             const from = (redemptionsPage - 1) * redemptionsPageSize;
             const to = from + redemptionsPageSize - 1;
 
-            const { data: redemptionData, error: redemptionError, count } = await supabase
+            const { data: redemptionData, error: redemptionError, count } = await adminData
                 .from('code_redemptions')
                 .select('id, user_id, redeemed_at', { count: 'exact' })
                 .eq('code_id', codeId)
@@ -142,7 +142,7 @@ export function RedemptionCodesPage() {
 
             if (redemptionData && redemptionData.length > 0) {
                 const userIds = redemptionData.map(r => r.user_id);
-                const { data: profileData } = await supabase
+                const { data: profileData } = await adminData
                     .from('profiles')
                     .select('id, name, email')
                     .in('id', userIds);
@@ -200,7 +200,7 @@ export function RedemptionCodesPage() {
 
         setIsSubmitting(true);
         try {
-            const { error } = await auditedSupabase.insert('redemption_codes', {
+            const { error } = await auditedAdminData.insert('redemption_codes', {
                 code: formData.code.toUpperCase().trim(),
                 description: formData.description.trim() || null,
                 max_uses: formData.max_uses,
@@ -229,7 +229,7 @@ export function RedemptionCodesPage() {
 
     const handleToggleActive = async (code: RedemptionCode) => {
         try {
-            const { error } = await auditedSupabase.update('redemption_codes', code.id, {
+            const { error } = await auditedAdminData.update('redemption_codes', code.id, {
                 is_active: !code.is_active,
             });
 
@@ -248,7 +248,7 @@ export function RedemptionCodesPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('redemption_codes', code.id);
+            const { error } = await auditedAdminData.delete('redemption_codes', code.id);
 
             if (error) throw error;
 

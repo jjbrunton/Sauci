@@ -1,14 +1,35 @@
-import { useAuthStore } from '@/store/authStore';
-import { useMatchStore } from '@/store/matchStore';
-import { usePacksStore } from '@/store/packsStore';
-import { useMessageStore } from '@/store/messageStore';
-import { useSubscriptionStore } from '@/store/subscriptionStore';
-import { supabase } from '@/lib/supabase';
+import { ApiError, apiClient } from "@/lib/apiClient";
+import { authClient } from "@/lib/authClient";
+import { coupleApi } from "@/lib/coupleApi";
+import { profileSettingsApi } from "@/lib/profileSettingsApi";
+import { useAuthStore } from "@/store/authStore";
+import { useMatchStore } from "@/store/matchStore";
+import { useMessageStore } from "@/store/messageStore";
+import { usePacksStore } from "@/store/packsStore";
+import { useSubscriptionStore } from "@/store/subscriptionStore";
+import type { Profile } from "@/types";
 
-describe('authStore', () => {
+const profile = {
+    id: "me",
+    name: "Test User",
+    email: "test@example.com",
+    avatar_url: null,
+    push_token: null,
+    is_premium: false,
+    couple_id: null,
+    gender: null,
+    show_explicit_content: false,
+    max_intensity: 3,
+    hide_nsfw: true,
+    onboarding_completed: false,
+    onboarding_version: 0,
+    created_at: "2026-08-27T00:00:00.000Z",
+    updated_at: "2026-08-27T00:00:00.000Z",
+};
+
+describe("authStore", () => {
     beforeEach(() => {
         jest.clearAllMocks();
-
         useAuthStore.setState({
             user: null,
             couple: null,
@@ -17,69 +38,93 @@ describe('authStore', () => {
             isAuthenticated: false,
             isAnonymous: false,
         } as any);
-
-        useMatchStore.setState({ matches: [{ id: 'm1' }], newMatchesCount: 1 } as any);
-        usePacksStore.setState({ enabledPackIds: ['p1'] } as any);
-        useMessageStore.setState({ unreadCount: 3, lastMessage: { id: 'msg1' }, activeMatchId: 'match1' } as any);
+        useMatchStore.setState({ matches: [{ id: "m1" }], newMatchesCount: 1 } as any);
+        usePacksStore.setState({ enabledPackIds: ["p1"] } as any);
+        useMessageStore.setState({ unreadCount: 3, lastMessage: { id: "msg1" }, activeMatchId: "match1" } as any);
         useSubscriptionStore.setState({ subscription: { isProUser: true } } as any);
     });
 
-    it('sets unauthenticated when no session exists', async () => {
-        (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({ data: { session: null } });
+    it("sets unauthenticated when no hosted auth session exists", async () => {
+        (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({ data: { session: null } });
 
         await useAuthStore.getState().fetchUser();
 
-        const state = useAuthStore.getState();
-        expect(state.user).toBeNull();
-        expect(state.isAuthenticated).toBe(false);
-        expect(state.isAnonymous).toBe(false);
-        expect(state.isLoading).toBe(false);
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            isAuthenticated: false,
+            isAnonymous: false,
+            isLoading: false,
+        });
     });
 
-    it('sets isAnonymous from auth user', async () => {
-        (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
-            data: { session: { user: { id: 'me' } } },
+    it("bootstraps and reads the profile through GET /v1/me", async () => {
+        (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
+            data: { session: { user: { id: "me", is_anonymous: true } } },
         });
+        const getSpy = jest.spyOn(apiClient, "get").mockResolvedValueOnce({ profile });
 
-        (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({
-            data: { user: { id: 'me', is_anonymous: true } },
-            error: null,
+        await useAuthStore.getState().fetchUser();
+
+        expect(getSpy).toHaveBeenCalledWith("/v1/me");
+        expect(useAuthStore.getState()).toMatchObject({
+            user: profile,
+            isAuthenticated: true,
+            isAnonymous: true,
+            isLoading: false,
         });
+    });
 
-        const profileQuery: any = {
-            select: jest.fn(() => profileQuery),
-            eq: jest.fn(() => profileQuery),
-            maybeSingle: jest.fn(async () => ({ data: { id: 'me', couple_id: null } })),
+    it("reads couple and partner state through the standalone API", async () => {
+        const pairedProfile = { ...profile, couple_id: "couple-1" };
+        const couple = {
+            id: "couple-1",
+            invite_code: "ABCD2345",
+            created_at: "2026-08-27T00:00:00.000Z",
         };
+        const partner: Profile = {
+            ...profile,
+            id: "partner",
+            name: "Partner",
+            couple_id: "couple-1",
+            max_intensity: 3,
+        };
+        useAuthStore.setState({ user: pairedProfile } as any);
+        const stateSpy = jest.spyOn(coupleApi, "getState").mockResolvedValueOnce({ couple, partner });
 
-        (supabase.from as jest.Mock).mockReturnValue(profileQuery);
+        await useAuthStore.getState().fetchCouple();
 
-        await useAuthStore.getState().fetchUser();
-
-        const state = useAuthStore.getState();
-        expect(state.isAuthenticated).toBe(true);
-        expect(state.isAnonymous).toBe(true);
+        expect(stateSpy).toHaveBeenCalledWith();
+        expect(useAuthStore.getState()).toMatchObject({ couple, partner });
     });
 
-    it('clears stores and signs out when session invalid', async () => {
-        (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce({
-            data: { session: { user: { id: 'me' } } },
-        });
+    it("updates activity through the standalone API", async () => {
+        useAuthStore.setState({ user: profile } as any);
+        const activitySpy = jest.spyOn(profileSettingsApi, "updateLastActive").mockResolvedValueOnce();
 
-        (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({
-            data: { user: null },
-            error: new Error('invalid'),
-        });
+        await useAuthStore.getState().updateLastActive();
 
-        (supabase.auth.signOut as jest.Mock).mockResolvedValueOnce({ error: null });
+        expect(activitySpy).toHaveBeenCalledWith();
+    });
+
+    it("clears user-scoped stores and hosted auth when the API rejects the session", async () => {
+        (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
+            data: { session: { user: { id: "me" } } },
+        });
+        jest.spyOn(apiClient, "get").mockRejectedValueOnce(new ApiError("Unauthorized", 401));
+        (authClient.auth.signOut as jest.Mock).mockResolvedValueOnce({ error: null });
 
         await useAuthStore.getState().fetchUser();
 
-        expect(useAuthStore.getState().user).toBeNull();
-        expect(useAuthStore.getState().isAuthenticated).toBe(false);
-        expect(useAuthStore.getState().isAnonymous).toBe(false);
-
-        expect(useAuthStore.getState().isAnonymous).toBe(false);
-        expect(useAuthStore.getState().isLoading).toBe(false);
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            isAuthenticated: false,
+            isAnonymous: false,
+            isLoading: false,
+        });
+        expect(useMatchStore.getState().matches).toEqual([]);
+        expect(usePacksStore.getState().enabledPackIds).toEqual([]);
+        expect(useMessageStore.getState().unreadCount).toBe(0);
+        expect(useSubscriptionStore.getState().subscription).toMatchObject({ isProUser: false });
+        expect(authClient.auth.signOut).toHaveBeenCalled();
     });
 });

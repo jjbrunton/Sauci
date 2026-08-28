@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { Button } from '@/components/ui/button';
@@ -82,7 +82,7 @@ export function AdminsPage() {
         setLoading(true);
         try {
             // First fetch admin users with permissions
-            const { data: adminData, error: adminError } = await supabase
+            const { data: adminRows, error: adminError } = await adminData
                 .from('admin_users')
                 .select('id, user_id, role, permissions, created_at')
                 .order('created_at', { ascending: false });
@@ -91,9 +91,9 @@ export function AdminsPage() {
 
             // Then fetch profiles for these users
             // We do this manually to avoid relying on foreign key relationships if they aren't perfect
-            if (adminData && adminData.length > 0) {
-                const userIds = adminData.map(a => a.user_id);
-                const { data: profileData, error: profileError } = await supabase
+            if (adminRows && adminRows.length > 0) {
+                const userIds = adminRows.map(a => a.user_id);
+                const { data: profileData, error: profileError } = await adminData
                     .from('profiles')
                     .select('id, name, email, avatar_url')
                     .in('id', userIds);
@@ -101,7 +101,7 @@ export function AdminsPage() {
                 if (profileError) throw profileError;
 
                 // Merge data
-                const joinedAdmins = adminData.map(admin => ({
+                const joinedAdmins = adminRows.map(admin => ({
                     ...admin,
                     permissions: (admin.permissions as string[]) || [],
                     profile: profileData?.find(p => p.id === admin.user_id)
@@ -149,7 +149,7 @@ export function AdminsPage() {
                 // Determine which users are already admins to exclude them
                 const adminUserIds = new Set(admins.map(a => a.user_id));
 
-                const { data, error } = await supabase
+                const { data, error } = await adminData
                     .from('profiles')
                     .select('id, name, email, avatar_url')
                     .or(`email.ilike.%${userSearch}%,name.ilike.%${userSearch}%`)
@@ -179,7 +179,7 @@ export function AdminsPage() {
             const role: AdminRole = isSuperAdminChecked ? 'super_admin' : 'pack_creator';
             const permissions = isSuperAdminChecked ? [] : selectedPermissions;
 
-            const { error } = await auditedSupabase.insert('admin_users', {
+            const { error } = await auditedAdminData.insert('admin_users', {
                 user_id: selectedUser.id,
                 role,
                 permissions
@@ -219,7 +219,7 @@ export function AdminsPage() {
             const role: AdminRole = editIsSuperAdmin ? 'super_admin' : 'pack_creator';
             const permissions = editIsSuperAdmin ? [] : editPermissions;
 
-            const { error } = await auditedSupabase.update('admin_users', editingAdmin.id, {
+            const { error } = await auditedAdminData.update('admin_users', editingAdmin.id, {
                 role,
                 permissions
             });
@@ -261,7 +261,7 @@ export function AdminsPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.deleteBy('admin_users', 'user_id', admin.user_id);
+            const { error } = await auditedAdminData.deleteBy('admin_users', 'user_id', admin.user_id);
 
             if (error) throw error;
 

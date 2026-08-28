@@ -1,7 +1,9 @@
 import { Alert } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { useMediaUpload } from '@/features/chat/hooks/useMediaUpload';
-import { supabase } from '@/lib/supabase';
+import { uploadMedia } from '@/lib/mediaApi';
+
+jest.mock('@/lib/mediaApi', () => ({ uploadMedia: jest.fn() }));
 
 describe('useMediaUpload', () => {
     beforeEach(() => {
@@ -13,20 +15,8 @@ describe('useMediaUpload', () => {
         jest.restoreAllMocks();
     });
 
-    it('uploads image and inserts message record', async () => {
-        jest.spyOn(Date, 'now').mockReturnValue(1700000000000);
-        jest.spyOn(Math, 'random').mockReturnValue(0.123456);
-
-        const upload: any = jest.fn(async () => ({ error: null }));
-        (supabase.storage.from as jest.Mock).mockReturnValue({ upload });
-
-        const insert: any = jest.fn(async () => ({ error: null }));
-        (supabase.from as jest.Mock).mockImplementation((table: string) => {
-            if (table === 'messages') {
-                return { insert };
-            }
-            return {};
-        });
+    it('uploads image and creates its message through the API', async () => {
+        (uploadMedia as jest.Mock).mockResolvedValue({ reference: 'media:11111111-1111-4111-8111-111111111111' });
 
         const { result } = renderHook(() => useMediaUpload('match1', 'me'));
 
@@ -34,18 +24,8 @@ describe('useMediaUpload', () => {
             await result.current.uploadMedia('file://photo.jpg', 'image');
         });
 
-        expect(upload).toHaveBeenCalledTimes(1);
-        const [path, body, options] = (upload.mock.calls as any[])[0] as any[];
-
-        expect(path).toMatch(/^match1\/1700000000000_/);
-        expect(options).toEqual({ contentType: 'image/jpeg', upsert: false });
-        expect(body).toBeInstanceOf(ArrayBuffer);
-
-        expect(insert).toHaveBeenCalledTimes(1);
-        const insertPayload = (insert.mock.calls as any[])[0][0] as any;
-        expect(insertPayload.match_id).toBe('match1');
-        expect(insertPayload.user_id).toBe('me');
-        expect(insertPayload.media_type).toBe('image');
-        expect(insertPayload.media_path).toBe(path);
+        expect(uploadMedia).toHaveBeenCalledWith('file://photo.jpg', {
+            kind: 'chat', mimeType: 'image/jpeg', matchId: 'match1',
+        });
     });
 });

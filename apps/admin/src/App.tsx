@@ -195,7 +195,7 @@ function App() {
                         <Route
                             path="/flagged-messages"
                             element={
-                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_AI_CONFIG}>
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_CHATS}>
                                     <FlaggedMessagesPage />
                                 </ProtectedRoute>
                             }

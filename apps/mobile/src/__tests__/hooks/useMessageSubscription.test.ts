@@ -1,160 +1,90 @@
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useMessageSubscription } from '@/hooks/useMessageSubscription';
-import { supabase } from '@/lib/supabase';
+import { chatApi } from '@/lib/chatApi';
 
-type ThenableResult = { data?: any; error?: any; count?: any };
+jest.mock('@/lib/chatApi', () => ({ chatApi: { listMessages: jest.fn(), markRead: jest.fn() } }));
 
-function createThenableQuery(result: ThenableResult) {
-    const query: any = {
-        select: jest.fn(() => query),
-        eq: jest.fn(() => query),
-        neq: jest.fn(() => query),
-        is: jest.fn(() => query),
-        in: jest.fn(() => query),
-        order: jest.fn(() => query),
-        update: jest.fn(() => query),
-        then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
-    };
+const message = (id: string, user_id = 'partner') => ({ id, match_id: 'match1', user_id, content: id } as any);
 
-    return query;
-}
-
-describe('useMessageSubscription', () => {
+describe('useMessageSubscription API polling', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         jest.useFakeTimers();
-        jest.setSystemTime(new Date('2024-01-01T00:00:00.000Z'));
+        (chatApi.listMessages as jest.Mock).mockResolvedValue({ messages: [] });
+        (chatApi.markRead as jest.Mock).mockResolvedValue({ updated: 0, read_at: 'now' });
     });
+    afterEach(() => jest.useRealTimers());
 
-    afterEach(() => {
-        jest.useRealTimers();
-    });
-
-    it('fetches initial messages and marks partner messages read', async () => {
-        const partnerMessage = {
-            id: 'm1',
-            match_id: 'match1',
-            user_id: 'partner',
-            created_at: '2024-01-01T00:00:00.000Z',
-            delivered_at: null,
-            read_at: null,
-        };
-
-        const fetchQuery = createThenableQuery({ data: [partnerMessage] });
-        const updateQuery = createThenableQuery({ data: null });
-        const deletionsQuery = createThenableQuery({ data: [] });
-
-        const fromMock = jest.fn((table: string) => {
-            if (table === 'message_deletions') return deletionsQuery;
-            if (table === 'messages') {
-                // If it's the first call to messages, it's fetch, otherwise update.
-                // But simplified for the test logic:
-                return fetchQuery;
-            }
-            return createThenableQuery({ data: null });
-        });
-
-        // Use mockReturnValueOnce to handle the sequence:
-        // 1. message_deletions (select)
-        // 2. messages (select)
-        // 3. messages (update)
-        const fromMockSequence = jest.fn()
-            .mockReturnValueOnce(deletionsQuery) // message_deletions select
-            .mockReturnValueOnce(fetchQuery)     // messages select
-            .mockReturnValueOnce(updateQuery);   // messages update
-
-        (supabase as any).from = fromMockSequence;
-
-        const channelMock: any = {
-            on: jest.fn(() => channelMock),
-            subscribe: jest.fn(() => channelMock),
-        };
-        (supabase as any).channel = jest.fn(() => channelMock);
-        (supabase as any).removeChannel = jest.fn();
-
-        const { result } = renderHook(() =>
-            useMessageSubscription({ matchId: 'match1', userId: 'me' })
+    it('fails closed without both a match and authenticated user', async () => {
+        const { result, rerender } = renderHook<ReturnType<typeof useMessageSubscription>, { matchId: string | undefined; userId: string | undefined }>(
+            ({ matchId, userId }) => useMessageSubscription({ matchId, userId }),
+            { initialProps: { matchId: undefined as string | undefined, userId: 'me' as string | undefined } },
         );
+        expect(result.current.loading).toBe(false);
+        expect(chatApi.listMessages).not.toHaveBeenCalled();
+        rerender({ matchId: 'match1', userId: undefined });
+        expect(chatApi.listMessages).not.toHaveBeenCalled();
+    });
 
+    it('loads initial messages without treating them as newly arrived', async () => {
+        const onNewMessage = jest.fn();
+        (chatApi.listMessages as jest.Mock).mockResolvedValue({ messages: [message('m1')] });
+        const { result } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me', onNewMessage }));
         await waitFor(() => expect(result.current.loading).toBe(false));
-
-        expect(fromMockSequence).toHaveBeenCalledWith('messages');
-        expect(updateQuery.update).toHaveBeenCalledWith(
-            expect.objectContaining({
-                delivered_at: expect.stringMatching(/^2024-01-01T00:00:00\./),
-                read_at: expect.stringMatching(/^2024-01-01T00:00:00\./),
-            })
-        );
-        expect(updateQuery.in).toHaveBeenCalledWith('id', ['m1']);
-
-        expect(result.current.messages[0].read_at).toMatch(/^2024-01-01T00:00:00\./);
-        expect(result.current.messages[0].delivered_at).toMatch(/^2024-01-01T00:00:00\./);
+        expect(result.current.messages).toEqual([message('m1')]);
+        expect(onNewMessage).not.toHaveBeenCalled();
+        expect(chatApi.markRead).not.toHaveBeenCalled();
     });
 
-    it('prepends inserted message and marks it read when focused', async () => {
-        const fetchQuery = createThenableQuery({ data: [] });
-        const updateQuery = createThenableQuery({ data: null });
-
-        const fromMock = jest.fn((table: string) => {
-            if (table === 'messages') return updateQuery;
-            return createThenableQuery({ data: null });
-        });
-
-        // First call should be fetch.
-        (supabase as any).from = jest
-            .fn()
-            .mockReturnValueOnce(fetchQuery)
-            .mockImplementation(fromMock);
-
-        let insertHandler: ((payload: any) => Promise<void> | void) | null = null;
-
-        const channelMock: any = {
-            on: jest.fn((_type: string, filter: any, cb: any) => {
-                if (filter?.event === 'INSERT') {
-                    insertHandler = cb;
-                }
-                return channelMock;
-            }),
-            subscribe: jest.fn(() => channelMock),
-        };
-
-        (supabase as any).channel = jest.fn(() => channelMock);
-        (supabase as any).removeChannel = jest.fn();
-
-        const { result } = renderHook(() =>
-            useMessageSubscription({ matchId: 'match1', userId: 'me' })
-        );
-
+    it('refreshes on the polling interval, marks focused messages read, and reports new partner messages', async () => {
+        const onNewMessage = jest.fn();
+        (chatApi.listMessages as jest.Mock)
+            .mockResolvedValueOnce({ messages: [message('m1')] })
+            .mockResolvedValueOnce({ messages: [message('m2'), message('m1')] });
+        const { result } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me', onNewMessage, pollInterval: 500 }));
         await waitFor(() => expect(result.current.loading).toBe(false));
+        act(() => { result.current.isFocusedRef.current = true; });
+        await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve(); });
+        await waitFor(() => expect(result.current.messages[0]?.id).toBe('m2'));
+        expect(chatApi.markRead).toHaveBeenCalledWith('match1');
+        expect(onNewMessage).toHaveBeenCalledTimes(1);
+    });
 
-        act(() => {
-            result.current.isFocusedRef.current = true;
-        });
+    it('does not notify for the current user own newly polled message', async () => {
+        const onNewMessage = jest.fn();
+        (chatApi.listMessages as jest.Mock)
+            .mockResolvedValueOnce({ messages: [] })
+            .mockResolvedValueOnce({ messages: [message('mine', 'me')] });
+        const { result } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me', onNewMessage, pollInterval: 500 }));
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve(); });
+        expect(onNewMessage).not.toHaveBeenCalled();
+    });
 
-        const newMessage = {
-            id: 'm2',
-            match_id: 'match1',
-            user_id: 'partner',
-            created_at: '2024-01-01T00:00:01.000Z',
-            delivered_at: null,
-            read_at: null,
-        };
+    it('surfaces loading completion and preserves a usable empty state after an API error', async () => {
+        (chatApi.listMessages as jest.Mock).mockRejectedValueOnce(new Error('forbidden'));
+        const { result } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me' }));
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        expect(result.current.messages).toEqual([]);
+    });
 
-        expect(insertHandler).toBeTruthy();
+    it('prevents overlapping polls and clears the interval on unmount', async () => {
+        let resolveFirst!: (value: { messages: any[] }) => void;
+        (chatApi.listMessages as jest.Mock).mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }));
+        const { unmount } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me', pollInterval: 500 }));
+        expect(chatApi.listMessages).toHaveBeenCalledTimes(1);
+        act(() => { jest.advanceTimersByTime(1_500); });
+        expect(chatApi.listMessages).toHaveBeenCalledTimes(1);
+        await act(async () => resolveFirst({ messages: [] }));
+        unmount();
+        act(() => { jest.advanceTimersByTime(2_000); });
+        expect(chatApi.listMessages).toHaveBeenCalledTimes(1);
+    });
 
-        await act(async () => {
-            await insertHandler?.({ new: newMessage });
-        });
-
-        expect(updateQuery.update).toHaveBeenCalledWith(
-            expect.objectContaining({
-                delivered_at: expect.stringMatching(/^2024-01-01T00:00:00\./),
-                read_at: expect.stringMatching(/^2024-01-01T00:00:00\./),
-            })
-        );
-
-        expect(result.current.messages[0].id).toBe('m2');
-        expect(result.current.messages[0].read_at).toMatch(/^2024-01-01T00:00:00\./);
-        expect(result.current.messages[0].delivered_at).toMatch(/^2024-01-01T00:00:00\./);
+    it('supports optimistic external updates', async () => {
+        const { result } = renderHook(() => useMessageSubscription({ matchId: 'match1', userId: 'me' }));
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        act(() => result.current.setMessages([message('optimistic', 'me')]));
+        expect(result.current.messages[0]?.id).toBe('optimistic');
     });
 });

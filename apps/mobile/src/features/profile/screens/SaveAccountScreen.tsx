@@ -40,7 +40,7 @@ if (Platform.OS === "android") {
 
 import { GradientBackground, GlassButton, GlassCard, GlassInput } from "../../../components/ui";
 import { colors, spacing, radius, typography } from "../../../theme";
-import { supabase } from "../../../lib/supabase";
+import { authClient } from "../../../lib/authClient";
 import { getAuthError } from "../../../lib/errors";
 import { useAuthStore } from "../../../store";
 import { ScreenHeader } from "../components";
@@ -84,18 +84,6 @@ export function SaveAccountScreen() {
         Alert.alert("Success", message);
     }, []);
 
-    const syncProfileEmail = useCallback(async (userId: string, nextEmail: string | null | undefined) => {
-        if (!nextEmail) return;
-        try {
-            await supabase
-                .from("profiles")
-                .update({ email: nextEmail })
-                .eq("id", userId);
-        } catch {
-            // Non-blocking (some envs may restrict this by RLS)
-        }
-    }, []);
-
     const handleSaveWithEmail = useCallback(async () => {
         if (!email.trim()) {
             showError("Please enter your email");
@@ -107,7 +95,7 @@ export function SaveAccountScreen() {
         }
 
         setIsSubmitting(true);
-        const { error } = await supabase.auth.updateUser(
+        const { error } = await authClient.auth.updateUser(
             { email: email.trim() },
             { emailRedirectTo } as any
         );
@@ -134,7 +122,7 @@ export function SaveAccountScreen() {
 
     const handleCheckVerification = useCallback(async () => {
         setIsChecking(true);
-        const { data: { user }, error } = await supabase.auth.getUser();
+        const { data: { user }, error } = await authClient.auth.getUser();
         setIsChecking(false);
 
         if (error || !user) {
@@ -151,7 +139,7 @@ export function SaveAccountScreen() {
         // If user chose password mode, set password after email is verified
         if (pendingPassword) {
             setIsSubmitting(true);
-            const { error: passwordError } = await supabase.auth.updateUser({ password: pendingPassword });
+            const { error: passwordError } = await authClient.auth.updateUser({ password: pendingPassword });
             setIsSubmitting(false);
 
             if (passwordError) {
@@ -160,12 +148,11 @@ export function SaveAccountScreen() {
             }
         }
 
-        await syncProfileEmail(user.id, user.email);
         await fetchUser();
 
         showSuccess("Account saved. You can now recover your account on any device.");
         router.navigate("/(app)/profile" as any);
-    }, [pendingPassword, fetchUser, showError, showSuccess, router, syncProfileEmail]);
+    }, [pendingPassword, fetchUser, showError, showSuccess, router]);
 
     const handleLinkApple = useCallback(async () => {
         if (!AppleAuthentication) return;
@@ -184,7 +171,7 @@ export function SaveAccountScreen() {
             }
 
             setIsSubmitting(true);
-            const { error } = await (supabase.auth.linkIdentity as any)({
+            const { error } = await (authClient.auth.linkIdentity as any)({
                 provider: "apple",
                 token: credential.identityToken,
             });
@@ -205,7 +192,7 @@ export function SaveAccountScreen() {
                 const fullName = nameParts.join(" ");
 
                 if (fullName) {
-                    await supabase.auth.updateUser({
+                    await authClient.auth.updateUser({
                         data: {
                             full_name: fullName,
                             given_name: credential.fullName.givenName,
@@ -216,10 +203,6 @@ export function SaveAccountScreen() {
             }
 
             // Refresh user/profile
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await syncProfileEmail(user.id, user.email);
-            }
             await fetchUser();
 
             showSuccess("Account saved with Apple.");
@@ -228,7 +211,7 @@ export function SaveAccountScreen() {
             if (e?.code === "ERR_REQUEST_CANCELED") return;
             showError("Apple sign in failed. Please try again.");
         }
-    }, [fetchUser, router, showError, showSuccess, syncProfileEmail]);
+    }, [fetchUser, router, showError, showSuccess]);
 
     const handleLinkGoogle = useCallback(async () => {
         if (!GoogleSignin) return;
@@ -242,7 +225,7 @@ export function SaveAccountScreen() {
             }
 
             setIsSubmitting(true);
-            const { error } = await (supabase.auth.linkIdentity as any)({
+            const { error } = await (authClient.auth.linkIdentity as any)({
                 provider: "google",
                 token: response.data.idToken,
             });
@@ -253,10 +236,6 @@ export function SaveAccountScreen() {
                 return;
             }
 
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await syncProfileEmail(user.id, user.email);
-            }
             await fetchUser();
 
             showSuccess("Account saved with Google.");
@@ -264,7 +243,7 @@ export function SaveAccountScreen() {
         } catch {
             showError("Google sign in failed. Please try again.");
         }
-    }, [fetchUser, router, showError, showSuccess, syncProfileEmail]);
+    }, [fetchUser, router, showError, showSuccess]);
 
     const showSocial = Platform.select({ ios: true, android: true, default: false });
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/ui/pagination';
@@ -45,7 +45,7 @@ export function AuditLogsPage() {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
-            const { data, error, count } = await supabase
+            const { data, error, count } = await adminData
                 .from('audit_logs')
                 .select('*', { count: 'exact' })
                 .order('created_at', { ascending: false })

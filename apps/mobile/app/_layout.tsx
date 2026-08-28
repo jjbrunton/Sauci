@@ -43,7 +43,7 @@ const GestureHandlerRootView = Platform.OS === "web"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as Linking from "expo-linking";
 import { useAuthStore } from "../src/store";
-import { supabase } from "../src/lib/supabase";
+import { authClient } from "../src/lib/authClient";
 import { colors, spacing, radius, typography } from "../src/theme";
 import { hasSeenGuestAccountWarning, markGuestAccountWarningSeen } from "../src/lib/guestAccountWarningSeen";
 
@@ -148,7 +148,7 @@ export default function RootLayout() {
                 if (accessToken && refreshToken) {
                     // OAuth flow - set session directly
                     console.log('[DeepLink] Setting session with tokens');
-                    const { data, error } = await supabase.auth.setSession({
+                    const { data, error } = await authClient.auth.setSession({
                         access_token: accessToken,
                         refresh_token: refreshToken,
                     });
@@ -160,7 +160,7 @@ export default function RootLayout() {
                 } else if (tokenHash && type) {
                     // Magic link / email verification flow - verify the OTP
                     console.log('[DeepLink] Verifying OTP with token_hash and type:', type);
-                    const { data, error } = await supabase.auth.verifyOtp({
+                    const { data, error } = await authClient.auth.verifyOtp({
                         token_hash: tokenHash,
                         type: type as 'signup' | 'magiclink' | 'recovery' | 'invite' | 'email',
                     });
@@ -174,12 +174,12 @@ export default function RootLayout() {
                 } else {
                     // Fallback for web or other scenarios
                     console.log('[DeepLink] No auth params found, falling back to getSession');
-                    await supabase.auth.getSession();
+                    await authClient.auth.getSession();
                 }
             } catch (error) {
                 console.error('[DeepLink] Error handling deep link:', error);
                 // Still try to get session as fallback
-                await supabase.auth.getSession();
+                await authClient.auth.getSession();
             }
         };
 
@@ -206,7 +206,7 @@ export default function RootLayout() {
         });
 
         // Listen for auth changes
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription: authSubscription } } = authClient.auth.onAuthStateChange(
             async (event, session) => {
                 console.log('[Auth] onAuthStateChange:', event, 'hasSession:', !!session, 'userId:', session?.user?.id);
                 if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {

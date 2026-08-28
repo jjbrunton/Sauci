@@ -2,7 +2,9 @@ import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { router } from "expo-router";
-import { supabase } from "./supabase";
+import { apiClient } from "./apiClient";
+import { profileSettingsApi } from "./profileSettingsApi";
+import type { Profile } from "../types";
 import { captureError } from "./crashlytics";
 import { Events } from "./analytics";
 import { useMatchStore } from "../store/matchStore";
@@ -76,17 +78,15 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 }
 
 /**
- * Save push token to user profile in Supabase.
+ * Save push token to the standalone profile API.
  */
 export async function savePushToken(userId: string, token: string): Promise<void> {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ push_token: token })
-    .eq("id", userId);
-
-  if (error) {
+  try {
+    await profileSettingsApi.updateProfile({ push_token: token });
+  } catch (error) {
     console.error("Failed to save push token:", error);
-    captureError(new Error("Failed to save push token"), { userId, error: error.message });
+    captureError(error as Error, { userId });
+    throw error;
   }
 }
 
@@ -94,13 +94,11 @@ export async function savePushToken(userId: string, token: string): Promise<void
  * Clear push token from user profile on sign out.
  */
 export async function clearPushToken(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ push_token: null })
-    .eq("id", userId);
-
-  if (error) {
+  try {
+    await profileSettingsApi.updateProfile({ push_token: null });
+  } catch (error) {
     console.error("Failed to clear push token:", error);
+    throw error;
   }
 }
 
@@ -194,11 +192,7 @@ export async function checkAndRegisterPushToken(userId: string): Promise<boolean
     }
 
     // Fetch the stored token from the database
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("push_token")
-      .eq("id", userId)
-      .single();
+    const { profile } = await apiClient.get<{ profile: Profile }>("/v1/me");
 
     console.log(`[Push] Stored token: ${profile?.push_token}`);
 

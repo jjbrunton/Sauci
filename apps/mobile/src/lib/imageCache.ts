@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getMediaUrl, mediaId } from './mediaApi';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
 
@@ -38,23 +38,17 @@ export async function getCachedSignedUrl(
         return cached.url;
     }
 
-    // Generate new signed URL
-    const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUrl(storagePath, SIGNED_URL_EXPIRY_SECONDS);
-
-    if (error || !data?.signedUrl) {
-        console.error('Failed to get signed URL:', error);
-        return null;
-    }
+    if (!mediaId(storagePath)) return storagePath;
+    const data = await getMediaUrl(storagePath).catch((error) => { console.error('Failed to get signed URL:', error); return null; });
+    if (!data?.url) return null;
 
     // Cache the new URL
     signedUrlCache.set(cacheKey, {
-        url: data.signedUrl,
-        expiresAt: now + SIGNED_URL_EXPIRY_SECONDS * 1000,
+        url: data.url,
+        expiresAt: new Date(data.expires_at).getTime(),
     });
 
-    return data.signedUrl;
+    return data.url;
 }
 
 /**

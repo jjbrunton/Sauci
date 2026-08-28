@@ -1,499 +1,332 @@
-import { useResponsesStore, groupResponses, ResponseWithQuestion } from '@/store/responsesStore';
+import { apiClient } from '@/lib/apiClient';
+import { groupResponses, type ResponseWithQuestion, useResponsesStore } from '@/store/responsesStore';
 import { useAuthStore } from '@/store/authStore';
 import { useMatchStore } from '@/store/matchStore';
-import { supabase } from '@/lib/supabase';
 
-// Mock authErrorHandler
-jest.mock('@/lib/authErrorHandler', () => ({
-    invokeWithAuthRetry: jest.fn(),
-}));
+jest.mock('@/lib/apiClient', () => ({ apiClient: { get: jest.fn(), patch: jest.fn() } }));
 
-import { invokeWithAuthRetry } from '@/lib/authErrorHandler';
+const apiGet = apiClient.get as jest.Mock;
+const apiPatch = apiClient.patch as jest.Mock;
 
-function createThenableQuery(result: any) {
-    const query: any = {
-        select: jest.fn(() => query),
-        eq: jest.fn(() => query),
-        neq: jest.fn(() => query),
-        is: jest.fn(() => query),
-        in: jest.fn(() => query),
-        order: jest.fn(() => query),
-        range: jest.fn(() => query),
-        then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
-    };
-    return query;
+function response(overrides: Partial<ResponseWithQuestion> = {}): ResponseWithQuestion {
+    return {
+        id: 'r1',
+        question_id: 'q1',
+        answer: 'yes',
+        response_data: null,
+        created_at: '2024-01-15T10:00:00.000Z',
+        question: {
+            id: 'q1', text: 'Question 1', partner_text: null, intensity: 2,
+            pack_id: 'p1', created_at: '',
+            pack: { id: 'p1', name: 'Pack A', icon: 'heart' },
+        },
+        has_match: true,
+        match_id: 'm1',
+        partner_answered: true,
+        ...overrides,
+    } as ResponseWithQuestion;
+}
+
+function resetStore(): void {
+    useResponsesStore.setState({
+        responses: [], isLoading: false, isLoadingMore: false, groupBy: 'date',
+        dateSortOrder: 'newest', hasMore: true, page: 0, totalCount: null,
+    });
 }
 
 describe('responsesStore', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        useResponsesStore.setState({
-            responses: [],
-            isLoading: false,
-            isLoadingMore: false,
-            groupBy: 'date',
-            dateSortOrder: 'newest',
-            hasMore: true,
-            page: 0,
-            totalCount: null,
-        });
+        resetStore();
         useAuthStore.setState({ user: { id: 'me', couple_id: 'couple1' } } as any);
         useMatchStore.setState({ matches: [], fetchMatches: jest.fn() } as any);
     });
 
     describe('fetchResponses', () => {
-        it('fetches responses with questions and packs on refresh', async () => {
-            const responses = [
-                {
-                    id: 'r1',
-                    question_id: 'q1',
-                    answer: 'yes',
-                    created_at: '2024-01-01T00:00:00.000Z',
-                    question: {
-                        id: 'q1',
-                        text: 'Question 1',
-                        partner_text: null,
-                        intensity: 2,
-                        pack_id: 'p1',
-                        pack: { id: 'p1', name: 'Pack 1', icon: '❤️' },
-                    },
-                },
-            ];
-
-            const countQuery = createThenableQuery({ count: 1 });
-            const responsesQuery = createThenableQuery({ data: responses });
-            const matchesQuery = createThenableQuery({ data: [{ id: 'm1', question_id: 'q1' }] });
-            const partnerQuery = createThenableQuery({ data: [{ question_id: 'q1' }] });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(responsesQuery)
-                .mockReturnValueOnce(matchesQuery)
-                .mockReturnValueOnce(partnerQuery);
+        it('fetches server-composed response, question, match, and partner state on refresh', async () => {
+            const row = response();
+            apiGet.mockResolvedValue({ responses: [row], totalCount: 1 });
 
             await useResponsesStore.getState().fetchResponses(true);
 
-            const state = useResponsesStore.getState();
-            expect(state.responses).toHaveLength(1);
-            expect(state.responses[0].has_match).toBe(true);
-            expect(state.responses[0].match_id).toBe('m1');
-            expect(state.responses[0].partner_answered).toBe(true);
-            expect(state.totalCount).toBe(1);
-            expect(state.isLoading).toBe(false);
-        });
-
-        it('does nothing if user is not authenticated', async () => {
-            useAuthStore.setState({ user: null } as any);
-
-            await useResponsesStore.getState().fetchResponses(true);
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
-
-        it('does nothing if couple_id is missing', async () => {
-            useAuthStore.setState({ user: { id: 'me', couple_id: null } } as any);
-
-            await useResponsesStore.getState().fetchResponses(true);
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
-
-        it('prevents concurrent loading', async () => {
-            useResponsesStore.setState({ isLoading: true });
-
-            await useResponsesStore.getState().fetchResponses(true);
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
-
-        it('handles empty responses correctly', async () => {
-            const countQuery = createThenableQuery({ count: 0 });
-            const responsesQuery = createThenableQuery({ data: [] });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(responsesQuery);
-
-            await useResponsesStore.getState().fetchResponses(true);
-
-            const state = useResponsesStore.getState();
-            expect(state.responses).toEqual([]);
-            expect(state.hasMore).toBe(false);
-            expect(state.totalCount).toBe(0);
-        });
-
-        it('paginates responses correctly', async () => {
-            // Set up initial state with some responses
-            useResponsesStore.setState({
-                page: 1,
-                hasMore: true,
-                responses: [{ id: 'r0' }] as any,
+            expect(apiGet).toHaveBeenCalledWith('/v1/me/responses?page=0&limit=20');
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [row], totalCount: 1, page: 1, isLoading: false,
+                isLoadingMore: false, hasMore: false,
             });
-
-            const responses = [
-                {
-                    id: 'r1',
-                    question_id: 'q1',
-                    answer: 'yes',
-                    created_at: '2024-01-01T00:00:00.000Z',
-                    question: {
-                        id: 'q1',
-                        text: 'Question 1',
-                        pack: { id: 'p1', name: 'Pack 1', icon: '❤️' },
-                    },
-                },
-            ];
-
-            const responsesQuery = createThenableQuery({ data: responses });
-            const matchesQuery = createThenableQuery({ data: [] });
-            const partnerQuery = createThenableQuery({ data: [] });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(responsesQuery)
-                .mockReturnValueOnce(matchesQuery)
-                .mockReturnValueOnce(partnerQuery);
-
-            await useResponsesStore.getState().fetchResponses(false);
-
-            const state = useResponsesStore.getState();
-            // Should append to existing responses
-            expect(state.responses).toHaveLength(2);
-            expect(state.page).toBe(2);
+            expect(useResponsesStore.getState().responses[0]).toMatchObject({
+                has_match: true, match_id: 'm1', partner_answered: true,
+                question: { pack: { name: 'Pack A' } },
+            });
         });
 
-        it('handles fetch errors gracefully', async () => {
-            const countQuery = createThenableQuery({ count: 1 });
-            const responsesQuery = createThenableQuery({ data: null, error: new Error('Network error') });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(responsesQuery);
-
+        it.each([
+            ['no authenticated user', null],
+            ['no couple', { id: 'me', couple_id: null }],
+        ])('does not call the API with %s', async (_label, user) => {
+            useAuthStore.setState({ user } as any);
             await useResponsesStore.getState().fetchResponses(true);
+            expect(apiGet).not.toHaveBeenCalled();
+        });
 
-            const state = useResponsesStore.getState();
-            expect(state.isLoading).toBe(false);
-            expect(state.isLoadingMore).toBe(false);
+        it('prevents a second request while refresh loading is active', async () => {
+            let resolve!: (value: unknown) => void;
+            apiGet.mockReturnValue(new Promise((done) => { resolve = done; }));
+            const first = useResponsesStore.getState().fetchResponses(true);
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(apiGet).toHaveBeenCalledTimes(1);
+            resolve({ responses: [], totalCount: 0 });
+            await first;
+        });
+
+        it('prevents load-more overlap but permits an explicit refresh', async () => {
+            useResponsesStore.setState({ isLoadingMore: true });
+            await useResponsesStore.getState().fetchResponses(false);
+            expect(apiGet).not.toHaveBeenCalled();
+
+            apiGet.mockResolvedValue({ responses: [], totalCount: 0 });
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(apiGet).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not request another page after exhaustion', async () => {
+            useResponsesStore.setState({ hasMore: false });
+            await useResponsesStore.getState().fetchResponses(false);
+            expect(apiGet).not.toHaveBeenCalled();
+        });
+
+        it('clears stale rows and captures total count for an empty refresh', async () => {
+            useResponsesStore.setState({ responses: [response()], totalCount: 4 });
+            apiGet.mockResolvedValue({ responses: [], totalCount: 0 });
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [], totalCount: 0, hasMore: false, isLoading: false,
+            });
+        });
+
+        it('marks load-more exhausted without clearing existing responses', async () => {
+            const existing = response();
+            useResponsesStore.setState({ responses: [existing], page: 1, totalCount: 1 });
+            apiGet.mockResolvedValue({ responses: [], totalCount: 1 });
+            await useResponsesStore.getState().fetchResponses(false);
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [existing], page: 1, totalCount: 1,
+                hasMore: false, isLoadingMore: false,
+            });
+        });
+
+        it('appends the requested page and preserves refresh total count', async () => {
+            const existing = response();
+            const next = response({ id: 'r2', question_id: 'q2' });
+            useResponsesStore.setState({ responses: [existing], page: 1, totalCount: 21 });
+            apiGet.mockResolvedValue({ responses: [next], totalCount: 21 });
+            await useResponsesStore.getState().fetchResponses(false);
+            expect(apiGet).toHaveBeenCalledWith('/v1/me/responses?page=1&limit=20');
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [existing, next], page: 2, totalCount: 21,
+                hasMore: false, isLoadingMore: false,
+            });
+        });
+
+        it('keeps hasMore true for a full page', async () => {
+            apiGet.mockResolvedValue({
+                responses: Array.from({ length: 20 }, (_, index) => response({ id: `r${index}` })),
+                totalCount: 40,
+            });
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(useResponsesStore.getState().hasMore).toBe(true);
+        });
+
+        it('releases refresh loading after an API failure without destroying existing data', async () => {
+            const existing = response();
+            useResponsesStore.setState({ responses: [existing], totalCount: 1 });
+            apiGet.mockRejectedValue(new Error('Network error'));
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [existing], isLoading: false, isLoadingMore: false, totalCount: 1,
+            });
+            expect(consoleSpy).toHaveBeenCalledWith('Error in fetchResponses:', expect.any(Error));
+            consoleSpy.mockRestore();
+        });
+
+        it('releases load-more loading after an API failure', async () => {
+            useResponsesStore.setState({ page: 1 });
+            apiGet.mockRejectedValue(new Error('Network error'));
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            await useResponsesStore.getState().fetchResponses(false);
+            expect(useResponsesStore.getState()).toMatchObject({ isLoading: false, isLoadingMore: false, page: 1 });
+            consoleSpy.mockRestore();
         });
     });
 
     describe('updateResponse', () => {
-        it('updates response and refreshes matches on success', async () => {
-            const fetchMatchesMock = jest.fn();
-            useMatchStore.setState({ fetchMatches: fetchMatchesMock } as any);
-            useResponsesStore.setState({
-                responses: [
-                    { question_id: 'q1', answer: 'maybe', has_match: false } as any,
-                ],
-            });
-
-            (invokeWithAuthRetry as jest.Mock).mockResolvedValueOnce({
-                data: { success: true, new_match: { id: 'm1' } },
-                error: null,
-            });
+        it('creates a local match and refreshes the match store', async () => {
+            const fetchMatches = jest.fn();
+            useMatchStore.setState({ fetchMatches } as any);
+            useResponsesStore.setState({ responses: [response({ answer: 'maybe', has_match: false, match_id: undefined })] });
+            apiPatch.mockResolvedValue({ success: true, new_match: { id: 'm2' } });
 
             const result = await useResponsesStore.getState().updateResponse('q1', 'yes');
 
-            expect(result.success).toBe(true);
-            expect(result.new_match).toEqual({ id: 'm1' });
-
-            const state = useResponsesStore.getState();
-            expect(state.responses[0].answer).toBe('yes');
-            expect(state.responses[0].has_match).toBe(true);
-            expect(state.responses[0].match_id).toBe('m1');
-            expect(fetchMatchesMock).toHaveBeenCalled();
+            expect(apiPatch).toHaveBeenCalledWith('/v1/responses/q1', {
+                new_answer: 'yes', confirm_delete_match: false, response_data: undefined,
+            });
+            expect(result).toMatchObject({ success: true, new_match: { id: 'm2' } });
+            expect(useResponsesStore.getState().responses[0]).toMatchObject({
+                answer: 'yes', has_match: true, match_id: 'm2',
+            });
+            expect(fetchMatches).toHaveBeenCalledTimes(1);
         });
 
-        it('handles match deletion correctly', async () => {
-            const fetchMatchesMock = jest.fn();
-            useMatchStore.setState({ fetchMatches: fetchMatchesMock } as any);
-            useResponsesStore.setState({
-                responses: [
-                    { question_id: 'q1', answer: 'yes', has_match: true, match_id: 'm1' } as any,
-                ],
+        it('deletes a confirmed match and clears response data for a no answer', async () => {
+            const fetchMatches = jest.fn();
+            useMatchStore.setState({ fetchMatches } as any);
+            useResponsesStore.setState({ responses: [response({ response_data: { type: 'text_answer', text: 'old' } })] });
+            apiPatch.mockResolvedValue({ success: true, match_deleted: true });
+
+            await useResponsesStore.getState().updateResponse('q1', 'no', true);
+
+            expect(useResponsesStore.getState().responses[0]).toMatchObject({
+                answer: 'no', response_data: null, has_match: false,
             });
-
-            (invokeWithAuthRetry as jest.Mock).mockResolvedValueOnce({
-                data: { success: true, match_deleted: true },
-                error: null,
-            });
-
-            const result = await useResponsesStore.getState().updateResponse('q1', 'no', true);
-
-            expect(result.success).toBe(true);
-            expect(result.match_deleted).toBe(true);
-
-            const state = useResponsesStore.getState();
-            expect(state.responses[0].answer).toBe('no');
-            expect(state.responses[0].has_match).toBe(false);
-            expect(state.responses[0].match_id).toBeUndefined();
-            expect(fetchMatchesMock).toHaveBeenCalled();
+            expect(useResponsesStore.getState().responses[0].match_id).toBeUndefined();
+            expect(fetchMatches).toHaveBeenCalled();
         });
 
-        it('returns requires_confirmation without updating local state', async () => {
-            useResponsesStore.setState({
-                responses: [
-                    { question_id: 'q1', answer: 'yes', has_match: true } as any,
-                ],
-            });
-
-            (invokeWithAuthRetry as jest.Mock).mockResolvedValueOnce({
-                data: { success: false, requires_confirmation: true, message_count: 5 },
-                error: null,
-            });
-
+        it('returns confirmation details without mutating local state', async () => {
+            const original = response();
+            useResponsesStore.setState({ responses: [original] });
+            apiPatch.mockResolvedValue({ success: false, requires_confirmation: true, match_id: 'm1', message_count: 5 });
             const result = await useResponsesStore.getState().updateResponse('q1', 'no');
-
-            expect(result.requires_confirmation).toBe(true);
-            expect(result.message_count).toBe(5);
-
-            const state = useResponsesStore.getState();
-            // Should not update local state
-            expect(state.responses[0].answer).toBe('yes');
+            expect(result).toMatchObject({ requires_confirmation: true, message_count: 5 });
+            expect(useResponsesStore.getState().responses[0]).toEqual(original);
         });
 
-        it('handles errors from edge function', async () => {
-            (invokeWithAuthRetry as jest.Mock).mockResolvedValueOnce({
-                data: null,
-                error: { message: 'Server error' },
-            });
-
-            const result = await useResponsesStore.getState().updateResponse('q1', 'yes');
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Server error');
-        });
-
-        it('refreshes matches when match_type_updated', async () => {
-            const fetchMatchesMock = jest.fn();
-            useMatchStore.setState({ fetchMatches: fetchMatchesMock } as any);
-            useResponsesStore.setState({
-                responses: [
-                    { question_id: 'q1', answer: 'maybe', has_match: true, match_id: 'm1' } as any,
-                ],
-            });
-
-            (invokeWithAuthRetry as jest.Mock).mockResolvedValueOnce({
-                data: { success: true, match_type_updated: true },
-                error: null,
-            });
-
+        it('preserves existing response data when omitted', async () => {
+            const data = { type: 'text_answer', text: 'existing' } as const;
+            useResponsesStore.setState({ responses: [response({ response_data: data })] });
+            apiPatch.mockResolvedValue({ success: true });
             await useResponsesStore.getState().updateResponse('q1', 'yes');
+            expect(useResponsesStore.getState().responses[0].response_data).toEqual(data);
+        });
 
-            expect(fetchMatchesMock).toHaveBeenCalled();
+        it('sets replacement response data when supplied', async () => {
+            const replacement = { type: 'text_answer', text: 'new' } as const;
+            useResponsesStore.setState({ responses: [response()] });
+            apiPatch.mockResolvedValue({ success: true });
+            await useResponsesStore.getState().updateResponse('q1', 'yes', false, replacement);
+            expect(apiPatch).toHaveBeenCalledWith('/v1/responses/q1', expect.objectContaining({ response_data: replacement }));
+            expect(useResponsesStore.getState().responses[0].response_data).toEqual(replacement);
+        });
+
+        it('accepts an explicit null response-data update', async () => {
+            useResponsesStore.setState({ responses: [response({ response_data: { type: 'text_answer', text: 'old' } })] });
+            apiPatch.mockResolvedValue({ success: true });
+            await useResponsesStore.getState().updateResponse('q1', 'yes', false, null);
+            expect(useResponsesStore.getState().responses[0].response_data).toBeNull();
+        });
+
+        it('refreshes matches when only the match type changed', async () => {
+            const fetchMatches = jest.fn();
+            useMatchStore.setState({ fetchMatches } as any);
+            useResponsesStore.setState({ responses: [response({ answer: 'maybe' })] });
+            apiPatch.mockResolvedValue({ success: true, match_type_updated: true });
+            await useResponsesStore.getState().updateResponse('q1', 'yes');
+            expect(fetchMatches).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not refresh matches for a plain successful response edit', async () => {
+            const fetchMatches = jest.fn();
+            useMatchStore.setState({ fetchMatches } as any);
+            useResponsesStore.setState({ responses: [response()] });
+            apiPatch.mockResolvedValue({ success: true });
+            await useResponsesStore.getState().updateResponse('q1', 'maybe');
+            expect(fetchMatches).not.toHaveBeenCalled();
+        });
+
+        it('returns an Error message and leaves state unchanged on API rejection', async () => {
+            const original = response();
+            useResponsesStore.setState({ responses: [original] });
+            apiPatch.mockRejectedValue(new Error('Server error'));
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            const result = await useResponsesStore.getState().updateResponse('q1', 'no');
+            expect(result).toEqual({ success: false, error: 'Server error' });
+            expect(useResponsesStore.getState().responses[0]).toEqual(original);
+            consoleSpy.mockRestore();
+        });
+
+        it('normalizes non-Error rejection values', async () => {
+            apiPatch.mockRejectedValue('failed');
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            await expect(useResponsesStore.getState().updateResponse('q1', 'yes'))
+                .resolves.toEqual({ success: false, error: 'Failed to update response' });
+            consoleSpy.mockRestore();
         });
     });
 
-    describe('setGroupBy', () => {
-        it('updates groupBy option', () => {
+    describe('state controls', () => {
+        it('sets and toggles grouping options', () => {
             useResponsesStore.getState().setGroupBy('pack');
             expect(useResponsesStore.getState().groupBy).toBe('pack');
-
-            useResponsesStore.getState().setGroupBy('answer');
-            expect(useResponsesStore.getState().groupBy).toBe('answer');
-
-            useResponsesStore.getState().setGroupBy('date');
-            expect(useResponsesStore.getState().groupBy).toBe('date');
-        });
-    });
-
-    describe('setDateSortOrder', () => {
-        it('updates date sort order', () => {
             useResponsesStore.getState().setDateSortOrder('oldest');
             expect(useResponsesStore.getState().dateSortOrder).toBe('oldest');
-
-            useResponsesStore.getState().setDateSortOrder('newest');
-            expect(useResponsesStore.getState().dateSortOrder).toBe('newest');
-        });
-    });
-
-    describe('toggleDateSortOrder', () => {
-        it('toggles between newest and oldest', () => {
-            expect(useResponsesStore.getState().dateSortOrder).toBe('newest');
-
-            useResponsesStore.getState().toggleDateSortOrder();
-            expect(useResponsesStore.getState().dateSortOrder).toBe('oldest');
-
             useResponsesStore.getState().toggleDateSortOrder();
             expect(useResponsesStore.getState().dateSortOrder).toBe('newest');
         });
-    });
 
-    describe('clearResponses', () => {
-        it('resets store to initial state', () => {
+        it('clears all response-scoped state', () => {
             useResponsesStore.setState({
-                responses: [{ id: 'r1' } as any],
-                isLoading: true,
-                groupBy: 'pack',
-                dateSortOrder: 'oldest',
-                page: 5,
-                hasMore: false,
-                isLoadingMore: true,
-                totalCount: 10,
+                responses: [response()], isLoading: true, isLoadingMore: true,
+                groupBy: 'pack', dateSortOrder: 'oldest', page: 5,
+                hasMore: false, totalCount: 10,
             });
-
             useResponsesStore.getState().clearResponses();
-
-            const state = useResponsesStore.getState();
-            expect(state.responses).toEqual([]);
-            expect(state.isLoading).toBe(false);
-            expect(state.groupBy).toBe('date');
-            expect(state.dateSortOrder).toBe('newest');
-            expect(state.page).toBe(0);
-            expect(state.hasMore).toBe(true);
-            expect(state.isLoadingMore).toBe(false);
-            expect(state.totalCount).toBeNull();
+            expect(useResponsesStore.getState()).toMatchObject({
+                responses: [], isLoading: false, isLoadingMore: false,
+                groupBy: 'date', dateSortOrder: 'newest', page: 0,
+                hasMore: true, totalCount: null,
+            });
         });
     });
 });
 
 describe('groupResponses', () => {
-    const mockResponses: ResponseWithQuestion[] = [
-        {
-            id: 'r1',
-            question_id: 'q1',
-            answer: 'yes',
-            created_at: '2024-01-15T10:00:00.000Z',
-            question: {
-                id: 'q1',
-                text: 'Question 1',
-                partner_text: null,
-                intensity: 2,
-                pack_id: 'p1',
-                created_at: '',
-                pack: { id: 'p1', name: 'Pack A', icon: '❤️' },
-            },
-            has_match: true,
-            partner_answered: true,
-        },
-        {
-            id: 'r2',
-            question_id: 'q2',
-            answer: 'maybe',
-            created_at: '2024-01-15T14:00:00.000Z',
-            question: {
-                id: 'q2',
-                text: 'Question 2',
-                partner_text: null,
-                intensity: 3,
-                pack_id: 'p2',
-                created_at: '',
-                pack: { id: 'p2', name: 'Pack B', icon: '💜' },
-            },
-            has_match: false,
-            partner_answered: false,
-        },
-        {
-            id: 'r3',
-            question_id: 'q3',
-            answer: 'no',
-            created_at: '2024-01-14T10:00:00.000Z',
-            question: {
-                id: 'q3',
-                text: 'Question 3',
-                partner_text: null,
-                intensity: 1,
-                pack_id: 'p1',
-                created_at: '',
-                pack: { id: 'p1', name: 'Pack A', icon: '❤️' },
-            },
-            has_match: false,
-            partner_answered: true,
-        },
-        {
-            id: 'r4',
-            question_id: 'q4',
-            answer: 'yes',
-            created_at: '2024-01-14T14:00:00.000Z',
-            question: {
-                id: 'q4',
-                text: 'Question 4',
-                partner_text: null,
-                intensity: 2,
-                pack_id: 'p2',
-                created_at: '',
-                pack: { id: 'p2', name: 'Pack B', icon: '💜' },
-            },
-            has_match: true,
-            partner_answered: true,
-        },
+    const rows: ResponseWithQuestion[] = [
+        response(),
+        response({ id: 'r2', question_id: 'q2', answer: 'maybe', created_at: '2024-01-15T14:00:00.000Z', question: { ...response().question, id: 'q2', pack_id: 'p2', pack: { id: 'p2', name: 'Pack B', icon: 'moon' } } }),
+        response({ id: 'r3', question_id: 'q3', answer: 'no', created_at: '2024-01-14T10:00:00.000Z' }),
+        response({ id: 'r4', question_id: 'q4', answer: 'yes', created_at: '2024-01-14T14:00:00.000Z', question: { ...response().question, id: 'q4', pack_id: 'p2', pack: { id: 'p2', name: 'Pack B', icon: 'moon' } } }),
     ];
 
-    describe('groupBy pack', () => {
-        it('groups responses by pack name', () => {
-            const grouped = groupResponses(mockResponses, 'pack');
-
-            expect(grouped).toHaveLength(2);
-
-            const packA = grouped.find(g => g.title === 'Pack A');
-            const packB = grouped.find(g => g.title === 'Pack B');
-
-            expect(packA?.data).toHaveLength(2);
-            expect(packB?.data).toHaveLength(2);
-        });
+    it('groups by pack while preserving rows', () => {
+        const grouped = groupResponses(rows, 'pack');
+        expect(grouped.map((group) => [group.title, group.data.length])).toEqual([['Pack A', 2], ['Pack B', 2]]);
     });
 
-    describe('groupBy answer', () => {
-        it('groups responses by answer type in order: yes, maybe, no', () => {
-            const grouped = groupResponses(mockResponses, 'answer');
-
-            expect(grouped).toHaveLength(3);
-            expect(grouped[0].title).toBe('Yes');
-            expect(grouped[0].data).toHaveLength(2);
-            expect(grouped[1].title).toBe('Maybe');
-            expect(grouped[1].data).toHaveLength(1);
-            expect(grouped[2].title).toBe('No');
-            expect(grouped[2].data).toHaveLength(1);
-        });
-
-        it('excludes empty answer groups', () => {
-            const yesOnlyResponses = mockResponses.filter(r => r.answer === 'yes');
-            const grouped = groupResponses(yesOnlyResponses, 'answer');
-
-            expect(grouped).toHaveLength(1);
-            expect(grouped[0].title).toBe('Yes');
-        });
+    it('orders non-empty answer groups yes, maybe, no', () => {
+        expect(groupResponses(rows, 'answer').map((group) => [group.title, group.data.length]))
+            .toEqual([['Yes', 2], ['Maybe', 1], ['No', 1]]);
+        expect(groupResponses(rows.filter((row) => row.answer === 'yes'), 'answer').map((group) => group.title))
+            .toEqual(['Yes']);
     });
 
-    describe('groupBy date', () => {
-        it('groups responses by date with newest first', () => {
-            const grouped = groupResponses(mockResponses, 'date', 'newest');
-
-            expect(grouped).toHaveLength(2);
-            // January 15 should be first (newer)
-            expect(grouped[0].title).toContain('January 15');
-            expect(grouped[0].data).toHaveLength(2);
-            expect(grouped[1].title).toContain('January 14');
-            expect(grouped[1].data).toHaveLength(2);
-        });
-
-        it('groups responses by date with oldest first', () => {
-            const grouped = groupResponses(mockResponses, 'date', 'oldest');
-
-            expect(grouped).toHaveLength(2);
-            // January 14 should be first (older)
-            expect(grouped[0].title).toContain('January 14');
-            expect(grouped[1].title).toContain('January 15');
-        });
-
-        it('sorts responses within each date group', () => {
-            const grouped = groupResponses(mockResponses, 'date', 'newest');
-
-            // Within January 15, the response at 14:00 should come first (newest)
-            const jan15Group = grouped[0];
-            expect(new Date(jan15Group.data[0].created_at).getTime())
-                .toBeGreaterThan(new Date(jan15Group.data[1].created_at).getTime());
-        });
+    it('groups dates newest-first and sorts within each day', () => {
+        const grouped = groupResponses(rows, 'date', 'newest');
+        expect(grouped[0].title).toContain('January 15');
+        expect(grouped[1].title).toContain('January 14');
+        expect(grouped[0].data.map((row) => row.id)).toEqual(['r2', 'r1']);
     });
 
-    describe('default grouping', () => {
-        it('returns all responses in a single group for unknown groupBy', () => {
-            // @ts-expect-error Testing unknown groupBy value
-            const grouped = groupResponses(mockResponses, 'unknown');
+    it('groups dates oldest-first and sorts within each day', () => {
+        const grouped = groupResponses(rows, 'date', 'oldest');
+        expect(grouped[0].title).toContain('January 14');
+        expect(grouped[1].title).toContain('January 15');
+        expect(grouped[0].data.map((row) => row.id)).toEqual(['r3', 'r4']);
+    });
 
-            expect(grouped).toHaveLength(1);
-            expect(grouped[0].title).toBe('All Responses');
-            expect(grouped[0].data).toHaveLength(4);
-        });
+    it('falls back to one section for an unknown grouping option', () => {
+        // @ts-expect-error deliberately verifies defensive fallback behavior
+        expect(groupResponses(rows, 'unknown')).toEqual([{ title: 'All Responses', data: rows }]);
     });
 });

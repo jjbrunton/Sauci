@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
-import { supabase } from '@/config';
+import { adminData, adminRequest } from '@/lib/adminApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LayoutGrid, Users, ClipboardList, ArrowRight, Activity, Target, TrendingUp, Heart, MessageCircle, Bell } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +43,7 @@ function formatFeatureName(featureName: string) {
 export function DashboardPage() {
     const { hasPermission } = useAuth();
     const canViewUsers = hasPermission(PERMISSION_KEYS.VIEW_USERS);
+    const canViewChats = hasPermission(PERMISSION_KEYS.VIEW_CHATS);
     const [stats, setStats] = useState({
         categories: 0,
         packs: 0,
@@ -64,10 +65,12 @@ export function DashboardPage() {
                 { count: questionsCount },
                 { count: usersCount },
             ] = await Promise.all([
-                supabase.from('categories').select('*', { count: 'exact', head: true }),
-                supabase.from('question_packs').select('*', { count: 'exact', head: true }),
-                supabase.from('questions').select('*', { count: 'exact', head: true }),
-                supabase.from('profiles').select('*', { count: 'exact', head: true }),
+                adminData.from('categories').select('*', { count: 'exact', head: true }),
+                adminData.from('question_packs').select('*', { count: 'exact', head: true }),
+                adminData.from('questions').select('*', { count: 'exact', head: true }),
+                canViewUsers
+                    ? adminData.from('profiles').select('*', { count: 'exact', head: true })
+                    : Promise.resolve({ count: 0 }),
             ]);
 
             setStats({
@@ -85,31 +88,24 @@ export function DashboardPage() {
                 { data: featureInterests },
                 { data: recentInterests },
             ] = await Promise.all([
-                supabase
-                    .from('messages')
-                    .select('created_at')
-                    .gte('created_at', startDate.toISOString())
-                    .lte('created_at', endDate.toISOString()),
-                supabase
-                    .from('feature_interests')
-                    .select('created_at, user_id')
-                    .gte('created_at', startDate.toISOString())
-                    .lte('created_at', endDate.toISOString()),
-                supabase
-                    .from('feature_interests')
-                    .select('id, user_id, feature_name, created_at')
-                    .order('created_at', { ascending: false })
-                    .limit(10),
+                canViewChats
+                    ? adminData.from('messages').select('created_at').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString())
+                    : Promise.resolve({ data: [] }),
+                canViewUsers
+                    ? adminData.from('feature_interests').select('created_at, user_id').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString())
+                    : Promise.resolve({ data: [] }),
+                canViewUsers
+                    ? adminData.from('feature_interests').select('id, user_id, feature_name, created_at').order('created_at', { ascending: false }).limit(10)
+                    : Promise.resolve({ data: [] }),
             ]);
 
             if (canViewUsers) {
-                const { data: countsData, error: countsError } = await supabase.rpc('get_feature_interest_counts');
-
-                if (countsError) {
+                try {
+                    const { counts } = await adminRequest<{ counts: FeatureInterestCountsRow[] }>('/v1/admin/feature-interest-counts');
+                    setFeatureInterestCounts(counts);
+                } catch (countsError) {
                     console.error('Failed to fetch feature interest counts:', countsError);
                     setFeatureInterestCounts([]);
-                } else {
-                    setFeatureInterestCounts((countsData ?? []) as FeatureInterestCountsRow[]);
                 }
             } else {
                 setFeatureInterestCounts([]);
@@ -172,7 +168,7 @@ export function DashboardPage() {
             if (canViewUsers && recentActivity.length > 0) {
                 const userIds = Array.from(new Set(recentActivity.map(item => item.user_id)));
 
-                const { data: profiles } = await supabase
+                const { data: profiles } = await adminData
                     .from('profiles')
                     .select('id, name, email, avatar_url')
                     .in('id', userIds);
@@ -193,11 +189,12 @@ export function DashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [canViewUsers]);
+    }, [canViewChats, canViewUsers]);
 
     // Real-time subscriptions for dashboard stats (with debouncing)
     const { status: profilesStatus } = useRealtimeSubscription({
         table: 'profiles',
+        enabled: canViewUsers,
         onInsert: fetchStats,
         onDelete: fetchStats,
         debounceMs: 2000,
@@ -205,6 +202,7 @@ export function DashboardPage() {
 
     const { status: messagesStatus } = useRealtimeSubscription({
         table: 'messages',
+        enabled: canViewChats,
         onInsert: fetchStats,
         debounceMs: 2000,
     });

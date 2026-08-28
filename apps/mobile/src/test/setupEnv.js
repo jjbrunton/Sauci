@@ -4,4 +4,5 @@
 
 process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
 process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+process.env.EXPO_PUBLIC_API_URL = 'http://127.0.0.1:3003';
 process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID = 'pro';

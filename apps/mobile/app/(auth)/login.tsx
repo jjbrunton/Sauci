@@ -43,7 +43,7 @@ if (Platform.OS === "android") {
         GoogleSignin = null;
     }
 }
-import { supabase } from "../../src/lib/supabase";
+import { authClient } from "../../src/lib/authClient";
 import { getAuthError } from "../../src/lib/errors";
 import { Events } from "../../src/lib/analytics";
 import { useAuthStore } from "../../src/store";
@@ -114,7 +114,7 @@ export default function LoginScreen() {
         if (!pendingVerification || resendCooldown > 0) return;
 
         setIsResendingEmail(true);
-        const { error: resendError } = await supabase.auth.resend({
+        const { error: resendError } = await authClient.auth.resend({
             type: 'signup',
             email: pendingVerification.email,
         });
@@ -138,7 +138,7 @@ export default function LoginScreen() {
         if (!pendingVerification) return;
 
         setIsCheckingVerification(true);
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await authClient.auth.signInWithPassword({
             email: pendingVerification.email,
             password: pendingVerification.password,
         });
@@ -159,7 +159,7 @@ export default function LoginScreen() {
 
     // Listen for auth state changes (e.g., when user verifies in another tab/browser)
     useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = authClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
                 // User verified and signed in - clear pending state
                 setPendingVerification(null);
@@ -191,7 +191,7 @@ export default function LoginScreen() {
         }
 
         setIsLoading(true);
-        const { error: authError } = await supabase.auth.signInWithOtp({
+        const { error: authError } = await authClient.auth.signInWithOtp({
             email: email.trim(),
             options: {
                 emailRedirectTo: Linking.createURL("/(auth)/login"),
@@ -226,7 +226,7 @@ export default function LoginScreen() {
         setIsLoading(true);
 
         if (isSignUp) {
-            const { data, error: signUpError } = await supabase.auth.signUp({
+            const { data, error: signUpError } = await authClient.auth.signUp({
                 email: email.trim(),
                 password,
                 options: {
@@ -251,7 +251,7 @@ export default function LoginScreen() {
                 Events.signUp("password");
             }
         } else {
-            const { error: signInError } = await supabase.auth.signInWithPassword({
+            const { error: signInError } = await authClient.auth.signInWithPassword({
                 email: email.trim(),
                 password,
             });
@@ -290,7 +290,7 @@ export default function LoginScreen() {
                 console.log("[Apple Sign In] Got credential:", !!credential, "identityToken:", !!credential?.identityToken);
 
                 if (credential.identityToken) {
-                    const { error } = await supabase.auth.signInWithIdToken({
+                    const { error } = await authClient.auth.signInWithIdToken({
                         provider: "apple",
                         token: credential.identityToken,
                     });
@@ -315,7 +315,7 @@ export default function LoginScreen() {
         } else {
             console.log("[Apple Sign In] Falling back to OAuth");
             // Fallback to web OAuth when native module unavailable
-            const { error } = await supabase.auth.signInWithOAuth({
+            const { error } = await authClient.auth.signInWithOAuth({
                 provider: "apple",
                 options: {
                     redirectTo: Linking.createURL("/(auth)/login"),
@@ -342,7 +342,7 @@ export default function LoginScreen() {
 
                 if (response.type === "success" && response.data.idToken) {
                     console.log("[Google Sign In] Got idToken, signing in with Supabase...");
-                    const { error } = await supabase.auth.signInWithIdToken({
+                    const { error } = await authClient.auth.signInWithIdToken({
                         provider: "google",
                         token: response.data.idToken,
                     });
@@ -368,7 +368,7 @@ export default function LoginScreen() {
     const handleGuestSignIn = async () => {
         clearError();
         setIsGuestLoading(true);
-        const { error: authError } = await supabase.auth.signInAnonymously();
+        const { error: authError } = await authClient.auth.signInAnonymously();
         setIsGuestLoading(false);
 
         if (authError) {

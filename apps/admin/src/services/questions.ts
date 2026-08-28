@@ -1,5 +1,5 @@
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 
 // =============================================================================
 // Types
@@ -29,7 +29,7 @@ export interface QuestionFormData {
  * Fetch all questions for a pack (excludes soft-deleted by default)
  */
 export async function fetchQuestionsForPack(packId: string, includeDeleted = false): Promise<Question[]> {
-    let query = supabase
+    let query = adminData
         .from('questions')
         .select('*')
         .eq('pack_id', packId)
@@ -49,7 +49,7 @@ export async function fetchQuestionsForPack(packId: string, includeDeleted = fal
  * Fetch a single question by ID
  */
 export async function fetchQuestionById(id: string): Promise<Question | null> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('questions')
         .select('*')
         .eq('id', id)
@@ -63,7 +63,7 @@ export async function fetchQuestionById(id: string): Promise<Question | null> {
  * Fetch question count for a pack (excludes soft-deleted)
  */
 export async function fetchQuestionCount(packId: string): Promise<number> {
-    const { count, error } = await supabase
+    const { count, error } = await adminData
         .from('questions')
         .select('*', { count: 'exact', head: true })
         .eq('pack_id', packId)
@@ -84,7 +84,7 @@ export async function createQuestion(
     packId: string,
     data: QuestionFormData
 ): Promise<Question> {
-    const { data: created, error } = await auditedSupabase.insert('questions', {
+    const { data: created, error } = await auditedAdminData.insert('questions', {
         text: data.text,
         partner_text: data.partner_text || null,
         intensity: data.intensity,
@@ -103,7 +103,7 @@ export async function updateQuestion(
     id: string,
     data: Partial<QuestionFormData>
 ): Promise<void> {
-    const { error } = await auditedSupabase.update('questions', id, {
+    const { error } = await auditedAdminData.update('questions', id, {
         text: data.text,
         partner_text: data.partner_text || null,
         intensity: data.intensity,
@@ -116,7 +116,7 @@ export async function updateQuestion(
  * Soft delete a question (sets deleted_at timestamp)
  */
 export async function deleteQuestion(id: string): Promise<void> {
-    const { error } = await auditedSupabase.update('questions', id, {
+    const { error } = await auditedAdminData.update('questions', id, {
         deleted_at: new Date().toISOString(),
     });
     if (error) throw error;
@@ -127,7 +127,7 @@ export async function deleteQuestion(id: string): Promise<void> {
  */
 export async function deleteQuestions(ids: string[]): Promise<void> {
     await Promise.all(
-        ids.map(id => auditedSupabase.update('questions', id, {
+        ids.map(id => auditedAdminData.update('questions', id, {
             deleted_at: new Date().toISOString(),
         }))
     );
@@ -137,7 +137,7 @@ export async function deleteQuestions(ids: string[]): Promise<void> {
  * Restore a soft-deleted question
  */
 export async function restoreQuestion(id: string): Promise<void> {
-    const { error } = await auditedSupabase.update('questions', id, {
+    const { error } = await auditedAdminData.update('questions', id, {
         deleted_at: null,
     });
     if (error) throw error;
@@ -169,7 +169,7 @@ export async function bulkCreateQuestions(
 
     // Insert standalone questions first
     for (const q of standaloneQuestions) {
-        const { data, error } = await auditedSupabase.insert('questions', {
+        const { data, error } = await auditedAdminData.insert('questions', {
             pack_id: packId,
             text: q.text,
             partner_text: q.partner_text || null,
@@ -186,7 +186,7 @@ export async function bulkCreateQuestions(
         if (pair.length >= 2) {
             // First question is primary
             const primary = pair[0];
-            const { data: primaryData, error: primaryError } = await auditedSupabase.insert('questions', {
+            const { data: primaryData, error: primaryError } = await auditedAdminData.insert('questions', {
                 pack_id: packId,
                 text: primary.text,
                 partner_text: primary.partner_text || null,
@@ -201,7 +201,7 @@ export async function bulkCreateQuestions(
 
                 // Second question is inverse
                 const inverse = pair[1];
-                const { data: inverseData, error: inverseError } = await auditedSupabase.insert('questions', {
+                const { data: inverseData, error: inverseError } = await auditedAdminData.insert('questions', {
                     pack_id: packId,
                     text: inverse.text,
                     partner_text: inverse.partner_text || null,
@@ -216,7 +216,7 @@ export async function bulkCreateQuestions(
             // Handle any additional questions in the pair
             for (let i = 2; i < pair.length; i++) {
                 const extra = pair[i];
-                const { data, error } = await auditedSupabase.insert('questions', {
+                const { data, error } = await auditedAdminData.insert('questions', {
                     pack_id: packId,
                     text: extra.text,
                     partner_text: extra.partner_text || null,
@@ -228,7 +228,7 @@ export async function bulkCreateQuestions(
             }
         } else if (pair.length === 1) {
             // Single question with pair_id but no pair
-            const { data, error } = await auditedSupabase.insert('questions', {
+            const { data, error } = await auditedAdminData.insert('questions', {
                 pack_id: packId,
                 text: pair[0].text,
                 partner_text: pair[0].partner_text || null,

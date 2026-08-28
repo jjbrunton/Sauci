@@ -3,7 +3,7 @@ import { useFocusEffect, useLocalSearchParams } from "expo-router";
 
 import { useAuthStore, usePacksStore } from "../../../store";
 import { skipQuestion, getSkippedQuestionIds } from "../../../lib/skippedQuestions";
-import { invokeWithAuthRetry } from "../../../lib/authErrorHandler";
+import { apiClient } from "../../../lib/apiClient";
 import { Events } from "../../../lib/analytics";
 import type { AnswerType } from "../../../types";
 import type { DailyLimitInfo, PackInfo, ResponseData } from "../types";
@@ -307,19 +307,11 @@ export const useSwipeScreen = () => {
                 uploadResponseMedia,
             });
 
-            const { data, error } = await invokeWithAuthRetry("submit-response", {
-                body: {
-                    question_id: questionId,
-                    answer,
-                    response_data: finalResponseData,
-                },
+            const data = await apiClient.post<{ match: unknown | null }>("/v1/responses", {
+                question_id: questionId,
+                answer,
+                response_data: finalResponseData,
             });
-
-            if (error) {
-                console.error("Submit response error:", error);
-                setCurrentIndex(prev => prev + 1);
-                return;
-            }
 
             Events.questionAnswered(answer, filteredQuestions[currentIndex]?.pack_id);
 

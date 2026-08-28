@@ -1,0 +1,115 @@
+# Standalone backend infrastructure
+
+This Compose project is the local data plane for the standalone Sauci API. It
+does not run Supabase services. Supabase remains the hosted identity provider;
+the API verifies its access tokens and owns all application data access.
+
+Use `scripts/dev-local.sh` rather than invoking Compose directly. PostgreSQL is
+bound to loopback and persists in the `sauci-local_sauci-postgres-data` volume.
+The committed credentials are deliberately local-only and must not be reused by
+a deployed environment.
+
+Private media is stored on the API's `media-data` volume. Mobile clients upload
+with bearer authentication, persist opaque `media:<uuid>` references, and ask
+the API for short-lived signed read URLs. The public content route accepts only
+a valid unexpired HMAC capability; it never exposes directory paths.
+
+## Dokploy deployment contract
+
+`compose.production.yaml` is a deployment-ready baseline containing the Node
+API and worker, PostgreSQL, and a one-shot migration service. Configure Dokploy to build the
+Compose file from the repository root and route the public API hostname to the
+`api` service on port `3003`. Do not publish PostgreSQL.
+
+Copy the variable names from `.env.production.example` into Dokploy's secret
+configuration. `POSTGRES_PASSWORD` and the password embedded (URL encoded) in
+`DATABASE_URL` must match. Generate them for the deployment; never reuse the
+committed local password. The API needs only the hosted Supabase Auth URL to
+discover its issuer and JWKS endpoint. The server-only service-role key is used
+solely by the hosted Auth Admin deletion endpoint; it must never reach a client
+or be used for application data or Storage access. The backend must not receive
+a Supabase anon key, database password, or direct Supabase Storage connection.
+
+Administrative automation uses a separate opaque credential pair. Configure
+`ADMIN_API_SERVICE_TOKEN` and `ADMIN_API_SERVICE_USER_ID` on the API together;
+the UUID must resolve to an active, least-privilege `admin_users` row imported or
+created in the standalone database. Configure MCP with the same token under the
+different name `SAUCI_ADMIN_API_TOKEN` plus its independent caller-facing
+`SAUCI_MCP_API_KEY`. The token does not confer Supabase authority: the API maps
+it to the configured administrator and applies normal permissions and auditing.
+Do not give either admin token to mobile, admin browser, or worker containers.
+
+Secret ownership is intentionally split:
+
+| Secret | API | Worker | MCP |
+|---|:---:|:---:|:---:|
+| Hosted Auth service-role key | yes, Auth Admin only | no | no |
+| RevenueCat API/webhook secrets | yes | no | no |
+| Admin API service token | yes | no | yes, as `SAUCI_ADMIN_API_TOKEN` |
+| OpenRouter/Discord worker credentials | no | yes | no |
+| PostgreSQL/media signing configuration | yes | yes | no |
+
+On each deployment, `migrate` waits for PostgreSQL, takes a PostgreSQL advisory
+lock, applies the committed `apps/api/drizzle` migrations, and exits. The `api`
+service starts only after migration succeeds. A failed migration therefore
+fails closed instead of starting new application code against an old schema.
+The image also exposes the same operation as:
+
+```sh
+node dist/db/migrate.js
+```
+
+The container runs as the unprivileged `node` user with a read-only filesystem,
+dropped Linux capabilities, an init process, and bounded graceful shutdown.
+Docker checks `/health/live`; Dokploy should use `/health/ready` for routing so
+traffic is admitted only when PostgreSQL is reachable.
+
+Before the first deployment, provide:
+
+1. The API hostname and TLS route.
+2. Persistent Dokploy volumes for `postgres-data` and `media-data`, with one
+   coordinated backup/restore policy covering both.
+3. The hosted Supabase project URL and expected JWT audience.
+4. Fresh PostgreSQL credentials stored only in Dokploy secrets.
+5. A rollback and restore point before any migrated production data is imported.
+6. A separately generated `MEDIA_SIGNING_SECRET` (at least 32 characters) and
+   the HTTPS API origin as `MEDIA_PUBLIC_BASE_URL`.
+7. A non-production hosted Auth project and disposable, onboarding-complete test
+   identities mapped into the staging database for authenticated mobile acceptance.
+
+Blob deletion is retryable. Database cascades and avatar replacement enqueue
+the server-generated storage key in `media_deletion_queue`; the operations
+worker removes the file and acknowledges the queue row only after a
+successful deletion (missing files are treated as already removed). Failed
+metadata transactions remove the newly written file immediately. Operators
+should alert on an old/growing deletion queue and include it in database
+backups; never delete files by constructing paths outside this lifecycle.
+
+The worker also leases notification, moderation, and optional Discord jobs from
+`operations_outbox`. Jobs are retried with bounded exponential backoff and are
+not selected again after five attempts. Alert on rows that remain unsent after
+five attempts; investigate and replay them explicitly rather than deleting the
+idempotency record or blindly retrying provider calls.
+
+Validate configuration without starting anything:
+
+```sh
+docker compose --env-file infra/backend/.env.production.local \
+  -f infra/backend/compose.production.yaml config
+```
+
+Run the repeatable disposable container check before changing the Dokploy
+application. It uses hard-coded test-only credentials, creates a unique Compose
+project, verifies migration/startup/security/shutdown behaviour, and removes its
+volume on exit:
+
+```sh
+infra/backend/verify-production.sh
+```
+
+Do not point this Compose project at an existing production database during
+local validation. Validate against a disposable local volume first. Production
+cutover additionally requires a stopped-source final sync, row/count checks,
+legacy-media-reference checks, and authenticated mobile behaviour checks against
+the non-production fixture; container health alone is not proof of a successful
+migration.

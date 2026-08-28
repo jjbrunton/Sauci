@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore, useMatchStore, useMessageStore, usePacksStore } from '../../../store';
-import { supabase } from '../../../lib/supabase';
+import { accountOperationsApi } from '../../../lib/accountOperationsApi';
+import { coupleApi } from '../../../lib/coupleApi';
 import { Events } from '../../../lib/analytics';
 
 export function useCoupleManagement() {
@@ -12,7 +13,7 @@ export function useCoupleManagement() {
     const { clearMessages } = useMessageStore();
     const { clearPacks } = usePacksStore();
 
-    const [isResettingProgress, setIsResettingProgress] = useState(false);
+    const [isResettingProgress] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
     const handleUnpair = async () => {
@@ -26,13 +27,11 @@ export function useCoupleManagement() {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await supabase.functions.invoke("manage-couple", {
-                                method: "DELETE",
-                            });
+                            await coupleApi.cancel();
                             await fetchCouple();
                             // Refresh user to update UI state
                             await fetchUser();
-                        } catch (error) {
+                        } catch {
                             Alert.alert("Error", "Failed to unpair");
                         }
                     },
@@ -43,11 +42,7 @@ export function useCoupleManagement() {
 
     const handleDeleteRelationship = async () => {
         try {
-            const { error } = await supabase.functions.invoke("delete-relationship", {
-                method: "DELETE",
-            });
-
-            if (error) throw error;
+            await accountOperationsApi.deleteRelationship();
 
             // Clear local stores
             clearMatches();
@@ -68,11 +63,7 @@ export function useCoupleManagement() {
 
     const handleResetProgress = async () => {
         try {
-            const { error } = await supabase.functions.invoke("reset-couple-progress", {
-                method: "DELETE",
-            });
-
-            if (error) throw error;
+            await accountOperationsApi.resetProgress();
 
             // Clear local stores
             clearMatches();
@@ -103,11 +94,7 @@ export function useCoupleManagement() {
     const handleDeleteAccount = async () => {
         setIsDeletingAccount(true);
         try {
-            const { error } = await supabase.functions.invoke("delete-account", {
-                method: "DELETE",
-            });
-
-            if (error) throw error;
+            await accountOperationsApi.deleteAccount();
 
             // Clear all local data
             clearMatches();

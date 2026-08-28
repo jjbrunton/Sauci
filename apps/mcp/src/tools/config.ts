@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerConfigTools(server: McpServer) {
@@ -9,7 +9,7 @@ export function registerConfigTools(server: McpServer) {
     'Get AI configuration',
     {},
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('ai_config')
         .select('*')
         .single();
@@ -35,14 +35,14 @@ export function registerConfigTools(server: McpServer) {
     },
     async (updates) => {
       // Get current ID (singleton table usually has 1 row, but need ID for update)
-      const { data: current, error: fetchError } = await supabase
+      const { data: current, error: fetchError } = await adminData
         .from('ai_config')
         .select('*')
         .single();
         
       if (fetchError) throw new Error(`Failed to fetch current config: ${fetchError.message}`);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('ai_config')
         .update(updates)
         .eq('id', current.id)
@@ -59,9 +59,7 @@ export function registerConfigTools(server: McpServer) {
         new_values: data
       });
 
-      return {
-        content: [{ type: 'text', text: JSON.stringify(data, null, 2) }]
-      };
+      return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
     }
   );
 
@@ -70,7 +68,7 @@ export function registerConfigTools(server: McpServer) {
     'Get app configuration',
     {},
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('app_config')
         .select('*')
         .single();
@@ -91,14 +89,14 @@ export function registerConfigTools(server: McpServer) {
       daily_response_limit: z.number().optional()
     },
     async (updates) => {
-      const { data: current, error: fetchError } = await supabase
+      const { data: current, error: fetchError } = await adminData
         .from('app_config')
         .select('*')
         .single();
         
       if (fetchError) throw new Error(`Failed to fetch current config: ${fetchError.message}`);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('app_config')
         .update(updates)
         .eq('id', current.id)

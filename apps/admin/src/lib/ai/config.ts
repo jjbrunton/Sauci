@@ -47,7 +47,7 @@ export function getCouncilConfig(): CouncilConfig {
 }
 
 /**
- * Initialize AI config by preloading from Supabase
+ * Initialize AI config by preloading from the standalone admin API
  * Call this on app startup to ensure config is available
  */
 export async function initializeAiConfig(): Promise<AiConfig | null> {

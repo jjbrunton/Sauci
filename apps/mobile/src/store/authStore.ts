@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+import { ApiError, apiClient } from "../lib/apiClient";
+import { authClient } from "../lib/authClient";
+import { coupleApi } from "../lib/coupleApi";
+import { profileSettingsApi } from "../lib/profileSettingsApi";
 import { Events } from "../lib/analytics";
 import type { Profile, Couple } from "@/types";
 
@@ -45,42 +48,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     fetchUser: async () => {
         try {
             // First check if we have a session in storage
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await authClient.auth.getSession();
 
             if (!session?.user) {
                 set({ user: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
                 return;
             }
 
-            // Validate the session by fetching the user from the server
-            // This will fail if the session was deleted server-side
-            const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+            // This endpoint verifies the Supabase access token and creates the
+            // product profile on first use, keeping profile data out of Supabase.
+            const { profile } = await apiClient.get<{ profile: Profile }>("/v1/me");
 
-            if (authError || !authUser) {
-                console.log("[Auth] Session invalid, signing out:", authError?.message);
-
-                // Session is invalid - clear everything
-                set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
-                // Clear other stores
-                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
-                useMatchStore.getState().clearMatches();
-                usePacksStore.getState().clearPacks();
-                useMessageStore.getState().clearMessages();
-                useSubscriptionStore.getState().clearSubscription();
-                useNotificationPreferencesStore.getState().clearPreferences();
-                useStreakStore.getState().clearStreak();
-                // Sign out from Supabase (clears storage)
-                await supabase.auth.signOut();
-                return;
-            }
-
-            const { data: profile } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", authUser.id)
-                .maybeSingle();
-
-            const isAnonymous = !!(authUser as any).is_anonymous;
+            const isAnonymous = !!(session.user as { is_anonymous?: boolean }).is_anonymous;
 
             // Only update user if data actually changed to avoid unnecessary re-renders
             const currentUser = get().user;
@@ -104,6 +83,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             set({ isLoading: false });
         } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+                console.log("[Auth] Session rejected by API, signing out");
+                set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
+                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
+                useMatchStore.getState().clearMatches();
+                usePacksStore.getState().clearPacks();
+                useMessageStore.getState().clearMessages();
+                useSubscriptionStore.getState().clearSubscription();
+                useNotificationPreferencesStore.getState().clearPreferences();
+                useStreakStore.getState().clearStreak();
+                await authClient.auth.signOut();
+                return;
+            }
             console.error("Error fetching user:", error);
             set({ isLoading: false });
         }
@@ -111,22 +103,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     fetchCouple: async () => {
         const user = get().user;
-        if (!user?.couple_id) return;
+        if (!user?.couple_id) {
+            set({ couple: null, partner: null });
+            return;
+        }
 
-        const { data: couple } = await supabase
-            .from("couples")
-            .select("*")
-            .eq("id", user.couple_id)
-            .maybeSingle();
-
-        // Fetch partner
-        const { data: partner } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("couple_id", user.couple_id)
-            .neq("id", user.id)
-            .maybeSingle();
-
+        const { couple, partner } = await coupleApi.getState();
         set({ couple, partner });
     },
 
@@ -138,12 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = get().user;
         if (!user?.couple_id) return null;
 
-        const { data: partner } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("couple_id", user.couple_id)
-            .neq("id", user.id)
-            .maybeSingle();
+        const { partner } = await coupleApi.getState();
 
         if (partner) {
             set({ partner });
@@ -178,7 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Then try to sign out from Supabase (don't block on this)
         try {
-            await supabase.auth.signOut();
+            await authClient.auth.signOut();
         } catch (error) {
             console.error("Supabase signOut error:", error);
         }
@@ -218,10 +195,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (!userId) return;
 
         try {
-            await supabase
-                .from("profiles")
-                .update({ last_active_at: new Date().toISOString() })
-                .eq("id", userId);
+            await profileSettingsApi.updateLastActive();
         } catch (error) {
             // Silently fail - this is not critical
             console.error("Failed to update last_active_at:", error);

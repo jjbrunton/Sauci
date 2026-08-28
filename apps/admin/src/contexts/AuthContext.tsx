@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../config';
+import { authClient } from '../config';
+import { adminRequest } from '@/lib/adminApi';
 import type { User, Session } from '@supabase/supabase-js';
 import { preloadAiConfig, clearAiConfigCache } from '@/hooks/useAiConfig';
 
@@ -80,23 +81,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        authClient.auth.getSession().then(async ({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
 
-            // Restore permissions from localStorage
-            const storedPermissions = localStorage.getItem(PERMISSIONS_KEY);
-            if (storedPermissions) {
-                setPermissions(JSON.parse(storedPermissions));
-                // Preload AI config if user has an existing session (non-blocking)
-                preloadAiConfig().catch(console.error);
+            if (session) {
+                try {
+                    const currentPermissions = await adminRequest<AdminPermissions>('/v1/admin/me');
+                    setPermissions(currentPermissions);
+                    localStorage.setItem(PERMISSIONS_KEY, JSON.stringify(currentPermissions));
+                    preloadAiConfig().catch(console.error);
+                } catch {
+                    setPermissions(null);
+                    localStorage.removeItem(PERMISSIONS_KEY);
+                }
             }
-
             setLoading(false);
         });
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        const { data: { subscription } } = authClient.auth.onAuthStateChange(
             (_event, session) => {
                 setSession(session);
                 setUser(session?.user ?? null);
@@ -112,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const login = async (email: string, password: string) => {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await authClient.auth.signInWithPassword({
             email,
             password,
         });
@@ -122,20 +126,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Fetch admin role and permissions
-        const { data: adminData, error: adminError } = await supabase
-            .from('admin_users')
-            .select('role, permissions')
-            .eq('user_id', data.user.id)
-            .single();
-
-        if (adminError || !adminData) {
-            await supabase.auth.signOut();
+        let adminData: AdminPermissions;
+        try {
+            adminData = await adminRequest<AdminPermissions>('/v1/admin/me');
+        } catch {
+            await authClient.auth.signOut();
             throw new Error('Access denied. You are not an administrator.');
         }
 
         // Store permissions from database
         const perms: AdminPermissions = {
-            role: adminData.role as AdminRole,
+            role: adminData.role,
             permissions: (adminData.permissions as string[]) || [],
         };
 
@@ -150,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(PERMISSIONS_KEY);
         setPermissions(null);
         clearAiConfigCache();
-        await supabase.auth.signOut();
+        await authClient.auth.signOut();
     };
 
     const isSuperAdmin = permissions?.role === 'super_admin';

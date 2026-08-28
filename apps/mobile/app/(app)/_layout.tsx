@@ -5,14 +5,13 @@ import { BlurView } from "expo-blur";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore, useStreakStore } from "../../src/store";
 import { colors, radius, spacing, typography, shadows } from "../../src/theme";
-import { supabase } from "../../src/lib/supabase";
+import { authClient } from "../../src/lib/authClient";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
 import { syncBadgeCount } from "../../src/lib/badge";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
 import { Events } from "../../src/lib/analytics";
 import { needsOnboarding } from "../../src/constants/onboarding";
-import type { MatchWithQuestion } from "../../src/types";
 import type { Database } from "../../src/types/supabase";
 
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -60,16 +59,18 @@ export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut, updateLastActive } = useAuthStore();
-    const { matches, newMatchesCount, addMatch, updateMatchUnreadCount, pendingQuestions, fetchPendingQuestions } = useMatchStore();
-    const { unreadCount, lastMessage, fetchUnreadCount, addMessage, clearLastMessage } = useMessageStore();
+    const { newMatchesCount, pendingQuestions, fetchPendingQuestions, fetchMatches } = useMatchStore();
+    const { unreadCount, lastMessage, fetchUnreadCount, clearLastMessage } = useMessageStore();
     const { fetchEnabledPacks } = usePacksStore();
-    const { initializeRevenueCat } = useSubscriptionStore();
+    const { initializeRevenueCat, refreshSubscriptionStatus } = useSubscriptionStore();
     const { fetchStreak } = useStreakStore();
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
     const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isLocked, setIsLocked] = useState(false);
     const hasCheckedInitialBiometric = useRef(false);
     const wentToBackgroundAt = useRef<number | null>(null);
+    const knownMatchIdsRef = useRef<Set<string>>(new Set());
+    const matchPollInitializedRef = useRef(false);
 
     // Check if we're on screens that should hide the tab bar
     const segmentStrings = segments as string[];
@@ -92,7 +93,7 @@ export default function AppLayout() {
     // Check session validity on mount and when app comes to foreground
     useEffect(() => {
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await authClient.auth.getSession();
             if (!session) {
                 // No valid session - sign out to clear local state
                 signOut();
@@ -111,13 +112,16 @@ export default function AppLayout() {
                 checkSession();
                 // Update last active timestamp when app comes to foreground
                 updateLastActive();
+                if (user?.id && Platform.OS !== "web") {
+                    void refreshSubscriptionStatus();
+                }
             }
         });
 
         return () => {
             subscription.remove();
         };
-    }, [signOut, updateLastActive]);
+    }, [signOut, updateLastActive, user?.id, refreshSubscriptionStatus]);
 
     // Handle biometric lock when app goes to background/foreground
     useEffect(() => {
@@ -210,171 +214,44 @@ export default function AppLayout() {
         }
     }, [user?.id, user?.onboarding_completed]);
 
-    // Subscribe to realtime changes on the current user's profile
-    // This detects when partner disconnects (sets our couple_id to NULL)
+    // Poll the self-hosted API for profile, match, pending-question and pack changes.
+    // This replaces the former Supabase Postgres change subscriptions.
     useEffect(() => {
         if (!user?.id) return;
+        let cancelled = false;
+        matchPollInitializedRef.current = false;
+        knownMatchIdsRef.current = new Set();
 
-        const channel = supabase
-            .channel(`profile:${user.id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "UPDATE",
-                    schema: "public",
-                    table: "profiles",
-                    filter: `id=eq.${user.id}`,
-                },
-                async (payload) => {
-                    const newProfile = payload.new as { couple_id: string | null };
-                    // If couple_id changed (especially to NULL when partner disconnects)
-                    if (newProfile.couple_id !== user.couple_id) {
-                        console.log("Profile couple_id changed, refreshing user data...");
-                        await useAuthStore.getState().fetchUser();
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
+        const poll = async () => {
+            await Promise.allSettled([
+                useAuthStore.getState().fetchUser(),
+                ...(user.couple_id ? [fetchMatches(true), fetchPendingQuestions(), fetchEnabledPacks()] : []),
+            ]);
+            if (cancelled || !user.couple_id) return;
+            const refreshed = useMatchStore.getState().matches;
+            if (matchPollInitializedRef.current) {
+                const added = refreshed.filter(item => !knownMatchIdsRef.current.has(item.id));
+                for (const item of added) Events.matchCreated(item.match_type || "unknown");
+                const previousCount = knownMatchIdsRef.current.size;
+                if (previousCount === 0 && added.length > 0) Events.firstMatch();
+                else if (added.length > 0 && refreshed.length % 10 === 0) Events.milestoneMatch(refreshed.length);
+            }
+            knownMatchIdsRef.current = new Set(refreshed.map(item => item.id));
+            matchPollInitializedRef.current = true;
         };
-    }, [user?.id, user?.couple_id]);
 
-    // Subscribe to realtime match notifications (for badge updates and analytics)
+        void poll();
+        const timer = setInterval(() => void poll(), 5_000);
+        return () => { cancelled = true; clearInterval(timer); };
+    }, [user?.id, user?.couple_id, fetchMatches, fetchPendingQuestions, fetchEnabledPacks]);
+
+    // Poll the self-hosted API for unread chat state. Chat screens perform their
+    // own message polling; this keeps the global badge current without Supabase Realtime.
     useEffect(() => {
         if (!user?.couple_id) return;
-
-        const channel = supabase
-            .channel(`matches:${user.couple_id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "matches",
-                    filter: `couple_id=eq.${user.couple_id}`,
-                },
-                async (payload) => {
-                    // Fetch the full match with question details
-                    const { data: matchWithQuestion } = await supabase
-                        .from("matches")
-                        .select(`
-                            *,
-                            question:questions(*)
-                        `)
-                        .eq("id", payload.new.id)
-                        .single();
-
-                    if (matchWithQuestion && matchWithQuestion.question) {
-                        // Track milestone events before adding (so count is accurate)
-                        const currentMatchCount = matches.length;
-                        if (currentMatchCount === 0) {
-                            Events.firstMatch();
-                        } else if ((currentMatchCount + 1) % 10 === 0) {
-                            Events.milestoneMatch(currentMatchCount + 1);
-                        }
-
-                        // Add to store (updates badge count via newMatchesCount)
-                        addMatch(matchWithQuestion);
-                        Events.matchCreated(matchWithQuestion.match_type || "unknown");
-
-                        // Note: No modal popup - user will see badge on matches tab
-                        // Confetti animation is shown inline on swipe screen when user creates match
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user?.couple_id, addMatch, matches.length]);
-
-    // Subscribe to realtime message notifications
-    useEffect(() => {
-        if (!user?.couple_id) return;
-
-        const channel = supabase
-            .channel(`messages:${user.couple_id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "INSERT",
-                    schema: "public",
-                    table: "messages",
-                },
-                async (payload) => {
-                    const newMessage = payload.new as Message;
-
-                    // Only process messages from partner
-                    if (newMessage.user_id === user.id) return;
-
-                    // Mark as delivered (message received by device)
-                    if (!newMessage.delivered_at) {
-                        await supabase
-                            .from("messages")
-                            .update({ delivered_at: new Date().toISOString() })
-                            .eq("id", newMessage.id);
-                    }
-
-                    // Fetch the match details for context
-                    const { data: match } = await supabase
-                        .from("matches")
-                        .select("id, question:questions(text)")
-                        .eq("id", newMessage.match_id)
-                        .single();
-
-                    if (match) {
-                        // Handle the joined question data from the query
-                        const questionData = match.question;
-                        const questionText = Array.isArray(questionData)
-                            ? questionData[0]?.text
-                            : (questionData as { text: string } | null)?.text;
-
-                        addMessage({
-                            ...newMessage,
-                            delivered_at: newMessage.delivered_at || new Date().toISOString(),
-                            match: { id: match.id, question: { text: questionText || "" } },
-                        });
-
-                        // Sync per-match unread count for realtime updates
-                        updateMatchUnreadCount(match.id, 1);
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user?.couple_id, user?.id, addMessage]);
-
-    // Subscribe to realtime pack setting changes (when partner toggles a pack)
-    useEffect(() => {
-        if (!user?.couple_id) return;
-
-        const channel = supabase
-            .channel(`couple_packs:${user.couple_id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "*", // INSERT, UPDATE, DELETE
-                    schema: "public",
-                    table: "couple_packs",
-                    filter: `couple_id=eq.${user.couple_id}`,
-                },
-                () => {
-                    // Refetch enabled packs when partner changes pack settings
-                    fetchEnabledPacks();
-                }
-            )
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user?.couple_id, fetchEnabledPacks]);
+        const timer = setInterval(() => void fetchUnreadCount(), 3_000);
+        return () => clearInterval(timer);
+    }, [user?.couple_id, fetchUnreadCount]);
 
     // Animate message toast when lastMessage changes
     useEffect(() => {

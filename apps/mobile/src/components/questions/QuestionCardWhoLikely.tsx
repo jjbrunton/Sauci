@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from "react-native";
-import { Image } from "expo-image";
+import { MediaImage } from "../MediaImage";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
     useSharedValue,
@@ -324,8 +324,8 @@ function AvatarButton({
             ]}>
                 <Animated.View style={[styles.avatarBorder, borderAnimatedStyle]}>
                     {avatarUrl ? (
-                        <Image
-                            source={{ uri: avatarUrl }}
+                        <MediaImage
+                            reference={avatarUrl}
                             style={styles.avatarImage}
                             contentFit="cover"
                             cachePolicy="memory-disk"

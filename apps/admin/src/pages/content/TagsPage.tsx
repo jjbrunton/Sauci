@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -64,9 +64,9 @@ export function TagsPage() {
         setLoading(true);
         try {
             const [topicsResult, packTopicsResult, packsResult] = await Promise.all([
-                supabase.from('topics').select('id, name').order('name'),
-                supabase.from('pack_topics').select('pack_id, topic_id'),
-                supabase
+                adminData.from('topics').select('id, name').order('name'),
+                adminData.from('pack_topics').select('pack_id, topic_id'),
+                adminData
                     .from('question_packs')
                     .select('id, name, description, is_public, category:categories(name)')
                     .order('name'),
@@ -106,7 +106,7 @@ export function TagsPage() {
             const questionCounts: Record<string, number> = {};
 
             if (untaggedPackIds.length > 0) {
-                const { data: questions, error: questionsError } = await supabase
+                const { data: questions, error: questionsError } = await adminData
                     .from('questions')
                     .select('pack_id')
                     .in('pack_id', untaggedPackIds);
@@ -167,7 +167,7 @@ export function TagsPage() {
         setTaggingProgress({ current: 0, total: eligiblePacks.length, packName: '' });
 
         try {
-            const { data: topicsData, error: topicsError } = await supabase
+            const { data: topicsData, error: topicsError } = await adminData
                 .from('topics')
                 .select('id, name')
                 .order('name');
@@ -188,7 +188,7 @@ export function TagsPage() {
                 });
 
                 try {
-                    const { data: questions, error: questionsError } = await supabase
+                    const { data: questions, error: questionsError } = await adminData
                         .from('questions')
                         .select('text')
                         .eq('pack_id', pack.id);
@@ -237,7 +237,7 @@ export function TagsPage() {
                     });
 
                     if (newTopics.length > 0) {
-                        const { data: createdTopics, error: createError } = await supabase
+                        const { data: createdTopics, error: createError } = await adminData
                             .from('topics')
                             .insert(newTopics)
                             .select('id, name');
@@ -250,14 +250,14 @@ export function TagsPage() {
                         });
                     }
 
-                    await supabase.from('pack_topics').delete().eq('pack_id', pack.id);
+                    await adminData.from('pack_topics').delete().eq('pack_id', pack.id);
 
                     if (topicIds.length === 0) {
                         skippedCount += 1;
                         continue;
                     }
 
-                    const { error: linkError } = await supabase
+                    const { error: linkError } = await adminData
                         .from('pack_topics')
                         .insert(topicIds.map((topicId) => ({
                             pack_id: pack.id,

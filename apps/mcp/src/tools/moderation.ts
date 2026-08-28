@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerModerationTools(server: McpServer) {
@@ -12,7 +12,7 @@ export function registerModerationTools(server: McpServer) {
       offset: z.number().default(0)
     },
     async ({ limit, offset }) => {
-      const { data, error, count } = await supabase
+      const { data, error, count } = await adminData
         .from('messages')
         .select('*', { count: 'exact' })
         .eq('moderation_status', 'flagged')
@@ -36,7 +36,7 @@ export function registerModerationTools(server: McpServer) {
       offset: z.number().default(0)
     },
     async ({ status, limit, offset }) => {
-      const { data, error, count } = await supabase
+      const { data, error, count } = await adminData
         .from('message_reports')
         .select(`
           *,
@@ -60,9 +60,9 @@ export function registerModerationTools(server: McpServer) {
     'Mark a flagged message as safe',
     { message_id: z.string() },
     async ({ message_id }) => {
-      const { data: oldData } = await supabase.from('messages').select('*').eq('id', message_id).single();
+      const { data: oldData } = await adminData.from('messages').select('*').eq('id', message_id).single();
       
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('messages')
         .update({ moderation_status: 'safe' })
         .eq('id', message_id)
@@ -90,9 +90,9 @@ export function registerModerationTools(server: McpServer) {
     'Dismiss a user report',
     { report_id: z.string() },
     async ({ report_id }) => {
-      const { data: oldData } = await supabase.from('message_reports').select('*').eq('id', report_id).single();
+      const { data: oldData } = await adminData.from('message_reports').select('*').eq('id', report_id).single();
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('message_reports')
         .update({ status: 'dismissed', reviewed_at: new Date().toISOString() })
         .eq('id', report_id)
@@ -120,9 +120,9 @@ export function registerModerationTools(server: McpServer) {
     'Mark a report as reviewed (action taken)',
     { report_id: z.string() },
     async ({ report_id }) => {
-      const { data: oldData } = await supabase.from('message_reports').select('*').eq('id', report_id).single();
+      const { data: oldData } = await adminData.from('message_reports').select('*').eq('id', report_id).single();
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('message_reports')
         .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
         .eq('id', report_id)

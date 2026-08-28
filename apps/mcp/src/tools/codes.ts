@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerCodeTools(server: McpServer) {
@@ -15,7 +15,7 @@ export function registerCodeTools(server: McpServer) {
     async ({ page, limit, search }) => {
       const offset = (page - 1) * limit;
       
-      let query = supabase
+      let query = adminData
         .from('redemption_codes')
         .select('*', { count: 'exact' });
         
@@ -48,7 +48,7 @@ export function registerCodeTools(server: McpServer) {
     async ({ code, description, max_uses, expires_at, is_active }) => {
       const finalCode = code || Math.random().toString(36).substring(2, 10).toUpperCase();
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('redemption_codes')
         .insert({
           code: finalCode,
@@ -81,9 +81,9 @@ export function registerCodeTools(server: McpServer) {
     'Enable or disable a redemption code',
     { id: z.string(), is_active: z.boolean() },
     async ({ id, is_active }) => {
-      const { data: oldData } = await supabase.from('redemption_codes').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('redemption_codes').select('*').eq('id', id).single();
       
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('redemption_codes')
         .update({ is_active })
         .eq('id', id)
@@ -111,9 +111,9 @@ export function registerCodeTools(server: McpServer) {
     'Delete a redemption code',
     { id: z.string() },
     async ({ id }) => {
-      const { data: oldData } = await supabase.from('redemption_codes').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('redemption_codes').select('*').eq('id', id).single();
       
-      const { error } = await supabase.from('redemption_codes').delete().eq('id', id);
+      const { error } = await adminData.from('redemption_codes').delete().eq('id', id);
       if (error) throw new Error(`Failed to delete code: ${error.message}`);
 
       await logAudit({
@@ -134,7 +134,7 @@ export function registerCodeTools(server: McpServer) {
     'See who redeemed a code',
     { code_id: z.string() },
     async ({ code_id }) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('code_redemptions')
         .select(`
           *,

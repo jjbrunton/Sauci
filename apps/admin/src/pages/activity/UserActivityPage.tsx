@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/config';
+import { adminData, adminRequest } from '@/lib/adminApi';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -149,7 +149,7 @@ export function UserActivityPage() {
             const from = (responsesPage - 1) * responsesPageSize;
             const to = from + responsesPageSize - 1;
 
-            const { data, error, count } = await supabase
+            const { data, error, count } = await adminData
                 .from('responses')
                 .select(`
                     id, user_id, answer, created_at,
@@ -166,7 +166,7 @@ export function UserActivityPage() {
 
             setResponsesTotal(count || 0);
 
-            // Transform data to match our types (Supabase returns nested objects, not arrays for 1:1 relations)
+            // Transform the API's nested relationship objects to the view model.
             const transformed: ResponseActivity[] = (data || []).map((item: any) => ({
                 id: item.id,
                 user_id: item.user_id,
@@ -195,7 +195,7 @@ export function UserActivityPage() {
             const from = (matchesPage - 1) * matchesPageSize;
             const to = from + matchesPageSize - 1;
 
-            const { data: matchesData, error: matchesError, count } = await supabase
+            const { data: matchesData, error: matchesError, count } = await adminData
                 .from('matches')
                 .select(`
                     id, couple_id, match_type, is_new, created_at,
@@ -211,7 +211,7 @@ export function UserActivityPage() {
             // Get unique couple IDs and fetch profiles
             const coupleIds = [...new Set((matchesData || []).map((m: any) => m.couple_id))];
             if (coupleIds.length > 0) {
-                const { data: profiles, error: profilesError } = await supabase
+                const { data: profiles, error: profilesError } = await adminData
                     .from('profiles')
                     .select('id, name, email, couple_id')
                     .in('couple_id', coupleIds);
@@ -257,7 +257,7 @@ export function UserActivityPage() {
             const to = from + messagesPageSize - 1;
 
             // Fetch messages with match data
-            const { data: messagesData, error: messagesError, count } = await supabase
+            const { data: messagesData, error: messagesError, count } = await adminData
                 .from('messages')
                 .select(`
                     id, user_id, content, media_path, media_type, created_at,
@@ -278,7 +278,7 @@ export function UserActivityPage() {
             let profilesMap: Record<string, { id: string; name: string | null; email: string | null }> = {};
 
             if (userIds.length > 0) {
-                const { data: profiles, error: profilesError } = await supabase
+                const { data: profiles, error: profilesError } = await adminData
                     .from('profiles')
                     .select('id, name, email')
                     .in('id', userIds);
@@ -319,10 +319,7 @@ export function UserActivityPage() {
         setLoading(prev => ({ ...prev, signups: true }));
         try {
             // Use RPC to get profiles with auth info (includes email from auth.users)
-            const { data: allData, error } = await supabase
-                .rpc('get_profiles_with_auth_info');
-
-            if (error) throw error;
+            const { users: allData } = await adminRequest<{ users: SignupActivity[] }>('/v1/admin/users');
 
             // Sort by created_at descending and apply pagination
             const sorted = (allData || []).sort((a: SignupActivity, b: SignupActivity) =>

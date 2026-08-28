@@ -1,0 +1,19 @@
+appId: com.sauci.app
+name: Standalone-backend build reaches the Auth login screen
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    point: "94%,44%"
+- extendedWaitUntil:
+    visible: "Explore intimacy together"
+    timeout: 30000
+- assertVisible: "Sauci"
+- assertVisible: "Password"
+- takeScreenshot: "evidence/self-hosted-backend/ios-auth-login-current"

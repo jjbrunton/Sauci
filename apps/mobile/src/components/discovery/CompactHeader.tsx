@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { colors, spacing, typography, radius } from '../../theme';
 import type { Profile, Couple } from '@/types';
+import { MediaImage } from '../MediaImage';
 
 interface CompactHeaderProps {
   user: Profile | null;
@@ -46,8 +46,8 @@ export function CompactHeader({
               partner ? (
                 <View style={styles.partnerBadge}>
                   {partner.avatar_url ? (
-                    <Image
-                      source={{ uri: partner.avatar_url }}
+                    <MediaImage
+                      reference={partner.avatar_url}
                       style={styles.partnerAvatar}
                       cachePolicy="disk"
                       contentFit="cover"

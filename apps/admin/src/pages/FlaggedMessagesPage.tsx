@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
+import { adminBinaryRequest, adminData, adminRequest } from '@/lib/adminApi';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -95,7 +95,7 @@ export function FlaggedMessagesPage() {
             const from = (aiPage - 1) * aiPageSize;
             const to = from + aiPageSize - 1;
 
-            const { data, error, count } = await supabase
+            const { data, error, count } = await adminData
                 .from('messages')
                 .select('id, created_at, user_id, match_id, moderation_status, flag_reason, content, media_path, media_type', { count: 'exact' })
                 .eq('moderation_status', 'flagged')
@@ -120,7 +120,7 @@ export function FlaggedMessagesPage() {
             const from = (reportsPage - 1) * reportsPageSize;
             const to = from + reportsPageSize - 1;
 
-            const { data, error, count } = await supabase
+            const { data, error, count } = await adminData
                 .from('message_reports')
                 .select(`
                     id,
@@ -166,24 +166,11 @@ export function FlaggedMessagesPage() {
         }
     }, [reportsPage, reportsPageSize, reportsTotal]);
 
-    // Custom media fetcher because supabase.functions.invoke is JSON-centric
     const fetchDecryptedMedia = async (messageId: string) => {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return null;
-
-            const response = await fetch(`https://ckjcrkjpmhqhiucifukx.supabase.co/functions/v1/admin-decrypt-media`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ messageId })
+            const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                method: 'POST', body: { messageId },
             });
-
-            if (!response.ok) throw new Error('Failed to fetch media');
-
-            const blob = await response.blob();
             return URL.createObjectURL(blob);
         } catch (e) {
             console.error(e);
@@ -199,8 +186,8 @@ export function FlaggedMessagesPage() {
         setImageDescription(null);
 
         try {
-            const { data: textData, error: textError } = await supabase.functions.invoke('admin-decrypt-message', {
-                 body: { messageId: message.id }
+            const textData = await adminRequest<{ content: string | null }>('/v1/admin/actions/decrypt-message', {
+                method: 'POST', body: { messageId: message.id },
             });
 
             let mediaUrl = null;
@@ -209,7 +196,7 @@ export function FlaggedMessagesPage() {
             }
 
             setDecryptedContent({
-                text: textData?.content || (textError ? 'Error decrypting text' : null),
+                text: textData.content,
                 mediaUrl
             });
 
@@ -233,8 +220,8 @@ export function FlaggedMessagesPage() {
         setImageDescription(null);
 
         try {
-            const { data: textData, error: textError } = await supabase.functions.invoke('admin-decrypt-message', {
-                 body: { messageId: report.message.id }
+            const textData = await adminRequest<{ content: string | null }>('/v1/admin/actions/decrypt-message', {
+                method: 'POST', body: { messageId: report.message.id },
             });
 
             let mediaUrl = null;
@@ -243,7 +230,7 @@ export function FlaggedMessagesPage() {
             }
 
             setDecryptedContent({
-                text: textData?.content || (textError ? 'Error decrypting text' : null),
+                text: textData.content,
                 mediaUrl
             });
 
@@ -274,27 +261,9 @@ export function FlaggedMessagesPage() {
 
         setDescribingInline(message.id);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                toast.error('Not authenticated');
-                return;
-            }
-
-            const response = await fetch(`https://ckjcrkjpmhqhiucifukx.supabase.co/functions/v1/admin-decrypt-media`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ messageId: message.id })
+            const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                method: 'POST', body: { messageId: message.id },
             });
-
-            if (!response.ok) {
-                toast.error('Failed to decrypt media');
-                return;
-            }
-
-            const blob = await response.blob();
             const base64 = await new Promise<string>((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -319,7 +288,7 @@ export function FlaggedMessagesPage() {
     const handleMarkSafe = async (messageId: string) => {
         setProcessing(messageId);
         try {
-            const { error } = await supabase
+            const { error } = await adminData
                 .from('messages')
                 .update({ moderation_status: 'safe' })
                 .eq('id', messageId);
@@ -339,7 +308,7 @@ export function FlaggedMessagesPage() {
     const handleDismissReport = async (reportId: string) => {
         setProcessing(reportId);
         try {
-            const { error } = await supabase
+            const { error } = await adminData
                 .from('message_reports')
                 .update({ status: 'dismissed', reviewed_at: new Date().toISOString() })
                 .eq('id', reportId);
@@ -359,7 +328,7 @@ export function FlaggedMessagesPage() {
     const handleReviewReport = async (reportId: string) => {
         setProcessing(reportId);
         try {
-            const { error } = await supabase
+            const { error } = await adminData
                 .from('message_reports')
                 .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
                 .eq('id', reportId);

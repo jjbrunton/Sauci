@@ -27,8 +27,12 @@ jest.mock('../../lib/revenuecat', () => ({
 
 import { useSubscriptionStore } from '@/store/subscriptionStore';
 import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/lib/supabase';
+import { accountOperationsApi } from '@/lib/accountOperationsApi';
 import revenueCatService from '../../lib/revenuecat';
+
+jest.mock('@/lib/accountOperationsApi', () => ({
+    accountOperationsApi: { syncSubscription: jest.fn(async () => ({ success: true, is_premium: true })) },
+}));
 
 describe('subscriptionStore', () => {
     beforeEach(() => {
@@ -167,7 +171,32 @@ describe('subscriptionStore', () => {
             const state = useSubscriptionStore.getState();
             expect(state.subscription.isProUser).toBe(true);
             expect(state.isPurchasing).toBe(false);
+            expect(accountOperationsApi.syncSubscription).toHaveBeenCalledTimes(1);
             expect(useAuthStore.getState().fetchUser).toHaveBeenCalled();
+        });
+
+        it('keeps a completed purchase successful when server reconciliation fails', async () => {
+            const mockPackage = { identifier: 'monthly' };
+            (revenueCatService.parseCustomerInfo as jest.Mock).mockReturnValue({
+                isProUser: true,
+                activeSubscription: 'monthly',
+                expirationDate: '2025-01-01',
+                willRenew: true,
+            });
+            (accountOperationsApi.syncSubscription as jest.Mock).mockRejectedValueOnce(
+                new Error('Sync unavailable')
+            );
+            const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+            const result = await useSubscriptionStore.getState().purchasePackage(mockPackage as any);
+
+            expect(result.success).toBe(true);
+            expect(useSubscriptionStore.getState().subscription.isProUser).toBe(true);
+            expect(consoleSpy).toHaveBeenCalledWith(
+                'Error syncing subscription after purchase:',
+                expect.any(Error)
+            );
+            consoleSpy.mockRestore();
         });
 
         it('handles cancelled purchase', async () => {
@@ -215,6 +244,8 @@ describe('subscriptionStore', () => {
             const state = useSubscriptionStore.getState();
             expect(state.subscription.isProUser).toBe(true);
             expect(state.isPurchasing).toBe(false);
+            expect(accountOperationsApi.syncSubscription).toHaveBeenCalledTimes(1);
+            expect(useAuthStore.getState().fetchUser).toHaveBeenCalled();
         });
 
         it('returns false when no purchases to restore', async () => {
@@ -237,7 +268,7 @@ describe('subscriptionStore', () => {
     });
 
     describe('refreshSubscriptionStatus', () => {
-        it('refreshes subscription status', async () => {
+        it('refreshes and syncs a changed subscription status through the standalone API', async () => {
             (revenueCatService.parseCustomerInfo as jest.Mock).mockReturnValue({
                 isProUser: true,
                 activeSubscription: 'monthly',
@@ -249,6 +280,17 @@ describe('subscriptionStore', () => {
 
             const state = useSubscriptionStore.getState();
             expect(state.subscription.isProUser).toBe(true);
+            expect(accountOperationsApi.syncSubscription).toHaveBeenCalled();
+            expect(useAuthStore.getState().fetchUser).toHaveBeenCalled();
+        });
+
+        it('skips refresh until RevenueCat is initialized', async () => {
+            (revenueCatService.isInitialized as jest.Mock).mockReturnValue(false);
+
+            await useSubscriptionStore.getState().refreshSubscriptionStatus();
+
+            expect(revenueCatService.getCustomerInfo).not.toHaveBeenCalled();
+            expect(accountOperationsApi.syncSubscription).not.toHaveBeenCalled();
         });
 
         it('handles refresh errors gracefully', async () => {
@@ -258,6 +300,32 @@ describe('subscriptionStore', () => {
 
             // Should not throw
             await useSubscriptionStore.getState().refreshSubscriptionStatus();
+        });
+    });
+
+    describe('customer info updates', () => {
+        it('syncs the server when RevenueCat reports a changed entitlement', async () => {
+            let listener: ((customerInfo: unknown) => void) | undefined;
+            (revenueCatService.addCustomerInfoUpdateListener as jest.Mock).mockImplementationOnce((callback) => {
+                listener = callback;
+                return () => {};
+            });
+
+            await useSubscriptionStore.getState().initializeRevenueCat('user1');
+            jest.clearAllMocks();
+            (revenueCatService.parseCustomerInfo as jest.Mock).mockReturnValue({
+                isProUser: true,
+                activeSubscription: 'monthly',
+                expirationDate: '2025-01-01',
+                willRenew: true,
+            });
+
+            listener?.({ entitlements: { active: {} } });
+            await Promise.resolve();
+            await Promise.resolve();
+
+            expect(accountOperationsApi.syncSubscription).toHaveBeenCalledTimes(1);
+            expect(useAuthStore.getState().fetchUser).toHaveBeenCalled();
         });
     });
 

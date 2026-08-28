@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { useEntityForm } from '@/hooks/useEntityForm';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,7 +116,7 @@ export function DarePacksPage() {
 
             // Fetch category info
             if (categoryId) {
-                const { data: categoryData } = await supabase
+                const { data: categoryData } = await adminData
                     .from('categories')
                     .select('id, name, icon')
                     .eq('id', categoryId)
@@ -127,7 +127,7 @@ export function DarePacksPage() {
             }
 
             // Fetch dare packs
-            let query = supabase
+            let query = adminData
                 .from('dare_packs')
                 .select('*', { count: 'exact' })
                 .order('sort_order', { ascending: true })
@@ -148,7 +148,7 @@ export function DarePacksPage() {
             const dareCounts: Record<string, number> = {};
 
             if (packIds.length > 0) {
-                const { data: dares } = await supabase
+                const { data: dares } = await adminData
                     .from('dares')
                     .select('pack_id')
                     .in('pack_id', packIds);
@@ -159,7 +159,7 @@ export function DarePacksPage() {
             }
 
             // Fetch categories
-            const { data: categoryData } = await supabase
+            const { data: categoryData } = await adminData
                 .from('categories')
                 .select('id, name')
                 .order('name');
@@ -208,7 +208,7 @@ export function DarePacksPage() {
         form.setSaving(true);
         try {
             if (form.editingItem) {
-                const { error } = await auditedSupabase.update('dare_packs', form.editingItem.id, {
+                const { error } = await auditedAdminData.update('dare_packs', form.editingItem.id, {
                     name: form.formData.name,
                     description: form.formData.description || null,
                     icon: form.formData.icon || null,
@@ -220,7 +220,7 @@ export function DarePacksPage() {
                 if (error) throw error;
                 toast.success('Dare pack updated');
             } else {
-                const { error } = await auditedSupabase.insert('dare_packs', {
+                const { error } = await auditedAdminData.insert('dare_packs', {
                     name: form.formData.name,
                     description: form.formData.description || null,
                     icon: form.formData.icon || null,
@@ -250,7 +250,7 @@ export function DarePacksPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('dare_packs', pack.id);
+            const { error } = await auditedAdminData.delete('dare_packs', pack.id);
             if (error) throw error;
             toast.success('Dare pack deleted');
             fetchData();
@@ -273,8 +273,8 @@ export function DarePacksPage() {
             const targetOrder = targetPack.sort_order ?? targetIndex;
 
             const [currentUpdate, targetUpdate] = await Promise.all([
-                auditedSupabase.update('dare_packs', pack.id, { sort_order: targetOrder }),
-                auditedSupabase.update('dare_packs', targetPack.id, { sort_order: currentOrder }),
+                auditedAdminData.update('dare_packs', pack.id, { sort_order: targetOrder }),
+                auditedAdminData.update('dare_packs', targetPack.id, { sort_order: currentOrder }),
             ]);
 
             if (currentUpdate.error || targetUpdate.error) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -102,7 +102,7 @@ export function FeedbackPage() {
     const fetchFeedback = useCallback(async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await adminData
                 .from('feedback')
                 .select(`
                     *,
@@ -161,7 +161,7 @@ export function FeedbackPage() {
 
         setIsUpdating(true);
         try {
-            const { error } = await supabase
+            const { error } = await adminData
                 .from('feedback')
                 .update({
                     status: editStatus,

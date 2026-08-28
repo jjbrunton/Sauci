@@ -1,5 +1,5 @@
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 
 // =============================================================================
 // Types
@@ -42,7 +42,7 @@ export interface Topic {
  * Fetch all packs for a category with question counts
  */
 export async function fetchPacksForCategory(categoryId: string): Promise<Pack[]> {
-    const { data: packs, error: packError } = await supabase
+    const { data: packs, error: packError } = await adminData
         .from('question_packs')
         .select('*, category:categories(name)')
         .eq('category_id', categoryId)
@@ -51,7 +51,7 @@ export async function fetchPacksForCategory(categoryId: string): Promise<Pack[]>
     if (packError) throw packError;
 
     // Get question counts per pack
-    const { data: questions } = await supabase
+    const { data: questions } = await adminData
         .from('questions')
         .select('pack_id');
 
@@ -72,7 +72,7 @@ export async function fetchPacksForCategory(categoryId: string): Promise<Pack[]>
  * Fetch a single pack by ID
  */
 export async function fetchPackById(id: string): Promise<Pack | null> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('question_packs')
         .select('*, category:categories(name)')
         .eq('id', id)
@@ -86,7 +86,7 @@ export async function fetchPackById(id: string): Promise<Pack | null> {
  * Fetch all topics
  */
 export async function fetchAllTopics(): Promise<Topic[]> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('topics')
         .select('*')
         .order('name');
@@ -99,7 +99,7 @@ export async function fetchAllTopics(): Promise<Topic[]> {
  * Fetch topic IDs for a specific pack
  */
 export async function fetchPackTopicIds(packId: string): Promise<Set<string>> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('pack_topics')
         .select('topic_id')
         .eq('pack_id', packId);
@@ -120,7 +120,7 @@ export async function createPack(
     data: PackFormData,
     sortOrder: number
 ): Promise<Pack> {
-    const { data: created, error } = await auditedSupabase.insert('question_packs', {
+    const { data: created, error } = await auditedAdminData.insert('question_packs', {
         name: data.name,
         description: data.description || null,
         icon: data.icon || null,
@@ -143,7 +143,7 @@ export async function updatePack(
     id: string,
     data: Partial<PackFormData>
 ): Promise<void> {
-    const { error } = await auditedSupabase.update('question_packs', id, {
+    const { error } = await auditedAdminData.update('question_packs', id, {
         name: data.name,
         description: data.description || null,
         icon: data.icon || null,
@@ -159,7 +159,7 @@ export async function updatePack(
  * Delete a pack
  */
 export async function deletePack(id: string): Promise<void> {
-    const { error } = await auditedSupabase.delete('question_packs', id);
+    const { error } = await auditedAdminData.delete('question_packs', id);
     if (error) throw error;
 }
 
@@ -173,8 +173,8 @@ export async function swapPackSortOrder(
     pack2Order: number
 ): Promise<void> {
     await Promise.all([
-        auditedSupabase.update('question_packs', pack1Id, { sort_order: pack2Order }),
-        auditedSupabase.update('question_packs', pack2Id, { sort_order: pack1Order }),
+        auditedAdminData.update('question_packs', pack1Id, { sort_order: pack2Order }),
+        auditedAdminData.update('question_packs', pack2Id, { sort_order: pack1Order }),
     ]);
 }
 
@@ -190,11 +190,11 @@ export async function updatePackTopics(
     topicIds: string[]
 ): Promise<void> {
     // Delete existing topics
-    await supabase.from('pack_topics').delete().eq('pack_id', packId);
+    await adminData.from('pack_topics').delete().eq('pack_id', packId);
 
     // Insert new topics
     if (topicIds.length > 0) {
-        const { error } = await supabase.from('pack_topics').insert(
+        const { error } = await adminData.from('pack_topics').insert(
             topicIds.map(topicId => ({ pack_id: packId, topic_id: topicId }))
         );
         if (error) throw error;
@@ -205,7 +205,7 @@ export async function updatePackTopics(
  * Create a new topic
  */
 export async function createTopic(name: string): Promise<Topic> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('topics')
         .insert({ name })
         .select()

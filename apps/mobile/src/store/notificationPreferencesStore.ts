@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+import { profileSettingsApi } from "../lib/profileSettingsApi";
 import { useAuthStore } from "./authStore";
 
 export interface NotificationPreferences {
@@ -46,13 +46,8 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSta
         set({ isLoading: true, error: null });
 
         try {
-            // Use the RPC function to get or create preferences
-            const { data, error } = await supabase
-                .rpc('get_or_create_notification_preferences', { p_user_id: userId });
-
-            if (error) throw error;
-
-            set({ preferences: data, isLoading: false });
+            const preferences = await profileSettingsApi.getNotificationPreferences();
+            set({ preferences, isLoading: false });
         } catch (error) {
             console.error('Error fetching notification preferences:', error);
             set({ error: 'Failed to load notification preferences', isLoading: false });
@@ -74,14 +69,8 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSta
         }
 
         try {
-            const { error } = await supabase
-                .from('notification_preferences')
-                .update({ [key]: value })
-                .eq('user_id', userId);
-
-            if (error) throw error;
-
-            set({ isUpdating: false });
+            const preferences = await profileSettingsApi.updateNotificationPreference(key, value);
+            set({ preferences, isUpdating: false });
         } catch (error) {
             console.error('Error updating notification preference:', error);
             // Revert optimistic update

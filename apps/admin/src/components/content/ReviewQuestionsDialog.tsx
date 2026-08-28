@@ -22,8 +22,8 @@ import {
     DeletionAnalysis,
     PropsAnalysis,
 } from '@/lib/openai';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { toast } from 'sonner';
 
 type QuestionType = 'swipe' | 'text_answer' | 'audio' | 'photo' | 'who_likely';
@@ -101,7 +101,7 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, onUpdated
         if (existingProps.length > 0) return existingProps;
 
         try {
-            const { data, error } = await supabase
+            const { data, error } = await adminData
                 .from('questions')
                 .select('required_props')
                 .not('required_props', 'is', null)
@@ -252,12 +252,12 @@ export function ReviewQuestionsDialog({ open, onOpenChange, questions, onUpdated
 
             // Apply updates/deletions in parallel with audit logging
             const operations: Promise<unknown>[] = updates.map(update =>
-                auditedSupabase.update('questions', update.id, update.data)
+                auditedAdminData.update('questions', update.id, update.data)
             );
 
             if (deleteIds.length > 0) {
                 operations.push(
-                    auditedSupabase.deleteMany('questions', deleteIds).then(result => {
+                    auditedAdminData.deleteMany('questions', deleteIds).then(result => {
                         if (result.error) throw result.error;
                     })
                 );

@@ -17,7 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Clipboard from "expo-clipboard";
 import { useAuthStore } from "../../src/store";
-import { supabase } from "../../src/lib/supabase";
+import { coupleApi } from "../../src/lib/coupleApi";
 import { getPairingError } from "../../src/lib/errors";
 import { Events } from "../../src/lib/analytics";
 import { router } from "expo-router";
@@ -25,7 +25,7 @@ import { GradientBackground, GlassCard, GlassButton } from "../../src/components
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
 
 export default function PairingScreen() {
-    const { user, fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
+    const { fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +36,8 @@ export default function PairingScreen() {
         }
     }, [couple, partner]);
 
-    // Subscribe to real-time updates for partner joining + polling fallback
+    // Poll the standalone API while waiting for a partner. Realtime delivery can
+    // be added later without coupling product data back to Supabase.
     useEffect(() => {
         if (!couple || partner) return;
 
@@ -45,42 +46,15 @@ export default function PairingScreen() {
             fetchCouple();
         }, 5000);
 
-        // Listen for new profiles joining this couple
-        const subscription = supabase
-            .channel(`couple-${couple.id}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "UPDATE",
-                    schema: "public",
-                    table: "profiles",
-                    filter: `couple_id=eq.${couple.id}`,
-                },
-                async (payload) => {
-                    // Someone updated their profile to join this couple
-                    if (payload.new.id !== user?.id) {
-                        await fetchCouple();
-                    }
-                }
-            )
-            .subscribe();
-
         return () => {
             clearInterval(pollInterval);
-            subscription.unsubscribe();
         };
-    }, [couple, partner, user?.id, fetchCouple]);
+    }, [couple, partner, fetchCouple]);
 
     const handleCreateCouple = async () => {
         setIsSubmitting(true);
         try {
-            const { data, error } = await supabase.functions.invoke("manage-couple", {
-                method: "POST",
-                body: {},
-            });
-
-            if (error) throw error;
-            if (data.error) throw new Error(data.error);
+            await coupleApi.create();
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
@@ -102,23 +76,7 @@ export default function PairingScreen() {
 
         setIsSubmitting(true);
         try {
-            // Refresh session to ensure we have a valid token
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError || !session) {
-                throw new Error("Please log in again");
-            }
-
-            const { data, error } = await supabase.functions.invoke("manage-couple", {
-                method: "POST",
-                body: { invite_code: sanitizedCode },
-            });
-
-            if (error) {
-                // Extract user-friendly error message
-                const errorMessage = data?.error || "Unable to join couple. Please try again.";
-                throw new Error(errorMessage);
-            }
-            if (data?.error) throw new Error(data.error);
+            await coupleApi.join(sanitizedCode);
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
@@ -186,12 +144,7 @@ export default function PairingScreen() {
                     onPress: async () => {
                         setIsSubmitting(true);
                         try {
-                            const { data, error } = await supabase.functions.invoke("manage-couple", {
-                                method: "DELETE",
-                            });
-
-                            if (error) throw error;
-                            if (data?.error) throw new Error(data.error);
+                            await coupleApi.cancel();
 
                             await fetchUser();
                             await fetchCouple();

@@ -1,8 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '../../../lib/supabase';
-import type { StrokeSegment, StrokePoint, LiveDrawEvent } from '../types';
-import { BROADCAST_BATCH_INTERVAL } from '../constants';
+import { useCallback, useEffect, useRef } from 'react';
+import { ApiError } from '../../../lib/apiClient';
+import { appDataApi, type LiveDrawState } from '../../../lib/appDataApi';
+import type { StrokeSegment, StrokePoint } from '../types';
 import { updateWidget } from '../utils/widgetBridge';
 
 interface UseDrawingSyncConfig {
@@ -27,202 +26,107 @@ interface UseDrawingSyncReturn {
   persistStrokes: (strokes: StrokeSegment[]) => Promise<void>;
 }
 
+function conflictState(error: unknown): LiveDrawState | null {
+  if (!(error instanceof ApiError) || error.status !== 409 || typeof error.details !== 'object' || error.details === null) return null;
+  const state = (error.details as { current_state?: LiveDrawState }).current_state;
+  return state && Array.isArray(state.strokes) && Number.isInteger(state.revision) ? state : null;
+}
+
+export function mergeDrawingChanges(base: StrokeSegment[], desired: StrokeSegment[], current: StrokeSegment[]): StrokeSegment[] {
+  const desiredById = new Map(desired.map(stroke => [stroke.id, stroke]));
+  const desiredIds = new Set(desiredById.keys());
+  const removedIds = new Set(base.filter(stroke => !desiredIds.has(stroke.id)).map(stroke => stroke.id));
+  const currentIds = new Set(current.map(stroke => stroke.id));
+  const merged = current
+    .filter(stroke => !removedIds.has(stroke.id))
+    .map(stroke => desiredById.get(stroke.id) ?? stroke);
+  return [...merged, ...desired.filter(stroke => !currentIds.has(stroke.id))];
+}
+
 export function useDrawingSync(config: UseDrawingSyncConfig): UseDrawingSyncReturn {
-  const {
-    coupleId,
-    userId,
-    onStrokeStart,
-    onStrokeContinue,
-    onStrokeEnd,
-    onClearCanvas,
-    onUndo,
-    onRedo,
-    onLoadStrokes,
-  } = config;
+  const { coupleId, userId, onLoadStrokes } = config;
+  const revisionRef = useRef(0);
+  const baselineRef = useRef<StrokeSegment[]>([]);
+  const workingRef = useRef<StrokeSegment[]>([]);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingWritesRef = useRef(0);
+  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+  const onLoadStrokesRef = useRef(onLoadStrokes);
+  onLoadStrokesRef.current = onLoadStrokes;
 
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const batchRef = useRef<{ strokeId: string; points: StrokePoint[] } | null>(null);
-  const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const acceptState = useCallback((state: LiveDrawState) => {
+    revisionRef.current = state.revision;
+    baselineRef.current = state.strokes;
+    workingRef.current = state.strokes;
+    onLoadStrokesRef.current(state.strokes);
+  }, []);
 
-  // Load existing strokes from DB on mount
+  const writeSnapshot = useCallback(async (desired: StrokeSegment[]) => {
+    const base = baselineRef.current;
+    try {
+      acceptState(await appDataApi.putLiveDraw(desired, revisionRef.current));
+    } catch (error) {
+      const current = conflictState(error);
+      if (!current) throw error;
+      const merged = mergeDrawingChanges(base, desired, current.strokes);
+      acceptState(await appDataApi.putLiveDraw(merged, current.revision));
+    }
+    updateWidget(workingRef.current);
+  }, [acceptState]);
+
+  const enqueueWrite = useCallback((strokes: StrokeSegment[]): Promise<void> => {
+    workingRef.current = strokes;
+    pendingWritesRef.current += 1;
+    const next = writeQueueRef.current.then(() => writeSnapshot(strokes));
+    writeQueueRef.current = next.catch(error => { console.error('Failed to persist live drawing:', error); });
+    return next.finally(() => { pendingWritesRef.current -= 1; });
+  }, [writeSnapshot]);
+
+  const scheduleWrite = useCallback((strokes: StrokeSegment[]) => {
+    workingRef.current = strokes;
+    if (!throttleRef.current) {
+      throttleRef.current = setTimeout(() => {
+        throttleRef.current = null;
+        void enqueueWrite(workingRef.current);
+      }, 250);
+    }
+  }, [enqueueWrite]);
+
   useEffect(() => {
     if (!coupleId) return;
+    onLoadStrokesRef.current([]);
+    void appDataApi.getLiveDraw().then(acceptState).catch(error => console.error('Failed to load live drawing:', error));
+  }, [coupleId, acceptState]);
 
-    // Clear any stale strokes from a previous couple before loading
-    onLoadStrokes([]);
-
-    const loadExisting = async () => {
-      const { data } = await supabase
-        .from('live_draw_sessions')
-        .select('strokes')
-        .eq('couple_id', coupleId)
-        .maybeSingle();
-
-      if (data?.strokes) {
-        onLoadStrokes(data.strokes as StrokeSegment[]);
-      }
-    };
-
-    loadExisting();
-  }, [coupleId]);
-
-  // Subscribe to broadcast channel
   useEffect(() => {
     if (!coupleId || !userId) return;
-
-    const channel = supabase.channel(`livedraw:${coupleId}`);
-    channelRef.current = channel;
-
-    channel.on('broadcast', { event: 'draw' }, (payload) => {
-      const event = payload.payload as LiveDrawEvent;
-
-      // Ignore own events
-      if ('stroke' in event && event.stroke?.userId === userId) return;
-      if ('userId' in event && event.userId === userId) return;
-
-      switch (event.type) {
-        case 'stroke_start':
-          onStrokeStart(event.stroke);
-          break;
-        case 'stroke_continue':
-          onStrokeContinue(event.strokeId, event.points);
-          break;
-        case 'stroke_end':
-          onStrokeEnd(event.strokeId);
-          break;
-        case 'clear_canvas':
-          onClearCanvas();
-          break;
-        case 'undo':
-          onUndo(event.strokeId);
-          break;
-        case 'redo':
-          // For redo, we'd need the full stroke - handled via DB sync
-          break;
-      }
-    });
-
-    channel.subscribe();
-
-    return () => {
-      channelRef.current = null;
-      supabase.removeChannel(channel);
-      if (batchTimerRef.current) {
-        clearInterval(batchTimerRef.current);
-      }
+    let cancelled = false;
+    const poll = async () => {
+      if (pendingWritesRef.current > 0) return;
+      try {
+        const state = await appDataApi.getLiveDraw();
+        if (!cancelled && state.revision > revisionRef.current) acceptState(state);
+      } catch (error) { console.error('Failed to poll live drawing:', error); }
     };
-  }, [coupleId, userId]);
+    const timer = setInterval(() => void poll(), 750);
+    return () => { cancelled = true; clearInterval(timer); if (throttleRef.current) clearTimeout(throttleRef.current); };
+  }, [coupleId, userId, acceptState]);
 
-  const send = useCallback(
-    (event: LiveDrawEvent) => {
-      channelRef.current?.send({
-        type: 'broadcast',
-        event: 'draw',
-        payload: event,
-      });
-    },
-    []
-  );
+  const broadcastStrokeStart = useCallback((stroke: StrokeSegment) => {
+    scheduleWrite([...workingRef.current.filter(item => item.id !== stroke.id), stroke]);
+  }, [scheduleWrite]);
+  const broadcastStrokeContinue = useCallback((strokeId: string, points: StrokePoint[]) => {
+    scheduleWrite(workingRef.current.map(stroke => stroke.id === strokeId ? { ...stroke, points: [...stroke.points, ...points] } : stroke));
+  }, [scheduleWrite]);
+  const broadcastStrokeEnd = useCallback((_strokeId: string) => undefined, []);
+  const broadcastClearCanvas = useCallback(() => { workingRef.current = []; }, []);
+  const broadcastUndo = useCallback((strokeId: string) => { workingRef.current = workingRef.current.filter(stroke => stroke.id !== strokeId); }, []);
+  const broadcastRedo = useCallback((stroke: StrokeSegment) => { workingRef.current = [...workingRef.current.filter(item => item.id !== stroke.id), stroke]; }, []);
+  const persistStrokes = useCallback((strokes: StrokeSegment[]) => {
+    if (throttleRef.current) clearTimeout(throttleRef.current);
+    throttleRef.current = null;
+    return enqueueWrite(strokes);
+  }, [enqueueWrite]);
 
-  const broadcastStrokeStart = useCallback(
-    (stroke: StrokeSegment) => {
-      send({ type: 'stroke_start', stroke });
-    },
-    [send]
-  );
-
-  const broadcastStrokeContinue = useCallback(
-    (strokeId: string, points: StrokePoint[]) => {
-      // Batch points to reduce traffic
-      if (!batchRef.current || batchRef.current.strokeId !== strokeId) {
-        batchRef.current = { strokeId, points: [...points] };
-      } else {
-        batchRef.current.points.push(...points);
-      }
-
-      if (!batchTimerRef.current) {
-        batchTimerRef.current = setInterval(() => {
-          if (batchRef.current && batchRef.current.points.length > 0) {
-            send({
-              type: 'stroke_continue',
-              strokeId: batchRef.current.strokeId,
-              points: batchRef.current.points,
-            });
-            batchRef.current.points = [];
-          }
-        }, BROADCAST_BATCH_INTERVAL);
-      }
-    },
-    [send]
-  );
-
-  const broadcastStrokeEnd = useCallback(
-    (strokeId: string) => {
-      // Flush remaining batch
-      if (batchRef.current && batchRef.current.points.length > 0) {
-        send({
-          type: 'stroke_continue',
-          strokeId: batchRef.current.strokeId,
-          points: batchRef.current.points,
-        });
-      }
-      batchRef.current = null;
-      if (batchTimerRef.current) {
-        clearInterval(batchTimerRef.current);
-        batchTimerRef.current = null;
-      }
-      send({ type: 'stroke_end', strokeId });
-    },
-    [send]
-  );
-
-  const broadcastClearCanvas = useCallback(() => {
-    if (!userId) return;
-    send({ type: 'clear_canvas', userId });
-  }, [send, userId]);
-
-  const broadcastUndo = useCallback(
-    (strokeId: string) => {
-      if (!userId) return;
-      send({ type: 'undo', userId, strokeId });
-    },
-    [send, userId]
-  );
-
-  const broadcastRedo = useCallback(
-    (stroke: StrokeSegment) => {
-      // Send full stroke so partner can restore it
-      send({ type: 'stroke_start', stroke });
-    },
-    [send]
-  );
-
-  const persistStrokes = useCallback(
-    async (strokes: StrokeSegment[]) => {
-      await supabase
-        .from('live_draw_sessions')
-        .upsert(
-          {
-            couple_id: coupleId,
-            strokes: strokes as any,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'couple_id' }
-        );
-
-      // Update home screen widget with latest drawing
-      updateWidget(strokes);
-    },
-    [coupleId]
-  );
-
-  return {
-    broadcastStrokeStart,
-    broadcastStrokeContinue,
-    broadcastStrokeEnd,
-    broadcastClearCanvas,
-    broadcastUndo,
-    broadcastRedo,
-    persistStrokes,
-  };
+  return { broadcastStrokeStart, broadcastStrokeContinue, broadcastStrokeEnd, broadcastClearCanvas, broadcastUndo, broadcastRedo, persistStrokes };
 }

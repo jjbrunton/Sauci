@@ -108,7 +108,7 @@ const systemNav: NavItem[] = [
         label: 'Flagged Messages',
         href: '/flagged-messages',
         icon: <AlertTriangle className="h-5 w-5" />,
-        requiredPermission: PERMISSION_KEYS.MANAGE_AI_CONFIG,
+        requiredPermission: PERMISSION_KEYS.VIEW_CHATS,
     },
     {
         label: 'AI Settings',

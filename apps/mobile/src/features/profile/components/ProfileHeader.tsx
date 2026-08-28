@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { GlassCard } from '../../../components/ui';
 import { colors, featureColors, spacing, typography } from '../../../theme';
 import { Profile } from '../../../types';
+import { MediaImage } from '../../../components/MediaImage';
 
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 
@@ -55,8 +55,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                             end={{ x: 1, y: 1 }}
                         >
                             {user?.avatar_url ? (
-                                <Image
-                                    source={{ uri: user.avatar_url }}
+                                <MediaImage
+                                    reference={user.avatar_url}
                                     style={styles.avatarImage}
                                     cachePolicy="disk"
                                     transition={200}

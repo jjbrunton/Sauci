@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
+import { apiClient } from "../lib/apiClient";
 import { useAuthStore } from "../store";
+
+interface FeatureInterestResponse {
+    feature: string;
+    interested: boolean;
+}
 
 export function useFeatureInterest(featureName: string) {
     const [isInterested, setIsInterested] = useState(false);
@@ -10,24 +15,32 @@ export function useFeatureInterest(featureName: string) {
 
     // Fetch current interest status
     useEffect(() => {
+        let cancelled = false;
+
         async function fetchInterest() {
             if (!user?.id) {
                 setIsLoading(false);
                 return;
             }
 
-            const { data } = await supabase
-                .from("feature_interests")
-                .select("id")
-                .eq("user_id", user.id)
-                .eq("feature_name", featureName)
-                .maybeSingle();
-
-            setIsInterested(!!data);
-            setIsLoading(false);
+            try {
+                const result = await apiClient.get<FeatureInterestResponse>(
+                    `/v1/me/feature-interests/${encodeURIComponent(featureName)}`,
+                );
+                if (!cancelled) setIsInterested(result.interested);
+            } catch (error) {
+                console.error("Error fetching feature interest:", error);
+                if (!cancelled) setIsInterested(false);
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
         }
 
         fetchInterest();
+
+        return () => {
+            cancelled = true;
+        };
     }, [user?.id, featureName]);
 
     const toggleInterest = useCallback(async () => {
@@ -41,24 +54,13 @@ export function useFeatureInterest(featureName: string) {
 
         try {
             if (wasInterested) {
-                // Remove interest
-                const { error } = await supabase
-                    .from("feature_interests")
-                    .delete()
-                    .eq("user_id", user.id)
-                    .eq("feature_name", featureName);
-
-                if (error) throw error;
+                await apiClient.delete<FeatureInterestResponse>(
+                    `/v1/me/feature-interests/${encodeURIComponent(featureName)}`,
+                );
             } else {
-                // Add interest
-                const { error } = await supabase
-                    .from("feature_interests")
-                    .insert({
-                        user_id: user.id,
-                        feature_name: featureName,
-                    });
-
-                if (error) throw error;
+                await apiClient.put<FeatureInterestResponse>(
+                    `/v1/me/feature-interests/${encodeURIComponent(featureName)}`,
+                );
             }
         } catch (error) {
             console.error("Error toggling feature interest:", error);

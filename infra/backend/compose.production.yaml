@@ -1,0 +1,125 @@
+name: sauci-backend
+
+x-common-environment: &common-environment
+  NODE_ENV: production
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+  MEDIA_ROOT: /data/media
+  MEDIA_SIGNING_SECRET: ${MEDIA_SIGNING_SECRET:?set MEDIA_SIGNING_SECRET}
+  MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:?set MEDIA_PUBLIC_BASE_URL}
+
+x-api-environment: &api-environment
+  <<: *common-environment
+  PORT: 3003
+  SUPABASE_AUTH_URL: ${SUPABASE_AUTH_URL:?set SUPABASE_AUTH_URL}
+  SUPABASE_AUTH_AUDIENCE: ${SUPABASE_AUTH_AUDIENCE:-authenticated}
+  SUPABASE_AUTH_SERVICE_ROLE_KEY: ${SUPABASE_AUTH_SERVICE_ROLE_KEY:?set SUPABASE_AUTH_SERVICE_ROLE_KEY}
+  REVENUECAT_API_KEY: ${REVENUECAT_API_KEY:?set REVENUECAT_API_KEY}
+  REVENUECAT_ENTITLEMENT_ID: ${REVENUECAT_ENTITLEMENT_ID:-Sauci Pro}
+  REVENUECAT_WEBHOOK_SECRET: ${REVENUECAT_WEBHOOK_SECRET:?set REVENUECAT_WEBHOOK_SECRET}
+  ADMIN_API_SERVICE_TOKEN: ${ADMIN_API_SERVICE_TOKEN:?set ADMIN_API_SERVICE_TOKEN}
+  ADMIN_API_SERVICE_USER_ID: ${ADMIN_API_SERVICE_USER_ID:?set ADMIN_API_SERVICE_USER_ID}
+  ADMIN_PRIVATE_KEY_JWK: ${ADMIN_PRIVATE_KEY_JWK:-}
+
+x-worker-environment: &worker-environment
+  <<: *common-environment
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+  CLASSIFIER_ENABLED: ${CLASSIFIER_ENABLED:-true}
+  CLASSIFIER_MODEL: ${CLASSIFIER_MODEL:-openai/gpt-4o}
+  ADMIN_PRIVATE_KEY_JWK: ${ADMIN_PRIVATE_KEY_JWK:-}
+  DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL:-}
+  WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-30000}
+  WORKER_BATCH_SIZE: ${WORKER_BATCH_SIZE:-25}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sauci}
+      POSTGRES_USER: ${POSTGRES_USER:-sauci}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    stop_grace_period: 60s
+    security_opt:
+      - no-new-privileges:true
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    command: ["node", "dist/db/migrate.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  api:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    environment: *api-environment
+    expose:
+      - "3003"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    init: true
+    read_only: true
+    volumes:
+      - media-data:/data/media
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: apps/api/Dockerfile
+    command: ["node", "dist/workers/index.js"]
+    environment: *worker-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # The image health check probes the HTTP API. This process deliberately has
+    # no listener; restart-on-exit is its liveness contract.
+    healthcheck:
+      disable: true
+    init: true
+    read_only: true
+    volumes:
+      - media-data:/data/media
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+volumes:
+  postgres-data:
+  media-data:

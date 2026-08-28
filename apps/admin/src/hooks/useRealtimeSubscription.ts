@@ -1,243 +1,92 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { supabase } from '@/config';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { queryAdminRows, type AdminFilter } from '@/lib/adminApi';
 
 export type SubscriptionStatus = 'SUBSCRIBED' | 'SUBSCRIBING' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
-
 export interface UseRealtimeSubscriptionOptions<T> {
-    table: string;
-    schema?: string;
-    event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-    filter?: string;
-    onInsert?: (payload: T) => void;
-    onUpdate?: (payload: { old: T; new: T }) => void;
-    onDelete?: (payload: T) => void;
-    insertToast?: {
-        enabled: boolean;
-        message: string | ((payload: T) => string);
-        type?: 'success' | 'info' | 'warning';
-    };
-    updateToast?: {
-        enabled: boolean;
-        message: string | ((payload: { old: T; new: T }) => string);
-        type?: 'success' | 'info' | 'warning';
-    };
-    deleteToast?: {
-        enabled: boolean;
-        message: string | ((payload: T) => string);
-        type?: 'success' | 'info' | 'warning';
-    };
-    debounceMs?: number;
-    enabled?: boolean;
+    table: string; schema?: string; event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*'; filter?: string;
+    onInsert?: (payload: T) => void; onUpdate?: (payload: { old: T; new: T }) => void; onDelete?: (payload: T) => void;
+    insertToast?: { enabled: boolean; message: string | ((payload: T) => string); type?: 'success' | 'info' | 'warning' };
+    updateToast?: { enabled: boolean; message: string | ((payload: { old: T; new: T }) => string); type?: 'success' | 'info' | 'warning' };
+    deleteToast?: { enabled: boolean; message: string | ((payload: T) => string); type?: 'success' | 'info' | 'warning' };
+    debounceMs?: number; enabled?: boolean; pollIntervalMs?: number;
+}
+export interface UseRealtimeSubscriptionReturn { status: SubscriptionStatus; error: Error | null }
+
+const DEFAULT_POLL_INTERVAL_MS = 10_000;
+const MIN_POLL_INTERVAL_MS = 5_000;
+
+function parseFilter(filter?: string): AdminFilter[] | undefined {
+    if (!filter) return undefined;
+    const match = /^([a-z_][a-z0-9_]*)=(eq|neq|gte|lte)\.(.+)$/.exec(filter);
+    return match ? [{ column: match[1], op: match[2] as AdminFilter['op'], value: match[3] }] : undefined;
 }
 
-export interface UseRealtimeSubscriptionReturn {
-    status: SubscriptionStatus;
-    error: Error | null;
+function rowKey(row: unknown, index: number): string {
+    if (row && typeof row === 'object') {
+        const record = row as Record<string, unknown>;
+        const key = record.id ?? `${record.pack_id ?? ''}:${record.topic_id ?? ''}`;
+        if (key) return String(key);
+    }
+    return String(index);
 }
 
-const MAX_RETRIES = 3;
-
-export function useRealtimeSubscription<T>(
-    options: UseRealtimeSubscriptionOptions<T>
-): UseRealtimeSubscriptionReturn {
-    const {
-        table,
-        schema = 'public',
-        event = '*',
-        filter,
-        onInsert,
-        onUpdate,
-        onDelete,
-        insertToast,
-        updateToast,
-        deleteToast,
-        debounceMs = 0,
-        enabled = true,
-    } = options;
-
+export function useRealtimeSubscription<T>(options: UseRealtimeSubscriptionOptions<T>): UseRealtimeSubscriptionReturn {
+    const { table, event = '*', filter, onInsert, onUpdate, onDelete, insertToast, updateToast, deleteToast,
+        debounceMs = 0, enabled = true, pollIntervalMs = DEFAULT_POLL_INTERVAL_MS } = options;
     const [status, setStatus] = useState<SubscriptionStatus>('CLOSED');
     const [error, setError] = useState<Error | null>(null);
-    const channelRef = useRef<RealtimeChannel | null>(null);
-    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const retryCountRef = useRef(0);
-    const isMountedRef = useRef(true);
+    const snapshotRef = useRef<Map<string, { value: T; json: string }> | null>(null);
+    const callbacksRef = useRef({ onInsert, onUpdate, onDelete, insertToast, updateToast, deleteToast });
+    callbacksRef.current = { onInsert, onUpdate, onDelete, insertToast, updateToast, deleteToast };
+    const emit = useCallback((callback: () => void) => {
+        if (debounceMs <= 0) callback(); else window.setTimeout(callback, debounceMs);
+    }, [debounceMs]);
 
-    // Use refs for callbacks and toast options to avoid re-subscription on every render
-    const onInsertRef = useRef(onInsert);
-    const onUpdateRef = useRef(onUpdate);
-    const onDeleteRef = useRef(onDelete);
-    const insertToastRef = useRef(insertToast);
-    const updateToastRef = useRef(updateToast);
-    const deleteToastRef = useRef(deleteToast);
-
-    // Keep refs up to date
     useEffect(() => {
-        onInsertRef.current = onInsert;
-        onUpdateRef.current = onUpdate;
-        onDeleteRef.current = onDelete;
-        insertToastRef.current = insertToast;
-        updateToastRef.current = updateToast;
-        deleteToastRef.current = deleteToast;
-    });
-
-    // Debounced callback wrapper
-    const debouncedCallback = useCallback(
-        (callback: () => void) => {
-            if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current);
-            }
-            if (debounceMs > 0) {
-                debounceTimerRef.current = setTimeout(() => {
-                    if (isMountedRef.current) {
-                        callback();
+        if (!enabled) { setStatus('CLOSED'); return; }
+        let cancelled = false;
+        let timer: number | undefined;
+        const interval = Math.max(MIN_POLL_INTERVAL_MS, pollIntervalMs);
+        const poll = async () => {
+            if (document.visibilityState === 'hidden') { timer = window.setTimeout(poll, interval); return; }
+            try {
+                setStatus((current) => current === 'SUBSCRIBED' ? current : 'SUBSCRIBING');
+                const { rows } = await queryAdminRows<T>(table, { filters: parseFilter(filter), limit: 500 });
+                if (cancelled) return;
+                const next = new Map(rows.map((row, index) => [rowKey(row, index), { value: row, json: JSON.stringify(row) }]));
+                const previous = snapshotRef.current;
+                if (previous) {
+                    if (event === '*' || event === 'INSERT') for (const [key, entry] of next) if (!previous.has(key)) {
+                        const config = callbacksRef.current;
+                        if (config.insertToast?.enabled) toast[config.insertToast.type || 'info'](typeof config.insertToast.message === 'function' ? config.insertToast.message(entry.value) : config.insertToast.message);
+                        if (config.onInsert) emit(() => config.onInsert!(entry.value));
                     }
-                }, debounceMs);
-            } else {
-                callback();
-            }
-        },
-        [debounceMs]
-    );
-
-    // Handle incoming changes - use refs to avoid dependency changes
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleChange = useCallback(
-        (payload: { eventType: string; new: any; old: any }) => {
-            if (!isMountedRef.current) return;
-
-            const eventType = payload.eventType;
-
-            if (eventType === 'INSERT') {
-                const newRecord = payload.new as T;
-
-                if (insertToastRef.current?.enabled) {
-                    const message =
-                        typeof insertToastRef.current.message === 'function'
-                            ? insertToastRef.current.message(newRecord)
-                            : insertToastRef.current.message;
-                    toast[insertToastRef.current.type || 'info'](message);
-                }
-
-                if (onInsertRef.current) {
-                    debouncedCallback(() => onInsertRef.current!(newRecord));
-                }
-            }
-
-            if (eventType === 'UPDATE') {
-                const updatePayload = { old: payload.old as T, new: payload.new as T };
-
-                if (updateToastRef.current?.enabled) {
-                    const message =
-                        typeof updateToastRef.current.message === 'function'
-                            ? updateToastRef.current.message(updatePayload)
-                            : updateToastRef.current.message;
-                    toast[updateToastRef.current.type || 'info'](message);
-                }
-
-                if (onUpdateRef.current) {
-                    debouncedCallback(() => onUpdateRef.current!(updatePayload));
-                }
-            }
-
-            if (eventType === 'DELETE') {
-                const deletedRecord = payload.old as T;
-
-                if (deleteToastRef.current?.enabled) {
-                    const message =
-                        typeof deleteToastRef.current.message === 'function'
-                            ? deleteToastRef.current.message(deletedRecord)
-                            : deleteToastRef.current.message;
-                    toast[deleteToastRef.current.type || 'info'](message);
-                }
-
-                if (onDeleteRef.current) {
-                    debouncedCallback(() => onDeleteRef.current!(deletedRecord));
-                }
-            }
-        },
-        [debouncedCallback]
-    );
-
-    useEffect(() => {
-        isMountedRef.current = true;
-
-        if (!enabled) {
-            setStatus('CLOSED');
-            return;
-        }
-
-        const subscribe = () => {
-            // Create unique channel name
-            const channelName = `admin-${table}-${filter || 'all'}-${Date.now()}`;
-
-            // Build subscription config
-            const subscriptionConfig: {
-                event: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-                schema: string;
-                table: string;
-                filter?: string;
-            } = {
-                event,
-                schema,
-                table,
-            };
-
-            if (filter) {
-                subscriptionConfig.filter = filter;
-            }
-
-            setStatus('SUBSCRIBING');
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const channel = (supabase.channel(channelName) as any)
-                .on('postgres_changes', subscriptionConfig, handleChange)
-                .subscribe((subscriptionStatus: string) => {
-                    if (!isMountedRef.current) return;
-
-                    if (subscriptionStatus === 'SUBSCRIBED') {
-                        setStatus('SUBSCRIBED');
-                        setError(null);
-                        retryCountRef.current = 0;
-                    } else if (subscriptionStatus === 'CHANNEL_ERROR') {
-                        setStatus('CHANNEL_ERROR');
-                        setError(new Error(`Failed to subscribe to ${table}`));
-
-                        // Auto-retry with exponential backoff
-                        if (retryCountRef.current < MAX_RETRIES) {
-                            const timeout = Math.pow(2, retryCountRef.current) * 1000;
-                            retryCountRef.current++;
-                            setTimeout(() => {
-                                if (isMountedRef.current && channelRef.current) {
-                                    supabase.removeChannel(channelRef.current);
-                                    subscribe();
-                                }
-                            }, timeout);
+                    if (event === '*' || event === 'UPDATE') for (const [key, entry] of next) {
+                        const old = previous.get(key);
+                        if (old && old.json !== entry.json) {
+                            const payload = { old: old.value, new: entry.value };
+                            const config = callbacksRef.current;
+                            if (config.updateToast?.enabled) toast[config.updateToast.type || 'info'](typeof config.updateToast.message === 'function' ? config.updateToast.message(payload) : config.updateToast.message);
+                            if (config.onUpdate) emit(() => config.onUpdate!(payload));
                         }
-                    } else if (subscriptionStatus === 'TIMED_OUT') {
-                        setStatus('TIMED_OUT');
-                        setError(new Error(`Subscription to ${table} timed out`));
-                    } else if (subscriptionStatus === 'CLOSED') {
-                        setStatus('CLOSED');
                     }
-                });
-
-            channelRef.current = channel;
-        };
-
-        subscribe();
-
-        return () => {
-            isMountedRef.current = false;
-            if (debounceTimerRef.current) {
-                clearTimeout(debounceTimerRef.current);
-            }
-            if (channelRef.current) {
-                supabase.removeChannel(channelRef.current);
+                    if (event === '*' || event === 'DELETE') for (const [key, entry] of previous) if (!next.has(key)) {
+                        const config = callbacksRef.current;
+                        if (config.deleteToast?.enabled) toast[config.deleteToast.type || 'info'](typeof config.deleteToast.message === 'function' ? config.deleteToast.message(entry.value) : config.deleteToast.message);
+                        if (config.onDelete) emit(() => config.onDelete!(entry.value));
+                    }
+                }
+                snapshotRef.current = next;
+                setStatus('SUBSCRIBED'); setError(null);
+            } catch (cause) {
+                if (!cancelled) { setStatus('CHANNEL_ERROR'); setError(cause instanceof Error ? cause : new Error(String(cause))); }
+            } finally {
+                if (!cancelled) timer = window.setTimeout(poll, interval);
             }
         };
-    }, [enabled, table, schema, event, filter, handleChange]);
-
+        void poll();
+        return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); snapshotRef.current = null; };
+    }, [emit, enabled, event, filter, pollIntervalMs, table]);
     return { status, error };
 }

@@ -1,4 +1,4 @@
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 
 // Tables to audit
 const AUDITED_TABLES = [
@@ -26,23 +26,10 @@ async function logAction(
     oldValues?: Record<string, unknown> | null,
     newValues?: Record<string, unknown> | null
 ): Promise<void> {
-    if (!AUDITED_TABLES.includes(tableName)) return;
-
-    try {
-        const { error } = await supabase.rpc('log_admin_action', {
-            p_table_name: tableName,
-            p_action: action,
-            p_record_id: recordId,
-            p_old_values: oldValues || null,
-            p_new_values: newValues || null,
-        });
-        if (error) {
-            console.error('Failed to log audit action:', error);
-        }
-    } catch (error) {
-        console.error('Failed to log audit action:', error);
-        // Don't throw - logging failure shouldn't block the operation
-    }
+    // The standalone admin API writes the mutation and audit record in one
+    // transaction. Keeping this no-op preserves the existing call sites while
+    // avoiding duplicate or client-forgeable audit entries.
+    void tableName; void action; void recordId; void oldValues; void newValues;
 }
 
 interface InsertResult<T> {
@@ -56,9 +43,9 @@ interface SingleResult<T> {
 }
 
 /**
- * Audited Supabase operations - automatically logs INSERT/UPDATE/DELETE to audit_logs
+ * Admin API mutations. The server writes each mutation and audit record atomically.
  */
-export const auditedSupabase = {
+export const auditedAdminData = {
     /**
      * Insert records with audit logging
      */
@@ -68,7 +55,7 @@ export const auditedSupabase = {
     ): Promise<InsertResult<T>> {
         const recordArray = Array.isArray(records) ? records : [records];
 
-        const { data, error } = await supabase
+        const { data, error } = await adminData
             .from(table)
             .insert(recordArray)
             .select();
@@ -94,7 +81,7 @@ export const auditedSupabase = {
         // Fetch old values before update
         let oldValues: Record<string, unknown> | null = null;
         if (AUDITED_TABLES.includes(table)) {
-            const { data: oldData } = await supabase
+            const { data: oldData } = await adminData
                 .from(table)
                 .select('*')
                 .eq('id', id)
@@ -102,7 +89,7 @@ export const auditedSupabase = {
             oldValues = oldData;
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await adminData
             .from(table)
             .update(updates)
             .eq('id', id)
@@ -127,14 +114,14 @@ export const auditedSupabase = {
         // Fetch old values before update
         let oldRecords: Record<string, unknown>[] = [];
         if (AUDITED_TABLES.includes(table)) {
-            const { data: oldData } = await supabase
+            const { data: oldData } = await adminData
                 .from(table)
                 .select('*')
                 .eq(filter.column, filter.value);
             oldRecords = oldData || [];
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await adminData
             .from(table)
             .update(updates)
             .eq(filter.column, filter.value)
@@ -161,7 +148,7 @@ export const auditedSupabase = {
         // Fetch old values before delete
         let oldValues: Record<string, unknown> | null = null;
         if (AUDITED_TABLES.includes(table)) {
-            const { data: oldData } = await supabase
+            const { data: oldData } = await adminData
                 .from(table)
                 .select('*')
                 .eq('id', id)
@@ -169,7 +156,7 @@ export const auditedSupabase = {
             oldValues = oldData;
         }
 
-        const { error } = await supabase
+        const { error } = await adminData
             .from(table)
             .delete()
             .eq('id', id);
@@ -191,14 +178,14 @@ export const auditedSupabase = {
         // Fetch old values before delete
         let oldRecords: Record<string, unknown>[] = [];
         if (AUDITED_TABLES.includes(table)) {
-            const { data: oldData } = await supabase
+            const { data: oldData } = await adminData
                 .from(table)
                 .select('*')
                 .in('id', ids);
             oldRecords = oldData || [];
         }
 
-        const { error } = await supabase
+        const { error } = await adminData
             .from(table)
             .delete()
             .in('id', ids);
@@ -224,7 +211,7 @@ export const auditedSupabase = {
         // Fetch old values before delete
         let oldValues: Record<string, unknown> | null = null;
         if (AUDITED_TABLES.includes(table)) {
-            const { data: oldData } = await supabase
+            const { data: oldData } = await adminData
                 .from(table)
                 .select('*')
                 .eq(field, value)
@@ -232,7 +219,7 @@ export const auditedSupabase = {
             oldValues = oldData;
         }
 
-        const { error } = await supabase
+        const { error } = await adminData
             .from(table)
             .delete()
             .eq(field, value);

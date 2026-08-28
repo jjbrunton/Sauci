@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
 import { Video as VideoCompressor } from 'react-native-compressor';
-import { decode } from 'base64-arraybuffer';
-
-import { supabase } from '../../../lib/supabase';
+import { uploadMedia as uploadMediaFile } from '../../../lib/mediaApi';
 import { Events } from '../../../lib/analytics';
 import { UploadStatus } from '../types';
 
@@ -19,7 +16,6 @@ export function useMediaUpload(matchId: string, userId: string | undefined) {
 
         try {
             let fileUri = uri;
-            let fileBody;
             let ext = mediaType === 'video' ? 'mp4' : 'jpg';
 
             // Compress videos on native platforms before upload
@@ -46,8 +42,6 @@ export function useMediaUpload(matchId: string, userId: string | undefined) {
             if (Platform.OS === 'web') {
                 const response = await fetch(fileUri);
                 const blob = await response.blob();
-                fileBody = blob;
-
                 // Detect extension from blob type
                 if (mediaType === 'video') {
                     if (blob.type === 'video/mp4') ext = 'mp4';
@@ -59,33 +53,14 @@ export function useMediaUpload(matchId: string, userId: string | undefined) {
                     else if (blob.type === 'image/gif') ext = 'gif';
                     else if (blob.type === 'image/webp') ext = 'webp';
                 }
-            } else {
-                const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: FileSystem.EncodingType.Base64 });
-                fileBody = decode(base64);
+            } else if (mediaType === 'image') {
+                const uriExt=fileUri.split('.').pop()?.toLowerCase();
+                if (uriExt && ['jpg','jpeg','png','gif','webp'].includes(uriExt)) ext=uriExt==='jpeg'?'jpg':uriExt;
             }
-
-            const fileName = `${matchId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
-            const contentType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
-
-            const { error: uploadError } = await supabase.storage
-                .from("chat-media")
-                .upload(fileName, fileBody, {
-                    contentType,
-                    upsert: false
-                });
-
-            if (uploadError) throw uploadError;
-
-            // Store the message (plaintext v1)
-            await supabase.from("messages").insert({
-                match_id: matchId,
-                user_id: userId,
-                content: mediaType === 'video' ? 'Sent a video' : 'Sent an image',
-                media_path: fileName,
-                media_type: mediaType,
-                media_expired: false,
-                version: 1,
-            });
+            const contentType = mediaType === 'video'
+                ? ({ mov: 'video/quicktime', webm: 'video/webm' }[ext] ?? 'video/mp4')
+                : ({ png: 'image/png', gif: 'image/gif', webp: 'image/webp' }[ext] ?? 'image/jpeg');
+            await uploadMediaFile(fileUri, { kind: 'chat', mimeType: contentType, matchId });
             Events.mediaUploaded();
 
         } catch (error) {

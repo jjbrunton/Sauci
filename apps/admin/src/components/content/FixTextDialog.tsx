@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Wand2, ArrowRight, Check } from 'lucide-react';
 import { analyzeQuestionText, TextAnalysis } from '@/lib/openai';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { toast } from 'sonner';
 
 interface Question {
@@ -62,7 +62,7 @@ export function FixTextDialog({ open, onOpenChange, questions, isExplicit = fals
 
             // Apply updates in parallel with audit logging
             await Promise.all(updates.map(update =>
-                auditedSupabase.update('questions', update.id, {
+                auditedAdminData.update('questions', update.id, {
                     text: update.suggested_text,
                     partner_text: update.suggested_partner_text,
                 })

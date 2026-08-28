@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/config';
+import { adminRequest } from '@/lib/adminApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -55,24 +55,7 @@ export function UsersPage() {
         setLoading(true);
         try {
             // Fetch profiles with auth info (includes last_sign_in_at)
-            const { data: profilesDataRaw, error } = await supabase
-                .rpc('get_profiles_with_auth_info');
-
-            if (error) throw error;
-
-            const profilesData = (profilesDataRaw || []) as Profile[];
-
-            // Fetch storage usage per user from storage.objects
-            const { data: storageData } = await supabase
-                .rpc('get_user_storage_usage');
-
-            // Create a map of user_id -> storage_bytes
-            const storageMap: Record<string, number> = {};
-            if (storageData) {
-                storageData.forEach((row: { owner: string; total_bytes: number }) => {
-                    storageMap[row.owner] = row.total_bytes;
-                });
-            }
+            const { users: profilesData } = await adminRequest<{ users: Profile[] }>('/v1/admin/users');
 
             // Build a map of couple_id -> users with premium in that couple
             const couplePartners: Record<string, { id: string; is_premium: boolean }[]> = {};
@@ -100,7 +83,7 @@ export function UsersPage() {
                 }
                 return {
                     ...profile,
-                    storage_bytes: storageMap[profile.id] || 0,
+                    storage_bytes: Number(profile.storage_bytes || 0),
                     partner_is_premium: partnerIsPremium,
                     partner_count: partnerCount,
                 };

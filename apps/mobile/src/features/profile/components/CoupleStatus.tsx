@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SettingsSection } from './SettingsSection';
 import { colors, featureColors, spacing, typography, radius } from '../../../theme';
 import { Profile, Couple } from '../../../types';
+import { MediaImage } from '../../../components/MediaImage';
 
 const ACCENT_GRADIENT = featureColors.profile.gradient as [string, string];
 
@@ -59,8 +59,8 @@ export const CoupleStatus: React.FC<CoupleStatusProps> = ({
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                 >
-                                    <Image
-                                        source={{ uri: partner.avatar_url }}
+                                    <MediaImage
+                                        reference={partner.avatar_url}
                                         style={styles.partnerAvatar}
                                         cachePolicy="disk"
                                         transition={200}

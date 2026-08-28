@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -8,6 +7,7 @@ import { EdgeInsets } from 'react-native-safe-area-context';
 
 import { colors, gradients, spacing, typography } from '../../../theme';
 import { Profile } from '../../../types';
+import { MediaImage } from '../../../components/MediaImage';
 
 // Premium color palette for Chat
 const ACCENT = colors.premium.gold;
@@ -66,8 +66,8 @@ const ChatHeaderComponent: React.FC<ChatHeaderProps> = ({
             <View style={styles.headerCenter}>
                 {partner?.avatar_url ? (
                     <View style={styles.headerAvatarContainer}>
-                        <Image
-                            source={{ uri: partner.avatar_url }}
+                        <MediaImage
+                            reference={partner.avatar_url}
                             style={styles.headerAvatar}
                             cachePolicy="disk"
                             transition={200}

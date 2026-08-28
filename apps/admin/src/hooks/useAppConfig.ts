@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 
 export interface AppConfig {
     id: string;
@@ -40,7 +40,7 @@ export function useAppConfig(): UseAppConfigReturn {
         setError(null);
 
         try {
-            const { data, error: fetchError } = await supabase
+            const { data, error: fetchError } = await adminData
                 .from('app_config')
                 .select('*')
                 .limit(1)
@@ -71,7 +71,7 @@ export function useAppConfig(): UseAppConfigReturn {
         }
 
         try {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await adminData
                 .from('app_config')
                 .update(updates)
                 .eq('id', config.id);

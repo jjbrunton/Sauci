@@ -1,5 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 
 export function registerAnalyticsTools(server: McpServer) {
   server.tool(
@@ -15,11 +15,11 @@ export function registerAnalyticsTools(server: McpServer) {
         { count: profiles },
         { count: couples }
       ] = await Promise.all([
-        supabase.from('categories').select('*', { count: 'exact', head: true }),
-        supabase.from('question_packs').select('*', { count: 'exact', head: true }),
-        supabase.from('questions').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('couples').select('*', { count: 'exact', head: true })
+        adminData.from('categories').select('*', { count: 'exact', head: true }),
+        adminData.from('question_packs').select('*', { count: 'exact', head: true }),
+        adminData.from('questions').select('*', { count: 'exact', head: true }),
+        adminData.from('profiles').select('*', { count: 'exact', head: true }),
+        adminData.from('couples').select('*', { count: 'exact', head: true })
       ]);
 
       return {
@@ -41,27 +41,8 @@ export function registerAnalyticsTools(server: McpServer) {
     'Get feature interest stats',
     {},
     async () => {
-      const { data, error } = await supabase.rpc('get_feature_interest_counts');
-      
-      // Fallback if RPC doesn't exist or fails, query table directly if possible
-      if (error) {
-        // Try raw query on feature_interests table
-        const { data: rawData, error: rawError } = await supabase
-          .from('feature_interests')
-          .select('feature_name');
-          
-        if (rawError) throw new Error(`Failed to get feature interests: ${rawError.message}`);
-        
-        // Manual aggregation
-        const counts: Record<string, number> = {};
-        rawData.forEach((r: any) => {
-          counts[r.feature_name] = (counts[r.feature_name] || 0) + 1;
-        });
-        
-        return {
-          content: [{ type: 'text', text: JSON.stringify(counts, null, 2) }]
-        };
-      }
+      const { data, error } = await adminData.featureInterestCounts();
+      if (error) throw new Error(`Failed to get feature interests: ${error.message}`);
 
       return {
         content: [{ type: 'text', text: JSON.stringify(data, null, 2) }]
@@ -75,7 +56,7 @@ export function registerAnalyticsTools(server: McpServer) {
     {},
     async () => {
       // Aggregating onboarding data from profiles
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('profiles')
         .select('usage_reason, gender');
         
@@ -84,9 +65,11 @@ export function registerAnalyticsTools(server: McpServer) {
       const reasons: Record<string, number> = {};
       const genders: Record<string, number> = {};
       
-      data.forEach((p) => {
-        if (p.usage_reason) reasons[p.usage_reason] = (reasons[p.usage_reason] || 0) + 1;
-        if (p.gender) genders[p.gender] = (genders[p.gender] || 0) + 1;
+      data.forEach((p: Record<string, unknown>) => {
+        const usageReason = typeof p.usage_reason === 'string' ? p.usage_reason : undefined;
+        const gender = typeof p.gender === 'string' ? p.gender : undefined;
+        if (usageReason) reasons[usageReason] = (reasons[usageReason] || 0) + 1;
+        if (gender) genders[gender] = (genders[gender] || 0) + 1;
       });
 
       return {

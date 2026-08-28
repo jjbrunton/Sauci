@@ -1,5 +1,5 @@
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 
 // =============================================================================
 // Types
@@ -32,7 +32,7 @@ export interface CategoryFormData {
  */
 export async function fetchCategories(): Promise<Category[]> {
     // Fetch categories
-    const { data: categories, error: catError } = await supabase
+    const { data: categories, error: catError } = await adminData
         .from('categories')
         .select('*')
         .order('sort_order', { ascending: true });
@@ -40,7 +40,7 @@ export async function fetchCategories(): Promise<Category[]> {
     if (catError) throw catError;
 
     // Fetch pack counts per category
-    const { data: packs } = await supabase
+    const { data: packs } = await adminData
         .from('question_packs')
         .select('category_id');
 
@@ -61,7 +61,7 @@ export async function fetchCategories(): Promise<Category[]> {
  * Fetch a single category by ID
  */
 export async function fetchCategoryById(id: string): Promise<Category | null> {
-    const { data, error } = await supabase
+    const { data, error } = await adminData
         .from('categories')
         .select('*')
         .eq('id', id)
@@ -82,7 +82,7 @@ export async function createCategory(
     data: CategoryFormData,
     sortOrder: number
 ): Promise<Category> {
-    const { data: created, error } = await auditedSupabase.insert('categories', {
+    const { data: created, error } = await auditedAdminData.insert('categories', {
         name: data.name,
         description: data.description || null,
         icon: data.icon || null,
@@ -102,7 +102,7 @@ export async function updateCategory(
     id: string,
     data: Partial<CategoryFormData>
 ): Promise<void> {
-    const { error } = await auditedSupabase.update('categories', id, {
+    const { error } = await auditedAdminData.update('categories', id, {
         name: data.name,
         description: data.description || null,
         icon: data.icon || null,
@@ -116,7 +116,7 @@ export async function updateCategory(
  * Delete a category
  */
 export async function deleteCategory(id: string): Promise<void> {
-    const { error } = await auditedSupabase.delete('categories', id);
+    const { error } = await auditedAdminData.delete('categories', id);
     if (error) throw error;
 }
 
@@ -130,7 +130,7 @@ export async function swapCategorySortOrder(
     category2Order: number
 ): Promise<void> {
     await Promise.all([
-        auditedSupabase.update('categories', category1Id, { sort_order: category2Order }),
-        auditedSupabase.update('categories', category2Id, { sort_order: category1Order }),
+        auditedAdminData.update('categories', category1Id, { sort_order: category2Order }),
+        auditedAdminData.update('categories', category2Id, { sort_order: category1Order }),
     ]);
 }

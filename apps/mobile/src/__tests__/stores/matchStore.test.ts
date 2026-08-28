@@ -1,485 +1,233 @@
-import { useMatchStore } from '@/store/matchStore';
+import { appDataApi } from '@/lib/appDataApi';
+import { ApiError, apiClient } from '@/lib/apiClient';
 import { useAuthStore } from '@/store/authStore';
-import { supabase } from '@/lib/supabase';
+import { useMatchStore } from '@/store/matchStore';
 
-function createThenableQuery(result: any) {
-    const query: any = {
-        select: jest.fn(() => query),
-        eq: jest.fn(() => query),
-        neq: jest.fn(() => query),
-        is: jest.fn(() => query),
-        in: jest.fn(() => query),
-        order: jest.fn(() => query),
-        range: jest.fn(() => query),
-        update: jest.fn(() => query),
-        insert: jest.fn(() => query),
-        delete: jest.fn(() => query),
-        then: (resolve: any, reject: any) => Promise.resolve(result).then(resolve, reject),
-    };
-    return query;
-}
+jest.mock('@/lib/apiClient', () => {
+    const actual = jest.requireActual('@/lib/apiClient');
+    return { ...actual, apiClient: { get: jest.fn(), patch: jest.fn(), put: jest.fn() } };
+});
+jest.mock('@/lib/appDataApi', () => ({ appDataApi: { sendNudge: jest.fn(), nudgeStatus: jest.fn() } }));
 
-describe('matchStore', () => {
+const match = (id: string, is_new = true, unreadCount = 0) => ({
+    id, couple_id: 'couple', question_id: `q-${id}`, match_type: 'yes_yes', is_new,
+    created_at: '2026-01-01T00:00:00.000Z', unreadCount,
+} as any);
+const pending = (id: string) => ({ id, question: { id: `q-${id}` }, partnerAnsweredAt: 'now' } as any);
+
+describe('matchStore API behavior', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        useMatchStore.setState({
-            matches: [],
-            newMatchesCount: 0,
-            totalCount: null,
-            isLoading: false,
-            isLoadingMore: false,
-            page: 0,
-            hasMore: true,
-            error: null,
-            archivedMatches: [],
-            archivedMatchIds: new Set<string>(),
-            showArchived: false,
-            isLoadingArchived: false,
-        });
-        useAuthStore.setState({ user: { id: 'me', couple_id: 'couple1' } } as any);
+        jest.useFakeTimers();
+        jest.setSystemTime(new Date('2026-08-27T12:00:00Z'));
+        useAuthStore.setState({ user: { id: 'me', couple_id: 'couple' } } as any);
+        useMatchStore.getState().clearMatches();
+        (apiClient.patch as jest.Mock).mockResolvedValue({ success: true });
+        (apiClient.put as jest.Mock).mockResolvedValue({ success: true });
     });
+    afterEach(() => jest.useRealTimers());
 
     describe('fetchMatches', () => {
-        it('sorts matches with unread messages first', async () => {
-            const matches = [
-                { id: 'a', question_id: 'q1', created_at: '2024-01-02T00:00:00.000Z', is_new: true },
-                { id: 'b', question_id: 'q2', created_at: '2024-01-03T00:00:00.000Z', is_new: false },
-            ];
-
-            const unreadMessages = [{ match_id: 'a' }, { match_id: 'a' }];
-
-            const archivesQuery = createThenableQuery({ data: [] });
-            const countQuery = createThenableQuery({ count: 2 });
-            const matchesQuery = createThenableQuery({ data: matches });
-            const responsesQuery = createThenableQuery({ data: [] });
-            const unreadQuery = createThenableQuery({ data: unreadMessages, error: null });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(archivesQuery) // archived matches
-                .mockReturnValueOnce(countQuery) // count
-                .mockReturnValueOnce(matchesQuery) // matches
-                .mockReturnValueOnce(responsesQuery) // responses
-                .mockReturnValueOnce(unreadQuery); // messages
-
+        it('loads the first API page and retains server ordering and counts', async () => {
+            (apiClient.get as jest.Mock).mockResolvedValue({ matches: [match('unread', false, 2), match('new')], totalCount: 2 });
             await useMatchStore.getState().fetchMatches(true);
-
-            const state = useMatchStore.getState();
-            expect(state.matches[0].id).toBe('a');
-            expect(state.newMatchesCount).toBe(1);
+            expect(apiClient.get).toHaveBeenCalledWith('/v1/matches?page=0&limit=20');
+            expect(useMatchStore.getState()).toMatchObject({ totalCount: 2, newMatchesCount: 1, page: 1, hasMore: false, isLoading: false });
+            expect(useMatchStore.getState().matches.map(item => item.id)).toEqual(['unread', 'new']);
         });
 
-        it('sets empty state when user has no couple', async () => {
+        it('fails closed for an unpaired user', async () => {
+            useMatchStore.setState({ matches: [match('old')], newMatchesCount: 1 });
             useAuthStore.setState({ user: { id: 'me', couple_id: null } } as any);
-
             await useMatchStore.getState().fetchMatches(true);
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toEqual([]);
-            expect(state.newMatchesCount).toBe(0);
-            expect(state.totalCount).toBe(0);
-            expect(supabase.from).not.toHaveBeenCalled();
+            expect(apiClient.get).not.toHaveBeenCalled();
+            expect(useMatchStore.getState()).toMatchObject({ matches: [], newMatchesCount: 0, totalCount: 0, isLoading: false });
         });
 
-        it('prevents concurrent loading', async () => {
+        it('guards concurrent loads and exhausted pagination', async () => {
             useMatchStore.setState({ isLoading: true });
-
             await useMatchStore.getState().fetchMatches(true);
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
-
-        it('filters out archived matches', async () => {
-            const matches = [
-                { id: 'a', question_id: 'q1', created_at: '2024-01-02T00:00:00.000Z', is_new: false },
-                { id: 'b', question_id: 'q2', created_at: '2024-01-03T00:00:00.000Z', is_new: false },
-            ];
-
-            const archivesQuery = createThenableQuery({ data: [{ match_id: 'a' }] });
-            const countQuery = createThenableQuery({ count: 2 });
-            const matchesQuery = createThenableQuery({ data: matches });
-            const responsesQuery = createThenableQuery({ data: [] });
-            const unreadQuery = createThenableQuery({ data: [], error: null });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(archivesQuery)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(matchesQuery)
-                .mockReturnValueOnce(responsesQuery)
-                .mockReturnValueOnce(unreadQuery);
-
-            await useMatchStore.getState().fetchMatches(true);
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toHaveLength(1);
-            expect(state.matches[0].id).toBe('b');
-            // Total count should subtract archived
-            expect(state.totalCount).toBe(1);
-        });
-
-        it('handles empty matches correctly', async () => {
-            const archivesQuery = createThenableQuery({ data: [] });
-            const countQuery = createThenableQuery({ count: 0 });
-            const matchesQuery = createThenableQuery({ data: [] });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(archivesQuery)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(matchesQuery);
-
-            await useMatchStore.getState().fetchMatches(true);
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toEqual([]);
-            expect(state.hasMore).toBe(false);
-            expect(state.isLoading).toBe(false);
-        });
-
-        it('handles fetch error gracefully', async () => {
-            const archivesQuery = createThenableQuery({ data: [] });
-            const countQuery = createThenableQuery({ count: 0 });
-            // Use createThenableQuery with error data to simulate error response
-            const matchesQuery = createThenableQuery({ data: null, error: { message: 'Network error' } });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(archivesQuery)
-                .mockReturnValueOnce(countQuery)
-                .mockReturnValueOnce(matchesQuery);
-
-            await useMatchStore.getState().fetchMatches(true);
-
-            const state = useMatchStore.getState();
-            expect(state.error).toBe('Failed to load matches');
-            expect(state.isLoading).toBe(false);
-        });
-
-        it('paginates matches correctly', async () => {
-            useMatchStore.setState({
-                matches: [{ id: 'existing' }] as any,
-                page: 1,
-                hasMore: true,
-            });
-
-            const newMatches = [
-                { id: 'c', question_id: 'q3', created_at: '2024-01-01T00:00:00.000Z', is_new: false },
-            ];
-
-            const matchesQuery = createThenableQuery({ data: newMatches });
-            const responsesQuery = createThenableQuery({ data: [] });
-            const unreadQuery = createThenableQuery({ data: [] });
-
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(matchesQuery)
-                .mockReturnValueOnce(responsesQuery)
-                .mockReturnValueOnce(unreadQuery);
-
+            useMatchStore.setState({ isLoading: false, hasMore: false });
             await useMatchStore.getState().fetchMatches(false);
+            expect(apiClient.get).not.toHaveBeenCalled();
+        });
 
-            const state = useMatchStore.getState();
-            expect(state.matches).toHaveLength(2);
-            expect(state.page).toBe(2);
+        it('appends and deduplicates later pages', async () => {
+            useMatchStore.setState({ matches: [match('existing')], page: 1, hasMore: true, newMatchesCount: 1, totalCount: 25 });
+            const page = [match('existing'), ...Array.from({ length: 19 }, (_, index) => match(`m${index}`, false))];
+            (apiClient.get as jest.Mock).mockResolvedValue({ matches: page, totalCount: 25 });
+            await useMatchStore.getState().fetchMatches(false);
+            expect(apiClient.get).toHaveBeenCalledWith('/v1/matches?page=1&limit=20');
+            expect(useMatchStore.getState()).toMatchObject({ page: 2, hasMore: true, isLoadingMore: false, totalCount: 25 });
+            expect(new Set(useMatchStore.getState().matches.map(item => item.id)).size).toBe(20);
+        });
+
+        it('sets an empty terminal state on an empty refresh', async () => {
+            (apiClient.get as jest.Mock).mockResolvedValue({ matches: [], totalCount: 0 });
+            await useMatchStore.getState().fetchMatches(true);
+            expect(useMatchStore.getState()).toMatchObject({ matches: [], totalCount: 0, hasMore: false, isLoading: false });
+        });
+
+        it('records API errors and releases loading guards', async () => {
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            (apiClient.get as jest.Mock).mockRejectedValue(new Error('network'));
+            await useMatchStore.getState().fetchMatches(true);
+            expect(useMatchStore.getState()).toMatchObject({ error: 'Failed to load matches', isLoading: false, isLoadingMore: false });
         });
     });
 
-    describe('markAsSeen', () => {
-        it('marks a match as seen and updates count', async () => {
-            useMatchStore.setState({
-                matches: [
-                    { id: 'm1', is_new: true } as any,
-                    { id: 'm2', is_new: true } as any,
-                ],
-                newMatchesCount: 2,
-            });
-
-            const updateQuery = createThenableQuery({});
-            (supabase.from as jest.Mock).mockReturnValue(updateQuery);
-
-            await useMatchStore.getState().markAsSeen('m1');
-
-            const state = useMatchStore.getState();
-            expect(state.matches[0].is_new).toBe(false);
-            expect(state.matches[1].is_new).toBe(true);
-            expect(state.newMatchesCount).toBe(1);
-            expect(updateQuery.update).toHaveBeenCalledWith({ is_new: false });
-        });
+    it('marks one or all new matches seen and skips an empty batch', async () => {
+        useMatchStore.setState({ matches: [match('m1'), match('m2'), match('old', false)], newMatchesCount: 2 });
+        await useMatchStore.getState().markAsSeen('m1');
+        expect(apiClient.patch).toHaveBeenLastCalledWith('/v1/matches/seen', { ids: ['m1'] });
+        expect(useMatchStore.getState().newMatchesCount).toBe(1);
+        await useMatchStore.getState().markAllAsSeen();
+        expect(apiClient.patch).toHaveBeenLastCalledWith('/v1/matches/seen', { ids: ['m2'] });
+        expect(useMatchStore.getState().newMatchesCount).toBe(0);
+        await useMatchStore.getState().markAllAsSeen();
+        expect(apiClient.patch).toHaveBeenCalledTimes(2);
     });
 
-    describe('markAllAsSeen', () => {
-        it('marks all matches as seen', async () => {
-            useMatchStore.setState({
-                matches: [
-                    { id: 'm1', is_new: true } as any,
-                    { id: 'm2', is_new: true } as any,
-                ],
-                newMatchesCount: 2,
-            });
-
-            const updateQuery = createThenableQuery({});
-            (supabase.from as jest.Mock).mockReturnValue(updateQuery);
-
-            await useMatchStore.getState().markAllAsSeen();
-
-            const state = useMatchStore.getState();
-            expect(state.matches.every(m => !m.is_new)).toBe(true);
-            expect(state.newMatchesCount).toBe(0);
-        });
-
-        it('does nothing when no new matches', async () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1', is_new: false } as any],
-                newMatchesCount: 0,
-            });
-
-            await useMatchStore.getState().markAllAsSeen();
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
+    it('adds matches and clamps unread counts at zero', () => {
+        useMatchStore.setState({ matches: [match('m1', false, 1)], totalCount: null, newMatchesCount: 0 });
+        useMatchStore.getState().addMatch(match('m2'));
+        useMatchStore.getState().updateMatchUnreadCount('m1', -5);
+        expect(useMatchStore.getState().matches.map(item => item.id)).toEqual(['m2', 'm1']);
+        expect(useMatchStore.getState()).toMatchObject({ totalCount: 1, newMatchesCount: 1 });
+        expect(useMatchStore.getState().matches[1]?.unreadCount).toBe(0);
     });
 
-    describe('addMatch', () => {
-        it('adds a new match to the beginning', () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1' } as any],
-                newMatchesCount: 0,
-                totalCount: 1,
-            });
-
-            useMatchStore.getState().addMatch({ id: 'm2', is_new: true } as any);
-
-            const state = useMatchStore.getState();
-            expect(state.matches[0].id).toBe('m2');
-            expect(state.matches).toHaveLength(2);
-            expect(state.newMatchesCount).toBe(1);
-            expect(state.totalCount).toBe(2);
-        });
-    });
-
-    describe('updateMatchUnreadCount', () => {
-        it('increments unread count', () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1', unreadCount: 1 } as any],
-            });
-
-            useMatchStore.getState().updateMatchUnreadCount('m1', 2);
-
-            expect(useMatchStore.getState().matches[0].unreadCount).toBe(3);
-        });
-
-        it('decrements unread count but not below zero', () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1', unreadCount: 1 } as any],
-            });
-
-            useMatchStore.getState().updateMatchUnreadCount('m1', -5);
-
-            expect(useMatchStore.getState().matches[0].unreadCount).toBe(0);
-        });
-
-        it('handles missing unreadCount', () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1' } as any],
-            });
-
-            useMatchStore.getState().updateMatchUnreadCount('m1', 1);
-
-            expect(useMatchStore.getState().matches[0].unreadCount).toBe(1);
-        });
-    });
-
-    describe('clearMatches', () => {
-        it('resets all state to initial values', () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1' }] as any,
-                newMatchesCount: 5,
-                totalCount: 10,
-                isLoading: true,
-                error: 'some error',
-                page: 3,
-                hasMore: false,
-                isLoadingMore: true,
-                archivedMatches: [{ id: 'a1' }] as any,
-                archivedMatchIds: new Set(['a1']),
-                showArchived: true,
-                isLoadingArchived: true,
-            });
-
-            useMatchStore.getState().clearMatches();
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toEqual([]);
-            expect(state.newMatchesCount).toBe(0);
-            expect(state.totalCount).toBeNull();
-            expect(state.isLoading).toBe(false);
-            expect(state.error).toBeNull();
-            expect(state.page).toBe(0);
-            expect(state.hasMore).toBe(true);
-            expect(state.isLoadingMore).toBe(false);
-            expect(state.archivedMatches).toEqual([]);
-            expect(state.archivedMatchIds.size).toBe(0);
-            expect(state.showArchived).toBe(false);
-            expect(state.isLoadingArchived).toBe(false);
-        });
-    });
-
-    describe('archiveMatch', () => {
-        it('archives a match with optimistic update', async () => {
-            useMatchStore.setState({
-                matches: [
-                    { id: 'm1' } as any,
-                    { id: 'm2' } as any,
-                ],
-                archivedMatches: [],
-                archivedMatchIds: new Set(),
-                totalCount: 2,
-            });
-
-            const insertQuery = createThenableQuery({ error: null });
-            (supabase.from as jest.Mock).mockReturnValue(insertQuery);
-
+    describe('archives', () => {
+        it('archives and unarchives optimistically through token-scoped routes', async () => {
+            useMatchStore.setState({ matches: [match('m1'), match('m2')], archivedMatches: [], archivedMatchIds: new Set(), totalCount: 2 });
             await useMatchStore.getState().archiveMatch('m1');
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toHaveLength(1);
-            expect(state.matches[0].id).toBe('m2');
-            expect(state.archivedMatches).toHaveLength(1);
-            expect(state.archivedMatches[0].id).toBe('m1');
-            expect(state.archivedMatchIds.has('m1')).toBe(true);
-            expect(state.totalCount).toBe(1);
-        });
-
-        it('does nothing if user not authenticated', async () => {
-            useAuthStore.setState({ user: null } as any);
-
-            await useMatchStore.getState().archiveMatch('m1');
-
-            expect(supabase.from).not.toHaveBeenCalled();
-        });
-
-        it('reverts on error', async () => {
-            useMatchStore.setState({
-                matches: [{ id: 'm1' } as any],
-                archivedMatches: [],
-                archivedMatchIds: new Set(),
-                totalCount: 1,
-            });
-
-            const insertQuery = createThenableQuery({ error: new Error('DB error') });
-            (supabase.from as jest.Mock).mockReturnValue(insertQuery);
-
-            await useMatchStore.getState().archiveMatch('m1');
-
-            const state = useMatchStore.getState();
-            // Should revert
-            expect(state.matches).toHaveLength(1);
-            expect(state.archivedMatchIds.has('m1')).toBe(false);
-        });
-    });
-
-    describe('unarchiveMatch', () => {
-        it('unarchives a match with optimistic update', async () => {
-            useMatchStore.setState({
-                matches: [],
-                archivedMatches: [{ id: 'm1' } as any],
-                archivedMatchIds: new Set(['m1']),
-                totalCount: 0,
-            });
-
-            const deleteQuery = createThenableQuery({ error: null });
-            (supabase.from as jest.Mock).mockReturnValue(deleteQuery);
-
+            expect(apiClient.put).toHaveBeenLastCalledWith('/v1/matches/m1/archive', { archived: true });
+            expect(useMatchStore.getState().matches.map(item => item.id)).toEqual(['m2']);
+            expect(useMatchStore.getState().archivedMatchIds.has('m1')).toBe(true);
             await useMatchStore.getState().unarchiveMatch('m1');
-
-            const state = useMatchStore.getState();
-            expect(state.matches).toHaveLength(1);
-            expect(state.matches[0].id).toBe('m1');
-            expect(state.archivedMatches).toHaveLength(0);
-            expect(state.archivedMatchIds.has('m1')).toBe(false);
-            expect(state.totalCount).toBe(1);
+            expect(apiClient.put).toHaveBeenLastCalledWith('/v1/matches/m1/archive', { archived: false });
+            expect(useMatchStore.getState()).toMatchObject({ totalCount: 2, archivedMatches: [] });
         });
 
-        it('does nothing if user not authenticated', async () => {
+        it('does not mutate or call the API without an authenticated user', async () => {
+            useMatchStore.setState({ matches: [match('m1')], archivedMatches: [match('m2')] });
             useAuthStore.setState({ user: null } as any);
-
-            await useMatchStore.getState().unarchiveMatch('m1');
-
-            expect(supabase.from).not.toHaveBeenCalled();
+            await useMatchStore.getState().archiveMatch('m1');
+            await useMatchStore.getState().unarchiveMatch('m2');
+            expect(apiClient.put).not.toHaveBeenCalled();
+            expect(useMatchStore.getState().matches).toHaveLength(1);
         });
-    });
 
-    describe('fetchArchivedMatches', () => {
-        it('fetches archived matches', async () => {
-            const archivesQuery = createThenableQuery({ data: [{ match_id: 'm1' }] });
-            const matchesQuery = createThenableQuery({
-                data: [{ id: 'm1', question_id: 'q1', created_at: '2024-01-01' }],
-            });
-            const unreadQuery = createThenableQuery({ data: [] });
+        it('reverts archive and unarchive mutations on API errors', async () => {
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            (apiClient.put as jest.Mock).mockRejectedValue(new Error('forbidden'));
+            useMatchStore.setState({ matches: [match('m1')], archivedMatches: [], archivedMatchIds: new Set(), totalCount: 1 });
+            await useMatchStore.getState().archiveMatch('m1');
+            expect(useMatchStore.getState().matches.map(item => item.id)).toEqual(['m1']);
+            expect(useMatchStore.getState().totalCount).toBe(1);
+            useMatchStore.setState({ matches: [], archivedMatches: [match('m2')], archivedMatchIds: new Set(['m2']), totalCount: 0 });
+            await useMatchStore.getState().unarchiveMatch('m2');
+            expect(useMatchStore.getState().archivedMatches.map(item => item.id)).toEqual(['m2']);
+            expect(useMatchStore.getState().totalCount).toBe(0);
+        });
 
-            (supabase.from as jest.Mock)
-                .mockReturnValueOnce(archivesQuery)
-                .mockReturnValueOnce(matchesQuery)
-                .mockReturnValueOnce(unreadQuery);
-
+        it('loads archived matches, handles empty responses, and guards missing couple state', async () => {
+            (apiClient.get as jest.Mock).mockResolvedValueOnce({ matches: [match('m1')], totalCount: 1 });
             await useMatchStore.getState().fetchArchivedMatches();
-
-            const state = useMatchStore.getState();
-            expect(state.archivedMatches).toHaveLength(1);
-            expect(state.archivedMatches[0].id).toBe('m1');
-            expect(state.isLoadingArchived).toBe(false);
-        });
-
-        it('does nothing if no couple', async () => {
+            expect(apiClient.get).toHaveBeenCalledWith('/v1/matches?archived=true&limit=100');
+            expect(useMatchStore.getState().archivedMatchIds.has('m1')).toBe(true);
+            (apiClient.get as jest.Mock).mockResolvedValueOnce({ matches: [], totalCount: 0 });
+            await useMatchStore.getState().fetchArchivedMatches();
+            expect(useMatchStore.getState()).toMatchObject({ archivedMatches: [], isLoadingArchived: false });
             useAuthStore.setState({ user: { id: 'me', couple_id: null } } as any);
-
             await useMatchStore.getState().fetchArchivedMatches();
-
-            expect(supabase.from).not.toHaveBeenCalled();
+            expect(apiClient.get).toHaveBeenCalledTimes(2);
         });
 
-        it('handles empty archives', async () => {
-            const archivesQuery = createThenableQuery({ data: [] });
-
-            (supabase.from as jest.Mock).mockReturnValue(archivesQuery);
-
-            await useMatchStore.getState().fetchArchivedMatches();
-
-            const state = useMatchStore.getState();
-            expect(state.archivedMatches).toEqual([]);
-            expect(state.isLoadingArchived).toBe(false);
-        });
-    });
-
-    describe('toggleShowArchived', () => {
-        it('toggles showArchived state', () => {
-            expect(useMatchStore.getState().showArchived).toBe(false);
-
+        it('toggles archived visibility and triggers an initial fetch only', async () => {
+            (apiClient.get as jest.Mock).mockResolvedValue({ matches: [], totalCount: 0 });
             useMatchStore.getState().toggleShowArchived();
-
+            await Promise.resolve();
             expect(useMatchStore.getState().showArchived).toBe(true);
-
+            expect(apiClient.get).toHaveBeenCalledTimes(1);
             useMatchStore.getState().toggleShowArchived();
-
             expect(useMatchStore.getState().showArchived).toBe(false);
-        });
-
-        it('fetches archived matches when toggling to show', async () => {
-            const archivesQuery = createThenableQuery({ data: [] });
-            (supabase.from as jest.Mock).mockReturnValue(archivesQuery);
-
-            useMatchStore.getState().toggleShowArchived();
-
-            // Should trigger fetch
-            expect(supabase.from).toHaveBeenCalled();
         });
     });
 
-    describe('isMatchArchived', () => {
-        it('returns true for archived matches', () => {
-            useMatchStore.setState({
-                archivedMatchIds: new Set(['m1', 'm2']),
-            });
-
-            expect(useMatchStore.getState().isMatchArchived('m1')).toBe(true);
-            expect(useMatchStore.getState().isMatchArchived('m2')).toBe(true);
-            expect(useMatchStore.getState().isMatchArchived('m3')).toBe(false);
+    describe('turn views', () => {
+        it('loads partner and own pending questions and clears them when unpaired', async () => {
+            (apiClient.get as jest.Mock).mockResolvedValueOnce({ questions: [pending('partner')] }).mockResolvedValueOnce({ questions: [pending('mine')] });
+            await useMatchStore.getState().fetchPendingQuestions();
+            await useMatchStore.getState().fetchTheirTurnQuestions();
+            expect(apiClient.get).toHaveBeenNthCalledWith(1, '/v1/questions/pending?direction=partner');
+            expect(apiClient.get).toHaveBeenNthCalledWith(2, '/v1/questions/pending?direction=mine');
+            expect(useMatchStore.getState()).toMatchObject({ pendingQuestions: [pending('partner')], theirTurnQuestions: [pending('mine')] });
+            useAuthStore.setState({ user: null } as any);
+            await useMatchStore.getState().fetchPendingQuestions();
+            await useMatchStore.getState().fetchTheirTurnQuestions();
+            expect(useMatchStore.getState()).toMatchObject({ pendingQuestions: [], theirTurnQuestions: [] });
         });
+
+        it('releases pending loading guards on errors', async () => {
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            (apiClient.get as jest.Mock).mockRejectedValue(new Error('network'));
+            await useMatchStore.getState().fetchPendingQuestions();
+            await useMatchStore.getState().fetchTheirTurnQuestions();
+            expect(useMatchStore.getState()).toMatchObject({ isLoadingPending: false, isLoadingTheirTurn: false });
+        });
+
+        it('updates current view and delegates an empty view fetch', () => {
+            const fetchArchivedMatches = jest.fn(async () => undefined);
+            useMatchStore.setState({ fetchArchivedMatches });
+            useMatchStore.getState().setCurrentView('archived');
+            expect(useMatchStore.getState()).toMatchObject({ currentView: 'archived', showArchived: true });
+            expect(fetchArchivedMatches).toHaveBeenCalled();
+        });
+    });
+
+    describe('nudges', () => {
+        it('sends a nudge and uses the server cooldown', async () => {
+            (appDataApi.sendNudge as jest.Mock).mockResolvedValue({ success: true, notification_sent: true, next_nudge_available_at: '2026-08-28T00:00:00Z' });
+            await expect(useMatchStore.getState().sendNudge()).resolves.toEqual({ success: true, notificationSent: true });
+            expect(useMatchStore.getState()).toMatchObject({ isNudging: false, nudgeCooldownUntil: new Date('2026-08-28T00:00:00Z') });
+        });
+
+        it('does not send during an active request or cooldown', async () => {
+            useMatchStore.setState({ isNudging: true });
+            await expect(useMatchStore.getState().sendNudge()).resolves.toEqual({ success: false, notificationSent: false });
+            useMatchStore.setState({ isNudging: false, nudgeCooldownUntil: new Date('2026-08-27T13:00:00Z') });
+            await useMatchStore.getState().sendNudge();
+            expect(appDataApi.sendNudge).not.toHaveBeenCalled();
+        });
+
+        it('records a 429 cooldown and recovers from generic errors', async () => {
+            (appDataApi.sendNudge as jest.Mock).mockRejectedValueOnce(new ApiError('rate limited', 429, { cooldown_remaining_seconds: 60 }));
+            await expect(useMatchStore.getState().sendNudge()).resolves.toEqual({ success: false, notificationSent: false });
+            expect(useMatchStore.getState().nudgeCooldownUntil).toEqual(new Date('2026-08-27T12:01:00Z'));
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            useMatchStore.setState({ nudgeCooldownUntil: null });
+            (appDataApi.sendNudge as jest.Mock).mockRejectedValueOnce(new Error('network'));
+            await useMatchStore.getState().sendNudge();
+            expect(useMatchStore.getState().isNudging).toBe(false);
+        });
+
+        it('derives, clears, and guards persisted cooldown status', async () => {
+            (appDataApi.nudgeStatus as jest.Mock).mockResolvedValueOnce({ last_nudge_sent_at: '2026-08-27T06:00:00Z' });
+            await useMatchStore.getState().checkNudgeCooldown();
+            expect(useMatchStore.getState().nudgeCooldownUntil).toEqual(new Date('2026-08-27T18:00:00Z'));
+            (appDataApi.nudgeStatus as jest.Mock).mockResolvedValueOnce({ last_nudge_sent_at: null });
+            await useMatchStore.getState().checkNudgeCooldown();
+            expect(useMatchStore.getState().nudgeCooldownUntil).toBeNull();
+            useAuthStore.setState({ user: null } as any);
+            await useMatchStore.getState().checkNudgeCooldown();
+            expect(appDataApi.nudgeStatus).toHaveBeenCalledTimes(2);
+        });
+    });
+
+    it('clearMatches resets all user-scoped state', () => {
+        useMatchStore.setState({ matches: [match('m1')], archivedMatches: [match('m2')], pendingQuestions: [pending('p')], theirTurnQuestions: [pending('t')], currentView: 'archived', showArchived: true, isNudging: true });
+        useMatchStore.getState().clearMatches();
+        expect(useMatchStore.getState()).toMatchObject({ matches: [], archivedMatches: [], pendingQuestions: [], theirTurnQuestions: [], currentView: 'pending', showArchived: false, isNudging: false, page: 0, hasMore: true });
     });
 });

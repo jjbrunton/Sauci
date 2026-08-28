@@ -28,7 +28,7 @@ import { GlassToggle } from '../../src/components/ui/GlassToggle';
 import { Paywall } from '../../src/components/paywall';
 import { colors, gradients, spacing, typography, radius, shadows } from '../../src/theme';
 import { useAuthStore } from '../../src/store';
-import { supabase } from '../../src/lib/supabase';
+import { profileSettingsApi } from '../../src/lib/profileSettingsApi';
 import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
@@ -183,11 +183,11 @@ export default function OnboardingScreen() {
             }
 
             // Derive intensity from hide_nsfw for backwards compatibility
-            const maxIntensity = hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
+            const maxIntensity: 2 | 5 = hideNsfw ? NSFW_OFF_INTENSITY : NSFW_ON_INTENSITY;
             const showExplicitContent = !hideNsfw;
             const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content", "hide_nsfw"];
 
-            const updateData: Record<string, any> = {
+            const updateData = {
                 name: name.trim(),
                 gender,
                 usage_reason: usageReason,
@@ -196,22 +196,12 @@ export default function OnboardingScreen() {
                 hide_nsfw: hideNsfw,
                 onboarding_completed: true,
                 onboarding_version: REQUIRED_ONBOARDING_VERSION,
-                updated_at: new Date().toISOString(),
             };
 
+            await profileSettingsApi.updateProfile(updateData);
+
             if (avatarUrl) {
-                updateData.avatar_url = avatarUrl;
                 updatedFields.push("avatar_url");
-            }
-
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update(updateData)
-                .eq('id', userId);
-
-            if (updateError) {
-                console.error('[Onboarding] Profile update error:', updateError);
-                throw updateError;
             }
 
             console.log('[Onboarding] Profile updated successfully, fetching user...');

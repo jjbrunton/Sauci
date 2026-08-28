@@ -2,8 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Alert, Platform, ActionSheetIOS } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
-import { supabase } from '../lib/supabase';
+import { uploadMedia } from '../lib/mediaApi';
 
 export interface UseAvatarPickerOptions {
     /** User ID for storage path. Required for upload. */
@@ -35,7 +34,7 @@ export interface UseAvatarPickerReturn {
 
 /**
  * Hook for avatar image picking and uploading.
- * Handles cross-platform image selection (camera/library) and Supabase storage upload.
+ * Handles cross-platform image selection and authenticated API upload.
  */
 export function useAvatarPicker(options?: UseAvatarPickerOptions): UseAvatarPickerReturn {
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -55,46 +54,24 @@ export function useAvatarPicker(options?: UseAvatarPickerOptions): UseAvatarPick
         setIsUploading(true);
 
         try {
-            let fileBody;
             let ext = 'jpg';
 
             if (Platform.OS === 'web') {
                 const response = await fetch(uri);
                 const blob = await response.blob();
-                fileBody = blob;
-
                 if (blob.type === 'image/png') ext = 'png';
                 else if (blob.type === 'image/webp') ext = 'webp';
             } else {
-                const base64 = await FileSystem.readAsStringAsync(uri, {
-                    encoding: FileSystem.EncodingType.Base64
-                });
-                fileBody = decode(base64);
-
                 const uriExt = uri.split('.').pop()?.toLowerCase();
                 if (uriExt && ['jpg', 'jpeg', 'png', 'webp'].includes(uriExt)) {
                     ext = uriExt === 'jpeg' ? 'jpg' : uriExt;
                 }
             }
 
-            const fileName = `${currentOptions.userId}/${Date.now()}.${ext}`;
             const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(fileName, fileBody, {
-                    contentType,
-                    upsert: true,
-                });
-
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(fileName);
-
-            currentOptions?.onUploadComplete?.(publicUrl);
-            return publicUrl;
+            const result = await uploadMedia(uri, { kind: 'avatar', mimeType: contentType });
+            currentOptions?.onUploadComplete?.(result.reference);
+            return result.reference;
         } catch (error) {
             console.error('Error uploading avatar:', error);
             currentOptions?.onUploadError?.(error as Error);

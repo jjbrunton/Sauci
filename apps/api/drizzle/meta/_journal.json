@@ -1,0 +1,97 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787853600000,
+      "tag": "0000_identity_and_feature_interests",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787864000000,
+      "tag": "0001_couples",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787864744000,
+      "tag": "0002_packs_catalog_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787865000000,
+      "tag": "0003_answers_matches",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787865100000,
+      "tag": "0004_chat",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787865200000,
+      "tag": "0005_profile_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787865300000,
+      "tag": "0006_media_storage",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787865400000,
+      "tag": "0007_billing_redemption",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787865500000,
+      "tag": "0008_residual_realtime",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787865600000,
+      "tag": "0009_operations_workers",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787865700000,
+      "tag": "0010_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787907600000,
+      "tag": "0011_question_pack_average_precision",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787908500000,
+      "tag": "0012_catalogue_field_parity",
+      "breakpoints": true
+    }
+  ]
+}

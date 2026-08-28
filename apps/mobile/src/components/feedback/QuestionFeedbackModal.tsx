@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { supabase } from '../../lib/supabase';
+import { profileSettingsApi } from '../../lib/profileSettingsApi';
 import { getDeviceInfo } from '../../lib/deviceInfo';
 import { useAuthStore } from '../../store';
 import { colors, gradients, spacing, radius, typography } from '../../theme';
@@ -70,16 +70,13 @@ export function QuestionFeedbackModal({
             const deviceInfo = getDeviceInfo();
             const reasonLabel = FEEDBACK_REASONS.find(r => r.id === selectedReason)?.label || selectedReason;
 
-            const { error } = await supabase.from('feedback').insert({
-                user_id: user.id,
+            await profileSettingsApi.submitFeedback({
                 type: 'question',
                 title: `Question Feedback: ${reasonLabel}`,
                 description: additionalInfo.trim() || `Reported as: ${reasonLabel}`,
                 question_id: questionId,
                 device_info: deviceInfo,
             });
-
-            if (error) throw error;
 
             Alert.alert('Thank you!', 'Your feedback has been submitted.', [
                 { text: 'OK', onPress: handleClose },

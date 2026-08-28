@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { useAuthStore, useSubscriptionStore, usePacksStore } from '../../../store';
-import { supabase } from '../../../lib/supabase';
+import { profileSettingsApi } from '../../../lib/profileSettingsApi';
 import { Events } from '../../../lib/analytics';
 import { useAvatarPicker } from '../../../hooks/useAvatarPicker';
 import {
@@ -33,20 +33,10 @@ export function useProfileSettings() {
     const [isUpdatingName, setIsUpdatingName] = useState(false);
 
     // Avatar - using shared hook with immediate upload on select
-    const handleAvatarUploadComplete = useCallback(async (publicUrl: string) => {
+    const handleAvatarUploadComplete = useCallback(async (_mediaReference: string) => {
         if (!user?.id) return;
 
         try {
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    avatar_url: publicUrl,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (updateError) throw updateError;
-
             await fetchUser();
             Events.avatarUploaded();
         } catch (error) {
@@ -131,15 +121,7 @@ export function useProfileSettings() {
         setIsUpdatingName(true);
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    name: trimmedName,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (error) throw error;
+            await profileSettingsApi.updateProfile({ name: trimmedName });
 
             await fetchUser();
             setIsEditingName(false);
@@ -241,17 +223,11 @@ export function useProfileSettings() {
         const showExplicitContent = !value;
 
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    hide_nsfw: value,
-                    max_intensity: maxIntensity,
-                    show_explicit_content: showExplicitContent,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id);
-
-            if (error) throw error;
+            await profileSettingsApi.updateProfile({
+                hide_nsfw: value,
+                max_intensity: maxIntensity,
+                show_explicit_content: showExplicitContent,
+            });
 
             // Refresh user data and packs to reflect the change
             await fetchUser();

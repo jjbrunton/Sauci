@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerAdminTools(server: McpServer) {
@@ -9,7 +9,7 @@ export function registerAdminTools(server: McpServer) {
     'List all admin users',
     {},
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('admin_users')
         .select(`
           *,
@@ -33,7 +33,7 @@ export function registerAdminTools(server: McpServer) {
       permissions: z.array(z.string()).optional()
     },
     async ({ user_id, role, permissions }) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('admin_users')
         .insert({
           user_id,
@@ -67,13 +67,13 @@ export function registerAdminTools(server: McpServer) {
       permissions: z.array(z.string()).optional()
     },
     async ({ id, role, permissions }) => {
-      const { data: oldData } = await supabase.from('admin_users').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('admin_users').select('*').eq('id', id).single();
       
       const updates: any = {};
       if (role) updates.role = role;
       if (permissions) updates.permissions = permissions;
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('admin_users')
         .update(updates)
         .eq('id', id)
@@ -101,9 +101,9 @@ export function registerAdminTools(server: McpServer) {
     'Revoke admin access',
     { id: z.string() }, // admin_users ID
     async ({ id }) => {
-      const { data: oldData } = await supabase.from('admin_users').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('admin_users').select('*').eq('id', id).single();
       
-      const { error } = await supabase.from('admin_users').delete().eq('id', id);
+      const { error } = await adminData.from('admin_users').delete().eq('id', id);
       if (error) throw new Error(`Failed to remove admin: ${error.message}`);
 
       await logAudit({
@@ -129,7 +129,7 @@ export function registerAdminTools(server: McpServer) {
       action: z.enum(['INSERT', 'UPDATE', 'DELETE']).optional()
     },
     async ({ limit, offset, table_name, action }) => {
-      let query = supabase
+      let query = adminData
         .from('audit_logs')
         .select('*', { count: 'exact' });
         

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -110,7 +110,7 @@ export function DaresPage() {
         setLoading(true);
         try {
             // Fetch pack info
-            const { data: packData } = await supabase
+            const { data: packData } = await adminData
                 .from('dare_packs')
                 .select('id, name, description, icon')
                 .eq('id', packId)
@@ -122,7 +122,7 @@ export function DaresPage() {
             const to = from + pageSize - 1;
 
             // Fetch dares
-            const { data: dareData, error, count } = await supabase
+            const { data: dareData, error, count } = await adminData
                 .from('dares')
                 .select('*', { count: 'exact' })
                 .eq('pack_id', packId)
@@ -191,11 +191,11 @@ export function DaresPage() {
             };
 
             if (editingDare) {
-                const { error } = await auditedSupabase.update('dares', editingDare.id, dareData);
+                const { error } = await auditedAdminData.update('dares', editingDare.id, dareData);
                 if (error) throw error;
                 toast.success('Dare updated');
             } else {
-                const { error } = await auditedSupabase.insert('dares', {
+                const { error } = await auditedAdminData.insert('dares', {
                     ...dareData,
                     pack_id: packId,
                 });
@@ -219,7 +219,7 @@ export function DaresPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('dares', dare.id);
+            const { error } = await auditedAdminData.delete('dares', dare.id);
             if (error) throw error;
             toast.success('Dare deleted');
             fetchData();
@@ -259,7 +259,7 @@ export function DaresPage() {
         setBulkDeleting(true);
         try {
             await Promise.all(
-                Array.from(selectedIds).map(id => auditedSupabase.delete('dares', id))
+                Array.from(selectedIds).map(id => auditedAdminData.delete('dares', id))
             );
             toast.success(`${count} dare${count !== 1 ? 's' : ''} deleted`);
             setSelectedIds(new Set());

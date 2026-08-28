@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -126,7 +126,7 @@ export function QuestionAnalyticsPage() {
             while (true) {
                 const from = page * pageSize;
                 const to = from + pageSize - 1;
-                const { data, error } = await supabase
+                const { data, error } = await adminData
                     .from('questions')
                     .select('id, pack_id, intensity, partner_text, inverse_of, question_type')
                     .range(from, to);
@@ -150,7 +150,7 @@ export function QuestionAnalyticsPage() {
             setLoading(true);
             try {
                 // Build pack query with optional is_public filter
-                let packQuery = supabase
+                let packQuery = adminData
                     .from('question_packs')
                     .select('id, name, is_premium, is_explicit, is_public, category_id, category:categories(name)');
 
@@ -162,11 +162,11 @@ export function QuestionAnalyticsPage() {
 
                 const [packsResult, topicsResult, packTopicsResult, questions] = await Promise.all([
                     packQuery,
-                    supabase
+                    adminData
                         .from('topics')
                         .select('id, name')
                         .order('name'),
-                    supabase
+                    adminData
                         .from('pack_topics')
                         .select('pack_id, topic_id, topics(id, name)'),
                     fetchAllQuestions(),

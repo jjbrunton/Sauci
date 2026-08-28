@@ -15,7 +15,7 @@ import Animated, {
     FadeInUp,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../src/lib/supabase";
+import { authClient } from "../../src/lib/authClient";
 import { getAuthError } from "../../src/lib/errors";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
@@ -54,7 +54,7 @@ export default function ResetPasswordScreen() {
         }
 
         setIsLoading(true);
-        const { error: updateError } = await supabase.auth.updateUser({
+        const { error: updateError } = await authClient.auth.updateUser({
             password,
         });
         setIsLoading(false);

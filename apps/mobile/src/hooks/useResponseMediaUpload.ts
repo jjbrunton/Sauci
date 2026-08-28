@@ -1,9 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
-
-import { supabase } from '../lib/supabase';
+import { uploadMedia } from '../lib/mediaApi';
 
 export interface UseResponseMediaUploadOptions {
     userId: string;
@@ -27,8 +24,7 @@ export interface UseResponseMediaUploadReturn {
 }
 
 /**
- * Hook for uploading response media (photos and audio) to Supabase storage.
- * Uploads to the `response-media` bucket with path format: {userId}/{questionId}_{timestamp}.{ext}
+ * Upload response media through the authenticated Sauci API.
  */
 export function useResponseMediaUpload(
     options: UseResponseMediaUploadOptions
@@ -49,24 +45,16 @@ export function useResponseMediaUpload(
         setUploading(true);
 
         try {
-            let fileBody;
             let ext = 'jpg';
 
             if (Platform.OS === 'web') {
                 const response = await fetch(localUri);
                 const blob = await response.blob();
-                fileBody = blob;
-
                 // Detect extension from blob type
                 if (blob.type === 'image/png') ext = 'png';
                 else if (blob.type === 'image/webp') ext = 'webp';
                 else if (blob.type === 'image/gif') ext = 'gif';
             } else {
-                const base64 = await FileSystem.readAsStringAsync(localUri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
-                fileBody = decode(base64);
-
                 // Try to get extension from URI
                 const uriExt = localUri.split('.').pop()?.toLowerCase();
                 if (uriExt && ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(uriExt)) {
@@ -74,23 +62,9 @@ export function useResponseMediaUpload(
                 }
             }
 
-            const timestamp = Date.now();
-            const mediaPath = `${userId}/${questionId}_${timestamp}.${ext}`;
             const contentType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('response-media')
-                .upload(mediaPath, fileBody, {
-                    contentType,
-                    upsert: false,
-                });
-
-            if (uploadError) {
-                console.error('Error uploading photo:', uploadError);
-                return { success: false, error: uploadError.message };
-            }
-
-            return { success: true, mediaPath };
+            const result = await uploadMedia(localUri, { kind: 'response', mimeType: contentType, questionId });
+            return { success: true, mediaPath: result.reference };
         } catch (error) {
             console.error('Error uploading photo:', error);
             return {
@@ -113,15 +87,12 @@ export function useResponseMediaUpload(
             setUploading(true);
 
             try {
-                let fileBody;
                 let ext = 'm4a';
                 let contentType = 'audio/m4a';
 
                 if (Platform.OS === 'web') {
                     const response = await fetch(localUri);
                     const blob = await response.blob();
-                    fileBody = blob;
-
                     // Detect extension from blob type
                     if (blob.type === 'audio/mpeg' || blob.type === 'audio/mp3') {
                         ext = 'mp3';
@@ -137,11 +108,6 @@ export function useResponseMediaUpload(
                         contentType = 'audio/m4a';
                     }
                 } else {
-                    const base64 = await FileSystem.readAsStringAsync(localUri, {
-                        encoding: FileSystem.EncodingType.Base64,
-                    });
-                    fileBody = decode(base64);
-
                     // Try to get extension from URI
                     const uriExt = localUri.split('.').pop()?.toLowerCase();
                     if (uriExt && ['m4a', 'mp3', 'wav', 'aac', 'caf'].includes(uriExt)) {
@@ -154,22 +120,8 @@ export function useResponseMediaUpload(
                     }
                 }
 
-                const timestamp = Date.now();
-                const mediaPath = `${userId}/${questionId}_${timestamp}.${ext}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from('response-media')
-                    .upload(mediaPath, fileBody, {
-                        contentType,
-                        upsert: false,
-                    });
-
-                if (uploadError) {
-                    console.error('Error uploading audio:', uploadError);
-                    return { success: false, error: uploadError.message };
-                }
-
-                return { success: true, mediaPath };
+                const result = await uploadMedia(localUri, { kind: 'response', mimeType: contentType, questionId });
+                return { success: true, mediaPath: result.reference };
             } catch (error) {
                 console.error('Error uploading audio:', error);
                 return {

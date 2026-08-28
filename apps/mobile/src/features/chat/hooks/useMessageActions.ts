@@ -4,7 +4,7 @@
  */
 import { Platform, ActionSheetIOS, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { supabase } from '../../../lib/supabase';
+import { chatApi } from '../../../lib/chatApi';
 import type { Message } from '../types';
 
 interface UseMessageActionsConfig {
@@ -20,11 +20,9 @@ export function useMessageActions({ userId, onReport }: UseMessageActionsConfig)
     const deleteForSelf = async (messageId: string) => {
         if (!userId) return;
 
-        const { error } = await supabase
-            .from('message_deletions')
-            .insert({ message_id: messageId, user_id: userId });
-
-        if (error) {
+        try {
+            await chatApi.deleteForSelf(messageId);
+        } catch (error) {
             Alert.alert('Error', 'Failed to delete message');
             console.error('Delete for self error:', error);
         }
@@ -35,12 +33,9 @@ export function useMessageActions({ userId, onReport }: UseMessageActionsConfig)
      * Message will show as "deleted" to both users.
      */
     const deleteForEveryone = async (messageId: string) => {
-        const { error } = await supabase
-            .from('messages')
-            .update({ deleted_at: new Date().toISOString() })
-            .eq('id', messageId);
-
-        if (error) {
+        try {
+            await chatApi.deleteForEveryone(messageId);
+        } catch (error) {
             Alert.alert('Error', 'Failed to delete message');
             console.error('Delete for everyone error:', error);
         }

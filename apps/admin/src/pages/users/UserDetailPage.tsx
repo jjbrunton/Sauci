@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase, supabaseConfig } from '@/config';
+import { adminData, adminRequest, adminBinaryRequest } from '@/lib/adminApi';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import { useAuth, PERMISSION_KEYS } from '@/contexts/AuthContext';
@@ -190,16 +190,9 @@ function AdminDecryptedImage({ messageId, alt }: { messageId: string; alt: strin
         const load = async () => {
             try {
                 setError(null);
-                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', apikey: supabaseConfig.anonKey, Authorization: `Bearer ${session.access_token}` },
-                    body: JSON.stringify({ messageId }),
+                const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                    method: 'POST', body: { messageId },
                 });
-                if (!res.ok) {
-                    const message = (await res.json().catch(() => ({})))?.error || `Failed to load media (${res.status})`;
-                    throw new Error(message);
-                }
-                const blob = await res.blob();
                 objectUrl = URL.createObjectURL(blob);
                 if (!cancelled) setUrl(objectUrl);
             } catch (err) {
@@ -246,16 +239,9 @@ function AdminDecryptedVideo({ messageId }: { messageId: string }) {
         const load = async () => {
             try {
                 setError(null);
-                const res = await fetch(`${supabaseConfig.url}/functions/v1/admin-decrypt-media`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', apikey: supabaseConfig.anonKey, Authorization: `Bearer ${session.access_token}` },
-                    body: JSON.stringify({ messageId }),
+                const blob = await adminBinaryRequest('/v1/admin/actions/decrypt-media', {
+                    method: 'POST', body: { messageId },
                 });
-                if (!res.ok) {
-                    const message = (await res.json().catch(() => ({})))?.error || `Failed to load media (${res.status})`;
-                    throw new Error(message);
-                }
-                const blob = await res.blob();
                 objectUrl = URL.createObjectURL(blob);
                 if (!cancelled) setUrl(objectUrl);
             } catch (err) {
@@ -308,7 +294,7 @@ function LiveDrawCanvas({ coupleId }: { coupleId: string }) {
         const fetchStrokes = async () => {
             setLoading(true);
             setError(null);
-            const { data, error: err } = await supabase
+            const { data, error: err } = await adminData
                 .from('live_draw_sessions')
                 .select('strokes')
                 .eq('couple_id', coupleId)
@@ -322,26 +308,14 @@ function LiveDrawCanvas({ coupleId }: { coupleId: string }) {
             setStrokes((data?.strokes as StrokeSegment[]) || []);
             setLoading(false);
         };
-        fetchStrokes();
-
-        // Subscribe to real-time updates
-        const channel = supabase
-            .channel(`admin-livedraw-${coupleId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'live_draw_sessions',
-                filter: `couple_id=eq.${coupleId}`,
-            }, (payload: any) => {
-                if (payload.new?.strokes) {
-                    setStrokes(payload.new.strokes as StrokeSegment[]);
-                }
-            })
-            .subscribe();
+        void fetchStrokes();
+        const interval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') void fetchStrokes();
+        }, 5_000);
 
         return () => {
             cancelled = true;
-            supabase.removeChannel(channel);
+            window.clearInterval(interval);
         };
     }, [coupleId]);
 
@@ -482,13 +456,12 @@ export function UserDetailPage() {
                 }
                 expiresAt = date.toISOString();
             }
-            // Use RPC function which handles permissions internally
-            const { error } = await supabase.rpc('admin_gift_premium', {
-                target_user_id: userId,
-                expires_at_param: expiresAt,
+            const days = expiresAt === null ? null : Math.max(1, Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / 86_400_000));
+            await adminRequest(`/v1/admin/users/${encodeURIComponent(userId)}/gift-premium`, {
+                method: 'POST', body: { days, reason: 'Granted from admin user detail' },
             });
-            if (error) throw error;
-            const { data: updatedProfile } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single<Profile>();
+            const { users } = await adminRequest<{ users: Profile[] }>(`/v1/admin/users?userId=${encodeURIComponent(userId)}`);
+            const updatedProfile = users[0] ?? null;
             if (updatedProfile) setProfile(updatedProfile);
             setUpgradeOpen(false);
             alert('User upgraded to premium successfully!');
@@ -504,11 +477,12 @@ export function UserDetailPage() {
         if (!userId) return;
         setLoading(true);
         try {
-            const { data: profileData } = await supabase.rpc('get_profile_with_auth_info', { user_id: userId }).single<Profile>();
+            const { users } = await adminRequest<{ users: Profile[] }>(`/v1/admin/users?userId=${encodeURIComponent(userId)}`);
+            const profileData = users[0] ?? null;
             setProfile(profileData);
 
             // Fetch feature interests for the user
-            const { data: featureInterestsData } = await supabase
+            const { data: featureInterestsData } = await adminData
                 .from('feature_interests')
                 .select('id, feature_name, created_at')
                 .eq('user_id', userId)
@@ -516,11 +490,11 @@ export function UserDetailPage() {
             setFeatureInterests((featureInterestsData || []) as FeatureInterest[]);
 
             if (profileData?.couple_id) {
-                const { data: partnerData } = await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).single();
+                const { data: partnerData } = await adminData.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).single();
                 setPartner(partnerData);
 
                 // Fetch streak data
-                const { data: streakData } = await supabase
+                const { data: streakData } = await adminData
                     .from('couple_streaks')
                     .select('*')
                     .eq('couple_id', profileData.couple_id)
@@ -534,7 +508,7 @@ export function UserDetailPage() {
             const responsesFrom = (responsesPage - 1) * responsesPageSize;
             const responsesTo = responsesFrom + responsesPageSize - 1;
 
-            const { data: responseData, count: responsesCount, error: responsesError } = await supabase
+            const { data: responseData, count: responsesCount, error: responsesError } = await adminData
                 .from('responses')
                 .select('id, answer, created_at, question:questions(id, text, pack:question_packs(id, name))', { count: 'exact' })
                 .eq('user_id', userId)
@@ -550,7 +524,7 @@ export function UserDetailPage() {
                 const matchesFrom = (matchesPage - 1) * matchesPageSize;
                 const matchesTo = matchesFrom + matchesPageSize - 1;
 
-                const { data: matchData, count: matchesCount, error: matchesError } = await supabase
+                const { data: matchData, count: matchesCount, error: matchesError } = await adminData
                     .from('matches')
                     .select('id, match_type, is_new, created_at, question:questions(id, text)', { count: 'exact' })
                     .eq('couple_id', profileData.couple_id)
@@ -563,7 +537,7 @@ export function UserDetailPage() {
 
                 const matchIds = (matchData || []).map(m => m.id);
                 if (matchIds.length > 0) {
-                    const { data: messages } = await supabase.from('messages').select('match_id').in('match_id', matchIds);
+                    const { data: messages } = await adminData.from('messages').select('match_id').in('match_id', matchIds);
                     const messageCounts: Record<string, number> = {};
                     messages?.forEach(m => { messageCounts[m.match_id] = (messageCounts[m.match_id] || 0) + 1; });
                     setMatches((matchData || []).map(m => ({ ...m, message_count: messageCounts[m.id] || 0 })) as unknown as Match[]);
@@ -571,7 +545,7 @@ export function UserDetailPage() {
                     setMatches([]);
                 }
 
-                const { data: allMatchIdsData } = await supabase
+                const { data: allMatchIdsData } = await adminData
                     .from('matches')
                     .select('id')
                     .eq('couple_id', profileData.couple_id);
@@ -581,7 +555,7 @@ export function UserDetailPage() {
                     const mediaFrom = (mediaPage - 1) * mediaPageSize;
                     const mediaTo = mediaFrom + mediaPageSize - 1;
 
-                    const { data: mediaMessagesData, error: mediaError, count: mediaCount } = await supabase
+                    const { data: mediaMessagesData, error: mediaError, count: mediaCount } = await adminData
                         .from('messages')
                         .select('id, user_id, media_path, media_type, version, created_at, keys_metadata, match_id', { count: 'exact' })
                         .in('match_id', allMatchIds)
@@ -602,7 +576,7 @@ export function UserDetailPage() {
                     setMediaTotal(0);
                 }
             // Fetch enabled packs for the couple
-                const { data: enabledPacksData, error: packsError } = await supabase
+                const { data: enabledPacksData, error: packsError } = await adminData
                     .from('couple_packs')
                     .select(`
                         pack_id,
@@ -631,17 +605,17 @@ export function UserDetailPage() {
 
                 // Fetch outstanding questions (partner answered, user hasn't)
                 // Use partner from state (set earlier in the first couple_id block)
-                const partnerProfile = partner || (await supabase.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).maybeSingle()).data;
+                const partnerProfile = partner || (await adminData.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).maybeSingle()).data;
                 if (partnerProfile) {
                     // Get question IDs user has already answered
-                    const { data: userResponseIds } = await supabase
+                    const { data: userResponseIds } = await adminData
                         .from('responses')
                         .select('question_id')
                         .eq('user_id', userId);
                     const answeredIds = new Set((userResponseIds || []).map((r: any) => r.question_id));
 
                     // Get all partner responses in this couple
-                    const { data: partnerResponses } = await supabase
+                    const { data: partnerResponses } = await adminData
                         .from('responses')
                         .select(`
                             question_id,
@@ -658,7 +632,7 @@ export function UserDetailPage() {
 
                     if (unansweredQuestionIds.length > 0) {
                         // Fetch question details (no pack filter — admin sees all)
-                        const { data: questionDetails } = await supabase
+                        const { data: questionDetails } = await adminData
                             .from('questions')
                             .select('id, text, intensity, pack:question_packs(id, name)')
                             .in('id', unansweredQuestionIds);
@@ -690,7 +664,7 @@ export function UserDetailPage() {
                     }
 
                     // Calculate gap status
-                    const { data: appConfig } = await supabase
+                    const { data: appConfig } = await adminData
                         .from('app_config')
                         .select('answer_gap_threshold')
                         .limit(1)
@@ -702,7 +676,7 @@ export function UserDetailPage() {
                     if (threshold > 0) {
                         // Count questions user answered that partner hasn't
                         const partnerAllAnswered = new Set((partnerResponses || []).map((r: any) => r.question_id));
-                        const { data: userResponses } = await supabase
+                        const { data: userResponses } = await adminData
                             .from('responses')
                             .select('question_id')
                             .eq('user_id', userId)

@@ -2,20 +2,42 @@
 export interface Profile {
     id: string;
     name: string | null;
+    email: string | null;
     avatar_url: string | null;
     push_token: string | null;
     is_premium: boolean;
     couple_id: string | null;
+    gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null;
+    show_explicit_content: boolean;
+    max_intensity: 1 | 2 | 3 | 4 | 5;
     created_at: string;
     updated_at: string;
     /** RSA public key in JWK format for E2EE */
     public_key_jwk?: Record<string, unknown> | null;
     /** When true, packs marked as is_explicit will be hidden */
-    hide_nsfw?: boolean;
+    hide_nsfw: boolean;
     /** Whether onboarding flow has been completed */
-    onboarding_completed?: boolean;
+    onboarding_completed: boolean;
     /** Version of onboarding flow completed. 0 = never, 1+ = that version */
-    onboarding_version?: number;
+    onboarding_version: number;
+}
+
+/** Public response returned by the standalone Sauci API identity bootstrap. */
+export interface MeResponse {
+    profile: Profile;
+}
+
+/** Per-user interest state; the API always derives the user from the bearer token. */
+export interface FeatureInterestResponse {
+    feature: string;
+    interested: boolean;
+}
+
+export interface ApiErrorResponse {
+    error: {
+        code: string;
+        message: string;
+    };
 }
 
 // Couple pairing

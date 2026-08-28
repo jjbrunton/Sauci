@@ -5,16 +5,16 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { GradientBackground } from '../../components/ui';
 import { Paywall } from '../../components/paywall';
 import { CompactHeader } from '../../components/discovery';
+import { MediaImage } from '../../components/MediaImage';
 import { colors, featureColors, spacing, typography, radius } from '../../theme';
 import { useAuthStore, useSubscriptionStore } from '../../store';
 import { resetMatchesTutorial } from '../../lib/matchesTutorialSeen';
-import { supabase } from '../../lib/supabase';
+import { profileSettingsApi } from '../../lib/profileSettingsApi';
 
 // Components
 import { SettingsSection, MenuItem, SubscriptionCard } from './components';
@@ -105,8 +105,8 @@ export function ProfileScreen() {
                             end={{ x: 1, y: 1 }}
                         >
                             {user?.avatar_url ? (
-                                <Image
-                                    source={{ uri: user.avatar_url }}
+                                <MediaImage
+                                    reference={user.avatar_url}
                                     style={styles.avatar}
                                     cachePolicy="disk"
                                     transition={200}
@@ -235,11 +235,7 @@ export function ProfileScreen() {
                             onPress={async () => {
                                 if (!user?.id) return;
                                 try {
-                                    const { error } = await supabase
-                                        .from('profiles')
-                                        .update({ onboarding_completed: false })
-                                        .eq('id', user.id);
-                                    if (error) throw error;
+                                    await profileSettingsApi.updateProfile({ onboarding_completed: false });
                                     await fetchUser();
                                     Alert.alert("Success", "Onboarding has been reset.");
                                 } catch (error) {

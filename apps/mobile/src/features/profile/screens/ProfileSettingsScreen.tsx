@@ -11,15 +11,16 @@ import {
     Alert,
     TouchableOpacity,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { MediaImage } from '../../../components/MediaImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { GradientBackground } from '../../../components/ui';
 import { colors, featureColors, spacing, typography, radius } from '../../../theme';
 import { useAuthStore } from '../../../store';
-import { supabase } from '../../../lib/supabase';
+import { authClient } from '../../../lib/authClient';
+import { profileSettingsApi } from '../../../lib/profileSettingsApi';
 import { Events } from '../../../lib/analytics';
 import { useProfileSettings } from '../hooks';
 import { ScreenHeader, SettingsSection } from '../components';
@@ -31,7 +32,7 @@ function useAuthEmail() {
 
     useEffect(() => {
         const getEmail = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { user } } = await authClient.auth.getUser();
             setEmail(user?.email ?? null);
         };
         getEmail();
@@ -83,9 +84,7 @@ export function ProfileSettingsScreen() {
         setIsSaving(true);
 
         try {
-            const updates: Record<string, any> = {
-                updated_at: new Date().toISOString(),
-            };
+            const updates: { name?: string; gender?: Gender | null } = {};
 
             const changedFields: string[] = [];
 
@@ -104,12 +103,7 @@ export function ProfileSettingsScreen() {
                 return;
             }
 
-            const { error } = await supabase
-                .from('profiles')
-                .update(updates)
-                .eq('id', user.id);
-
-            if (error) throw error;
+            await profileSettingsApi.updateProfile(updates);
 
             await fetchUser();
             Events.profileUpdated(changedFields);
@@ -166,8 +160,8 @@ export function ProfileSettingsScreen() {
                             end={{ x: 1, y: 1 }}
                         >
                             {user?.avatar_url ? (
-                                <Image
-                                    source={{ uri: user.avatar_url }}
+                                <MediaImage
+                                    reference={user.avatar_url}
                                     style={styles.avatarImage}
                                     cachePolicy="disk"
                                     transition={200}

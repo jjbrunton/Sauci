@@ -11,7 +11,9 @@ import { useMediaUpload } from "./hooks/useMediaUpload";
 import { useMessageActions } from "./hooks/useMessageActions";
 import type { ReportReason, Match } from "./types";
 
-import { supabase } from "../../lib/supabase";
+import { appDataApi } from "../../lib/appDataApi";
+import { chatApi } from "../../lib/chatApi";
+import { ApiError } from "../../lib/apiClient";
 import { useAuthStore, useMessageStore, useMatchStore } from "../../store";
 import { useAmbientOrbAnimation, useMediaPicker, useTypingIndicator, useMessageSubscription, useMediaSaver } from "../../hooks";
 import { Database } from "../../types/supabase";
@@ -61,6 +63,7 @@ export const ChatScreen: React.FC = () => {
     // Typing indicator hook
     const { partnerTyping, sendTypingEvent, clearTypingIndicator } = useTypingIndicator({
         channelName: `chat:${matchId}`,
+        matchId,
         userId: user?.id,
         isFocused,
     });
@@ -147,26 +150,7 @@ export const ChatScreen: React.FC = () => {
         if (!reportingMessage || !user?.id) return;
 
         try {
-            // Insert the report
-            const { error: reportError } = await supabase
-                .from('message_reports')
-                .insert({
-                    message_id: reportingMessage.id,
-                    reporter_id: user.id,
-                    reason: reason,
-                });
-
-            if (reportError) {
-                if (reportError.code === '23505') {
-                    // Unique violation - already reported
-                    Alert.alert('Already Reported', 'You have already reported this message.');
-                } else {
-                    console.error('Report error:', reportError);
-                    Alert.alert('Error', 'Failed to submit report');
-                }
-                setReportingMessage(null);
-                return;
-            }
+            await chatApi.report(reportingMessage.id, reason);
 
             // Also delete the message for the reporter (so they don't see it anymore)
             await deleteForSelf(reportingMessage.id);
@@ -178,7 +162,11 @@ export const ChatScreen: React.FC = () => {
             setReportingMessage(null);
         } catch (err) {
             console.error('Report error:', err);
-            Alert.alert('Error', 'Failed to submit report');
+            if (err instanceof ApiError && err.status === 409) {
+                Alert.alert('Already Reported', 'You have already reported this message.');
+            } else {
+                Alert.alert('Error', 'Failed to submit report');
+            }
             setReportingMessage(null);
         }
     }, [reportingMessage, user?.id, deleteForSelf, setMessages]);
@@ -204,20 +192,11 @@ export const ChatScreen: React.FC = () => {
 
         const fetchMatch = async () => {
             setMatch(null); // Clear previous match data immediately
-            const { data } = await supabase
-                .from("matches")
-                .select("*, question:questions(*)")
-                .eq("id", matchId)
-                .single();
-
-            if (data) {
-                const { data: responses } = await supabase
-                    .from("responses")
-                    .select("*, profiles(name)")
-                    .eq("question_id", data.question_id)
-                    .eq("couple_id", data.couple_id);
-
-                setMatch({ ...data, responses: responses || [] });
+            try {
+                const { match } = await appDataApi.matchContext(matchId);
+                setMatch(match);
+            } catch (error) {
+                console.error("Error fetching match context:", error);
             }
         };
         fetchMatch();
@@ -239,26 +218,15 @@ export const ChatScreen: React.FC = () => {
         setInputText("");
 
         try {
-            // Send plaintext message (v1) - protected by TLS in transit and RLS policies
-            const { error } = await supabase.from("messages").insert({
-                match_id: matchId,
-                user_id: user.id,
-                content: content,
-                version: 1,
-            });
-
-            if (error) {
-                Alert.alert("Error", "Failed to send message");
-                setInputText(content);
-            } else {
-                Events.messageSent();
-            }
+            const { message } = await chatApi.sendText(matchId, content);
+            setMessages(previous => previous.some(item => item.id === message.id) ? previous : [message, ...previous]);
+            Events.messageSent();
         } catch (err) {
             console.error("Error sending message:", err);
             Alert.alert("Delivery Failed", "Couldn't send message. Please check your connection.");
             setInputText(content);
         }
-    }, [inputText, user, matchId]);
+    }, [inputText, user, matchId, setMessages]);
 
     const handlePickMedia = useCallback(async () => {
         const result = await pickMedia();
@@ -297,13 +265,16 @@ export const ChatScreen: React.FC = () => {
             } : m
         ));
 
-        await supabase
-            .from("messages")
-            .update({
-                media_viewed_at: now.toISOString(),
-                media_expires_at: expiresAt
-            })
-            .eq("id", messageId);
+        try {
+            const viewed = await appDataApi.markMediaViewed(messageId, expiresAt);
+            setMessages(prev => prev.map(m => m.id === messageId ? {
+                ...m,
+                media_viewed_at: viewed.media_viewed_at,
+                media_expires_at: viewed.media_expires_at,
+            } : m));
+        } catch (error) {
+            console.error("Error marking media viewed:", error);
+        }
     }, [messages, setMessages]);
 
     return (

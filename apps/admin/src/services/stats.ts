@@ -1,4 +1,4 @@
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 
 // =============================================================================
 // Types
@@ -25,10 +25,10 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
         { count: questions },
         { count: users },
     ] = await Promise.all([
-        supabase.from('categories').select('*', { count: 'exact', head: true }),
-        supabase.from('question_packs').select('*', { count: 'exact', head: true }),
-        supabase.from('questions').select('*', { count: 'exact', head: true }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        adminData.from('categories').select('*', { count: 'exact', head: true }),
+        adminData.from('question_packs').select('*', { count: 'exact', head: true }),
+        adminData.from('questions').select('*', { count: 'exact', head: true }),
+        adminData.from('profiles').select('*', { count: 'exact', head: true }),
     ]);
 
     return {
@@ -43,7 +43,7 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
  * Fetch count for a specific table
  */
 export async function fetchTableCount(tableName: string): Promise<number> {
-    const { count, error } = await supabase
+    const { count, error } = await adminData
         .from(tableName)
         .select('*', { count: 'exact', head: true });
 

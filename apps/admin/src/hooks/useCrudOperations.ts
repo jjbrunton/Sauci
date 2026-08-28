@@ -1,14 +1,14 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { toast } from 'sonner';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseFilterFn = (query: any) => any;
+type AdminFilterFn = (query: any) => any;
 
 interface UseCrudOperationsOptions<T> {
     /**
-     * The Supabase table name
+     * The standalone admin API resource name
      */
     table: string;
 
@@ -41,7 +41,7 @@ interface UseCrudOperationsOptions<T> {
 }
 
 /**
- * Generic CRUD operations hook for Supabase tables
+ * Generic CRUD operations hook for standalone admin API resources
  * Reduces boilerplate for data fetching and mutations across pages.
  *
  * @example
@@ -90,13 +90,13 @@ export function useCrudOperations<T extends { id: string }>({
      * @param filter Optional filter function to modify the query
      */
     const fetchAll = useCallback(async (
-        filter?: SupabaseFilterFn
+        filter?: AdminFilterFn
     ): Promise<T[]> => {
         setLoading(true);
         setError(null);
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let query: any = supabase.from(table).select(select);
+            let query: any = adminData.from(table).select(select);
 
             if (filter) {
                 query = filter(query);
@@ -131,7 +131,7 @@ export function useCrudOperations<T extends { id: string }>({
      */
     const fetchById = useCallback(async (id: string): Promise<T | null> => {
         try {
-            const { data, error: fetchError } = await supabase
+            const { data, error: fetchError } = await adminData
                 .from(table)
                 .select(select)
                 .eq('id', id)
@@ -158,7 +158,7 @@ export function useCrudOperations<T extends { id: string }>({
         const { refetch = true, silent = false } = options;
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: created, error: createError } = await auditedSupabase.insert(table, data as any);
+            const { data: created, error: createError } = await auditedAdminData.insert(table, data as any);
 
             if (createError) throw createError;
 
@@ -170,7 +170,7 @@ export function useCrudOperations<T extends { id: string }>({
                 await fetchAll();
             }
 
-            // auditedSupabase.insert returns T[] | null, get first element
+            // auditedAdminData.insert returns T[] | null, get first element
             return created && created.length > 0 ? (created[0] as T) : null;
         } catch (err) {
             if (!silent) {
@@ -194,7 +194,7 @@ export function useCrudOperations<T extends { id: string }>({
     ): Promise<boolean> => {
         const { refetch = true, silent = false } = options;
         try {
-            const { error: updateError } = await auditedSupabase.update(table, id, data);
+            const { error: updateError } = await auditedAdminData.update(table, id, data);
 
             if (updateError) throw updateError;
 
@@ -233,7 +233,7 @@ export function useCrudOperations<T extends { id: string }>({
         }
 
         try {
-            const { error: deleteError } = await auditedSupabase.delete(table, id);
+            const { error: deleteError } = await auditedAdminData.delete(table, id);
 
             if (deleteError) throw deleteError;
 

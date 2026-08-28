@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/config';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { adminData } from '@/lib/adminApi';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { useEntityForm } from '@/hooks/useEntityForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -215,7 +215,7 @@ export function CategoriesPage() {
             const from = (page - 1) * pageSize;
             const to = from + pageSize - 1;
 
-            const { data: cats, error, count } = await supabase
+            const { data: cats, error, count } = await adminData
                 .from('categories')
                 .select('*', { count: 'exact' })
                 .order('sort_order', { ascending: true })
@@ -231,11 +231,11 @@ export function CategoriesPage() {
 
             if (categoryIds.length > 0) {
                 const [{ data: packs }, { data: darePacks }] = await Promise.all([
-                    supabase
+                    adminData
                         .from('question_packs')
                         .select('category_id')
                         .in('category_id', categoryIds),
-                    supabase
+                    adminData
                         .from('dare_packs')
                         .select('category_id')
                         .in('category_id', categoryIds),
@@ -310,11 +310,11 @@ export function CategoriesPage() {
             };
 
             if (form.editingItem) {
-                const { error } = await auditedSupabase.update('categories', form.editingItem.id, data);
+                const { error } = await auditedAdminData.update('categories', form.editingItem.id, data);
                 if (error) throw error;
                 toast.success('Category updated');
             } else {
-                const { error } = await auditedSupabase.insert('categories', {
+                const { error } = await auditedAdminData.insert('categories', {
                     ...data,
                     sort_order: totalCount,
                 });
@@ -338,7 +338,7 @@ export function CategoriesPage() {
         }
 
         try {
-            const { error } = await auditedSupabase.delete('categories', category.id);
+            const { error } = await auditedAdminData.delete('categories', category.id);
             if (error) throw error;
             toast.success('Category deleted');
             fetchCategories();
@@ -355,7 +355,7 @@ export function CategoriesPage() {
                 c.id === category.id ? { ...c, is_public: !c.is_public } : c
             ));
 
-            const { error } = await auditedSupabase.update('categories', category.id, {
+            const { error } = await auditedAdminData.update('categories', category.id, {
                 is_public: !category.is_public
             });
 
@@ -399,7 +399,7 @@ export function CategoriesPage() {
         // Persist new order to database
         try {
             const updates = newCategories.map((category, index) =>
-                auditedSupabase.update('categories', category.id, { sort_order: index })
+                auditedAdminData.update('categories', category.id, { sort_order: index })
             );
 
             const results = await Promise.all(updates);

@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, ShieldCheck, ArrowRight, Check } from 'lucide-react';
 import { analyzeQuestionTargets, TargetAnalysis } from '@/lib/openai';
-import { auditedSupabase } from '@/hooks/useAuditedSupabase';
+import { auditedAdminData } from '@/hooks/useAuditedAdminData';
 import { toast } from 'sonner';
 
 // Define local compatible interface
@@ -111,7 +111,7 @@ export function FixTargetsDialog({ open, onOpenChange, questions, onUpdated }: F
 
             // Apply updates in parallel with audit logging
             await Promise.all(updates.map(update =>
-                auditedSupabase.update('questions', update.id, {
+                auditedAdminData.update('questions', update.id, {
                     allowed_couple_genders: update.suggested_targets && update.suggested_targets.length > 0 ? update.suggested_targets : null,
                     target_user_genders: update.suggested_initiator && update.suggested_initiator.length > 0 ? update.suggested_initiator : null,
                 })

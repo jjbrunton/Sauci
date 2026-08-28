@@ -1,14 +1,43 @@
 appId: com.sauci.app
-name: Local fixture login reaches authenticated app
+name: Hosted Auth fixture reaches the standalone API-backed app
 ---
 - launchApp:
     clearState: true
+- waitForAnimationToEnd
+- tapOn:
+    point: "50%,25%"
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    point: "94%,44%"
+- extendedWaitUntil:
+    visible: "Explore intimacy together"
+    timeout: 30000
 - tapOn: "Password"
 - tapOn: "Enter your email"
-- inputText: "e2e.alex@example.test"
+- eraseText
+- inputText: "${E2E_EMAIL}"
 - tapOn: "Enter your password"
-- inputText: "Sauci-e2e-only-2026!"
+- eraseText
+- setClipboard: "${E2E_PASSWORD}"
+- pasteText
+- tapOn: "Sauci"
+- scrollUntilVisible:
+    element:
+      text: "Sign In"
+    direction: DOWN
 - tapOn: "Sign In"
 - extendedWaitUntil:
     notVisible: "Sign In"
     timeout: 15000
+- tapOn:
+    text: "Not Now"
+    optional: true
+- extendedWaitUntil:
+    visible: "Discover"
+    timeout: 15000
+- assertVisible: "Adventure & Travel"
+- assertVisible: "Quality Time"
+- assertNotVisible: "No packs available"
+- takeScreenshot: "evidence/self-hosted-backend/ios-authenticated-api-current"

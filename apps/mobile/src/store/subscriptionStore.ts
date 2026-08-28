@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { supabase } from "../lib/supabase";
+import { accountOperationsApi } from "../lib/accountOperationsApi";
 import revenueCatService, {
     SubscriptionState,
     PurchasesPackage,
@@ -37,6 +37,28 @@ const defaultSubscription: SubscriptionState = {
     willRenew: false,
 };
 
+let subscriptionSyncInFlight: Promise<void> | null = null;
+
+async function syncSubscriptionWithServer(): Promise<void> {
+    if (!useAuthStore.getState().user) return;
+
+    if (!subscriptionSyncInFlight) {
+        subscriptionSyncInFlight = (async () => {
+            await accountOperationsApi.syncSubscription();
+            await useAuthStore.getState().fetchUser();
+        })();
+    }
+
+    const activeSync = subscriptionSyncInFlight;
+    try {
+        await activeSync;
+    } finally {
+        if (subscriptionSyncInFlight === activeSync) {
+            subscriptionSyncInFlight = null;
+        }
+    }
+}
+
 export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) => ({
     subscription: defaultSubscription,
     offerings: null,
@@ -64,7 +86,9 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
                     // Update user's is_premium in auth store if changed
                     const currentUser = useAuthStore.getState().user;
                     if (currentUser && currentUser.is_premium !== subscription.isProUser) {
-                        useAuthStore.getState().fetchUser();
+                        void syncSubscriptionWithServer().catch((error) => {
+                            console.error("Error syncing updated subscription:", error);
+                        });
                     }
                 }
             );
@@ -135,8 +159,13 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
             const subscription = revenueCatService.parseCustomerInfo(customerInfo);
             set({ subscription, isPurchasing: false });
 
-            // Refresh user profile to get updated is_premium
-            await useAuthStore.getState().fetchUser();
+            // The purchase succeeded even if reconciliation is temporarily unavailable.
+            // Never report a failed purchase here, which could encourage a duplicate charge.
+            try {
+                await syncSubscriptionWithServer();
+            } catch (error) {
+                console.error("Error syncing subscription after purchase:", error);
+            }
 
             return { success: true };
         } catch (error: any) {
@@ -166,8 +195,11 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
             const subscription = revenueCatService.parseCustomerInfo(customerInfo);
             set({ subscription, isPurchasing: false });
 
-            // Refresh user profile
-            await useAuthStore.getState().fetchUser();
+            try {
+                await syncSubscriptionWithServer();
+            } catch (error) {
+                console.error("Error syncing subscription after restore:", error);
+            }
 
             return subscription.isProUser;
         } catch (error) {
@@ -177,6 +209,8 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
     },
 
     refreshSubscriptionStatus: async () => {
+        if (!revenueCatService.isInitialized()) return;
+
         try {
             const customerInfo = await revenueCatService.getCustomerInfo();
             const subscription = revenueCatService.parseCustomerInfo(customerInfo);
@@ -187,23 +221,10 @@ export const useSubscriptionStore = create<SubscriptionStoreState>((set, get) =>
             if (currentUser && currentUser.is_premium !== subscription.isProUser) {
                 console.log("Syncing subscription status with server...");
 
-                // Get the session token to pass to the function
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session?.access_token) {
-                    console.error("No session available for sync");
-                    return;
-                }
-
-                const { error } = await supabase.functions.invoke("sync-subscription", {
-                    headers: {
-                        Authorization: `Bearer ${session.access_token}`,
-                    },
-                });
-                if (error) {
+                try {
+                    await syncSubscriptionWithServer();
+                } catch (error) {
                     console.error("Error syncing subscription:", error);
-                } else {
-                    // Refresh user to get updated is_premium
-                    await useAuthStore.getState().fetchUser();
                 }
             }
         } catch (error) {

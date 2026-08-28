@@ -15,9 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
-import { supabase } from '../../lib/supabase';
+import { uploadMedia } from '../../lib/mediaApi';
+import { profileSettingsApi } from '../../lib/profileSettingsApi';
 import { getDeviceInfo } from '../../lib/deviceInfo';
 import { useAuthStore } from '../../store';
 import { colors, gradients, spacing, radius, typography } from '../../theme';
@@ -72,44 +71,20 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
         }
     };
 
-    const uploadScreenshot = async (uri: string, userId: string): Promise<string> => {
-        let fileBody;
+    const uploadScreenshot = async (uri: string, _userId: string): Promise<string> => {
         let ext = 'jpg';
 
         if (Platform.OS === 'web') {
             const response = await fetch(uri);
             const blob = await response.blob();
-            fileBody = blob;
-
             if (blob.type === 'image/png') ext = 'png';
             else if (blob.type === 'image/jpeg' || blob.type === 'image/jpg') ext = 'jpg';
             else if (blob.type === 'image/gif') ext = 'gif';
             else if (blob.type === 'image/webp') ext = 'webp';
         } else {
-            const base64 = await FileSystem.readAsStringAsync(uri, {
-                encoding: FileSystem.EncodingType.Base64,
-            });
-            fileBody = decode(base64);
             ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
         }
-
-        const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
-
-        const { error } = await supabase.storage
-            .from('feedback-screenshots')
-            .upload(fileName, fileBody, {
-                contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
-                upsert: false,
-            });
-
-        if (error) throw error;
-
-        // Get signed URL (private bucket)
-        const { data } = await supabase.storage
-            .from('feedback-screenshots')
-            .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
-
-        return data?.signedUrl ?? '';
+        return (await uploadMedia(uri, { kind: 'feedback', mimeType: `image/${ext === 'jpg' ? 'jpeg' : ext}` })).media.id;
     };
 
     const handleSubmit = async () => {
@@ -132,24 +107,19 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
 
         try {
             const deviceInfo = getDeviceInfo();
-            let screenshotUrl: string | null = null;
+            let screenshotMediaId: string | null = null;
 
             // Upload screenshot if provided
             if (screenshotUri) {
-                screenshotUrl = await uploadScreenshot(screenshotUri, user.id);
+                screenshotMediaId = await uploadScreenshot(screenshotUri, user.id);
             }
-
-            // Insert feedback
-            const { error } = await supabase.from('feedback').insert({
-                user_id: user.id,
+            await profileSettingsApi.submitFeedback({
                 type: feedbackType,
                 title: title.trim(),
                 description: description.trim(),
-                screenshot_url: screenshotUrl,
                 device_info: deviceInfo,
+                ...(screenshotMediaId ? { screenshot_media_id: screenshotMediaId } : {}),
             });
-
-            if (error) throw error;
 
             Alert.alert('Thank you!', 'Your feedback has been submitted successfully.', [
                 { text: 'OK', onPress: handleClose },

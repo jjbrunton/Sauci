@@ -16,7 +16,7 @@ import Animated, {
     FadeInUp,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../../src/lib/supabase";
+import { authClient } from "../../src/lib/authClient";
 import { getAuthError } from "../../src/lib/errors";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
@@ -63,7 +63,7 @@ export default function ForgotPasswordScreen() {
         }
 
         setIsLoading(true);
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        const { error: resetError } = await authClient.auth.resetPasswordForEmail(
             email.trim(),
             {
                 redirectTo: Linking.createURL("/(auth)/reset-password"),
@@ -83,7 +83,7 @@ export default function ForgotPasswordScreen() {
         if (resendCooldown > 0) return;
 
         setIsResending(true);
-        const { error: resendError } = await supabase.auth.resetPasswordForEmail(
+        const { error: resendError } = await authClient.auth.resetPasswordForEmail(
             email.trim(),
             {
                 redirectTo: Linking.createURL("/(auth)/reset-password"),

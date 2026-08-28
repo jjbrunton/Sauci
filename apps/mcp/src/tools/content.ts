@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { supabase } from '../lib/supabase.js';
+import { adminData } from '../lib/admin-data.js';
 import { logAudit } from '../utils/audit.js';
 
 export function registerContentTools(server: McpServer) {
@@ -11,7 +11,7 @@ export function registerContentTools(server: McpServer) {
     'List all categories with pack counts',
     {},
     async () => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('categories')
         .select(`
           *,
@@ -38,7 +38,7 @@ export function registerContentTools(server: McpServer) {
       is_public: z.boolean().default(false)
     },
     async ({ name, description, icon, sort_order, is_public }) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('categories')
         .insert({ name, description, icon, sort_order: sort_order ?? 0, is_public })
         .select()
@@ -72,10 +72,10 @@ export function registerContentTools(server: McpServer) {
     },
     async ({ id, ...updates }) => {
       // Get old values for audit
-      const { data: oldData } = await supabase.from('categories').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('categories').select('*').eq('id', id).single();
       if (!oldData) throw new Error(`Category not found: ${id}`);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('categories')
         .update(updates)
         .eq('id', id)
@@ -103,10 +103,10 @@ export function registerContentTools(server: McpServer) {
     'Delete a category',
     { id: z.string() },
     async ({ id }) => {
-      const { data: oldData } = await supabase.from('categories').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('categories').select('*').eq('id', id).single();
       if (!oldData) throw new Error(`Category not found: ${id}`);
 
-      const { error } = await supabase
+      const { error } = await adminData
         .from('categories')
         .delete()
         .eq('id', id);
@@ -133,7 +133,7 @@ export function registerContentTools(server: McpServer) {
     'List packs for a category or all packs',
     { category_id: z.string().optional() },
     async ({ category_id }) => {
-      let query = supabase
+      let query = adminData
         .from('question_packs')
         .select(`
           *,
@@ -167,7 +167,7 @@ export function registerContentTools(server: McpServer) {
       sort_order: z.number().optional()
     },
     async (input) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('question_packs')
         .insert({ ...input, sort_order: input.sort_order ?? 0 })
         .select()
@@ -202,10 +202,10 @@ export function registerContentTools(server: McpServer) {
       sort_order: z.number().optional()
     },
     async ({ id, ...updates }) => {
-      const { data: oldData } = await supabase.from('question_packs').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('question_packs').select('*').eq('id', id).single();
       if (!oldData) throw new Error(`Pack not found: ${id}`);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('question_packs')
         .update(updates)
         .eq('id', id)
@@ -233,10 +233,10 @@ export function registerContentTools(server: McpServer) {
     'Delete a question pack',
     { id: z.string() },
     async ({ id }) => {
-      const { data: oldData } = await supabase.from('question_packs').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('question_packs').select('*').eq('id', id).single();
       if (!oldData) throw new Error(`Pack not found: ${id}`);
 
-      const { error } = await supabase.from('question_packs').delete().eq('id', id);
+      const { error } = await adminData.from('question_packs').delete().eq('id', id);
       if (error) throw new Error(`Failed to delete pack: ${error.message}`);
 
       await logAudit({
@@ -259,7 +259,7 @@ export function registerContentTools(server: McpServer) {
     'List questions for a pack',
     { pack_id: z.string() },
     async ({ pack_id }) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('questions')
         .select('*')
         .eq('pack_id', pack_id)
@@ -283,7 +283,7 @@ export function registerContentTools(server: McpServer) {
       intensity: z.number().min(1).max(5).default(1)
     },
     async (input) => {
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('questions')
         .insert(input)
         .select()
@@ -315,10 +315,10 @@ export function registerContentTools(server: McpServer) {
       pack_id: z.string().optional()
     },
     async ({ id, ...updates }) => {
-      const { data: oldData } = await supabase.from('questions').select('*').eq('id', id).single();
+      const { data: oldData } = await adminData.from('questions').select('*').eq('id', id).single();
       if (!oldData) throw new Error(`Question not found: ${id}`);
 
-      const { data, error } = await supabase
+      const { data, error } = await adminData
         .from('questions')
         .update(updates)
         .eq('id', id)
@@ -346,9 +346,9 @@ export function registerContentTools(server: McpServer) {
     'Delete one or more questions',
     { ids: z.array(z.string()) },
     async ({ ids }) => {
-      const { data: oldData } = await supabase.from('questions').select('*').in('id', ids);
+      const { data: oldData } = await adminData.from('questions').select('*').in('id', ids);
       
-      const { error } = await supabase.from('questions').delete().in('id', ids);
+      const { error } = await adminData.from('questions').delete().in('id', ids);
       if (error) throw new Error(`Failed to delete questions: ${error.message}`);
 
       // Log audit for each deleted question

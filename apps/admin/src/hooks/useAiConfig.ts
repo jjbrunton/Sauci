@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/config';
+import { adminData } from '@/lib/adminApi';
 
 export interface CouncilGenerator {
     model: string;
@@ -74,7 +74,7 @@ export function useAiConfig(): UseAiConfigReturn {
         setError(null);
 
         try {
-            const { data, error: fetchError } = await supabase
+            const { data, error: fetchError } = await adminData
                 .from('ai_config')
                 .select('*')
                 .limit(1)
@@ -82,7 +82,7 @@ export function useAiConfig(): UseAiConfigReturn {
 
             if (fetchError) {
                 // If user doesn't have access (not super admin), that's expected
-                if (fetchError.code === 'PGRST116' || fetchError.message.includes('permission')) {
+                if (fetchError.message.includes('permission')) {
                     setError('Access denied. Super admin privileges required.');
                 } else {
                     setError(fetchError.message);
@@ -110,7 +110,7 @@ export function useAiConfig(): UseAiConfigReturn {
         }
 
         try {
-            const { error: updateError } = await supabase
+            const { error: updateError } = await adminData
                 .from('ai_config')
                 .update(updates)
                 .eq('id', config.id);
@@ -160,7 +160,7 @@ export async function preloadAiConfig(): Promise<AiConfig | null> {
     }
 
     try {
-        const { data } = await supabase
+        const { data } = await adminData
             .from('ai_config')
             .select('*')
             .limit(1)
