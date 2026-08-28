@@ -18,6 +18,17 @@ export interface Profile {
     onboarding_version?: number;
 }
 
+/** Editorial catalogue state. Customer applications do not enforce it yet. */
+export type ContentReviewStatus = 'unreviewed' | 'allowed' | 'archived';
+
+export interface ContentReviewMetadata {
+    /** Optional until the additive migration has reached every environment. */
+    content_status?: ContentReviewStatus;
+    content_review_reason?: string | null;
+    content_reviewed_at?: string | null;
+    content_reviewed_by?: string | null;
+}
+
 // Couple pairing
 export interface Couple {
     id: string;
@@ -26,7 +37,7 @@ export interface Couple {
 }
 
 // Question pack
-export interface QuestionPack {
+export interface QuestionPack extends ContentReviewMetadata {
     id: string;
     name: string;
     description: string | null;
@@ -38,7 +49,7 @@ export interface QuestionPack {
 }
 
 // Individual question
-export interface Question {
+export interface Question extends ContentReviewMetadata {
     id: string;
     pack_id: string;
     text: string;

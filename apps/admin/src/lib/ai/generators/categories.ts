@@ -71,11 +71,11 @@ export async function suggestCategories(
         : 'None';
 
     const explicitInstruction = explicit
-        ? 'Include bold, spicy, and explicitly intimate categories (NSFW is allowed).'
+        ? 'This legacy explicit flag does not override the universal safety ceiling. Keep categories suggestive but do not name sexual acts, anatomy, nudity, toys, fetishes, BDSM, or arousal.'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the names and descriptions.'
+        ? '\nLEGACY CRUDE-LANGUAGE OPTION: Ignore it. Do not use crude, vulgar, sexual, or anatomical terms.'
         : '';
 
     // Sanitize inspiration to prevent prompt injection

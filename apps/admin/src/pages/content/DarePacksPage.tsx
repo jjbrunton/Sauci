@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/select';
 import { Plus, Zap, Pencil, Trash2, Loader2, Crown, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentReviewControl } from '@/components/content/ContentReviewControl';
+import type { ContentReviewStatus } from '@sauci/shared';
 
 // =============================================================================
 // Types
@@ -54,6 +56,8 @@ interface DarePack {
     category_id: string | null;
     created_at: string | null;
     dare_count?: number;
+    content_status?: ContentReviewStatus | null;
+    content_review_reason?: string | null;
 }
 
 interface DarePackFormData {
@@ -511,6 +515,15 @@ export function DarePacksPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
+                                        <ContentReviewControl
+                                            table="dare_packs"
+                                            entityId={pack.id}
+                                            entityLabel={`dare pack “${pack.name}”`}
+                                            status={pack.content_status}
+                                            reason={pack.content_review_reason}
+                                            onChanged={fetchData}
+                                            compact
+                                        />
                                         {pack.is_explicit && (
                                             <Badge variant="destructive">
                                                 NSFW

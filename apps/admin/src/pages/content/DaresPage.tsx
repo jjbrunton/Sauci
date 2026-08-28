@@ -37,6 +37,8 @@ import { Plus, Pencil, Trash2, Zap, Loader2, Clock } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { IconPreview } from '@/components/ui/icon-picker';
+import { ContentReviewControl } from '@/components/content/ContentReviewControl';
+import type { ContentReviewStatus } from '@sauci/shared';
 
 // =============================================================================
 // Types
@@ -56,6 +58,8 @@ interface Dare {
     intensity: number;
     suggested_duration_hours: number | null;
     created_at: string | null;
+    content_status?: ContentReviewStatus | null;
+    content_review_reason?: string | null;
 }
 
 // Duration options for dares
@@ -439,6 +443,7 @@ export function DaresPage() {
                                 </TableHead>
                                 <TableHead className="w-12">#</TableHead>
                                 <TableHead>Dare</TableHead>
+                                <TableHead className="w-40">Catalogue</TableHead>
                                 <TableHead className="w-24">Duration</TableHead>
                                 <TableHead className="w-24">Actions</TableHead>
                             </TableRow>
@@ -461,6 +466,17 @@ export function DaresPage() {
                                     </TableCell>
                                     <TableCell>
                                         <span className="line-clamp-2">{dare.text}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <ContentReviewControl
+                                            table="dares"
+                                            entityId={dare.id}
+                                            entityLabel={`dare ${((page - 1) * pageSize) + index + 1}`}
+                                            status={dare.content_status}
+                                            reason={dare.content_review_reason}
+                                            onChanged={fetchData}
+                                            compact
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         {dare.suggested_duration_hours ? (

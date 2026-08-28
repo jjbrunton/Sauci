@@ -43,6 +43,8 @@ import { AiGeneratorDialog } from '@/components/ai/AiGeneratorDialog';
 import { AIPolishButton } from '@/components/ai/AIPolishButton';
 import { ReviewQuestionsDialog } from '@/components/content/ReviewQuestionsDialog';
 import { IconPreview } from '@/components/ui/icon-picker';
+import { ContentReviewControl } from '@/components/content/ContentReviewControl';
+import type { ContentReviewStatus } from '@sauci/shared';
 
 interface QuestionPack {
     id: string;
@@ -70,6 +72,8 @@ interface Question {
     created_at: string | null;
     question_type?: QuestionType | null;
     config?: QuestionConfig | null;
+    content_status?: ContentReviewStatus | null;
+    content_review_reason?: string | null;
 }
 
 const DEFAULT_AUDIO_DURATION = 60;
@@ -982,6 +986,7 @@ export function QuestionsPage() {
                                     </TableHead>
                                     <TableHead className="w-12">#</TableHead>
                                     <TableHead>Question</TableHead>
+                                    <TableHead className="w-40">Catalogue</TableHead>
                                     <TableHead className="w-28">Type</TableHead>
                                     <TableHead className="w-20">Inverse</TableHead>
                                     <TableHead className="w-32">Partner Text</TableHead>
@@ -1008,6 +1013,17 @@ export function QuestionsPage() {
                                         </TableCell>
                                         <TableCell>
                                             <span className="line-clamp-2">{question.text}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <ContentReviewControl
+                                                table="questions"
+                                                entityId={question.id}
+                                                entityLabel={`question ${((page - 1) * pageSize) + index + 1}`}
+                                                status={question.content_status}
+                                                reason={question.content_review_reason}
+                                                onChanged={fetchData}
+                                                compact
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             <div className="space-y-1">

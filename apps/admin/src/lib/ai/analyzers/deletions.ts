@@ -23,8 +23,8 @@ export async function analyzeQuestionDeletions(
     }));
 
     const toneInstruction = isExplicit
-        ? 'CONTENT: EXPLICIT pack. Adult content is allowed but must be consensual, safe, and clear. Avoid coercion, minors, illegal acts, or unsafe suggestions.'
-        : 'CONTENT: NON-EXPLICIT pack. Do NOT include explicit sexual acts, crude language, or NSFW content. If the core action is sexual, it should be removed, not rewritten.';
+        ? 'LEGACY EXPLICIT FLAG: It does not override the universal catalogue safety ceiling. Delete developer-authored sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, and public sexual activity.'
+        : 'Delete developer-authored sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, and public sexual activity rather than rewriting them into disguised euphemisms.';
 
     const prompt = `<task>
 Identify questions that should be DELETED instead of edited.
@@ -38,7 +38,7 @@ ${toneInstruction}
 <deletion_categories>
 - duplicate: same core action AND same initiator as another question (near-duplicate). Note: swapped perspectives (e.g., "give" vs "receive") are NOT duplicates.
 - redundant: minor variation with no added value
-- off-tone: violates explicit vs non-explicit rules
+- off-tone: violates the universal catalogue safety ceiling or the pack's intended tone
 - unsafe: coercion, minors, illegal acts, or consent violations
 - too-vague: not actionable or not a clear proposal
 - broken: grammar/structure too broken to repair without inventing content
@@ -73,8 +73,8 @@ Only return questions that should be deleted.
 </output_format>`;
 
     const systemMessage = isExplicit
-        ? 'You are a strict content quality reviewer for an adult couples app. Remove only what should be deleted. Always respond with valid JSON only.'
-        : 'You are a strict content quality reviewer for a couples app. Remove only what should be deleted. Always respond with valid JSON only.';
+        ? 'You are a strict content safety reviewer for a couples connection app. A legacy explicit flag never permits sexual content. Mark content outside the universal safety ceiling for deletion. Always respond with valid JSON only.'
+        : 'You are a strict content safety reviewer for a couples connection app. Mark sexual or explicit content for deletion. Always respond with valid JSON only.';
 
     const response = await openai.chat.completions.create({
         model: getModel('fix'),

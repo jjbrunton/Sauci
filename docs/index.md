@@ -26,6 +26,7 @@ These contain useful history and acceptance details, but may describe planned or
 partially implemented states. Confirm claims against current code.
 
 - `admin-question-types-plan.md`
+- [Universal catalogue safety plan](product/catalog-content-safety-plan.md)
 - `content-balance-implementation.md`
 - `dares-feature.md`
 - `live-draw-feature-plan.md`

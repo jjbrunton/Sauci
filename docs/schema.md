@@ -37,6 +37,7 @@ erDiagram
         text icon
         boolean is_premium
         boolean is_public
+        content_review_status content_status "metadata only; not yet enforced"
         int sort_order
         timestamptz created_at
     }
@@ -50,6 +51,7 @@ erDiagram
         text[] allowed_couple_genders "couple composition filter"
         text[] target_user_genders "individual user filter"
         text[] required_props "props/accessories required"
+        content_review_status content_status "metadata only; not yet enforced"
         timestamptz created_at
     }
 
@@ -163,6 +165,23 @@ erDiagram
 | `feedback_type` | `bug`, `feature_request`, `general` |
 | `feedback_status` | `new`, `reviewed`, `in_progress`, `resolved`, `closed` |
 | `subscription_status` | `active`, `cancelled`, `expired`, `billing_issue`, `paused` |
+| `content_review_status` | `unreviewed`, `allowed`, `archived` |
+| `content_entity_type` | `categories`, `question_packs`, `questions`, `dare_packs`, `dares` |
+
+## Catalogue review metadata
+
+`categories`, `question_packs`, `questions`, `dare_packs`, and `dares` carry
+`content_status`, `content_review_reason`, `content_reviewed_at`, and
+`content_reviewed_by`. Insert triggers force new rows to `unreviewed` with empty
+review metadata even when a caller supplies forged values. Status changes and
+same-status re-reviews require a non-blank reason, only super-admin users may
+make an authenticated decision, reviewer identity/time are database-managed,
+and visible content edits reset an unchanged decision to `unreviewed`.
+
+`content_reviews` is the append-only status-change history. Only super-admins
+may read it through the authenticated API. The current migration is preparatory:
+existing RLS, RPCs, and customer applications do not filter `content_status`
+until the separately verified universal enforcement phase.
 
 ## Key Flows
 

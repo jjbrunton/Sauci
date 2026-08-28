@@ -9,16 +9,16 @@ export interface ImageSafetyAnalysis {
 }
 
 const SAFETY_ANALYSIS_PROMPT = `<task>
-Analyze this image for content safety in the context of an adult couples intimacy app.
+Analyze this image for content safety in the context of a couples connection app.
 </task>
 
 <context>
-This app is for ADULT couples (25-45) to explore intimacy. Adult content between consenting adults is expected and acceptable. The concern is inappropriate content like violence, minors, or illegal activity.
+This app has one universal mobile catalogue. Explicit or sexually gratifying imagery is not eligible for publication, even when it depicts consenting adults.
 </context>
 
 <categories>
-- SAFE: No concerns, appropriate for the app (including tasteful adult content between adults)
-- ADULT_CONTENT: Explicit content - acceptable for this app but flag for review
+- SAFE: Non-explicit relationship, romance, lifestyle, or abstract imagery appropriate for the universal catalogue
+- ADULT_CONTENT: Sexual, sexually gratifying, fetish, explicit-anatomy, or stimulation-focused imagery; not appropriate for publication
 - VIOLENCE: Gore, weapons, abuse, non-consensual acts
 - MINORS: Anyone appearing under 18 years old - CRITICAL, never acceptable
 - ILLEGAL: Drug use, criminal activity, non-consensual content
@@ -27,9 +27,9 @@ This app is for ADULT couples (25-45) to explore intimacy. Adult content between
 
 <severity_levels>
 - none: No safety concerns at all
-- low: Minor flag, likely fine but worth noting
-- medium: Should be reviewed by admin
-- high: Likely inappropriate, requires immediate review
+- low: Minor flag, needs human review before publication
+- medium: Not eligible without a documented human safety decision
+- high: Inappropriate for publication and should be archived
 - critical: Definitely inappropriate, should be blocked (MINORS, VIOLENCE, ILLEGAL)
 </severity_levels>
 
@@ -40,7 +40,7 @@ Return a JSON object:
   "severity": "none"|"low"|"medium"|"high"|"critical",
   "description": "Brief factual description of what's shown (max 50 words)",
   "concerns": ["List of specific concerns if any, empty array if none"],
-  "isAppropriate": true|false  // false for VIOLENCE, MINORS, ILLEGAL or high/critical severity
+  "isAppropriate": true|false  // false for ADULT_CONTENT, VIOLENCE, MINORS, ILLEGAL, UNCERTAIN, or any flagged severity
 }
 </output_format>`;
 

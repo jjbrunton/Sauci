@@ -18,8 +18,8 @@ export async function polishContent(
     const openai = getOpenAI();
 
     const explicitInstruction = explicit
-        ? 'Use nuanced language: tasteful phrasing for general acts ("have sex", "perform oral") but crude/specific terms when relevant to the activity ("cum on", "cock ring", "edge"). Do not over-sanitize - keep explicit terms that are essential to the activity. NEVER change "cum" to "come" - they have different meanings.'
-        : 'CRITICAL: This is a NON-EXPLICIT pack. Keep it clean, romantic, and playful. Do NOT add any sexual acts, crude language, or NSFW content. If the original text contains explicit content, replace with tasteful romantic alternatives.';
+        ? 'LEGACY EXPLICIT FLAG: It does not override the universal catalogue safety ceiling. Remove named or described sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, and public sexual activity. If preserving the original action would violate this rule, return a safe high-level relationship proposal instead.'
+        : 'Keep it romantic, playful, and suggestive without naming or describing sexual content. If the original text is explicit, return a safe high-level relationship proposal instead.';
 
     const contextMap: Record<PolishType, string> = {
         question: 'a question for a couples app',
@@ -37,28 +37,24 @@ export async function polishContent(
   1. STYLE: Cards should be "Proposals" relative to a specific action, rather than interview questions.
      - GOOD: "Have a candlelit dinner with your partner", "Give your partner a massage".
      - BAD: "Do you want to have...", "Have you ever thought about...".
-  2. ACCURACY: Do NOT rewrite the text effectively changing the action.
+  2. ACCURACY: Preserve the original relationship intent when it is catalogue-safe.
      - "Want a candlelit dinner?" -> "Have a candlelit dinner with your partner"
-     - DO NOT change it to something unrelated like "Go to the movies".
-     - Polish the phrasing, grammar, and tone, but keep the core action IDENTICAL.
-  3. TONE: Engaging, romantic, or spicy (depending on context), but direct.
-  4. ANATOMICAL CONSISTENCY: NEVER combine male-specific and female-specific acts as alternatives.
-     - BAD: "Finger or give your partner a handjob" (requires different anatomy)
-     - BAD: "Suck their cock or eat them out" (male vs female anatomy)
-     - If text has mixed anatomy alternatives, keep ONE activity and remove the incompatible one.
+     - If the core action is explicit, replace it with a high-level proposal about curiosity, trust, anticipation, or relationship dynamics.
+  3. TONE: Engaging, romantic, flirty, or daring, but never sexual or instructional.
+  4. UNIVERSAL SAFETY CEILING: Do not name or describe sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity.
   `;
         fewShotExamples = `
   === FEW-SHOT EXAMPLES ===
   ${type === 'question' ? `
-  "Would you want to give me a massage?" -> "Give your partner a sensual massage"
-  "Have you ever thought about sex in public?" -> "Have sex somewhere you might get caught"
-  "maybe we could try using a blindfold sometime" -> "Blindfold your partner and tease their senses"
-  "cum on partner" -> "Cum on your partner" (keep "cum", don't change to "come")
+  "Would you want to give me a massage?" -> "Give your partner a relaxing massage"
+  "Have you ever thought about trying something daring?" -> "Try something daring with your partner"
+  "maybe we could explore a new dynamic sometime" -> "Explore a new dynamic with your partner"
+  "describe a private fantasy" -> "Share a private desire in your own words"
   ` : `
   "Receive a massage from your partner" -> "Let your partner's hands work the tension from your body"
-  "Get oral from your partner" -> "Let your partner pleasure you with their mouth"
-  "Be tied up" -> "Let your partner tie you up and surrender control"
-  "Moan for your partner" -> "Let your partner make you moan"
+  "Let your partner plan the evening" -> "Let your partner take the lead for an evening"
+  "Try something new together" -> "Explore a new dynamic with your partner"
+  "Tell your partner what you want" -> "Share a private desire in your own words"
   `}
   === END EXAMPLES ===
   `;
@@ -79,8 +75,8 @@ ${explicitInstruction}
 <rules>
 ${additionalRules}
 - Make it concise, engaging, and grammatically correct
-- Maintain the original intent and meaning
-- Do NOT change the core action - only improve phrasing
+- Preserve the original intent only when it stays inside the universal safety ceiling
+- Replace explicit core actions with safe, high-level relationship proposals
 </rules>
 
 ${fewShotExamples}
@@ -96,7 +92,7 @@ ${fewShotExamples}
         messages: [
             {
                 role: 'system',
-                content: 'You are a professional editor for a couples app. Improve the copy while maintaining the tone. Always respond with valid JSON only.',
+                content: 'You are a professional editor for a couples connection app. Never output sexual acts, explicit anatomy, nudity for stimulation, sex toys, fetishes, BDSM acts, arousal, orgasm, or public sexual activity. Always respond with valid JSON only.',
             },
             { role: 'user', content: prompt },
         ],

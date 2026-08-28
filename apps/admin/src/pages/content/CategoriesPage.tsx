@@ -43,6 +43,8 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ContentReviewControl } from '@/components/content/ContentReviewControl';
+import type { ContentReviewStatus } from '@sauci/shared';
 
 // =============================================================================
 // Types
@@ -56,6 +58,8 @@ interface Category {
     sort_order: number | null;
     created_at: string | null;
     is_public: boolean;
+    content_status?: ContentReviewStatus | null;
+    content_review_reason?: string | null;
     question_pack_count?: number;
     dare_pack_count?: number;
 }
@@ -76,9 +80,10 @@ interface SortableCategoryCardProps {
     onEdit: (category: Category) => void;
     onDelete: (category: Category) => void;
     onToggleVisibility: (category: Category) => void;
+    onReviewChanged: () => void | Promise<void>;
 }
 
-function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility }: SortableCategoryCardProps) {
+function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility, onReviewChanged }: SortableCategoryCardProps) {
     const {
         attributes,
         listeners,
@@ -163,6 +168,16 @@ function SortableCategoryCard({ category, onEdit, onDelete, onToggleVisibility }
                         </Button>
                     </div>
                 </div>
+
+                <ContentReviewControl
+                    table="categories"
+                    entityId={category.id}
+                    entityLabel={`category “${category.name}”`}
+                    status={category.content_status}
+                    reason={category.content_review_reason}
+                    onChanged={onReviewChanged}
+                    compact
+                />
 
                 <div className="grid gap-2">
                     <Link to={`/categories/${category.id}/packs`}>
@@ -579,6 +594,7 @@ export function CategoriesPage() {
                                     onEdit={form.openEdit}
                                     onDelete={handleDelete}
                                     onToggleVisibility={handleToggleVisibility}
+                                    onReviewChanged={fetchCategories}
                                 />
                             ))}
                         </div>

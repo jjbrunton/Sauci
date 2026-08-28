@@ -19,11 +19,11 @@ export async function generatePack(
     const openai = getOpenAI();
 
     const explicitInstruction = explicit
-        ? 'Include bold, spicy, and uncensored themes (NSFW is allowed).'
+        ? 'This legacy explicit flag does not override the universal safety ceiling. Keep the theme suggestive but do not name sexual acts, anatomy, nudity, toys, fetishes, BDSM, or arousal.'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? 'CRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms throughout - "fuck", "cock", "pussy" etc.'
+        ? 'LEGACY CRUDE-LANGUAGE OPTION: Ignore it. Do not use crude, vulgar, sexual, or anatomical terms.'
         : '';
 
     // Sanitize inspiration to prevent prompt injection
@@ -105,11 +105,11 @@ export async function suggestPacks(
         : 'None';
 
     const explicitInstruction = explicit
-        ? 'Include bold, spicy, and uncensored pack ideas (NSFW is allowed).'
+        ? 'This legacy explicit flag does not override the universal safety ceiling. Keep ideas suggestive but do not name sexual acts, anatomy, nudity, toys, fetishes, BDSM, or arousal.'
         : 'Do NOT include any explicit or NSFW themes. Keep it romantic, emotional, playful, and clean.';
 
     const crudeLangInstruction = crudeLang
-        ? '\nCRUDE LANGUAGE OVERRIDE: Use crude, vulgar terms in the pack names and descriptions.'
+        ? '\nLEGACY CRUDE-LANGUAGE OPTION: Ignore it. Do not use crude, vulgar, sexual, or anatomical terms.'
         : '';
 
     // Sanitize inspiration to prevent prompt injection
