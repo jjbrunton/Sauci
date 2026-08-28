@@ -127,6 +127,13 @@
       "when": 1788081420000,
       "tag": "0017_streak_reminder_preference",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1788081480000,
+      "tag": "0018_cutover_source_parity",
+      "breakpoints": true
     }
   ]
 }
