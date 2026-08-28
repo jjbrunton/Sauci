@@ -26,7 +26,12 @@ cleanup() {
 trap cleanup EXIT
 
 docker compose -p "$project_name" -f "$compose_file" config >/dev/null
-docker compose -p "$project_name" -f "$compose_file" up -d --build --wait
+docker compose -p "$project_name" -f "$compose_file" up -d --build --wait postgres migrate api
+# The worker deliberately has no HTTP healthcheck. Start it separately so
+# Compose versions that reject `--wait` for healthcheck-disabled services do not
+# turn that intentional contract into a false failure.
+docker compose -p "$project_name" -f "$compose_file" up -d worker
+test "$(docker compose -p "$project_name" -f "$compose_file" ps --status running -q worker | wc -l | tr -d ' ')" = "1"
 
 docker compose -p "$project_name" -f "$compose_file" exec -T api node -e \
   "Promise.all(['/health/live','/health/ready','/v1/me'].map(async p=>[p,(await fetch('http://127.0.0.1:3003'+p)).status])).then(results=>{const expected=[200,200,401];if(results.some((result,index)=>result[1]!==expected[index])){console.error(results);process.exit(1)};console.log(results)})"
