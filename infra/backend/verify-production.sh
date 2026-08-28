@@ -32,6 +32,11 @@ docker compose -p "$project_name" -f "$compose_file" up -d --build --wait postgr
 # turn that intentional contract into a false failure.
 docker compose -p "$project_name" -f "$compose_file" up -d worker
 test "$(docker compose -p "$project_name" -f "$compose_file" ps --status running -q worker | wc -l | tr -d ' ')" = "1"
+worker_id="$(docker compose -p "$project_name" -f "$compose_file" ps -q worker)"
+worker_restarts_before="$(docker inspect --format '{{.RestartCount}}' "$worker_id")"
+sleep 3
+test "$(docker inspect --format '{{.State.Running}}' "$worker_id")" = "true"
+test "$(docker inspect --format '{{.RestartCount}}' "$worker_id")" = "$worker_restarts_before"
 
 docker compose -p "$project_name" -f "$compose_file" exec -T api node -e \
   "Promise.all(['/health/live','/health/ready','/v1/me'].map(async p=>[p,(await fetch('http://127.0.0.1:3003'+p)).status])).then(results=>{const expected=[200,200,401];if(results.some((result,index)=>result[1]!==expected[index])){console.error(results);process.exit(1)};console.log(results)})"
