@@ -14,6 +14,8 @@ import { useMatchStore } from "../store/matchStore";
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: false,
+    shouldShowBanner: false,
+    shouldShowList: false,
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),
@@ -25,6 +27,21 @@ export interface NotificationData {
   match_id?: string;
   message_id?: string;
   count?: number;
+}
+
+const notificationTypes = new Set<NotificationData["type"]>([
+  "match",
+  "message",
+  "match_digest",
+  "partner_activity",
+  "nudge",
+  "weekly_summary",
+]);
+
+function isNotificationData(value: unknown): value is NotificationData {
+  if (!value || typeof value !== "object") return false;
+  const type = (value as { type?: unknown }).type;
+  return typeof type === "string" && notificationTypes.has(type as NotificationData["type"]);
 }
 
 
@@ -219,9 +236,9 @@ export async function checkAndRegisterPushToken(userId: string): Promise<boolean
 export function handleNotificationResponse(
   response: Notifications.NotificationResponse
 ): void {
-  const data = response.notification.request.content.data as NotificationData;
+  const data = response.notification.request.content.data;
 
-  if (!data) {
+  if (!isNotificationData(data)) {
     return;
   }
 

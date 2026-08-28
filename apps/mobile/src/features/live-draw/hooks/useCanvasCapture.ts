@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import type { SkImage } from '@shopify/react-native-skia';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 interface UseCanvasCaptureReturn {
   makeSnapshot: React.MutableRefObject<(() => SkImage | null) | null>;
