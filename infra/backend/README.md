@@ -45,6 +45,12 @@ different name `SAUCI_ADMIN_API_TOKEN` plus its independent caller-facing
 `SAUCI_MCP_API_KEY`. The token does not confer Supabase authority: the API maps
 it to the configured administrator and applies normal permissions and auditing.
 Do not give either admin token to mobile, admin browser, or worker containers.
+An environment without an imported active administrator may leave both values
+empty; customer API routes still run, while MCP service authentication remains
+disabled until the pair is configured. RevenueCat credentials are likewise
+optional at infrastructure bootstrap, but purchase verification, webhooks, and
+account-deletion provider cleanup remain unavailable until their dedicated
+server-side credentials are installed.
 
 Secret ownership is intentionally split:
 

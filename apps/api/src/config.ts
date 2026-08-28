@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const optionalString = z.preprocess((value) => value === '' ? undefined : value, z.string().min(1).optional());
+const optionalUuid = z.preprocess((value) => value === '' ? undefined : value, z.string().uuid().optional());
+
 const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3003),
@@ -12,13 +15,13 @@ const baseSchema = z.object({
   MEDIA_ROOT: z.string().min(1).default('/data/media'),
   MEDIA_SIGNING_SECRET: z.string().min(32).optional(),
   MEDIA_PUBLIC_BASE_URL: z.string().url().optional(),
-  SUPABASE_AUTH_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  REVENUECAT_API_KEY: z.string().min(1).optional(),
+  SUPABASE_AUTH_SERVICE_ROLE_KEY: optionalString,
+  REVENUECAT_API_KEY: optionalString,
   REVENUECAT_ENTITLEMENT_ID: z.string().min(1).default('Sauci Pro'),
-  REVENUECAT_WEBHOOK_SECRET: z.string().min(1).optional(),
-  ADMIN_API_SERVICE_TOKEN: z.string().min(32).optional(),
-  ADMIN_API_SERVICE_USER_ID: z.string().uuid().optional(),
-  ADMIN_PRIVATE_KEY_JWK: z.string().optional(),
+  REVENUECAT_WEBHOOK_SECRET: optionalString,
+  ADMIN_API_SERVICE_TOKEN: z.preprocess((value) => value === '' ? undefined : value, z.string().min(32).optional()),
+  ADMIN_API_SERVICE_USER_ID: optionalUuid,
+  ADMIN_PRIVATE_KEY_JWK: optionalString,
 });
 
 export interface AppConfig {

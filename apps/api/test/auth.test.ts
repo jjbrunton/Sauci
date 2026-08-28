@@ -61,4 +61,28 @@ describe('Supabase Auth JWT verification', () => {
       AUTH_TEST_JWKS: jwks,
     })).toThrow('AUTH_TEST_JWKS is forbidden');
   });
+
+  it('treats empty optional deployment integrations as disabled', async () => {
+    const { jwks } = await signedToken();
+    const config = loadConfig({
+      NODE_ENV: 'test',
+      DATABASE_URL: 'postgresql://localhost/sauci_test',
+      SUPABASE_AUTH_ISSUER: issuer,
+      AUTH_TEST_JWKS: jwks,
+      SUPABASE_AUTH_SERVICE_ROLE_KEY: '',
+      REVENUECAT_API_KEY: '',
+      REVENUECAT_WEBHOOK_SECRET: '',
+      ADMIN_API_SERVICE_TOKEN: '',
+      ADMIN_API_SERVICE_USER_ID: '',
+      ADMIN_PRIVATE_KEY_JWK: '',
+    });
+    expect(config).toMatchObject({
+      supabaseAuthServiceRoleKey: undefined,
+      revenueCatApiKey: undefined,
+      revenueCatWebhookSecret: undefined,
+      adminApiServiceToken: undefined,
+      adminApiServiceUserId: undefined,
+      adminPrivateKeyJwk: undefined,
+    });
+  });
 });
