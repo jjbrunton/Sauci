@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "app.sauci",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -35,7 +35,7 @@
         "NSPhotoLibraryAddUsageDescription": "Sauci saves photos and videos from your partner's messages to your photo library when you tap the save button.",
         "NSMicrophoneUsageDescription": "Sauci uses your microphone to record audio when you capture videos to share privately with your partner."
       },
-      "privacyManifest": {
+      "privacyManifests": {
         "NSPrivacyTracking": false,
         "NSPrivacyCollectedDataTypes": [
           {
@@ -205,8 +205,9 @@
         "expo-build-properties",
         {
           "android": {
-            "targetSdkVersion": 35,
-            "kotlinVersion": "1.9.25",
+            "buildToolsVersion": "36.0.0",
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "extraProguardRules": "-keep class com.facebook.hermes.unicode.** { *; }",
             "useLegacyPackaging": false,
             "manifestPlaceholders": {

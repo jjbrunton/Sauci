@@ -15,6 +15,7 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const MOBILE_NM = path.join(ROOT, 'apps', 'mobile', 'node_modules');
+const WEB_NM = path.join(ROOT, 'apps', 'web', 'node_modules');
 const ROOT_NM = path.join(ROOT, 'node_modules');
 
 // Packages that must live in apps/mobile/node_modules, not root
@@ -39,4 +40,26 @@ for (const pkg of PACKAGES_TO_FIX) {
   // Move from root to local
   fs.renameSync(rootPkg, localPkg);
   console.log(`fix-hoisting: moved ${pkg} → apps/mobile/node_modules/`);
+}
+
+// Next and its React-facing tooling must resolve the web workspace's React 18
+// runtime, not the React 19 runtime hoisted for Expo SDK 54 / React Native.
+for (const pkg of ['next', 'styled-jsx', 'eslint-config-next']) {
+  const rootPkg = path.join(ROOT_NM, pkg);
+  const localPkg = path.join(WEB_NM, pkg);
+  if (!fs.existsSync(rootPkg) || fs.existsSync(localPkg)) continue;
+
+  fs.mkdirSync(WEB_NM, { recursive: true });
+  fs.renameSync(rootPkg, localPkg);
+  console.log(`fix-hoisting: moved ${pkg} → apps/web/node_modules/`);
+}
+
+const localNext = path.join(WEB_NM, 'next');
+if (fs.existsSync(localNext)) {
+  const localBinDir = path.join(WEB_NM, '.bin');
+  const localBin = path.join(localBinDir, 'next');
+  fs.mkdirSync(localBinDir, { recursive: true });
+  if (!fs.existsSync(localBin)) {
+    fs.symlinkSync(path.join('..', 'next', 'dist', 'bin', 'next'), localBin);
+  }
 }

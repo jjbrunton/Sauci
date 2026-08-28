@@ -1,5 +1,5 @@
 import { getMediaUrl, mediaId } from './mediaApi';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 
 // Cache for signed URLs with expiration tracking

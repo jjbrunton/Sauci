@@ -1,7 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useMediaSaver } from '@/hooks/useMediaSaver';
 
 // Mock expo-media-library
@@ -11,7 +11,7 @@ jest.mock('expo-media-library', () => ({
 }));
 
 // Mock expo-file-system with all required methods
-jest.mock('expo-file-system', () => ({
+jest.mock('expo-file-system/legacy', () => ({
     readAsStringAsync: jest.fn(async () => ''),
     downloadAsync: jest.fn(),
     deleteAsync: jest.fn(),
