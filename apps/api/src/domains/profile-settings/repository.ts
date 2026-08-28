@@ -19,6 +19,7 @@ interface PreferencesRow extends QueryResultRow {
   weekly_summary_enabled: boolean;
   unpaired_reminders_enabled: boolean;
   catchup_reminders_enabled: boolean;
+  dares_enabled: boolean;
   created_at: Date;
   updated_at: Date;
 }
@@ -64,6 +65,7 @@ function toPreferences(row: PreferencesRow): NotificationPreferences {
     weekly_summary_enabled: row.weekly_summary_enabled,
     unpaired_reminders_enabled: row.unpaired_reminders_enabled,
     catchup_reminders_enabled: row.catchup_reminders_enabled,
+    dares_enabled: row.dares_enabled,
     created_at: row.created_at.toISOString(),
     updated_at: row.updated_at.toISOString(),
   };

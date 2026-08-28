@@ -9,6 +9,7 @@ export const notificationPreferenceKeys = [
   'weekly_summary_enabled',
   'unpaired_reminders_enabled',
   'catchup_reminders_enabled',
+  'dares_enabled',
 ] as const;
 
 export type NotificationPreferenceKey = typeof notificationPreferenceKeys[number];
