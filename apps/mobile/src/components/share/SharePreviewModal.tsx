@@ -23,7 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { colors, gradients, radius, typography, spacing, blur } from "../../theme";
 
 const logo = require("../../../assets/logo.png");

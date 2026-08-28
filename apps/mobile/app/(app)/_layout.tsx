@@ -65,7 +65,7 @@ export default function AppLayout() {
     const { initializeRevenueCat, refreshSubscriptionStatus } = useSubscriptionStore();
     const { fetchStreak } = useStreakStore();
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
-    const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messageTimeoutRef = useRef<number | null>(null);
     const [isLocked, setIsLocked] = useState(false);
     const hasCheckedInitialBiometric = useRef(false);
     const wentToBackgroundAt = useRef<number | null>(null);
