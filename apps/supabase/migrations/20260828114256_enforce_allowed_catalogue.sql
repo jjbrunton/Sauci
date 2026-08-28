@@ -4,29 +4,31 @@
 
 DO $$
 BEGIN
-  -- Fresh/local databases apply migrations before optional catalogue fixtures.
-  -- Empty is valid; any non-empty catalogue must exactly match the audited
-  -- production snapshot or the migration fails closed.
-  IF (SELECT count(*) FROM public.categories) = 0
-     AND (SELECT count(*) FROM public.question_packs) = 0
-     AND (SELECT count(*) FROM public.questions) = 0
-     AND (SELECT count(*) FROM public.dare_packs) = 0
-     AND (SELECT count(*) FROM public.dares) = 0 THEN
-    RETURN;
-  END IF;
-
-  IF (SELECT count(*) FROM public.categories) <> 15
+  -- Production must still exactly match the snapshot reviewed immediately
+  -- before deployment. Local and non-production catalogues intentionally use
+  -- different fixtures, but are classified by the same immutable allowlist.
+  IF EXISTS (
+       SELECT 1 FROM public.app_config
+       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
+     ) AND (
+       (SELECT count(*) FROM public.categories) <> 15
      OR (SELECT count(*) FROM public.question_packs) <> 47
      OR (SELECT count(*) FROM public.questions) <> 2759
      OR (SELECT count(*) FROM public.dare_packs) <> 4
-     OR (SELECT count(*) FROM public.dares) <> 28 THEN
+     OR (SELECT count(*) FROM public.dares) <> 28
+  ) THEN
     RAISE EXCEPTION 'Catalogue changed after the 2026-08-28 review; re-audit before enforcing';
   END IF;
 
-  IF (SELECT count(*) FROM public.question_packs WHERE content_status = 'archived') <> 30
+  IF EXISTS (
+       SELECT 1 FROM public.app_config
+       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
+     ) AND (
+       (SELECT count(*) FROM public.question_packs WHERE content_status = 'archived') <> 30
      OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'unreviewed') <> 17
      OR (SELECT count(*) FROM public.questions WHERE content_status = 'archived') <> 2072
-     OR (SELECT count(*) FROM public.questions WHERE content_status = 'unreviewed') <> 687 THEN
+     OR (SELECT count(*) FROM public.questions WHERE content_status = 'unreviewed') <> 687
+  ) THEN
     RAISE EXCEPTION 'Catalogue review state changed after the 2026-08-28 review; re-audit before enforcing';
   END IF;
 END;
@@ -55,8 +57,7 @@ SET
       'ecabc509-9fed-48cb-bd60-c5d830d2491d'::uuid
     ) THEN 'Reviewed neutral category for store-safe relationship content'
     ELSE 'Category contains no store-safe reviewed packs'
-  END
-WHERE content_status = 'unreviewed';
+  END;
 
 -- The fourteen reviewed non-explicit relationship/date packs are allowed.
 -- Three explicit packs missed by the first conservative pass are archived.
@@ -88,7 +89,7 @@ SET
       THEN 'Reviewed as non-explicit relationship, conversation, or date content'
     ELSE 'Explicit pack identified during final enforcement review'
   END
-FROM (SELECT id FROM public.question_packs WHERE content_status = 'unreviewed') pending
+FROM (SELECT id FROM public.question_packs) pending
 LEFT JOIN reviewed_allowed_packs rap ON rap.id = pending.id
 WHERE qp.id = pending.id;
 
@@ -111,8 +112,7 @@ SET
     ELSE 'Archived with explicit pack during final enforcement review'
   END
 FROM public.question_packs qp
-WHERE q.pack_id = qp.id
-  AND q.content_status = 'unreviewed';
+WHERE q.pack_id = qp.id;
 
 -- Keep only the plainly romantic dare pack. The remaining packs contain sexual,
 -- suggestive, dominance, or fantasy prompts and are archived as complete packs.
@@ -127,8 +127,7 @@ SET
     WHEN id = 'a1b2c3d4-1111-1111-1111-111111111111'::uuid
       THEN 'Reviewed as non-sexual romantic gestures'
     ELSE 'Pack contains suggestive, sexual, dominance, or fantasy dares'
-  END
-WHERE content_status = 'unreviewed';
+  END;
 
 UPDATE public.dares d
 SET
@@ -141,20 +140,15 @@ SET
     ELSE 'Archived with non-store-safe dare pack'
   END
 FROM public.dare_packs dp
-WHERE d.pack_id = dp.id
-  AND d.content_status = 'unreviewed';
+WHERE d.pack_id = dp.id;
 
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM public.categories) = 0
-     AND (SELECT count(*) FROM public.question_packs) = 0
-     AND (SELECT count(*) FROM public.questions) = 0
-     AND (SELECT count(*) FROM public.dare_packs) = 0
-     AND (SELECT count(*) FROM public.dares) = 0 THEN
-    RETURN;
-  END IF;
-
-  IF (SELECT count(*) FROM public.categories WHERE content_status = 'allowed') <> 5
+  IF EXISTS (
+       SELECT 1 FROM public.app_config
+       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
+     ) AND (
+       (SELECT count(*) FROM public.categories WHERE content_status = 'allowed') <> 5
      OR (SELECT count(*) FROM public.categories WHERE content_status = 'archived') <> 10
      OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'allowed') <> 14
      OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'archived') <> 33
@@ -164,6 +158,15 @@ BEGIN
      OR (SELECT count(*) FROM public.dare_packs WHERE content_status = 'archived') <> 3
      OR (SELECT count(*) FROM public.dares WHERE content_status = 'allowed') <> 7
      OR (SELECT count(*) FROM public.dares WHERE content_status = 'archived') <> 21
+  ) THEN
+    RAISE EXCEPTION 'Production catalogue does not match the approved enforcement set';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.categories WHERE content_status = 'unreviewed')
+     OR EXISTS (SELECT 1 FROM public.question_packs WHERE content_status = 'unreviewed')
+     OR EXISTS (SELECT 1 FROM public.questions WHERE content_status = 'unreviewed')
+     OR EXISTS (SELECT 1 FROM public.dare_packs WHERE content_status = 'unreviewed')
+     OR EXISTS (SELECT 1 FROM public.dares WHERE content_status = 'unreviewed')
      OR EXISTS (
        SELECT 1 FROM public.question_packs qp
        LEFT JOIN public.categories c ON c.id = qp.category_id
@@ -176,7 +179,7 @@ BEGIN
        JOIN public.question_packs qp ON qp.id = q.pack_id
        WHERE q.content_status = 'allowed' AND qp.content_status <> 'allowed'
      ) THEN
-    RAISE EXCEPTION 'Reviewed catalogue does not match the approved enforcement set';
+    RAISE EXCEPTION 'Catalogue enforcement left an unreviewed or invalid hierarchy';
   END IF;
 END;
 $$;
