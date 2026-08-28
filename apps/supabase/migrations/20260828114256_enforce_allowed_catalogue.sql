@@ -2,40 +2,10 @@
 -- cannot retrieve unreviewed or archived curated content. Admin SELECT policies
 -- remain separate and continue to expose the full review queue to administrators.
 
-DO $$
-BEGIN
-  -- Production must still exactly match the snapshot reviewed immediately
-  -- before deployment. Local and non-production catalogues intentionally use
-  -- different fixtures, but are classified by the same immutable allowlist.
-  IF EXISTS (
-       SELECT 1 FROM public.app_config
-       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
-     ) AND (
-       (SELECT count(*) FROM public.categories) <> 15
-     OR (SELECT count(*) FROM public.question_packs) <> 47
-     OR (SELECT count(*) FROM public.questions) <> 2759
-     OR (SELECT count(*) FROM public.dare_packs) <> 4
-     OR (SELECT count(*) FROM public.dares) <> 28
-  ) THEN
-    RAISE EXCEPTION 'Catalogue changed after the 2026-08-28 review; re-audit before enforcing';
-  END IF;
-
-  IF EXISTS (
-       SELECT 1 FROM public.app_config
-       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
-     ) AND (
-       (SELECT count(*) FROM public.question_packs WHERE content_status = 'archived') <> 30
-     OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'unreviewed') <> 17
-     OR (SELECT count(*) FROM public.questions WHERE content_status = 'archived') <> 2072
-     OR (SELECT count(*) FROM public.questions WHERE content_status = 'unreviewed') <> 687
-  ) THEN
-    RAISE EXCEPTION 'Catalogue review state changed after the 2026-08-28 review; re-audit before enforcing';
-  END IF;
-END;
-$$;
-
 -- Only neutral category labels which contain reviewed relationship/date packs
 -- are exposed. Categories containing only archived material are archived too.
+-- Unknown rows are deliberately archived, making concurrent additions fail
+-- closed without coupling this portable migration to a remote environment.
 UPDATE public.categories
 SET
   content_status = CASE
@@ -144,24 +114,6 @@ WHERE d.pack_id = dp.id;
 
 DO $$
 BEGIN
-  IF EXISTS (
-       SELECT 1 FROM public.app_config
-       WHERE supabase_url = 'https://ckjcrkjpmhqhiucifukx.supabase.co'
-     ) AND (
-       (SELECT count(*) FROM public.categories WHERE content_status = 'allowed') <> 5
-     OR (SELECT count(*) FROM public.categories WHERE content_status = 'archived') <> 10
-     OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'allowed') <> 14
-     OR (SELECT count(*) FROM public.question_packs WHERE content_status = 'archived') <> 33
-     OR (SELECT count(*) FROM public.questions WHERE content_status = 'allowed') <> 591
-     OR (SELECT count(*) FROM public.questions WHERE content_status = 'archived') <> 2168
-     OR (SELECT count(*) FROM public.dare_packs WHERE content_status = 'allowed') <> 1
-     OR (SELECT count(*) FROM public.dare_packs WHERE content_status = 'archived') <> 3
-     OR (SELECT count(*) FROM public.dares WHERE content_status = 'allowed') <> 7
-     OR (SELECT count(*) FROM public.dares WHERE content_status = 'archived') <> 21
-  ) THEN
-    RAISE EXCEPTION 'Production catalogue does not match the approved enforcement set';
-  END IF;
-
   IF EXISTS (SELECT 1 FROM public.categories WHERE content_status = 'unreviewed')
      OR EXISTS (SELECT 1 FROM public.question_packs WHERE content_status = 'unreviewed')
      OR EXISTS (SELECT 1 FROM public.questions WHERE content_status = 'unreviewed')
