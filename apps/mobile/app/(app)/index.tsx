@@ -1,15 +1,17 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Platform, View, Text, useWindowDimensions } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useAuthStore, usePacksStore, useSubscriptionStore } from '../../src/store';
+import * as Haptics from 'expo-haptics';
+import { useAuthStore, useMatchStore, usePacksStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
-import { CompactHeader, ContentRow, DaresTile, LiveDrawTile } from '../../src/components/discovery';
+import { CompactHeader, ContentRow, DaresTile, LiveDrawTile, PendingQuestionsCard } from '../../src/components/discovery';
 import { StreakDisplay } from '../../src/components/StreakDisplay';
-import { colors, spacing, typography, radius } from '../../src/theme';
+import { Events } from '../../src/lib/analytics';
+import { colors, spacing, typography } from '../../src/theme';
 import type { QuestionPack, Category } from '../../src/types';
 
 const MAX_CONTENT_WIDTH = 600;
@@ -69,14 +71,21 @@ function groupPacksByCategory(
 export default function DiscoveryScreen() {
   const { user, partner, couple } = useAuthStore();
   const { packs, categories, fetchPacks, ensurePacksLoaded, getPackProgress } = usePacksStore();
+  const { pendingQuestions, fetchPendingQuestions } = useMatchStore();
   const { subscription } = useSubscriptionStore();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const [showPaywall, setShowPaywall] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(130);
+  const lastPromptImpression = useRef<string | null>(null);
 
   // Check all sources of premium access: user flag, partner flag, or active subscription
   const isPremiumUser = user?.is_premium || partner?.is_premium || subscription.isProUser;
   const isWideScreen = width > MAX_CONTENT_WIDTH;
+  const pendingQuestionIds = useMemo(
+    () => pendingQuestions.map(question => question.id).join(','),
+    [pendingQuestions],
+  );
 
   // Load the catalog once. Returning to this tab shows what is cached; answering a
   // question invalidates it, and StreakDisplay owns the streak, so neither needs a
@@ -84,7 +93,17 @@ export default function DiscoveryScreen() {
   useFocusEffect(
     useCallback(() => {
       void ensurePacksLoaded();
-    }, [ensurePacksLoaded])
+      void fetchPendingQuestions();
+
+      if (pendingQuestionIds && lastPromptImpression.current !== pendingQuestionIds) {
+        Events.pendingQuestionsPromptViewed(pendingQuestions.length);
+        lastPromptImpression.current = pendingQuestionIds;
+      }
+
+      return () => {
+        lastPromptImpression.current = null;
+      };
+    }, [ensurePacksLoaded, fetchPendingQuestions, pendingQuestionIds, pendingQuestions.length])
   );
 
   // Group packs by category
@@ -95,6 +114,18 @@ export default function DiscoveryScreen() {
 
   // Check if user has no packs enabled (empty state)
   const hasNoPacks = packs.length === 0;
+
+  const handlePendingQuestionsPress = useCallback(() => {
+    const firstQuestion = pendingQuestions[0];
+    if (!firstQuestion) return;
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Events.pendingQuestionsPromptTapped(pendingQuestions.length);
+    router.push({
+      pathname: '/(app)/swipe',
+      params: { mode: 'pending', startQuestionId: firstQuestion.question.id },
+    });
+  }, [pendingQuestions, router]);
 
   return (
     <GradientBackground>
@@ -117,16 +148,23 @@ export default function DiscoveryScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.innerContainer, isWideScreen && styles.innerContainerWide]}>
+          <PendingQuestionsCard
+            questions={pendingQuestions}
+            partnerName={partner?.name}
+            onPress={handlePendingQuestionsPress}
+            delay={50}
+          />
+
           {/* Shared streak - hidden entirely for couples with nothing running */}
           <View style={styles.streakSlot}>
-            <StreakDisplay delay={50} />
+            <StreakDisplay delay={100} />
           </View>
 
           {/* Live Draw Activity Tile */}
-          <LiveDrawTile delay={100} />
+          <LiveDrawTile delay={150} />
 
           {/* Dares */}
-          <DaresTile delay={150} />
+          <DaresTile delay={200} />
 
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (
@@ -136,7 +174,7 @@ export default function DiscoveryScreen() {
               packs={group.packs}
               isPremiumUser={isPremiumUser}
               categoryId={group.category.id}
-              delay={200 + index * 100}
+              delay={250 + index * 100}
               getPackProgress={getPackProgress}
               onShowPaywall={() => setShowPaywall(true)}
             />

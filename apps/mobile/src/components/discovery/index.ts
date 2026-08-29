@@ -4,3 +4,4 @@ export { CompactHeader } from './CompactHeader';
 export { CircularProgress } from './CircularProgress';
 export { LiveDrawTile } from './LiveDrawTile';
 export { DaresTile } from './DaresTile';
+export { PendingQuestionsCard } from './PendingQuestionsCard';
