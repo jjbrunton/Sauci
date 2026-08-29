@@ -3,6 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import type { AuthIdentity } from '../../auth.js';
 import { AppDataError, type AppDataRepository } from './repository.js';
+import { recordSync } from '../../telemetry.js';
 
 type App = Hono<{ Variables: { identity: AuthIdentity } }>;
 const uuid = z.string().uuid();
@@ -46,7 +47,9 @@ export function registerAppDataRoutes(app: App, repository: AppDataRepository): 
   });
   // The client polls this instead of re-fetching every domain; see SyncSummary.
   app.get('/v1/me/sync', async c => {
+    const startedAt = performance.now();
     const result = await run(() => repository.syncSummary(c.get('identity').id));
+    recordSync('api',result.ok?'ok':'error',startedAt);
     return result.ok ? c.json(result.value) : c.json(error(result.cause.code, result.cause.message), result.cause.status);
   });
   app.get('/v1/me/nudge-status', async c => c.json(await repository.nudgeStatus(c.get('identity').id)));

@@ -15,8 +15,18 @@ export interface OperationsRepository {
   message(id: string): Promise<MessageForClassification | null>;
   classifierConfig(): Promise<ClassifierRuntimeConfig | null>;
   classify(id: string, status: 'safe' | 'flagged', reason: string | null, category: string): Promise<void>;
+  outboxState(): Promise<{ due: number; oldestDueAgeSeconds: number }>;
   close(): Promise<void>;
 }
+
+/** Matches `claim`: only currently due, retryable, and unlocked/expired leases. */
+export const OUTBOX_STATE_SQL = `select count(*)::int due,
+  coalesce(floor(extract(epoch from now()-min(available_at))),0)::int oldest_due_age_seconds
+ from operations_outbox
+where sent_at is null
+  and attempts<5
+  and available_at<=now()
+  and (locked_at is null or locked_at<now()-interval '5 minutes')`;
 
 function item(row: OutboxRow): OperationItem {
   return { id: row.id, kind: row.kind, dedupeKey: row.dedupe_key, recipientId: row.recipient_id,
@@ -279,6 +289,30 @@ export class PostgresOperationsRepository implements OperationsRepository {
            left join notification_preferences np on np.user_id=c.recipient_id`, [limit]);
       return result.rows.map(item);
     });
+  }
+  async outboxState(): Promise<{ due: number; oldestDueAgeSeconds: number }> {
+    const client = await this.pool.connect();
+    let released = false;
+    try {
+      await client.query('begin');
+      // A server-side timeout cancels the query and transaction; unlike a
+      // Promise race it cannot leave an unobserved query or borrowed client.
+      await client.query("set local statement_timeout = '250ms'");
+      const result = await client.query<{ due: number; oldest_due_age_seconds: number }>(OUTBOX_STATE_SQL);
+      await client.query('commit');
+      const row = result.rows[0];
+      return { due: row?.due ?? 0, oldestDueAgeSeconds: row?.oldest_due_age_seconds ?? 0 };
+    } catch (cause) {
+      try { await client.query('rollback'); }
+      catch (rollbackCause) {
+        // A failed rollback leaves transaction state uncertain. Evict this
+        // client instead of returning it to the shared pool, but retain the
+        // original observation failure for callers and logs.
+        client.release(rollbackCause instanceof Error ? rollbackCause : new Error('outbox observation rollback failed'));
+        released = true;
+      }
+      throw cause;
+    } finally { if (!released) client.release(); }
   }
   async complete(id:string) { await this.pool.query('update operations_outbox set sent_at=now(),locked_at=null,last_error=null where id=$1',[id]); }
   async fail(id:string,message:string) { await this.pool.query(

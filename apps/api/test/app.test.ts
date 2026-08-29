@@ -5,6 +5,7 @@ import type {
   ApiRepository,
   MobileCompatibleProfile,
 } from '../src/db/repository.js';
+import { flushTelemetry, setTelemetrySinkForTests, type TelemetryRecord } from '../src/telemetry.js';
 
 const alice: AuthIdentity = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -118,5 +119,16 @@ describe('Sauci API', () => {
       headers: { authorization: 'Bearer valid' },
     });
     expect(response.status).toBe(400);
+  });
+
+  it('logs only a route template and status class, never raw UUIDs or auth values', async () => {
+    const records: TelemetryRecord[] = []; const restore = setTelemetrySinkForTests((record) => records.push(record));
+    const app = createApp({ auth: verifier(), repository: new MemoryRepository() });
+    await app.request('/v1/me/11111111-1111-4111-8111-111111111111?token=private-token', { headers: { authorization: 'Bearer private-token' } });
+    flushTelemetry(); restore();
+    const serialized = JSON.stringify(records);
+    expect(records).toContainEqual(expect.objectContaining({ event: 'request', status_class: '4xx' }));
+    expect(serialized).not.toContain('11111111-1111-4111-8111-111111111111');
+    expect(serialized).not.toContain('private-token');
   });
 });

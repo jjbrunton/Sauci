@@ -189,7 +189,10 @@ default-sized pool per domain. Shutdown ends that pool once. Repositories still
 accept a connection string in tests, in which case they own and end the pool they
 created — see `resolvePool` / `closeResolvedPool` in `apps/api/src/db/pool.ts`.
 
-Bounds come from `DATABASE_POOL_MAX` (default 10),
+Bounds come from `DATABASE_POOL_MAX` (default 10 for API, 4 for worker),
 `DATABASE_POOL_IDLE_TIMEOUT_MS` (30000) and
 `DATABASE_POOL_CONNECTION_TIMEOUT_MS` (10000). They are process-wide; keep the
 total across running instances inside the database's own connection limit.
+Production Compose exposes these as separate `API_DATABASE_POOL_MAX` and
+`WORKER_DATABASE_POOL_MAX` budgets; `infra/backend/README.md` documents the
+database-wide formula and deferred `pg_stat_statements` prerequisite.

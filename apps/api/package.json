@@ -17,6 +17,7 @@
     "db:migrate:prod": "node dist/db/migrate.js",
     "db:seed": "tsx src/db/seed.ts",
     "migration:cutover": "tsx src/migration/run.ts",
+    "load:representative": "tsx src/load/representative.ts",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc --noEmit",

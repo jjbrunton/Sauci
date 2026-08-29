@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { instrumentPool, type TelemetryProcess } from '../telemetry.js';
 
 /**
  * A repository is constructed either from a connection string, in which case it
@@ -23,13 +24,14 @@ export interface DatabasePoolOptions {
  */
 export const DEFAULT_POOL_MAX = 10;
 
-export function createDatabasePool(databaseUrl: string, options: DatabasePoolOptions = {}): Pool {
-  return new Pool({
+export function createDatabasePool(databaseUrl: string, options: DatabasePoolOptions = {}, telemetryProcess?: TelemetryProcess): Pool {
+  const pool = new Pool({
     connectionString: databaseUrl,
     max: options.max ?? DEFAULT_POOL_MAX,
     ...(options.idleTimeoutMillis === undefined ? {} : { idleTimeoutMillis: options.idleTimeoutMillis }),
     ...(options.connectionTimeoutMillis === undefined ? {} : { connectionTimeoutMillis: options.connectionTimeoutMillis }),
   });
+  return telemetryProcess ? instrumentPool(telemetryProcess, pool) : pool;
 }
 
 export interface ResolvedPool {

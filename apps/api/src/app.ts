@@ -27,6 +27,7 @@ import type { FilesystemMediaStorage } from './domains/media/storage.js';
 import type { AdminRequestAuth } from './domains/admin/auth.js';
 import type { AdminRepository } from './domains/admin/repository.js';
 import { registerAdminRoutes } from './domains/admin/routes.js';
+import { recordRequest } from './telemetry.js';
 
 type Variables = { identity: AuthIdentity };
 
@@ -56,6 +57,18 @@ function error(code: string, message: string): ApiErrorResponse {
 
 export function createApp(deps: AppDependencies): Hono<{ Variables: Variables }> {
   const app = new Hono<{ Variables: Variables }>();
+
+  app.use('*', async (c, next) => {
+    const startedAt = performance.now();
+    try {
+      await next();
+    } finally {
+      // Hono returns the matched template after dispatch, never the raw path.
+      const candidate = c.req.routePath;
+      const route = candidate && !/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i.test(candidate) && !candidate.includes('?') ? candidate : 'unmatched';
+      recordRequest(c.req.method, route, c.res.status, startedAt);
+    }
+  });
 
   app.get('/health/live', (c) => c.json({ status: 'ok' }));
   app.get('/health/ready', async (c) => {

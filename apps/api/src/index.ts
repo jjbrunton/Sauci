@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { createAuthVerifier } from './auth.js';
 import { loadConfig } from './config.js';
 import { createDatabasePool } from './db/pool.js';
+import { recordPool } from './telemetry.js';
 import { PostgresRepository } from './db/repository.js';
 import { PostgresAppDataRepository } from './domains/app-data/repository.js';
 import { AdminRequestAuth } from './domains/admin/auth.js';
@@ -30,7 +31,7 @@ const authVerifier = createAuthVerifier(config);
 // One deliberately bounded pool for the whole process. Repositories used to open
 // a default-sized pool each, so a single API instance could hold twelve times the
 // connections a self-hosted PostgreSQL was sized for.
-const pool = createDatabasePool(config.databaseUrl, config.databasePool);
+const pool = createDatabasePool(config.databaseUrl, config.databasePool, 'api');
 const repository = new PostgresRepository(pool);
 const coupleRepository = new PostgresCoupleRepository(pool);
 const packsRepository = new PostgresPacksRepository(pool);
@@ -81,6 +82,10 @@ const app = createApp({
   ),
 });
 
+// Sample pool state on the telemetry cadence rather than once per request.
+const poolTelemetryTimer = setInterval(() => recordPool('api', pool), 60_000);
+poolTelemetryTimer.unref();
+
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Sauci API listening on http://127.0.0.1:${info.port}`);
 });
@@ -90,6 +95,7 @@ let shuttingDown = false;
 async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
+  clearInterval(poolTelemetryTimer);
   console.log(`Received ${signal}; shutting down`);
   const forcedExit = setTimeout(() => {
     console.error('Graceful shutdown timed out');

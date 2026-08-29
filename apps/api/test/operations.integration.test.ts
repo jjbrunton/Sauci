@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Pool } from 'pg';
 import { afterAll,beforeAll,describe,expect,it } from 'vitest';
-import { PostgresOperationsRepository } from '../src/domains/operations/repository.js';
+import { OUTBOX_STATE_SQL, PostgresOperationsRepository } from '../src/domains/operations/repository.js';
 
 const databaseUrl=process.env.DATABASE_URL;const local=databaseUrl?['127.0.0.1','localhost','::1'].includes(new URL(databaseUrl).hostname):false;
 if(databaseUrl&&!local)throw new Error('Operations integration tests only permit a localhost DATABASE_URL');
@@ -110,5 +110,14 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
     await pool.query('insert into notification_preferences(user_id,messages_enabled) values($1,false) on conflict(user_id) do update set messages_enabled=false',[bob]);
     const [a,b]=await Promise.all([repo.claim(100),repo2.claim(100)]);const ids=[...a,...b].map(item=>item.id);expect(new Set(ids).size).toBe(ids.length);expect(ids.length).toBeGreaterThan(0);
     expect([...a,...b].find(item=>item.dedupeKey.startsWith('message:'))?.pushToken).toBeNull();
+  });
+
+  it('keeps due/unlocked outbox observation eligible for the existing due index',async()=>{
+    const client=await pool.connect();
+    try {
+      await client.query('begin'); await client.query('set local enable_seqscan=off');
+      const plan=await client.query<{"QUERY PLAN":string}>(`explain (costs off) ${OUTBOX_STATE_SQL}`);
+      expect(plan.rows.map(row=>row['QUERY PLAN']).join('\n')).toContain('operations_outbox_due_idx');
+    } finally { await client.query('rollback').catch(()=>undefined); client.release(); }
   });
 });
