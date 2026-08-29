@@ -32,6 +32,16 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": true
+      },
+      "ios": {
+        "ascAppId": "6757159885",
+        "appleTeamId": "BXVPBATDZY"
+      }
+    }
   }
 }

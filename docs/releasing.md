@@ -33,6 +33,30 @@ Output files are placed in the current directory by default.
 These scripts create signed artifacts only. They do not upload or submit them.
 Store mutation always requires a separate, explicitly authorized command.
 
+## Submit a local artifact with EAS
+
+The production submission credentials are managed by EAS. Never add App Store
+Connect `.p8` files, Google service-account JSON files, or local credential paths
+to the repository or `eas.json`.
+
+Submit only an independently verified artifact by its exact absolute path:
+
+```bash
+cd apps/mobile
+
+# Uploads an Android internal-track draft; it does not roll out the release.
+eas submit --platform android --profile production --path /absolute/path/to/sauci.aab --wait
+
+# Uploads to App Store Connect/TestFlight; it does not submit for App Review.
+eas submit --platform ios --profile production --path /absolute/path/to/sauci.ipa --wait
+```
+
+Do not use `--latest` for a local release. Before upload, verify the artifact's
+package or bundle identifier, public version, build number, signature, and
+SHA-256 digest. After upload, read back the same identity and version from Google
+Play Console or App Store Connect. Public rollout, App Review submission, and
+TestFlight group distribution remain separate, explicitly authorized actions.
+
 ### Source integrity
 
 Sauci commits its native `ios/` and `android/` projects. Start a release from a
