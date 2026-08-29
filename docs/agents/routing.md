@@ -12,8 +12,16 @@ Implementation starts in a dedicated task worktree created from the current
 integration target. Complete the scoped change, review its diff, and run the
 required verification in the task worktree. Merge the task branch back into local
 `staging` only after that evidence passes; an unverified or partially complete
-branch does not belong in `staging`. Pushing or deploying `staging` remains a
-separate operation subject to the applicable release and production-safety rules.
+branch does not belong in `staging`.
+
+Completion includes publishing the work: commit only the scoped task changes,
+merge the verified commit into local `staging`, push `staging`, then fetch or read
+back the remote ref and prove `HEAD` equals `origin/staging`. Do not report an
+implementation complete while its commits exist only in a task worktree or the
+local integration checkout. A blocked or ambiguous push is a blocker, not a
+successful publish; preserve the commit, do not retry blindly, and report the
+exact remote state. Pushing and deployment remain subject to applicable branch
+protection, release, and production-safety rules.
 
 Before implementation, map the change to every deployed consumer it can affect,
 including supported mobile builds, web and admin clients, the API and worker, and

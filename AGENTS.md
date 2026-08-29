@@ -18,8 +18,9 @@ MCP service in one npm/Turborepo workspace.
 6. Keep shared package exports type-only and route them through `src/index.ts`.
 7. Do not commit secrets, generated evidence, local logs, or runtime state.
 8. Implement in a task-specific git worktree created from current `staging`,
-   not in the shared `staging` checkout. After the work is verified, merge the
-   completed task branch back into local `staging`.
+   not in the shared `staging` checkout. After the work is verified, commit the
+   scoped changes, merge the completed task branch back into local `staging`,
+   push `staging`, and prove local and remote commit parity.
 9. Before merging, identify every deployed app or service the change can affect
    and prove the relevant compatibility contracts still hold. Preserve deployed
    interfaces and supported client behavior; repository checks alone do not
@@ -46,8 +47,8 @@ MCP service in one npm/Turborepo workspace.
 
 ## Workflows
 
-- Implementation: create a task worktree from current `staging`; merge verified
-  work back to local `staging` when complete.
+- Implementation: create a task worktree from current `staging`; commit verified
+  work, merge it back to local `staging`, push `staging`, and verify remote parity.
 - Bootstrap: `npm ci`
 - Full local stack: `scripts/dev-local.sh up`
 - Fast checks: `npm run verify:fast`
