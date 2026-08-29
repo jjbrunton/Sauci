@@ -83,7 +83,10 @@ export class PostgresRepository implements ApiRepository {
       target: profiles.id,
       set: {
         email: sql`coalesce(excluded.email, ${profiles.email})`,
-        authSyncedAt: new Date(),
+        // Keep the write on the same clock as the column default. API and
+        // PostgreSQL hosts can differ slightly, which must not move this
+        // monotonic sync marker backwards.
+        authSyncedAt: sql`now()`,
       },
     }).returning();
 
