@@ -47,13 +47,23 @@ describe('messageStore API state', () => {
         expect(useMessageStore.getState()).toMatchObject({ unreadCount: 1, lastMessage: { id: 'new' } });
     });
 
-    it('marks partner messages read then reconciles global and per-match counts', async () => {
+    it('marks partner messages read and subtracts the cleared count without re-reading the total', async () => {
+        useMessageStore.setState({ unreadCount: 3 });
         (chatApi.markRead as jest.Mock).mockResolvedValue({ updated: 2, read_at: '2026-08-27T00:00:00.000Z' });
-        (chatApi.unread as jest.Mock).mockResolvedValue({ total: 1, by_match: { m2: 1 } });
         await useMessageStore.getState().markMatchMessagesAsRead('m1');
         expect(chatApi.markRead).toHaveBeenCalledWith('m1');
+        expect(chatApi.unread).not.toHaveBeenCalled();
         expect(useMessageStore.getState().unreadCount).toBe(1);
         expect(useMatchStore.getState().matches[0]?.unreadCount).toBe(1);
+    });
+
+    it('spends no request and touches no count when the read API cleared nothing', async () => {
+        useMessageStore.setState({ unreadCount: 3 });
+        (chatApi.markRead as jest.Mock).mockResolvedValue({ updated: 0, read_at: null });
+        await useMessageStore.getState().markMatchMessagesAsRead('m1');
+        expect(chatApi.unread).not.toHaveBeenCalled();
+        expect(useMessageStore.getState().unreadCount).toBe(3);
+        expect(useMatchStore.getState().matches[0]?.unreadCount).toBe(3);
     });
 
     it('does not mark read without an authenticated user', async () => {
@@ -67,6 +77,42 @@ describe('messageStore API state', () => {
         (chatApi.markRead as jest.Mock).mockRejectedValue(error);
         await expect(useMessageStore.getState().markMatchMessagesAsRead('m1')).rejects.toBe(error);
         expect(useMatchStore.getState().matches[0]?.unreadCount).toBe(3);
+    });
+
+    describe('account isolation (generation tokens)', () => {
+        it('does not let a stale unread total become the next account\'s badge', async () => {
+            let release: (value: unknown) => void = () => undefined;
+            (chatApi.unread as jest.Mock).mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+            const staleFetch = useMessageStore.getState().fetchUnreadCount();
+
+            // Sign-out or leaving a couple, while the request is still open.
+            useMessageStore.getState().clearMessages();
+            useMessageStore.setState({ unreadCount: 2 });
+
+            release({ total: 9, by_match: { m1: 9 } });
+            await staleFetch;
+
+            expect(useMessageStore.getState().unreadCount).toBe(2);
+        });
+
+        it('does not subtract a stale read receipt from the next account\'s badge', async () => {
+            useMessageStore.setState({ unreadCount: 3 });
+            let release: (value: unknown) => void = () => undefined;
+            (chatApi.markRead as jest.Mock).mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+            const staleRead = useMessageStore.getState().markMatchMessagesAsRead('m1');
+
+            useMessageStore.getState().clearMessages();
+            useMessageStore.setState({ unreadCount: 2 });
+            useMatchStore.setState({ matches: [{ id: 'm1', unreadCount: 2 } as any] });
+
+            release({ updated: 3, read_at: '2026-08-27T00:00:00.000Z' });
+            await staleRead;
+
+            // The badge is wrong whatever the match id; reusing 'm1' also makes the
+            // second half of the damage — the per-match count — visible.
+            expect(useMessageStore.getState().unreadCount).toBe(2);
+            expect(useMatchStore.getState().matches[0]?.unreadCount).toBe(2);
+        });
     });
 
     it('clears transient message state', () => {

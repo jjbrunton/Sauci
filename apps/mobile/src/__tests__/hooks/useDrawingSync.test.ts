@@ -48,6 +48,60 @@ describe('useDrawingSync API polling', () => {
   });
 });
 
+describe('useDrawingSync focus gating', () => {
+  const handlers = {
+    onStrokeStart: jest.fn(), onStrokeContinue: jest.fn(), onStrokeEnd: jest.fn(),
+    onClearCanvas: jest.fn(), onUndo: jest.fn(), onRedo: jest.fn(),
+  };
+  beforeEach(() => { jest.clearAllMocks(); jest.useFakeTimers(); });
+  afterEach(() => jest.useRealTimers());
+
+  it('reads the canvas once on mount and then polls only while the screen is on top', async () => {
+    (appDataApi.getLiveDraw as jest.Mock).mockResolvedValue({ strokes: [], revision: 1, updated_at: 'one', updated_by: userId });
+    const onLoadStrokes = jest.fn();
+    const { rerender } = renderHook<unknown, { isFocused: boolean }>(({ isFocused }) => useDrawingSync({
+      coupleId: 'couple', userId, onLoadStrokes, isFocused, ...handlers,
+    }), { initialProps: { isFocused: false } });
+
+    await waitFor(() => expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(1));
+    // A canvas nobody is looking at costs nothing beyond the state it loaded with.
+    await act(async () => { jest.advanceTimersByTime(750 * 8); await Promise.resolve(); });
+    expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(1);
+
+    rerender({ isFocused: true });
+    await act(async () => { jest.advanceTimersByTime(750); await Promise.resolve(); });
+    expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(2);
+
+    rerender({ isFocused: false });
+    await act(async () => { jest.advanceTimersByTime(750 * 8); await Promise.resolve(); });
+    expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(2);
+  });
+
+  it('never polls over its own write in flight', async () => {
+    (appDataApi.getLiveDraw as jest.Mock).mockResolvedValue({ strokes: [], revision: 1, updated_at: 'one', updated_by: userId });
+    let release: (state: unknown) => void = () => undefined;
+    (appDataApi.putLiveDraw as jest.Mock).mockReturnValue(new Promise(resolve => { release = resolve; }));
+    const onLoadStrokes = jest.fn();
+    const { result } = renderHook(() => useDrawingSync({
+      coupleId: 'couple', userId, onLoadStrokes, isFocused: true, ...handlers,
+    }));
+    await waitFor(() => expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(1));
+
+    const pending = result.current.persistStrokes([stroke]);
+    await act(async () => { jest.advanceTimersByTime(750 * 4); await Promise.resolve(); });
+    // The write returns the authoritative state; reading over the top of it would
+    // only race a revision we are about to replace.
+    expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      release({ strokes: [stroke], revision: 2, updated_at: 'two', updated_by: userId });
+      await pending;
+    });
+    await act(async () => { jest.advanceTimersByTime(750); await Promise.resolve(); });
+    expect(appDataApi.getLiveDraw).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('useDrawingSync stroke deduplication', () => {
   const at = (id: string, points: number, userId = 'u1') => ({
     id, userId, points: Array.from({ length: points }, (_, i) => ({ x: i, y: i })),

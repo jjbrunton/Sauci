@@ -12,6 +12,16 @@ is proved through the real stack.
   already-running local stack.
 - `verify`: full plus E2E; this is the pre-PR target.
 
+The required CI checks also run instrumented coverage for the API and mobile
+workspaces. Mobile coverage includes every TypeScript file under `app` and
+`src`, including files no test imports. The committed thresholds are ratchets,
+not targets: raise them as coverage improves, and never narrow the collected
+source set to make a percentage pass.
+
+- API unit floor: 30% statements/lines, 60% branches, 40% functions.
+- API PostgreSQL integration floor: 55% statements/lines, 65% branches/functions.
+- Mobile floor: 23% statements/lines, 17% branches, 21% functions.
+
 CI runs deterministic checks on every pull request and on pushes to `staging`
 and `main`. The backend integration job provisions disposable PostgreSQL and
 refuses non-loopback database URLs. User-facing browser/native acceptance remains

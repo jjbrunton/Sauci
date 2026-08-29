@@ -16,6 +16,12 @@ function repository(): AppDataRepository {
     markMediaViewed: vi.fn(async () => ({ media_viewed_at: 'now', media_expires_at: null })),
     nudgeStatus: vi.fn(async () => ({ last_nudge_sent_at: null })),
     sendNudge: vi.fn(async () => ({ success: true as const, notification_sent: false, reason: 'no_push_token', next_nudge_available_at: 'later' })),
+    syncSummary: vi.fn(async () => ({
+      server_time: 'now', couple_id: null, profile_updated_at: null, partner_id: null, partner_updated_at: null,
+      match_count: 0, new_match_count: 0, latest_match_at: null, pending_yours: 0, pending_theirs: 0,
+      unread_total: 0, enabled_packs_fingerprint: '',
+      match_state_fingerprint: '', match_unread_fingerprint: '', streak_updated_at: null,
+    })),
     getLiveDraw: vi.fn(async () => ({ strokes: [], revision: 0, updated_at: null, updated_by: null })),
     putLiveDraw: vi.fn(async () => ({ strokes: [], revision: 1, updated_at: 'now', updated_by: identity.id })),
     close: vi.fn(async () => undefined),

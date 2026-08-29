@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 
 export interface PackCategory {
   id: string;
@@ -69,9 +70,12 @@ interface ProfilePreferencesRow {
 
 export class PostgresPacksRepository implements PacksRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   private async profile(userId: string): Promise<ProfilePreferencesRow> {
@@ -215,6 +219,6 @@ export class PostgresPacksRepository implements PacksRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }

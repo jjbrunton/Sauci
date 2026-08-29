@@ -216,6 +216,10 @@ export const Events = {
   questionSkipped: () => logEvent("question_skipped"),
   matchCreated: (matchType: string) => logEvent("match_created", { match_type: matchType }),
   allQuestionsExhausted: () => logEvent("all_questions_exhausted"),
+  pendingQuestionsPromptViewed: (count: number) =>
+    logEvent("pending_questions_prompt_viewed", { question_count: count }),
+  pendingQuestionsPromptTapped: (count: number) =>
+    logEvent("pending_questions_prompt_tapped", { question_count: count }),
 
   // Chat events
   matchViewed: () => logEvent("match_viewed"),

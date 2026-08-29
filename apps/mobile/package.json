@@ -13,6 +13,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --runInBand --ci",
+    "test:coverage": "jest --runInBand --ci --coverage",
     "release:ios": "dotenv -e .env -- eas build --platform ios --profile production --local",
     "release:ios:preview": "dotenv -e .env -- eas build --platform ios --profile preview --local",
     "release:android": "dotenv -e .env -- eas build --platform android --profile production --local",

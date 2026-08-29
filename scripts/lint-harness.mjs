@@ -23,6 +23,10 @@ function fail(file, message, fix) {
   errors.push(`${path.relative(root, file)}: ${message}\n  Fix: ${fix}`);
 }
 
+function tomlString(source, key) {
+  return source.match(new RegExp(`^${key}\\s*=\\s*"([^"]+)"\\s*$`, 'm'))?.[1];
+}
+
 const allFiles = await walk(root);
 for (const file of allFiles) {
   if (path.basename(file) === 'agents.md') {
@@ -37,6 +41,57 @@ for (const file of allFiles) {
 
 if (!scoped) {
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const codexConfigFile = path.join(root, '.codex', 'config.toml');
+  const codexConfig = await readFile(codexConfigFile, 'utf8');
+  if (!/^\[agents\]$/m.test(codexConfig) || !/^enabled\s*=\s*true$/m.test(codexConfig)) {
+    fail(codexConfigFile, 'project subagent routing is not enabled', 'restore the [agents] table with enabled = true');
+  }
+  if (tomlString(codexConfig, 'default_subagent_model') !== 'gpt-5.6-terra') {
+    fail(codexConfigFile, 'ordinary subagents no longer default to the cost-balanced model', 'set default_subagent_model = "gpt-5.6-terra"');
+  }
+  if (tomlString(codexConfig, 'default_subagent_reasoning_effort') !== 'medium') {
+    fail(codexConfigFile, 'ordinary subagent effort is no longer the balanced default', 'set default_subagent_reasoning_effort = "medium"');
+  }
+  const maxThreads = Number(codexConfig.match(/^max_concurrent_threads_per_session\s*=\s*(\d+)$/m)?.[1]);
+  if (!Number.isInteger(maxThreads) || maxThreads < 1 || maxThreads > 3) {
+    fail(codexConfigFile, 'subagent concurrency is missing or exceeds the repository cost cap', 'set max_concurrent_threads_per_session between 1 and 3');
+  }
+
+  const agentContracts = {
+    'repo-scout.toml': { name: 'repo_scout', model: 'gpt-5.6-luna', effort: 'low', readOnly: true },
+    'implementation.toml': { name: 'implementation', model: 'gpt-5.6-terra', effort: null, flexibleEffort: true },
+    'test-writer.toml': { name: 'test_writer', model: 'gpt-5.6-terra', effort: 'medium' },
+    'verifier.toml': { name: 'verifier', model: 'gpt-5.6-terra', effort: 'medium' },
+    'database-reviewer.toml': { name: 'database_reviewer', model: 'gpt-5.6-terra', effort: 'high', readOnly: true },
+    'security-reviewer.toml': { name: 'security_reviewer', model: 'gpt-5.6-sol', effort: 'high', readOnly: true },
+    'architecture-reviewer.toml': { name: 'architecture_reviewer', model: 'gpt-5.6-sol', effort: 'high', readOnly: true },
+  };
+  for (const [filename, contract] of Object.entries(agentContracts)) {
+    const agentFile = path.join(root, '.codex', 'agents', filename);
+    if (!(await exists(agentFile))) {
+      fail(agentFile, 'required task-agent profile is missing', `restore .codex/agents/${filename}`);
+      continue;
+    }
+    const source = await readFile(agentFile, 'utf8');
+    if (tomlString(source, 'name') !== contract.name || tomlString(source, 'model') !== contract.model) {
+      fail(agentFile, 'task-agent identity or cost tier drifted', `set name = "${contract.name}" and model = "${contract.model}"`);
+    }
+    const effort = tomlString(source, 'model_reasoning_effort');
+    if (contract.flexibleEffort ? effort !== undefined : effort !== contract.effort) {
+      fail(
+        agentFile,
+        contract.flexibleEffort ? 'implementation reasoning is pinned and cannot flex by task complexity' : 'task-agent reasoning effort drifted',
+        contract.flexibleEffort ? 'omit model_reasoning_effort so the handoff or project default controls it' : `set model_reasoning_effort = "${contract.effort}"`,
+      );
+    }
+    if (contract.readOnly && tomlString(source, 'sandbox_mode') !== 'read-only') {
+      fail(agentFile, 'review-only agent can mutate the workspace', 'set sandbox_mode = "read-only"');
+    }
+    if (!/^description\s*=\s*".+"$/m.test(source) || !/developer_instructions\s*=\s*"""[\s\S]*\S[\s\S]*"""/m.test(source)) {
+      fail(agentFile, 'custom agent is missing its required description or instructions', 'restore non-empty description and developer_instructions fields');
+    }
+  }
+
   const mobilePackageFile = path.join(root, 'apps', 'mobile', 'package.json');
   const mobilePackageJson = JSON.parse(await readFile(mobilePackageFile, 'utf8'));
   const releaseBuildScripts = Object.entries(mobilePackageJson.scripts ?? {})

@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import { BillingError, type RedemptionResult, type RevenueCatWebhook, type SubscriptionStatus } from './types.js';
 
 interface ProfileRecord extends QueryResultRow {
@@ -43,9 +44,12 @@ async function transaction<T>(pool: Pool, operation: (client: PoolClient) => Pro
 
 export class PostgresBillingRepository implements BillingRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   async processRevenueCatEvent(
@@ -207,6 +211,6 @@ export class PostgresBillingRepository implements BillingRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }

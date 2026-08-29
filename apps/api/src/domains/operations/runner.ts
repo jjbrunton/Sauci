@@ -1,6 +1,7 @@
 import type { MediaJanitor } from '../media/janitor.js';
 import type { OperationsRepository } from './repository.js';
 import type { DiscordProvider, ExpoPushProvider, MessageClassifier } from './providers.js';
+import { emitTelemetry } from '../../telemetry.js';
 
 export class OperationsRunner {
   constructor(private readonly repository:OperationsRepository,private readonly expo:ExpoPushProvider,private readonly discord:DiscordProvider,private readonly classifier:MessageClassifier,private readonly mediaJanitor?:MediaJanitor) {}
@@ -13,7 +14,11 @@ export class OperationsRunner {
         await this.repository.complete(item.id);completed++;
       } catch(cause) { await this.repository.fail(item.id,cause instanceof Error?cause.message:'unknown error');failed++; }
     }
+    // Observation never blocks useful work. It runs after claiming/completing and
+    // has a short caller-side deadline; the claim lock predicate remains the
+    // source of truth when several worker instances race.
+    const after=await this.repository.outboxState().catch(()=>null);
+    if(after)emitTelemetry({event:'outbox',process:'worker',due_after:after.due,oldest_due_age_seconds:after.oldestDueAgeSeconds,claimed:items.length,completed,failed,count:1});
     return {produced,claimed:items.length,completed,failed};
   }
 }
-

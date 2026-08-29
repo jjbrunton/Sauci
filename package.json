@@ -19,6 +19,7 @@
     "lint": "turbo lint && npm run lint:harness",
     "lint:harness": "node scripts/lint-harness.mjs",
     "test": "turbo test --filter=!@sauci/e2e",
+    "test:coverage": "npm run test:coverage -w @sauci/api && npm run test:coverage -w @sauci/mobile",
     "test:supabase": "scripts/test-supabase.sh",
     "test:api:integration": "scripts/test-api-integration.sh",
     "test:mobile:e2e": "maestro test e2e/maestro",

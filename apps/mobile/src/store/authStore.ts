@@ -34,7 +34,8 @@ const getOtherStores = () => {
     const { useSubscriptionStore } = require("./subscriptionStore");
     const { useNotificationPreferencesStore } = require("./notificationPreferencesStore");
     const { useStreakStore } = require("./streakStore");
-    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore };
+    const { useResponsesStore } = require("./responsesStore");
+    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore };
 };
 
 
@@ -87,13 +88,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (error instanceof ApiError && error.status === 401) {
                 console.log("[Auth] Session rejected by API, signing out");
                 set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
-                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
+                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
                 useMessageStore.getState().clearMessages();
                 useSubscriptionStore.getState().clearSubscription();
                 useNotificationPreferencesStore.getState().clearPreferences();
                 useStreakStore.getState().clearStreak();
+                useResponsesStore.getState().clearResponses();
                 await authClient.auth.signOut();
                 return;
             }
@@ -142,13 +144,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
              isLoading: false,
          });
         // Clear other stores
-        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
+        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
         useMatchStore.getState().clearMatches();
         usePacksStore.getState().clearPacks();
         useMessageStore.getState().clearMessages();
         useSubscriptionStore.getState().clearSubscription();
         useNotificationPreferencesStore.getState().clearPreferences();
         useStreakStore.getState().clearStreak();
+        useResponsesStore.getState().clearResponses();
 
         // Clear badge on sign out
         const { clearBadge } = require("../lib/badge");
@@ -173,13 +176,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
-            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore } = getOtherStores();
+            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
             useMatchStore.getState().clearMatches();
             usePacksStore.getState().clearPacks();
             useMessageStore.getState().clearMessages();
             useSubscriptionStore.getState().clearSubscription();
             useNotificationPreferencesStore.getState().clearPreferences();
             useStreakStore.getState().clearStreak();
+            useResponsesStore.getState().clearResponses();
             // Clear badge on sign out
             const { clearBadge } = require("../lib/badge");
             clearBadge();

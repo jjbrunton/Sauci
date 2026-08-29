@@ -44,7 +44,7 @@ const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<Question>);
 export default function PackDetailsScreen() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const { packs, fetchPacks } = usePacksStore();
+    const { packs, ensurePacksLoaded } = usePacksStore();
     const { subscription } = useSubscriptionStore();
     const { user, partner } = useAuthStore();
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -61,9 +61,7 @@ export default function PackDetailsScreen() {
     const category = categories.find(c => c.id === pack?.category_id);
 
     useEffect(() => {
-        if (packs.length === 0) {
-            fetchPacks();
-        }
+        void ensurePacksLoaded();
         fetchPackDetails();
     }, [id]);
 

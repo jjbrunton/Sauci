@@ -111,6 +111,53 @@ docker compose --env-file infra/backend/.env.production.local \
   -f infra/backend/compose.production.yaml config
 ```
 
+## PostgreSQL connection and telemetry contract
+
+The API and worker each create exactly one process-owned PostgreSQL pool and
+hand it to every repository. They have separate deployment variables:
+`API_DATABASE_POOL_MAX` (default 10) and `WORKER_DATABASE_POOL_MAX` (default
+4). Set PostgreSQL `max_connections` above:
+
+```text
+(API replicas * API_DATABASE_POOL_MAX) + (worker replicas * WORKER_DATABASE_POOL_MAX) + migration/admin headroom
+```
+
+The headroom covers the one-shot migrator, an operator session, and any
+backup/monitoring connection; allocating the full server limit to application
+pools is unsafe. `DATABASE_POOL_IDLE_TIMEOUT_MS` and
+`DATABASE_POOL_CONNECTION_TIMEOUT_MS` apply to both process pools.
+
+API and worker write privacy-safe JSON telemetry to normal logs. Fixed event
+types are request, query, pool, sync, and outbox; fields are route templates,
+method/status/outcome, durations, counts, and pool/outbox sizes. They never
+include SQL, query values, raw paths, identities, tokens, content, dedupe keys,
+or request bodies. There is deliberately no public `/metrics` endpoint.
+Request, query, and sync events are aggregated into one fixed-interval JSON
+record per label set (and worker flushes after its tick); pool state is sampled
+once per minute rather than per request. This prevents telemetry itself from
+becoming a connection or log-volume amplifier. Outbox observation runs after
+work with a 250ms best-effort deadline and uses the same due/unlocked predicate
+as claims, so a slow observation cannot delay the next lease.
+
+`pg_stat_statements` is useful for aggregate query investigation but is not
+enabled by this repository change. A database operator must first confirm the
+PostgreSQL image/provider supports it, add `shared_preload_libraries =
+'pg_stat_statements'`, and restart PostgreSQL in a planned window. After that,
+the extension itself must be introduced by a reviewed, committed migration in
+`apps/api/drizzle/`; do not run ad hoc provider/operator DDL. This changes
+server startup and remains deferred from ordinary API deployments.
+
+For a controlled local observation, `npm run load:representative -w @sauci/api`
+performs five authenticated sync reads, five authenticated chat reads, and a
+read-only outbox-state query. It requires `DATABASE_URL`,
+`SAUCI_LOAD_AUTHORIZATION`, `SAUCI_LOAD_USER_ID`, and `SAUCI_LOAD_MATCH_ID`.
+It accepts only `http` loopback API port 3003 (or the explicit local
+`SAUCI_LOAD_API_PORT`) and loopback PostgreSQL, verifies `/health/live` and the
+authenticated fixture identity before load, and emits counts plus p50/p95/p99
+summaries without any pass/fail latency threshold. Use disposable local or
+designated non-production Auth credentials only; never pass a staging or
+production token to this fixture.
+
 Run the repeatable disposable container check before changing the Dokploy
 application. It uses hard-coded test-only credentials, creates a unique Compose
 project, verifies migration/startup/security/shutdown behaviour, and removes its

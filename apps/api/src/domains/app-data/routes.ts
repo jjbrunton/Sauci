@@ -3,6 +3,7 @@ import type { Hono } from 'hono';
 import { z } from 'zod';
 import type { AuthIdentity } from '../../auth.js';
 import { AppDataError, type AppDataRepository } from './repository.js';
+import { recordSync } from '../../telemetry.js';
 
 type App = Hono<{ Variables: { identity: AuthIdentity } }>;
 const uuid = z.string().uuid();
@@ -42,6 +43,13 @@ export function registerAppDataRoutes(app: App, repository: AppDataRepository): 
     const id = uuid.safeParse(c.req.param('messageId')); const body = viewedBody.safeParse(await c.req.json().catch(() => null));
     if (!id.success || !body.success) return c.json(error('invalid_request', 'A valid message ID and expires_at are required'), 400);
     const result = await run(() => repository.markMediaViewed(c.get('identity').id, id.data, body.data.expires_at));
+    return result.ok ? c.json(result.value) : c.json(error(result.cause.code, result.cause.message), result.cause.status);
+  });
+  // The client polls this instead of re-fetching every domain; see SyncSummary.
+  app.get('/v1/me/sync', async c => {
+    const startedAt = performance.now();
+    const result = await run(() => repository.syncSummary(c.get('identity').id));
+    recordSync('api',result.ok?'ok':'error',startedAt);
     return result.ok ? c.json(result.value) : c.json(error(result.cause.code, result.cause.message), result.cause.status);
   });
   app.get('/v1/me/nudge-status', async c => c.json(await repository.nudgeStatus(c.get('identity').id)));

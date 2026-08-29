@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import type { ClassifierRuntimeConfig, MessageForClassification, OperationItem, ProducerSummary } from './types.js';
 
 interface OutboxRow extends QueryResultRow {
@@ -14,8 +15,18 @@ export interface OperationsRepository {
   message(id: string): Promise<MessageForClassification | null>;
   classifierConfig(): Promise<ClassifierRuntimeConfig | null>;
   classify(id: string, status: 'safe' | 'flagged', reason: string | null, category: string): Promise<void>;
+  outboxState(): Promise<{ due: number; oldestDueAgeSeconds: number }>;
   close(): Promise<void>;
 }
+
+/** Matches `claim`: only currently due, retryable, and unlocked/expired leases. */
+export const OUTBOX_STATE_SQL = `select count(*)::int due,
+  coalesce(floor(extract(epoch from now()-min(available_at))),0)::int oldest_due_age_seconds
+ from operations_outbox
+where sent_at is null
+  and attempts<5
+  and available_at<=now()
+  and (locked_at is null or locked_at<now()-interval '5 minutes')`;
 
 function item(row: OutboxRow): OperationItem {
   return { id: row.id, kind: row.kind, dedupeKey: row.dedupe_key, recipientId: row.recipient_id,
@@ -31,7 +42,8 @@ async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<
 
 export class PostgresOperationsRepository implements OperationsRepository {
   private readonly pool: Pool;
-  constructor(databaseUrl: string) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  private readonly ownsPool: boolean;
+  constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   async produce(now: Date, limit=100): Promise<ProducerSummary> {
     return transaction(this.pool, async (client) => {
@@ -278,6 +290,30 @@ export class PostgresOperationsRepository implements OperationsRepository {
       return result.rows.map(item);
     });
   }
+  async outboxState(): Promise<{ due: number; oldestDueAgeSeconds: number }> {
+    const client = await this.pool.connect();
+    let released = false;
+    try {
+      await client.query('begin');
+      // A server-side timeout cancels the query and transaction; unlike a
+      // Promise race it cannot leave an unobserved query or borrowed client.
+      await client.query("set local statement_timeout = '250ms'");
+      const result = await client.query<{ due: number; oldest_due_age_seconds: number }>(OUTBOX_STATE_SQL);
+      await client.query('commit');
+      const row = result.rows[0];
+      return { due: row?.due ?? 0, oldestDueAgeSeconds: row?.oldest_due_age_seconds ?? 0 };
+    } catch (cause) {
+      try { await client.query('rollback'); }
+      catch (rollbackCause) {
+        // A failed rollback leaves transaction state uncertain. Evict this
+        // client instead of returning it to the shared pool, but retain the
+        // original observation failure for callers and logs.
+        client.release(rollbackCause instanceof Error ? rollbackCause : new Error('outbox observation rollback failed'));
+        released = true;
+      }
+      throw cause;
+    } finally { if (!released) client.release(); }
+  }
   async complete(id:string) { await this.pool.query('update operations_outbox set sent_at=now(),locked_at=null,last_error=null where id=$1',[id]); }
   async fail(id:string,message:string) { await this.pool.query(
     `update operations_outbox set locked_at=null,last_error=$2,available_at=now()+make_interval(secs=>least(3600,power(2,attempts)::int*30)) where id=$1`,[id,message.slice(0,500)]); }
@@ -312,7 +348,7 @@ export class PostgresOperationsRepository implements OperationsRepository {
   async classify(id:string,status:'safe'|'flagged',reason:string|null,category:string) {
     await this.pool.query('update messages set moderation_status=$2,flag_reason=$3,category=$4 where id=$1',[id,status,reason,category]);
   }
-  async close() { await this.pool.end(); }
+  async close(): Promise<void> { await closeResolvedPool(this.pool, this.ownsPool); }
 }
 
 function streakCopy(days:number) {

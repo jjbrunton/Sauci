@@ -2,6 +2,7 @@ import type { FeatureInterestResponse, Profile } from '@sauci/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from './pool.js';
 import type { AuthIdentity } from '../auth.js';
 import { featureInterests, profiles, type ProfileRow } from './schema.js';
 
@@ -44,10 +45,13 @@ function toProfile(row: ProfileRow): MobileCompatibleProfile {
 
 export class PostgresRepository implements ApiRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
   private readonly db: NodePgDatabase;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
     this.db = drizzle(this.pool);
   }
 
@@ -55,7 +59,21 @@ export class PostgresRepository implements ApiRepository {
     await this.db.select({ id: profiles.id }).from(profiles).limit(1);
   }
 
+  /**
+   * Idempotent for the common case. `GET /v1/me` runs on every app start and on
+   * every session refresh, and the previous unconditional upsert made each of
+   * those a write that advanced `auth_synced_at` and produced dead row versions
+   * for autovacuum. The only fields this sync can actually change are the ones
+   * the conflict clause sets, so a profile that already carries the identity's
+   * email is returned as read and nothing is written. First-use creation and
+   * email enrichment keep their existing behaviour.
+   */
   async upsertProfile(identity: AuthIdentity): Promise<MobileCompatibleProfile> {
+    const [existing] = await this.db.select().from(profiles).where(eq(profiles.id, identity.id)).limit(1);
+    if (existing && (identity.email === null || identity.email === undefined || existing.email === identity.email)) {
+      return toProfile(existing);
+    }
+
     const [row] = await this.db.insert(profiles).values({
       id: identity.id,
       name: identity.name,
@@ -93,6 +111,6 @@ export class PostgresRepository implements ApiRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }

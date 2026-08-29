@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import { readFile } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import { AdminError, type AdminPrincipal, type AdminQuery } from './types.js';
@@ -139,9 +140,10 @@ export interface AdminRepository {
 
 export class PostgresAdminRepository implements AdminRepository {
   private readonly pool: Pool;
-  constructor(databaseUrl: string, private readonly options: {
+  private readonly ownsPool: boolean;
+  constructor(connection: DatabaseConnection, private readonly options: {
     adminPrivateKeyJwk?: string; mediaRoot?: string; authDirectory?: AdminAuthDirectory;
-  } = {}) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  } = {}) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   async principal(userId: string): Promise<AdminPrincipal> {
     const result = await this.pool.query<{ id: string; user_id: string; role: AdminPrincipal['role']; permissions: string[] }>(
@@ -356,5 +358,5 @@ export class PostgresAdminRepository implements AdminRepository {
     await client.query('insert into audit_logs(admin_user_id,actor_user_id,table_name,action,record_id,old_values,new_values) values($1,$2,$3,$4,$5,$6,$7)', [principal.adminId, principal.userId, table, action, recordId || null, redactAudit(oldValues), redactAudit(newValues)]);
   }
 
-  async close(): Promise<void> { await this.pool.end(); }
+  async close(): Promise<void> { await closeResolvedPool(this.pool, this.ownsPool); }
 }

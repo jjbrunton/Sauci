@@ -7,6 +7,9 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3003),
   DATABASE_URL: z.string().url(),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(200).default(10),
+  DATABASE_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().min(0).max(3_600_000).default(30_000),
+  DATABASE_POOL_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(0).max(60_000).default(10_000),
   SUPABASE_AUTH_URL: z.string().url().optional(),
   SUPABASE_AUTH_ISSUER: z.string().url().optional(),
   SUPABASE_AUTH_JWKS_URL: z.string().url().optional(),
@@ -28,6 +31,7 @@ export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
   databaseUrl: string;
+  databasePool: { max: number; idleTimeoutMillis: number; connectionTimeoutMillis: number };
   authIssuer: string;
   authJwksUrl?: string;
   authAudience: string;
@@ -81,6 +85,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
     databaseUrl: parsed.DATABASE_URL,
+    databasePool: {
+      max: parsed.DATABASE_POOL_MAX,
+      idleTimeoutMillis: parsed.DATABASE_POOL_IDLE_TIMEOUT_MS,
+      connectionTimeoutMillis: parsed.DATABASE_POOL_CONNECTION_TIMEOUT_MS,
+    },
     authIssuer,
     authJwksUrl,
     authAudience: parsed.SUPABASE_AUTH_AUDIENCE,

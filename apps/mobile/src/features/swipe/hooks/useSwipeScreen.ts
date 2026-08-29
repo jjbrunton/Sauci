@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 
-import { useAuthStore, usePacksStore, useStreakStore } from "../../../store";
+import { useAuthStore, usePacksStore, useResponsesStore, useStreakStore } from "../../../store";
 import { skipQuestion, getSkippedQuestionIds } from "../../../lib/skippedQuestions";
 import { ApiError, apiClient } from "../../../lib/apiClient";
 import { Events } from "../../../lib/analytics";
@@ -352,6 +352,12 @@ export const useSwipeScreen = () => {
             // wrong partner state for the rest of the session. Refreshing it must never
             // interfere with recording the answer, so it stays off the critical path.
             void useStreakStore.getState().fetchStreak().catch(() => undefined);
+
+            // This answer changed pack progress and the answer history. Marking their
+            // caches stale costs no request: whichever screen the user opens next
+            // reloads once, and the ones they do not open stay quiet.
+            usePacksStore.getState().invalidatePacks();
+            useResponsesStore.getState().invalidateResponses();
         } catch (error) {
             // A 429 means the server rejected this answer outright. Do not advance the
             // index, or the question is silently skipped and lost for the day.

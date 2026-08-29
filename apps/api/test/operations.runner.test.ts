@@ -7,7 +7,7 @@ import { loadWorkerConfig } from '../src/workers/config.js';
 
 const summary={releasedPacks:0,streakMilestones:0,digests:0,packChanges:0,weeklySummaries:0,unpairedReminders:0,catchupReminders:0,streakReminders:0,daresExpired:0};
 function repository(items:OperationItem[]):OperationsRepository {
-  return {produce:vi.fn(async()=>summary),claim:vi.fn(async()=>items),complete:vi.fn(async()=>undefined),fail:vi.fn(async()=>undefined),
+  return {produce:vi.fn(async()=>summary),claim:vi.fn(async()=>items),complete:vi.fn(async()=>undefined),fail:vi.fn(async()=>undefined),outboxState:vi.fn(async()=>({due:items.length,oldestDueAgeSeconds:0})),
     message:vi.fn(async()=>null),classifierConfig:vi.fn(async()=>null),classify:vi.fn(async()=>undefined),close:vi.fn(async()=>undefined)};
 }
 
@@ -70,5 +70,12 @@ describe('worker configuration',()=>{
       adminPrivateKeyJwk:undefined,
       discordWebhookUrl:undefined,
     });
+  });
+
+  it('uses a distinct bounded pool configuration for the worker process',()=>{
+    expect(loadWorkerConfig({
+      DATABASE_URL:'postgresql://sauci:test@localhost:5432/sauci',
+      DATABASE_POOL_MAX:'3', DATABASE_POOL_IDLE_TIMEOUT_MS:'1200', DATABASE_POOL_CONNECTION_TIMEOUT_MS:'3400',
+    }).databasePool).toEqual({max:3,idleTimeoutMillis:1200,connectionTimeoutMillis:3400});
   });
 });

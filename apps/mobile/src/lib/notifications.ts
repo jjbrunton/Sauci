@@ -23,7 +23,7 @@ Notifications.setNotificationHandler({
 
 // Types
 export interface NotificationData {
-  type: "match" | "message" | "match_digest" | "partner_activity" | "nudge" | "weekly_summary";
+  type: "match" | "message" | "match_digest" | "partner_activity" | "nudge" | "weekly_summary" | "catchup_reminder";
   match_id?: string;
   message_id?: string;
   count?: number;
@@ -36,6 +36,7 @@ const notificationTypes = new Set<NotificationData["type"]>([
   "partner_activity",
   "nudge",
   "weekly_summary",
+  "catchup_reminder",
 ]);
 
 function isNotificationData(value: unknown): value is NotificationData {
@@ -258,6 +259,12 @@ export function handleNotificationResponse(
     // Navigate to Matches > Your Turn tab (questions to answer)
     useMatchStore.getState().setCurrentView('pending');
     router.push("/(app)/matches");
+    return;
+  }
+
+  if (data.type === "catchup_reminder") {
+    useMatchStore.getState().setCurrentView('pending');
+    router.push("/(app)/swipe?mode=pending");
     return;
   }
 

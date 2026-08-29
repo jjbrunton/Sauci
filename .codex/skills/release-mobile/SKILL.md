@@ -10,9 +10,12 @@ scoped instructions. Confirm target platform and release profile. Run repository
 verification plus a native acceptance pass before starting a release build.
 
 Before a build from the current upstream branch, fetch, require a clean worktree,
-and prove `HEAD` matches its upstream. Sauci tracks its native iOS and Android
-projects, so routine release builds must package those checked-in sources. Do not
-run `expo prebuild` first; native regeneration is a separate reviewed change.
+and prove `HEAD` matches its upstream. The `generate-release` skill may instead
+build a clean, scoped release-preparation commit that descends directly from that
+fetched upstream; between its multi-platform builds it commits only independently
+verified EAS version metadata. Sauci tracks its native iOS and Android projects,
+so routine release builds must package those checked-in sources. Do not run
+`expo prebuild` first; native regeneration is a separate reviewed change.
 
 Use the package scripts in `apps/mobile/package.json`; they create artifacts only.
 Never infer upload or submission authority from build authorization. Store upload

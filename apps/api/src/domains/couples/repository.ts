@@ -1,5 +1,6 @@
 import type { Couple, Profile } from '@sauci/shared';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import { CoupleError, type CoupleStateResponse } from './types.js';
 
 interface ProfileRecord extends QueryResultRow {
@@ -93,9 +94,12 @@ async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<
 
 export class PostgresCoupleRepository implements CoupleRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   async getState(userId: string): Promise<CoupleStateResponse> {
@@ -199,6 +203,6 @@ export class PostgresCoupleRepository implements CoupleRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }

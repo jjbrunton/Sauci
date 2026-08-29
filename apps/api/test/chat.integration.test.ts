@@ -48,7 +48,7 @@ describe.skipIf(!databaseUrl || !isLocal)('chat repository + PostgreSQL', () => 
 
   it('sends, lists, counts and reads text messages for couple members only', async () => {
     const sent = await repository.sendText(alice, match, 'Hello');
-    expect((await repository.listMessages(bob, match))[0]?.content).toBe('Hello');
+    expect((await repository.listMessages(bob, match)).messages[0]?.content).toBe('Hello');
     expect(await repository.unreadCounts(bob)).toEqual({ total: 1, by_match: { [match]: 1 } });
     expect((await repository.markDelivered(bob, sent.id)).delivered_at).not.toBeNull();
     expect((await repository.markMatchRead(bob, match)).updated).toBe(1);
@@ -58,12 +58,108 @@ describe.skipIf(!databaseUrl || !isLocal)('chat repository + PostgreSQL', () => 
   it('enforces per-user and author-only deletions plus reports', async () => {
     const sent = await repository.sendText(alice, match, 'Moderate me');
     await repository.deleteForSelf(bob, sent.id);
-    expect((await repository.listMessages(bob, match)).some(item => item.id === sent.id)).toBe(false);
-    expect((await repository.listMessages(alice, match)).some(item => item.id === sent.id)).toBe(true);
+    expect((await repository.listMessages(bob, match)).messages.some(item => item.id === sent.id)).toBe(false);
+    expect((await repository.listMessages(alice, match)).messages.some(item => item.id === sent.id)).toBe(true);
     await expect(repository.deleteForEveryone(bob, sent.id)).rejects.toMatchObject({ code: 'not_message_author' });
     expect((await repository.deleteForEveryone(alice, sent.id)).deleted_at).not.toBeNull();
     await repository.report(bob, sent.id, 'harassment');
     await expect(repository.report(bob, sent.id, 'spam')).rejects.toBeInstanceOf(ChatError);
+  });
+
+  it('answers a delta with only what changed, and the same rows a full read would give', async () => {
+    const before = await repository.listMessages(bob, match);
+    const cursor = before.server_time;
+    expect(before.complete).toBe(true);
+
+    // Nothing has happened since the cursor, so the delta carries no row the client
+    // has not already seen. The cursor is deliberately held a couple of seconds
+    // behind wall clock so a write racing the read is repeated rather than lost;
+    // that repetition is absorbed by merging on id, never by blanking the thread.
+    const known = new Set(before.messages.map(item => item.id));
+    const quiet = await repository.listMessages(bob, match, { since: cursor });
+    expect(quiet.complete).toBe(false);
+    expect(quiet.messages.every(item => known.has(item.id))).toBe(true);
+    expect(quiet.removed_ids?.every(id => !known.has(id))).toBe(true);
+
+    const fresh = await repository.sendText(alice, match, 'Delta arrival');
+    const delta = await repository.listMessages(bob, match, { since: cursor });
+    expect(delta.messages.map(item => item.id)).toContain(fresh.id);
+    // Media and moderation columns must survive the narrower query.
+    expect(delta.messages.find(item => item.id === fresh.id)).toMatchObject({
+      content: 'Delta arrival', media_path: null, media_type: null, media_expired: false, read_at: null,
+    });
+
+    // A status change with no new row still reaches the sender through the delta.
+    const afterSend = await repository.listMessages(alice, match);
+    await repository.markMatchRead(bob, match);
+    const readDelta = await repository.listMessages(alice, match, { since: afterSend.server_time });
+    expect(readDelta.messages.find(item => item.id === fresh.id)?.read_at).not.toBeNull();
+
+    // So does a deletion, which arrives as a removal rather than a silent gap.
+    const doomed = await repository.sendText(alice, match, 'Delete me');
+    const beforeDelete = await repository.listMessages(bob, match);
+    await repository.deleteForSelf(bob, doomed.id);
+    const removal = await repository.listMessages(bob, match, { since: beforeDelete.server_time });
+    expect(removal.removed_ids).toContain(doomed.id);
+
+    // Ordering is the contract the screen renders against: newest first, both ways.
+    const full = await repository.listMessages(bob, match);
+    const timestamps = full.messages.map(item => Date.parse(item.created_at));
+    expect([...timestamps].sort((a, b) => b - a)).toEqual(timestamps);
+
+    // Access control is unchanged on the delta path.
+    await expect(repository.listMessages(outsider, match, { since: cursor })).rejects.toMatchObject({ code: 'match_not_found' });
+  });
+
+  it('surfaces an expiring video to a chat that is already open, and only in the window it expires', async () => {
+    // Expiry is the one visible change no write announces: the deadline simply
+    // passes. Backdated so neither `created_at` nor `media_viewed_at` can be what
+    // puts the row in a delta — only the deadline crossing may.
+    const video = await repository.sendText(alice, match, 'Sent a video');
+    await pool.query(
+      `update messages
+          set media_path = 'media:expiring', media_type = 'video',
+              moderation_status = 'safe', encrypted_content = 'cipher', encryption_iv = 'iv',
+              created_at = now() - interval '1 hour',
+              media_viewed_at = now() - interval '1 hour',
+              media_expires_at = now() + interval '1 hour'
+        where id = $1`,
+      [video.id],
+    );
+
+    const before = await repository.listMessages(bob, match);
+    expect(before.messages.find(item => item.id === video.id)).toMatchObject({ media_expired: false });
+
+    // A deadline still in the future is not a change, so the row is not re-sent on
+    // every poll until it arrives.
+    const quiet = await repository.listMessages(bob, match, { since: before.server_time });
+    expect(quiet.messages.some(item => item.id === video.id)).toBe(false);
+
+    // The deadline now falls inside this poll's window.
+    await pool.query(`update messages set media_expires_at = now() - interval '1 second' where id = $1`, [video.id]);
+    const delta = await repository.listMessages(bob, match, { since: before.server_time });
+    const expired = delta.messages.find(item => item.id === video.id);
+    // Media, encryption and moderation columns still arrive whole on the delta path.
+    expect(expired).toMatchObject({
+      media_expired: true, media_type: 'video', media_path: 'media:expiring',
+      moderation_status: 'safe', encrypted_content: 'cipher', encryption_iv: 'iv',
+    });
+    expect(expired?.media_expires_at).not.toBeNull();
+    expect(expired?.media_viewed_at).not.toBeNull();
+
+    // A full read agrees, so leaving and re-entering the chat shows the same thing.
+    expect((await repository.listMessages(bob, match)).messages.find(item => item.id === video.id))
+      .toMatchObject({ media_expired: true });
+  });
+
+  it('folds the partner typing check into the message read when asked', async () => {
+    await repository.setTyping(alice, match, 4_000);
+    const withTyping = await repository.listMessages(bob, match, { includeTyping: true });
+    expect(withTyping.typing?.typing).toBe(true);
+    // Own typing is never reflected back, so the sender does not see themselves.
+    expect((await repository.listMessages(alice, match, { includeTyping: true })).typing?.typing).toBe(false);
+    // And it stays absent unless requested, so the default read costs no extra work.
+    expect((await repository.listMessages(bob, match)).typing).toBeUndefined();
   });
 
   it('stores typing state with a short expiry and exposes only the partner state', async () => {

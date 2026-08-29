@@ -1,4 +1,5 @@
 import { Pool, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 
 export type ChatMediaType = 'image' | 'video' | null;
 export type ReportReason = 'harassment' | 'spam' | 'inappropriate_content' | 'other';
@@ -45,8 +46,37 @@ export class ChatError extends Error {
   }
 }
 
+/**
+ * The reply to a message poll. A request without a cursor is a full snapshot; a
+ * request with one carries only what changed, so a quiet chat costs an empty
+ * array rather than the whole backlog.
+ */
+export interface MessagesPage {
+  /** Newest first. Messages created or changed since the cursor, or the snapshot. */
+  messages: ChatMessage[];
+  /** Messages the caller deleted for themselves since the cursor. */
+  removed_ids: string[];
+  /** Cursor to send as `since` on the next poll. */
+  server_time: string;
+  /** True when `messages` is a complete snapshot the client may replace its cache with. */
+  complete: boolean;
+  /** Present only when the caller asked for it, folding the typing poll into this one. */
+  typing?: PartnerTyping;
+}
+
+export interface PartnerTyping {
+  typing: boolean;
+  expires_at: string | null;
+}
+
+export interface ListMessagesOptions {
+  /** ISO timestamp from a previous `server_time`. Omit for a full snapshot. */
+  since?: string;
+  includeTyping?: boolean;
+}
+
 export interface ChatRepository {
-  listMessages(userId: string, matchId: string): Promise<ChatMessage[]>;
+  listMessages(userId: string, matchId: string, options?: ListMessagesOptions): Promise<MessagesPage>;
   sendText(userId: string, matchId: string, content: string): Promise<ChatMessage>;
   unreadCounts(userId: string): Promise<{ total: number; by_match: Record<string, number> }>;
   markMatchRead(userId: string, matchId: string): Promise<{ updated: number; read_at: string }>;
@@ -55,13 +85,21 @@ export interface ChatRepository {
   deleteForEveryone(userId: string, messageId: string): Promise<ChatMessage>;
   report(userId: string, messageId: string, reason: ReportReason): Promise<void>;
   setTyping(userId: string, matchId: string, ttlMs: number): Promise<void>;
-  getPartnerTyping(userId: string, matchId: string): Promise<{ typing: boolean; expires_at: string | null }>;
+  getPartnerTyping(userId: string, matchId: string): Promise<PartnerTyping>;
   close(): Promise<void>;
 }
 
+// `media_expired` is derived rather than read. Nothing ever writes the stored
+// column — it is inserted `false` and never updated — so a video that reached
+// `media_expires_at` still arrived flagged as playable, while the media itself
+// was already refused (see `accessible` in the media repository, which treats
+// `media_expired or media_expires_at <= now()` as gone). Deriving it here is the
+// same rule the media side already applies, and it is what makes the client's
+// "Video expired" state reachable at all.
 const columns = `m.id, m.match_id, m.user_id, m.content, m.created_at, m.read_at,
   m.delivered_at, m.deleted_at, m.media_path, m.media_type, m.media_expires_at,
-  m.media_expired, m.media_viewed_at, m.version, m.encrypted_content,
+  (m.media_expired or (m.media_expires_at is not null and m.media_expires_at <= now())) as media_expired,
+  m.media_viewed_at, m.version, m.encrypted_content,
   m.encryption_iv, m.keys_metadata, m.moderation_status, m.flag_reason, m.category`;
 
 function iso(value: Date | null): string | null {
@@ -82,9 +120,12 @@ function toMessage(row: MessageRecord): ChatMessage {
 
 export class PostgresChatRepository implements ChatRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   private async assertMatchAccess(userId: string, matchId: string): Promise<void> {
@@ -112,20 +153,68 @@ export class PostgresChatRepository implements ChatRepository {
     return row;
   }
 
-  async listMessages(userId: string, matchId: string): Promise<ChatMessage[]> {
+  /**
+   * Without `since` this is the previous behaviour: the newest 500 visible messages.
+   * With `since` it returns only rows whose visible state moved after that instant —
+   * new messages, existing ones whose delivery, read, deletion or media-view
+   * timestamp advanced, and videos whose media expired inside the window — plus the
+   * ids the caller has since deleted for themselves.
+   *
+   * Moderation metadata (`moderation_status`, `flag_reason`, `category`) is not
+   * covered: the classifier and the admin tool rewrite those columns without
+   * advancing any timestamp, so a delta cannot see them move. No client renders
+   * them today, so nothing user-visible goes stale; giving them a cursor would
+   * mean adding a column to `messages`.
+   * Rows are returned whole rather than as patches so the client merges by id and
+   * needs no second shape to interpret.
+   *
+   * The returned cursor is deliberately a couple of seconds behind the server clock:
+   * a transaction that started before this read but committed after it would
+   * otherwise fall into the gap between two polls. The overlap re-delivers a handful
+   * of rows the client already has, which its merge-by-id absorbs.
+   */
+  async listMessages(userId: string, matchId: string, options: ListMessagesOptions = {}): Promise<MessagesPage> {
     await this.assertMatchAccess(userId, matchId);
-    const result = await this.pool.query<MessageRecord>(
-      `select ${columns}
-         from messages m
-        where m.match_id = $1
-          and not exists (
-            select 1 from message_deletions d where d.message_id = m.id and d.user_id = $2
-          )
-        order by m.created_at desc, m.id desc
-        limit 500`,
-      [matchId, userId],
-    );
-    return result.rows.map(toMessage);
+    const since = options.since ?? null;
+    const visible = `not exists (select 1 from message_deletions d where d.message_id = m.id and d.user_id = $2)`;
+    // Expiry is the one visible change no row write announces: the clock crosses
+    // `media_expires_at` and nothing is updated, so no timestamp moves past the
+    // cursor. Comparing the deadline against the window instead emits the row in
+    // the single poll whose `(since, now()]` contains it, which is exactly when
+    // the derived `media_expired` above flips.
+    const changed = `(m.created_at > $3 or m.read_at > $3 or m.delivered_at > $3
+        or m.deleted_at > $3 or m.media_viewed_at > $3
+        or (m.media_expires_at > $3 and m.media_expires_at <= now()))`;
+
+    const [clock, messages, removed, typing] = await Promise.all([
+      this.pool.query<{ cursor: Date }>(`select now() - interval '2 seconds' as cursor`),
+      this.pool.query<MessageRecord>(
+        `select ${columns}
+           from messages m
+          where m.match_id = $1 and ${visible}${since === null ? '' : ` and ${changed}`}
+          order by m.created_at desc, m.id desc
+          limit 500`,
+        since === null ? [matchId, userId] : [matchId, userId, since],
+      ),
+      since === null
+        ? null
+        : this.pool.query<{ message_id: string }>(
+            `select d.message_id
+               from message_deletions d
+               join messages m on m.id = d.message_id
+              where m.match_id = $1 and d.user_id = $2 and d.deleted_at > $3`,
+            [matchId, userId, since],
+          ),
+      options.includeTyping ? this.partnerTyping(userId, matchId) : null,
+    ]);
+
+    return {
+      messages: messages.rows.map(toMessage),
+      removed_ids: removed?.rows.map((row) => row.message_id) ?? [],
+      server_time: clock.rows[0]!.cursor.toISOString(),
+      complete: since === null,
+      ...(typing ? { typing } : {}),
+    };
   }
 
   async sendText(userId: string, matchId: string, content: string): Promise<ChatMessage> {
@@ -226,8 +315,8 @@ export class PostgresChatRepository implements ChatRepository {
     );
   }
 
-  async getPartnerTyping(userId: string, matchId: string): Promise<{ typing: boolean; expires_at: string | null }> {
-    await this.assertMatchAccess(userId, matchId);
+  /** Access already asserted by the caller, so the message poll can fold this in for free. */
+  private async partnerTyping(userId: string, matchId: string): Promise<PartnerTyping> {
     const result = await this.pool.query<{ expires_at: Date }>(
       `select expires_at from chat_typing_states
         where match_id = $1 and user_id <> $2 and expires_at > now()
@@ -238,8 +327,13 @@ export class PostgresChatRepository implements ChatRepository {
     return { typing: Boolean(expiresAt), expires_at: iso(expiresAt) };
   }
 
+  async getPartnerTyping(userId: string, matchId: string): Promise<PartnerTyping> {
+    await this.assertMatchAccess(userId, matchId);
+    return this.partnerTyping(userId, matchId);
+  }
+
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }
 

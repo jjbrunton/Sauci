@@ -47,6 +47,8 @@ jobs:
       - run: npm ci
       - run: npm run learn:check
       - run: npm run verify:fast
+      - name: Enforce API and mobile coverage floors
+        run: npm run test:coverage
       - run: npm run build
 
   backend-integration:
@@ -76,7 +78,7 @@ jobs:
       - name: Run standalone backend integration tests
         env:
           DATABASE_URL: postgresql://sauci:sauci_ci_only@127.0.0.1:5432/sauci_test
-        run: npm run test:api:integration
+        run: npm run test:integration:coverage -w @sauci/api
 
   container-contract:
     runs-on: ubuntu-latest

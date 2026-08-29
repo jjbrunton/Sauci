@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -35,6 +36,7 @@ export const LiveDrawScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const coupleId = coupleIdParam || user?.couple_id;
+  const isFocused = useIsFocused();
   const { width: screenWidth } = useWindowDimensions();
 
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
@@ -95,6 +97,7 @@ export const LiveDrawScreen: React.FC = () => {
   const sync = useDrawingSync({
     coupleId: coupleId!,
     userId: user?.id,
+    isFocused,
     onStrokeStart: handleStrokeStartFromPartner,
     onStrokeContinue: handleStrokeContinueFromPartner,
     onStrokeEnd: handleStrokeEndFromPartner,

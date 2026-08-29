@@ -1,0 +1,4 @@
+interface:
+  display_name: "Delegate to Claude Code"
+  short_description: "Delegate scoped work to Claude Code"
+  default_prompt: "Use $delegate-to-claude to delegate this scoped task to Claude Code and review the result."
