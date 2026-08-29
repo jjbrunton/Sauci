@@ -5,6 +5,27 @@ final answer. Use one implementation agent when a bounded handoff will keep nois
 execution out of the primary context. Do not pay the coordination cost for a
 trivial one-file edit. Add other agents only for separable work or a risk trigger.
 
+## Implementation and integration
+
+Implementation starts in a dedicated task worktree created from the current
+`staging` branch. Keep the shared `staging` checkout clean and use it only as the
+integration target. Complete the scoped change, review its diff, and run the
+required verification in the task worktree. Merge the task branch back into local
+`staging` only after that evidence passes; an unverified or partially complete
+branch does not belong in `staging`. Pushing or deploying `staging` remains a
+separate operation subject to the applicable release and production-safety rules.
+
+Before implementation, map the change to every deployed consumer it can affect,
+including supported mobile builds, web and admin clients, the API and worker, and
+internal MCP integrations. Preserve their current interfaces, configuration,
+authentication and data expectations. Verification must cover the affected
+contracts and cross-application path, not only the edited package. If the change
+can alter live production, first establish the actual deployed versions,
+configuration, dependencies, interfaces, and behavior; after deployment,
+independently verify the affected end-to-end behavior. A local test, repository
+state, or successful deployment record is not proof that deployed apps remain
+functional.
+
 ## Cost ladder
 
 Project Codex defaults live in `.codex/config.toml`; task profiles live in

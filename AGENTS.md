@@ -17,10 +17,17 @@ MCP service in one npm/Turborepo workspace.
 5. Read `apps/mobile/DESIGN.md` before mobile UI work.
 6. Keep shared package exports type-only and route them through `src/index.ts`.
 7. Do not commit secrets, generated evidence, local logs, or runtime state.
-8. Scope work to the task. Route bounded implementation through the project
+8. Implement in a task-specific git worktree created from current `staging`,
+   not in the shared `staging` checkout. After the work is verified, merge the
+   completed task branch back into local `staging`.
+9. Before merging, identify every deployed app or service the change can affect
+   and prove the relevant compatibility contracts still hold. Preserve deployed
+   interfaces and supported client behavior; repository checks alone do not
+   prove a live change is safe.
+10. Scope work to the task. Route bounded implementation through the project
    `implementation` agent when delegation is useful; the primary agent retains
    acceptance, review, and final verification. Do not delegate trivial edits.
-9. Use high-effort reviewers only for the risk triggers in
+11. Use high-effort reviewers only for the risk triggers in
    `docs/agents/routing.md`.
 
 ## Repository map
@@ -39,6 +46,8 @@ MCP service in one npm/Turborepo workspace.
 
 ## Workflows
 
+- Implementation: create a task worktree from current `staging`; merge verified
+  work back to local `staging` when complete.
 - Bootstrap: `npm ci`
 - Full local stack: `scripts/dev-local.sh up`
 - Fast checks: `npm run verify:fast`
