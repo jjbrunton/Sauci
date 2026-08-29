@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Release"
+  short_description: "Bump, build, note, and tag Sauci releases"
+  default_prompt: "Use $generate-release to create the next signed Sauci mobile release for iOS and Android."
