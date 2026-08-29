@@ -33,6 +33,46 @@ Output files are placed in the current directory by default.
 These scripts create signed artifacts only. They do not upload or submit them.
 Store mutation always requires a separate, explicitly authorized command.
 
+## Submit a local artifact with EAS
+
+The production submission credentials are managed by EAS. Never add App Store
+Connect `.p8` files, Google service-account JSON files, or local credential paths
+to the repository or `eas.json`.
+
+Submit only an independently verified artifact by its exact absolute path:
+
+```bash
+cd apps/mobile
+
+# Uploads an Android internal-track draft; it does not roll out the release.
+eas submit --platform android --profile production --path /absolute/path/to/sauci.aab --wait
+
+# Uploads to App Store Connect/TestFlight; it does not submit for App Review.
+eas submit --platform ios --profile production --path /absolute/path/to/sauci.ipa --wait
+```
+
+Agents must not upload immediately after building, whether they use EAS,
+Fastlane, Xcode Organizer, or a store console. Once the artifact is verified, the
+agent must show the user the platform, exact path, bundle/package identifier,
+version, build number, signing identity, SHA-256 digest, and destination, then ask
+for a fresh confirmation to upload it. This confirmation authorizes one upload
+of that exact artifact to that exact destination, even if the earlier request
+already said to build, release, upload, or submit.
+
+Before an iOS confirmation, inspect App Store Connect for automatic TestFlight
+distribution. If upload will add the build to existing groups or testers, name
+them in the confirmation and include that effect in the authorization. If the
+effect cannot be established, stop. Changing automatic-distribution settings is
+a separate action and requires its own authorization.
+
+Do not use `--latest` for a local release. Before upload, verify the artifact's
+package or bundle identifier, public version, build number, signature, and
+SHA-256 digest. After upload, read back the same identity and version from Google
+Play Console or App Store Connect. Public rollout, App Review submission, and
+additional TestFlight group distribution remain separate, explicitly authorized
+actions. If an upload command returns an ambiguous result, inspect EAS and the
+store first; do not retry unless the user gives fresh authorization.
+
 ### Source integrity
 
 Sauci commits its native `ios/` and `android/` projects. Start a release from a
@@ -196,12 +236,19 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 ### Step 5: Upload to Play Store
 
+Apply the upload authorization gate above before opening or changing the release.
+Uploading the AAB and starting any rollout are separate actions; ask again before
+the rollout.
+
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select **Sauci** app
-3. Go to **Production** (or testing track)
+3. Go to **Internal testing**, unless the user authorized a different exact track
 4. **Create new release**
 5. Upload the `.aab` file
-6. Add release notes and submit
+6. Add release notes, save the release as a draft, and read it back
+
+Do not send the draft for review or start a rollout without the separate fresh
+authorization described above.
 
 ### Verifying Keystore Fingerprint
 
@@ -239,12 +286,18 @@ cd ..
 
 ### Step 4: Upload to App Store
 
+Apply the upload authorization gate above before using Xcode Organizer. Include
+any verified automatic TestFlight distribution in the confirmation.
+
 1. In Xcode Organizer (Window → Organizer), select the archive
 2. Click **Distribute App**
 3. Select **App Store Connect** → **Upload**
 4. Follow the prompts to upload
 
 ### Step 5: Submit in App Store Connect
+
+Submitting for App Review is not authorized by the upload confirmation. Ask the
+user for fresh authorization immediately before this step.
 
 1. Go to [App Store Connect](https://appstoreconnect.apple.com)
 2. Select **Sauci**
