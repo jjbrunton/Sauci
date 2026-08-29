@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import type { ClassifierRuntimeConfig, MessageForClassification, OperationItem, ProducerSummary } from './types.js';
 
 interface OutboxRow extends QueryResultRow {
@@ -31,7 +32,8 @@ async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<
 
 export class PostgresOperationsRepository implements OperationsRepository {
   private readonly pool: Pool;
-  constructor(databaseUrl: string) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  private readonly ownsPool: boolean;
+  constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   async produce(now: Date, limit=100): Promise<ProducerSummary> {
     return transaction(this.pool, async (client) => {
@@ -312,7 +314,7 @@ export class PostgresOperationsRepository implements OperationsRepository {
   async classify(id:string,status:'safe'|'flagged',reason:string|null,category:string) {
     await this.pool.query('update messages set moderation_status=$2,flag_reason=$3,category=$4 where id=$1',[id,status,reason,category]);
   }
-  async close() { await this.pool.end(); }
+  async close(): Promise<void> { await closeResolvedPool(this.pool, this.ownsPool); }
 }
 
 function streakCopy(days:number) {

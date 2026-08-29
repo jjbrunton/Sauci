@@ -121,9 +121,15 @@ rejected.
 ## Mobile
 
 Reached from the home screen's `DaresTile`, which badges pending incoming dares. The
-screen has Active / Send / History tabs, polls on a 5s interval (there is no realtime
-channel), and opens the paywall both proactively and in reaction to a `402` — a client
-whose entitlement went stale still lands on the paywall rather than an error.
+screen has Active / Send / History tabs and opens the paywall both proactively and in
+reaction to a `402` — a client whose entitlement went stale still lands on the paywall
+rather than an error.
+
+There is no realtime channel, so the screen polls on a 5s interval — but only while it is
+focused and the app is foregrounded, and each pass reads the active list alone. History,
+the catalogue and the stats are re-read only when the active set's ids or statuses
+actually changed, or on an explicit refresh or a mutation. See
+[Client data freshness](architecture/client-data-freshness.md).
 
 ## Tests
 

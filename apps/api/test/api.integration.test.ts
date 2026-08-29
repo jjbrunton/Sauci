@@ -75,6 +75,31 @@ describe.skipIf(!databaseUrl || !localDatabase)('API + PostgreSQL integration', 
       },
     });
 
+    // Reading the profile again must not rewrite it. Every authenticated request the
+    // app makes starts here, so an unconditional upsert turned a read into a write
+    // on the busiest path in the API.
+    const stamps = async () => (await pool.query<{ auth_synced_at: Date | null; updated_at: Date }>(
+      'select auth_synced_at, updated_at from profiles where id = $1',
+      ['33333333-3333-4333-8333-333333333333'],
+    )).rows[0];
+    const created = await stamps();
+    expect(created.auth_synced_at).not.toBeNull();
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await app.request('/v1/me', { headers })).status).toBe(200);
+    }
+    const unchanged = await stamps();
+    expect(unchanged.auth_synced_at?.getTime()).toBe(created.auth_synced_at?.getTime());
+    expect(unchanged.updated_at.getTime()).toBe(created.updated_at.getTime());
+
+    // A genuine identity change still writes through, so first use and a changed
+    // email are both recorded rather than skipped.
+    await pool.query('update profiles set email = $2 where id = $1', ['33333333-3333-4333-8333-333333333333', 'stale@sauci.test']);
+    expect((await app.request('/v1/me', { headers })).status).toBe(200);
+    const resynced = await stamps();
+    expect(resynced.auth_synced_at!.getTime()).toBeGreaterThan(created.auth_synced_at!.getTime());
+    expect(await (await app.request('/v1/me', { headers })).json()).toMatchObject({ profile: { email: 'integration@sauci.test' } });
+
     expect((await app.request('/v1/me/feature-interests/better-chat', { method: 'PUT', headers })).status).toBe(200);
     expect(await (await app.request('/v1/me/feature-interests/better-chat', { headers })).json())
       .toEqual({ feature: 'better-chat', interested: true });

@@ -47,7 +47,7 @@ const AnimatedSectionList = Animated.createAnimatedComponent(SectionList);
 type GroupByOption = "pack" | "date" | "answer";
 
 export default function MyAnswersScreen() {
-    const { responses, isLoading, isLoadingMore, hasMore, groupBy, dateSortOrder, fetchResponses, setGroupBy, toggleDateSortOrder, totalCount } = useResponsesStore();
+    const { responses, isLoading, isRefreshing, isLoadingMore, hasMore, groupBy, dateSortOrder, fetchResponses, ensureResponsesLoaded, setGroupBy, toggleDateSortOrder, totalCount } = useResponsesStore();
     const { user, partner } = useAuthStore();
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -110,11 +110,12 @@ export default function MyAnswersScreen() {
     // Ambient orb breathing animations
     const { orbStyle1, orbStyle2 } = useAmbientOrbAnimation();
 
-    // Fetch responses on focus
+    // Load once, then keep showing what is cached. Answering or editing a response
+    // invalidates it, and pull-to-refresh is always available.
     useFocusEffect(
         useCallback(() => {
-            fetchResponses(true);
-        }, [])
+            void ensureResponsesLoaded();
+        }, [ensureResponsesLoaded])
     );
 
     const handleLoadMore = useCallback(() => {
@@ -271,7 +272,7 @@ export default function MyAnswersScreen() {
                         scrollEventThrottle={16}
                         refreshControl={
                             <RefreshControl
-                                refreshing={isLoading}
+                                refreshing={isRefreshing}
                                 onRefresh={() => fetchResponses(true)}
                                 tintColor={colors.primary}
                                 colors={[colors.primary]}

@@ -30,6 +30,99 @@ describe.skipIf(!databaseUrl || !local)('app-data repository + PostgreSQL', () =
     await pool.query("insert into messages(id,match_id,user_id,media_path,media_type) values($1,$2,$3,'x.jpg','image')",[message,match,alice]);
   });
   afterAll(async()=>{await repo.close();await pool.end();await admin.query(`drop schema "${schema}" cascade`);await admin.end();});
+  it('summarises change markers per couple without leaking another couple state',async()=>{
+    // This one small read replaced a five-second refresh of profile, couple, matches,
+    // pending questions, packs and unread counts, so its markers have to move for
+    // exactly the changes those refreshes existed to notice.
+    const before=await repo.syncSummary(alice);
+    expect(before).toMatchObject({couple_id:couple,partner_id:bob,match_count:1,new_match_count:1,unread_total:0});
+    expect(before.profile_updated_at).not.toBeNull();
+    expect(Date.parse(before.server_time)).not.toBeNaN();
+
+    // The partner's own message is unread to them and not to us.
+    expect((await repo.syncSummary(bob)).unread_total).toBe(1);
+
+    // A partner profile edit moves the partner marker, which is what tells the
+    // client to re-read the couple rather than everything.
+    await pool.query("update profiles set name='Bobby', updated_at=now() where id=$1",[bob]);
+    const afterPartner=await repo.syncSummary(alice);
+    expect(Date.parse(afterPartner.partner_updated_at!)).toBeGreaterThan(Date.parse(before.partner_updated_at!));
+    expect(afterPartner.profile_updated_at).toBe(before.profile_updated_at);
+
+    // couple_packs carries no timestamp, so equal-and-opposite toggles have to be
+    // caught by a digest rather than a max(updated_at).
+    const emptyDigest=before.enabled_packs_fingerprint;
+    expect(emptyDigest).toEqual(expect.any(String));
+    await pool.query('insert into couple_packs(couple_id,pack_id,enabled) values($1,$2,true)',[couple,pack]);
+    const enabled=await repo.syncSummary(alice);
+    expect(enabled.enabled_packs_fingerprint).not.toBe(emptyDigest);
+    await pool.query('update couple_packs set enabled=false where couple_id=$1 and pack_id=$2',[couple,pack]);
+    expect((await repo.syncSummary(alice)).enabled_packs_fingerprint).toBe(emptyDigest);
+    // Toggling back must land on the same digest, so the client stops refetching.
+    await pool.query('update couple_packs set enabled=true where couple_id=$1 and pack_id=$2',[couple,pack]);
+    expect((await repo.syncSummary(alice)).enabled_packs_fingerprint).toBe(enabled.enabled_packs_fingerprint);
+
+    // An outsider's summary is about their own couple and never ours.
+    const other=await repo.syncSummary(outsider);
+    expect(other).toMatchObject({couple_id:otherCouple,partner_id:null,match_count:0,unread_total:0});
+  });
+
+  it('moves the match-state fingerprint on an in-place edit that the count and latest-at markers miss',async()=>{
+    // Editing an existing match's type/response summary (response editing) creates
+    // no new match and touches no created_at, so match_count/new_match_count/
+    // latest_match_at all hold steady; only the state fingerprint must move.
+    const before=await repo.syncSummary(alice);
+    await pool.query("update matches set match_type='yes_maybe', response_summary=$2 where id=$1",[match,JSON.stringify({edited:true})]);
+    const after=await repo.syncSummary(alice);
+    expect(after.match_count).toBe(before.match_count);
+    expect(after.new_match_count).toBe(before.new_match_count);
+    expect(after.latest_match_at).toBe(before.latest_match_at);
+    expect(after.match_state_fingerprint).not.toBe(before.match_state_fingerprint);
+    // Reverting lands back on the same digest, so the client stops refetching.
+    await pool.query("update matches set match_type='yes_yes', response_summary=null where id=$1",[match]);
+    expect((await repo.syncSummary(alice)).match_state_fingerprint).toBe(before.match_state_fingerprint);
+  });
+
+  it('moves the match-unread fingerprint when unread redistributes without changing the total',async()=>{
+    const secondMatch='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const secondQuestion='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const originalUnread='eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const secondUnread='11111111-2222-4333-8444-555555555555';
+    await pool.query("insert into questions(id,pack_id,text) values($1,$2,'Question 2')",[secondQuestion,pack]);
+    await pool.query("insert into matches(id,couple_id,question_id,match_type) values($1,$2,$3,'yes_yes')",[secondMatch,couple,secondQuestion]);
+    // Alice's own message ('message', from beforeAll) is never unread to her, so
+    // give the original match a message from her partner to actually redistribute.
+    await pool.query("insert into messages(id,match_id,user_id,media_path,media_type) values($1,$2,$3,'y.jpg','image')",[originalUnread,match,bob]);
+    await pool.query("insert into messages(id,match_id,user_id,media_path,media_type) values($1,$2,$3,'y2.jpg','image')",[secondUnread,secondMatch,bob]);
+
+    const before=await repo.syncSummary(alice);
+    expect(before.unread_total).toBe(2);
+
+    // Read the original match's unread message while a new one lands in the
+    // second match: unread_total holds steady at 2, but which match owns it moves.
+    await pool.query('update messages set read_at=now() where id=$1',[originalUnread]);
+    const thirdMessage='ffffffff-ffff-4fff-8fff-ffffffffffff';
+    await pool.query("insert into messages(id,match_id,user_id,media_path,media_type) values($1,$2,$3,'z.jpg','image')",[thirdMessage,secondMatch,bob]);
+
+    const after=await repo.syncSummary(alice);
+    expect(after.unread_total).toBe(before.unread_total);
+    expect(after.match_unread_fingerprint).not.toBe(before.match_unread_fingerprint);
+
+    // Clean up so later assertions in this suite see the original single-match state.
+    await pool.query('delete from messages where id=any($1::uuid[])',[[originalUnread,secondUnread,thirdMessage]]);
+    await pool.query('delete from matches where id=$1',[secondMatch]);
+    await pool.query('delete from questions where id=$1',[secondQuestion]);
+  });
+
+  it('moves the streak marker from couple_streaks.updated_at',async()=>{
+    await pool.query('insert into couple_streaks(couple_id) values($1) on conflict do nothing',[couple]);
+    const before=await repo.syncSummary(alice);
+    expect(before.streak_updated_at).toEqual(expect.any(String));
+    await pool.query('update couple_streaks set current_streak=current_streak+1, updated_at=now() where couple_id=$1',[couple]);
+    const after=await repo.syncSummary(alice);
+    expect(Date.parse(after.streak_updated_at!)).toBeGreaterThan(Date.parse(before.streak_updated_at!));
+  });
+
   it('returns only public catalog data and couple-owned match context',async()=>{
     expect((await repo.packQuestions(alice,pack))[0]?.text).toBe('Question');
     expect((await repo.matchContext(bob,match)).responses).toHaveLength(2);

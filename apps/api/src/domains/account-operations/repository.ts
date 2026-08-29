@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import { AccountOperationError } from './types.js';
 
 interface ProfileOperationRecord extends QueryResultRow {
@@ -63,9 +64,12 @@ async function lockCoupleAndPartner(
 
 export class PostgresAccountOperationsRepository implements AccountOperationsRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   async deleteRelationship(userId: string): Promise<DestructiveOperationResult> {
@@ -135,7 +139,7 @@ export class PostgresAccountOperationsRepository implements AccountOperationsRep
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }
 

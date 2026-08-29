@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect, useIsFocused } from "@react-navigation/native";
@@ -60,20 +60,31 @@ export const ChatScreen: React.FC = () => {
 
     const isFocused = useIsFocused();
 
-    // Typing indicator hook
+    // Each hook needs a value the other produces: the message poll reports typing
+    // state, and an arriving message clears the indicator. The ref breaks the cycle.
+    const clearTypingRef = useRef<() => void>(() => undefined);
+    const handleNewMessage = useCallback(() => clearTypingRef.current(), []);
+
+    // Message subscription hook
+    const { messages, setMessages, partnerTyping: syncedTyping } = useMessageSubscription({
+        matchId,
+        userId: user?.id,
+        onNewMessage: handleNewMessage,
+        isFocused,
+    });
+
+    // Typing indicator hook, reading the state the message poll already fetched
     const { partnerTyping, sendTypingEvent, clearTypingIndicator } = useTypingIndicator({
         channelName: `chat:${matchId}`,
         matchId,
         userId: user?.id,
         isFocused,
+        externalTyping: syncedTyping,
     });
 
-    // Message subscription hook
-    const { messages, setMessages, isFocusedRef } = useMessageSubscription({
-        matchId,
-        userId: user?.id,
-        onNewMessage: clearTypingIndicator,
-    });
+    useEffect(() => {
+        clearTypingRef.current = clearTypingIndicator;
+    }, [clearTypingIndicator]);
 
 
     // Message actions hook for deletion and reporting
@@ -174,16 +185,12 @@ export const ChatScreen: React.FC = () => {
     // Track active chat to prevent notifications for current chat
     useFocusEffect(
         useCallback(() => {
-            isFocusedRef.current = true;
             if (matchId) {
                 setActiveMatchId(matchId);
                 markMatchMessagesAsRead(matchId);
                 Events.matchViewed();
             }
-            return () => {
-                isFocusedRef.current = false;
-                setActiveMatchId(null);
-            };
+            return () => setActiveMatchId(null);
         }, [matchId, setActiveMatchId, markMatchMessagesAsRead])
     );
 

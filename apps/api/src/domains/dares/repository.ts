@@ -1,4 +1,5 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 
 export type DareStatus =
   | 'pending' | 'active' | 'submitted' | 'completed' | 'expired' | 'declined' | 'cancelled';
@@ -181,9 +182,12 @@ function toSentDare(row: SentDareRecord, viewerId: string): SentDare {
 
 export class PostgresDaresRepository implements DaresRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
 
-  constructor(databaseUrl: string) {
-    this.pool = new Pool({ connectionString: databaseUrl });
+  constructor(connection: DatabaseConnection) {
+    const resolved = resolvePool(connection);
+    this.pool = resolved.pool;
+    this.ownsPool = resolved.owned;
   }
 
   /**
@@ -475,6 +479,6 @@ export class PostgresDaresRepository implements DaresRepository {
   }
 
   async close(): Promise<void> {
-    await this.pool.end();
+    await closeResolvedPool(this.pool, this.ownsPool);
   }
 }

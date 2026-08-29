@@ -64,4 +64,69 @@ describe('packsStore standalone API integration', () => {
         expect(getSpy).not.toHaveBeenCalled();
         expect(usePacksStore.getState().enabledPackIds).toEqual([]);
     });
+
+    describe('account isolation (generation tokens)', () => {
+        it('does not let a stale fetchEnabledPacks response populate the store after clearPacks, and lets the next account start immediately', async () => {
+            let release: (page: unknown) => void = () => undefined;
+            const getSpy = jest.spyOn(apiClient, 'get').mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+            const staleFetch = usePacksStore.getState().fetchEnabledPacks();
+
+            // Simulates sign-out/account switch while the request is still in flight.
+            usePacksStore.getState().clearPacks();
+            release({ enabledPackIds: ['stale-pack'] });
+            await staleFetch;
+
+            expect(usePacksStore.getState().enabledPackIds).toEqual([]);
+
+            getSpy.mockResolvedValueOnce({ enabledPackIds: ['fresh-pack'] });
+            await usePacksStore.getState().fetchEnabledPacks();
+            expect(usePacksStore.getState().enabledPackIds).toEqual(['fresh-pack']);
+        });
+
+        it('does not let a stale fetchPackProgress response populate the store after clearPacks, and lets the next account start immediately', async () => {
+            let release: (page: unknown) => void = () => undefined;
+            const getSpy = jest.spyOn(apiClient, 'get').mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+            const staleFetch = usePacksStore.getState().fetchPackProgress();
+
+            usePacksStore.getState().clearPacks();
+            release({ progress: [{ packId: 'stale', totalQuestions: 1, answeredQuestions: 1 }] });
+            await staleFetch;
+
+            expect(usePacksStore.getState().packProgress.size).toBe(0);
+
+            getSpy.mockResolvedValueOnce({ progress: [{ packId: 'fresh', totalQuestions: 2, answeredQuestions: 1 }] });
+            await usePacksStore.getState().fetchPackProgress();
+            expect(usePacksStore.getState().packProgress.get('fresh')).toEqual({ totalQuestions: 2, answeredQuestions: 1 });
+        });
+
+        it('does not let a stale toggle write the previous couple\'s pack selection', async () => {
+            usePacksStore.setState({ enabledPackIds: [] } as any);
+            let release: (value: unknown) => void = () => undefined;
+            jest.spyOn(apiClient, 'put').mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
+            const staleToggle = usePacksStore.getState().togglePack('pack1');
+
+            usePacksStore.getState().clearPacks();
+            usePacksStore.setState({ enabledPackIds: ['next-couple-pack'] } as any);
+
+            release({ enabledPackIds: ['pack1'] });
+            await expect(staleToggle).resolves.toEqual({ success: false, reason: 'stale' });
+            expect(usePacksStore.getState().enabledPackIds).toEqual(['next-couple-pack']);
+        });
+
+        it('does not roll a failed toggle back into the next couple\'s selection', async () => {
+            usePacksStore.setState({ enabledPackIds: ['pack1'] } as any);
+            let reject: (reason: unknown) => void = () => undefined;
+            jest.spyOn(apiClient, 'put').mockReturnValueOnce(new Promise((_resolve, fail) => { reject = fail; }));
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            const staleToggle = usePacksStore.getState().togglePack('pack1');
+
+            usePacksStore.getState().clearPacks();
+            usePacksStore.setState({ enabledPackIds: ['next-couple-pack'] } as any);
+
+            reject(new Error('offline'));
+            await expect(staleToggle).resolves.toEqual({ success: false, reason: 'stale' });
+            // The rollback would have re-added pack1, which this couple never enabled.
+            expect(usePacksStore.getState().enabledPackIds).toEqual(['next-couple-pack']);
+        });
+    });
 });

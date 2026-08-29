@@ -39,6 +39,7 @@ export default function MatchesScreen() {
         fetchMatches,
         markAllAsSeen,
         isLoading,
+        isRefreshing,
         hasMore,
         isLoadingMore,
         totalCount,
@@ -58,7 +59,9 @@ export default function MatchesScreen() {
         fetchTheirTurnQuestions,
         currentView,
         setCurrentView,
+        ensureViewLoaded,
         fetchPendingQuestions,
+        fetchArchivedMatches,
         // Nudge state and methods
         nudgeCooldownUntil,
         isNudging,
@@ -118,14 +121,12 @@ export default function MatchesScreen() {
         setShowTutorial(false);
     };
 
+    // Load whichever view is showing, once. Returning to this tab reuses what is
+    // already cached; the sync poll refreshes it when the server reports a change,
+    // and pull-to-refresh remains the explicit way to force one.
     useFocusEffect(
         useCallback(() => {
-            fetchMatches(true);
-            // Also refresh pending questions when focused
-            fetchPendingQuestions();
-            fetchTheirTurnQuestions();
-            // Check nudge cooldown
-            checkNudgeCooldown();
+            ensureViewLoaded();
 
             // Cleanup: mark matches as seen when leaving the screen (if on Complete tab)
             return () => {
@@ -134,8 +135,14 @@ export default function MatchesScreen() {
                     state.markAllAsSeen();
                 }
             };
-        }, [])
+        }, [ensureViewLoaded])
     );
+
+    // The nudge cooldown only moves when this device sends a nudge, and sendNudge
+    // already records the new cooldown, so one read on mount is enough.
+    useEffect(() => {
+        void checkNudgeCooldown();
+    }, [checkNudgeCooldown]);
 
     // Format cooldown remaining time
     const formatCooldownTime = (cooldownUntil: Date): string => {
@@ -633,13 +640,16 @@ export default function MatchesScreen() {
                                 refreshing={
                                     currentView === 'pending' ? isLoadingPending :
                                     currentView === 'their_turn' ? isLoadingTheirTurn :
-                                    isLoading
+                                    currentView === 'archived' ? isLoadingArchived :
+                                    isRefreshing
                                 }
                                 onRefresh={() => {
                                     if (currentView === 'pending') {
                                         fetchPendingQuestions();
                                     } else if (currentView === 'their_turn') {
                                         fetchTheirTurnQuestions();
+                                    } else if (currentView === 'archived') {
+                                        fetchArchivedMatches();
                                     } else {
                                         fetchMatches(true);
                                     }

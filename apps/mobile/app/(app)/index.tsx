@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { useAuthStore, usePacksStore, useStreakStore, useSubscriptionStore } from '../../src/store';
+import { useAuthStore, usePacksStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
 import { CompactHeader, ContentRow, DaresTile, LiveDrawTile } from '../../src/components/discovery';
@@ -68,8 +68,7 @@ function groupPacksByCategory(
 
 export default function DiscoveryScreen() {
   const { user, partner, couple } = useAuthStore();
-  const { packs, categories, fetchPacks, getPackProgress } = usePacksStore();
-  const { fetchStreak } = useStreakStore();
+  const { packs, categories, fetchPacks, ensurePacksLoaded, getPackProgress } = usePacksStore();
   const { subscription } = useSubscriptionStore();
   const { width } = useWindowDimensions();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -79,12 +78,13 @@ export default function DiscoveryScreen() {
   const isPremiumUser = user?.is_premium || partner?.is_premium || subscription.isProUser;
   const isWideScreen = width > MAX_CONTENT_WIDTH;
 
-  // Refresh data when screen gains focus
+  // Load the catalog once. Returning to this tab shows what is cached; answering a
+  // question invalidates it, and StreakDisplay owns the streak, so neither needs a
+  // request here.
   useFocusEffect(
     useCallback(() => {
-      fetchPacks();
-      fetchStreak();
-    }, [fetchStreak])
+      void ensurePacksLoaded();
+    }, [ensurePacksLoaded])
   );
 
   // Group packs by category

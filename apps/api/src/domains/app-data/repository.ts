@@ -1,4 +1,5 @@
 import { Pool, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 
 export interface PackContext { id: string; name: string; icon: string | null }
 export interface AppQuestion {
@@ -19,6 +20,50 @@ export interface StrokeSegment {
 }
 export interface LiveDrawState { strokes: StrokeSegment[]; revision: number; updated_at: string | null; updated_by: string | null }
 
+/**
+ * A change summary rather than a payload. The mobile app used to re-fetch profile,
+ * couple, matches, both pending directions and enabled packs every five seconds to
+ * notice partner activity; it now compares this summary with the last one it saw and
+ * refreshes only the domains whose marker actually moved. Every field is a marker,
+ * not display data, so the response stays a few hundred bytes whatever the couple's
+ * history looks like.
+ */
+export interface SyncSummary {
+  server_time: string;
+  couple_id: string | null;
+  profile_updated_at: string | null;
+  partner_id: string | null;
+  partner_updated_at: string | null;
+  /** Matches visible to this member: archiving one of them moves the count. */
+  match_count: number;
+  new_match_count: number;
+  latest_match_at: string | null;
+  /** Partner answered, this member has not. */
+  pending_yours: number;
+  /** This member answered, partner has not. */
+  pending_theirs: number;
+  unread_total: number;
+  /** Digest of the enabled pack ids, so an equal-and-opposite toggle is still a change. */
+  enabled_packs_fingerprint: string;
+  /**
+   * Digest of each visible match's type and response summary. `match_count` /
+   * `new_match_count` / `latest_match_at` only move when a match is created,
+   * archived or unarchived — not when a partner edits an existing response and
+   * changes its `match_type` or `response_summary` — so this fingerprint is
+   * what actually notices that edit.
+   */
+  match_state_fingerprint: string;
+  /**
+   * Digest of each visible match's unread count. `unread_total` can stay equal
+   * while unread messages redistribute between matches (one read, another
+   * receives a message), which reorders the unread-first list without moving
+   * the total; this fingerprint is what notices that.
+   */
+  match_unread_fingerprint: string;
+  /** couple_streaks.updated_at, so a partner's answer can silently refresh an already-loaded streak. */
+  streak_updated_at: string | null;
+}
+
 export class AppDataError extends Error {
   constructor(public readonly code: 'not_found' | 'no_couple' | 'not_recipient' | 'rate_limited' | 'revision_conflict', message: string, public readonly status: 403 | 404 | 409 | 429, public readonly details?: Record<string, unknown>) { super(message); }
 }
@@ -31,6 +76,7 @@ export interface AppDataRepository {
   markMediaViewed(userId: string, messageId: string, expiresAt: string | null): Promise<{ media_viewed_at: string; media_expires_at: string | null }>;
   nudgeStatus(userId: string): Promise<{ last_nudge_sent_at: string | null }>;
   sendNudge(userId: string): Promise<{ success: true; notification_sent: boolean; reason?: string; next_nudge_available_at: string }>;
+  syncSummary(userId: string): Promise<SyncSummary>;
   getLiveDraw(userId: string): Promise<LiveDrawState>;
   putLiveDraw(userId: string, strokes: StrokeSegment[], baseRevision: number): Promise<LiveDrawState>;
   close(): Promise<void>;
@@ -38,11 +84,22 @@ export interface AppDataRepository {
 
 interface QuestionRow extends QueryResultRow, Omit<AppQuestion, 'created_at'> { created_at: Date }
 
+interface SyncRow extends QueryResultRow {
+  server_time: Date; couple_id: string | null; profile_updated_at: Date | null;
+  partner_id: string | null; partner_updated_at: Date | null;
+  match_count: number | null; new_match_count: number | null; latest_match_at: Date | null;
+  pending_yours: number | null; pending_theirs: number | null; unread_total: number | null;
+  enabled_packs_fingerprint: string | null;
+  match_state_fingerprint: string | null; match_unread_fingerprint: string | null;
+  streak_updated_at: Date | null;
+}
+
 function question(row: QuestionRow): AppQuestion { return { ...row, created_at: row.created_at.toISOString() }; }
 
 export class PostgresAppDataRepository implements AppDataRepository {
   private readonly pool: Pool;
-  constructor(databaseUrl: string) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  private readonly ownsPool: boolean;
+  constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   private async visiblePack(userId: string, packId: string): Promise<PackContext> {
     const result = await this.pool.query<PackContext>(`
@@ -189,5 +246,75 @@ export class PostgresAppDataRepository implements AppDataRepository {
     }
     return { strokes: row.strokes, revision: Number(row.revision), updated_at: row.updated_at.toISOString(), updated_by: row.updated_by };
   }
-  async close(): Promise<void> { await this.pool.end(); }
+  /**
+   * One round trip, all scalar subqueries, nothing that grows with the couple's
+   * history. An unpaired member's couple-scoped markers all collapse to zero or null
+   * because `me.couple_id` is null, so the endpoint stays valid before pairing.
+   */
+  async syncSummary(userId: string): Promise<SyncSummary> {
+    const result = await this.pool.query<SyncRow>(`
+      with me as (select id, couple_id, updated_at from profiles where id = $1),
+      visible as (
+        select m.id, m.is_new, m.created_at, m.match_type, m.response_summary from matches m, me
+        where m.couple_id = me.couple_id
+          and not exists (select 1 from match_archives a where a.match_id = m.id and a.user_id = me.id)
+      ),
+      visible_unread as (
+        select v.id as match_id, count(msg.id)::int as c
+        from visible v
+        left join messages msg on msg.match_id = v.id and msg.user_id <> (select id from me)
+          and msg.read_at is null and msg.deleted_at is null
+          and not exists (select 1 from message_deletions d where d.message_id = msg.id and d.user_id = (select id from me))
+        group by v.id
+      )
+      select
+        now() as server_time,
+        me.couple_id,
+        me.updated_at as profile_updated_at,
+        (select p.id from profiles p where p.couple_id = me.couple_id and p.id <> me.id order by p.id limit 1) as partner_id,
+        (select max(p.updated_at) from profiles p where p.couple_id = me.couple_id and p.id <> me.id) as partner_updated_at,
+        (select count(*)::int from visible) as match_count,
+        (select count(*)::int from visible where is_new) as new_match_count,
+        (select max(created_at) from visible) as latest_match_at,
+        (select count(*)::int from responses r join questions q on q.id = r.question_id
+           where r.couple_id = me.couple_id and q.deleted_at is null and r.user_id <> me.id
+             and not exists (select 1 from responses o
+               where o.question_id = r.question_id and o.couple_id = me.couple_id and o.user_id = me.id)) as pending_yours,
+        (select count(*)::int from responses r join questions q on q.id = r.question_id
+           where r.couple_id = me.couple_id and q.deleted_at is null and r.user_id = me.id
+             and not exists (select 1 from responses o
+               where o.question_id = r.question_id and o.couple_id = me.couple_id and o.user_id <> me.id)) as pending_theirs,
+        (select count(*)::int from messages msg join matches ma on ma.id = msg.match_id
+           where ma.couple_id = me.couple_id and msg.user_id <> me.id and msg.read_at is null and msg.deleted_at is null
+             and not exists (select 1 from message_deletions d where d.message_id = msg.id and d.user_id = me.id)) as unread_total,
+        (select md5(coalesce(string_agg(cp.pack_id::text, ',' order by cp.pack_id), ''))
+           from couple_packs cp where cp.couple_id = me.couple_id and cp.enabled) as enabled_packs_fingerprint,
+        (select md5(coalesce(string_agg(v.id::text || ':' || v.match_type || ':' || coalesce(v.response_summary::text, ''), ',' order by v.id), ''))
+           from visible v) as match_state_fingerprint,
+        (select md5(coalesce(string_agg(vu.match_id::text || ':' || vu.c, ',' order by vu.match_id), ''))
+           from visible_unread vu) as match_unread_fingerprint,
+        (select cs.updated_at from couple_streaks cs where cs.couple_id = me.couple_id) as streak_updated_at
+      from me`, [userId]);
+    const row = result.rows[0];
+    if (!row) throw new AppDataError('not_found', 'Profile not found', 404);
+    return {
+      server_time: row.server_time.toISOString(),
+      couple_id: row.couple_id,
+      profile_updated_at: row.profile_updated_at?.toISOString() ?? null,
+      partner_id: row.partner_id,
+      partner_updated_at: row.partner_updated_at?.toISOString() ?? null,
+      match_count: row.match_count ?? 0,
+      new_match_count: row.new_match_count ?? 0,
+      latest_match_at: row.latest_match_at?.toISOString() ?? null,
+      pending_yours: row.pending_yours ?? 0,
+      pending_theirs: row.pending_theirs ?? 0,
+      unread_total: row.unread_total ?? 0,
+      enabled_packs_fingerprint: row.enabled_packs_fingerprint ?? '',
+      match_state_fingerprint: row.match_state_fingerprint ?? '',
+      match_unread_fingerprint: row.match_unread_fingerprint ?? '',
+      streak_updated_at: row.streak_updated_at?.toISOString() ?? null,
+    };
+  }
+
+  async close(): Promise<void> { await closeResolvedPool(this.pool, this.ownsPool); }
 }

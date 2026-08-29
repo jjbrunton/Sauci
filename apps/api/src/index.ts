@@ -2,6 +2,7 @@ import { serve } from '@hono/node-server';
 import { createApp } from './app.js';
 import { createAuthVerifier } from './auth.js';
 import { loadConfig } from './config.js';
+import { createDatabasePool } from './db/pool.js';
 import { PostgresRepository } from './db/repository.js';
 import { PostgresAppDataRepository } from './domains/app-data/repository.js';
 import { AdminRequestAuth } from './domains/admin/auth.js';
@@ -26,30 +27,34 @@ import { FilesystemMediaStorage, PostgresMediaRepository } from './domains/media
 
 const config = loadConfig();
 const authVerifier = createAuthVerifier(config);
-const repository = new PostgresRepository(config.databaseUrl);
-const coupleRepository = new PostgresCoupleRepository(config.databaseUrl);
-const packsRepository = new PostgresPacksRepository(config.databaseUrl);
-const answersRepository = new PostgresAnswersRepository(config.databaseUrl);
-const chatRepository = new PostgresChatRepository(config.databaseUrl);
-const daresRepository = new PostgresDaresRepository(config.databaseUrl);
-const profileSettingsRepository = new PostgresProfileSettingsRepository(config.databaseUrl);
-const accountOperationsRepository = new PostgresAccountOperationsRepository(config.databaseUrl);
+// One deliberately bounded pool for the whole process. Repositories used to open
+// a default-sized pool each, so a single API instance could hold twelve times the
+// connections a self-hosted PostgreSQL was sized for.
+const pool = createDatabasePool(config.databaseUrl, config.databasePool);
+const repository = new PostgresRepository(pool);
+const coupleRepository = new PostgresCoupleRepository(pool);
+const packsRepository = new PostgresPacksRepository(pool);
+const answersRepository = new PostgresAnswersRepository(pool);
+const chatRepository = new PostgresChatRepository(pool);
+const daresRepository = new PostgresDaresRepository(pool);
+const profileSettingsRepository = new PostgresProfileSettingsRepository(pool);
+const accountOperationsRepository = new PostgresAccountOperationsRepository(pool);
 const accountOperationsService = new AccountOperationsService(
   accountOperationsRepository,
   new SupabaseAuthAdminClient(config.authIssuer, config.supabaseAuthServiceRoleKey),
   new HttpRevenueCatClient(config.revenueCatApiKey, config.revenueCatEntitlementId),
   new ExpoPartnerNotifier(),
 );
-const mediaRepository = new PostgresMediaRepository(config.databaseUrl);
+const mediaRepository = new PostgresMediaRepository(pool);
 const mediaStorage = new FilesystemMediaStorage(
   config.mediaRoot,
   config.mediaSigningSecret,
   config.mediaPublicBaseUrl,
 );
-const appDataRepository = new PostgresAppDataRepository(config.databaseUrl);
-const billingRepository = new PostgresBillingRepository(config.databaseUrl);
+const appDataRepository = new PostgresAppDataRepository(pool);
+const billingRepository = new PostgresBillingRepository(pool);
 const billingService = new BillingService(billingRepository, config.revenueCatWebhookSecret);
-const adminRepository = new PostgresAdminRepository(config.databaseUrl, {
+const adminRepository = new PostgresAdminRepository(pool, {
   adminPrivateKeyJwk: config.adminPrivateKeyJwk,
   mediaRoot: config.mediaRoot,
   authDirectory: new SupabaseAdminAuthDirectory(config.authIssuer, config.supabaseAuthServiceRoleKey),
@@ -94,20 +99,9 @@ async function shutdown(signal: string): Promise<void> {
 
   server.close(async () => {
     try {
-      await Promise.all([
-        repository.close(),
-        coupleRepository.close(),
-        packsRepository.close(),
-        answersRepository.close(),
-        chatRepository.close(),
-        daresRepository.close(),
-        profileSettingsRepository.close(),
-        accountOperationsRepository.close(),
-        mediaRepository.close(),
-        appDataRepository.close(),
-        billingRepository.close(),
-        adminRepository.close(),
-      ]);
+      // Repositories share the process pool and no longer own a connection each,
+      // so ending the pool once is the whole of the database shutdown.
+      await pool.end();
       process.exit(0);
     } catch (error) {
       console.error('Failed to close database connections', error);

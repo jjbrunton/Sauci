@@ -17,13 +17,19 @@ jest.mock("expo-router", () => ({
 jest.mock("@/store", () => {
     const auth = { user: { id: "user-1" }, partner: { id: "user-2" }, couple: { id: "couple-1", couple_id: "couple-1" } };
     const packs = { enabledPackIds: ["pack-1"], ensureEnabledPacksLoaded: async () => undefined, packs: [] };
+    const packState = { ...packs, invalidatePacks: jest.fn() };
+    const responses = { invalidateResponses: jest.fn() };
     const useAuthStore = () => auth;
     useAuthStore.getState = () => auth.user;
+    const usePacksStore = () => packs;
+    usePacksStore.getState = () => packState;
+    const useResponsesStore = () => responses;
+    useResponsesStore.getState = () => responses;
     // Read lazily: the factory runs before this module's own consts are initialised.
     const streak = { fetchStreak: () => mockFetchStreak() };
     const useStreakStore = () => streak;
     useStreakStore.getState = () => streak;
-    return { useAuthStore, usePacksStore: () => packs, useStreakStore };
+    return { useAuthStore, usePacksStore, useResponsesStore, useStreakStore };
 });
 
 jest.mock("@/lib/skippedQuestions", () => ({
@@ -45,17 +51,19 @@ const questions = [
     { id: "q2", pack_id: "pack-1", question_type: "swipe", text: "Two" },
 ];
 
+const futureResetAt = "2099-08-29T00:00:00.000Z";
+
 const openLimit = {
     responses_today: 4,
     limit_value: 10,
     remaining: 6,
-    reset_at: "2026-08-29T00:00:00.000Z",
+    reset_at: futureResetAt,
     is_blocked: false,
 };
 
 const dailyLimit429 = () => new ApiError("Daily response limit reached", 429, {
     error: { code: "daily_limit", message: "Daily response limit reached" },
-    details: { daily_limit: 10, responses_today: 10, remaining: 0, reset_at: "2026-08-29T00:00:00.000Z" },
+    details: { daily_limit: 10, responses_today: 10, remaining: 0, reset_at: futureResetAt },
 });
 
 // clearMocks wipes implementations between tests, so re-arm the whole surface each time.
@@ -92,7 +100,7 @@ describe("useSwipeScreen daily limit", () => {
             responses_today: 10,
             limit_value: 10,
             remaining: 0,
-            reset_at: "2026-08-29T00:00:00.000Z",
+            reset_at: futureResetAt,
             is_blocked: true,
         });
     });

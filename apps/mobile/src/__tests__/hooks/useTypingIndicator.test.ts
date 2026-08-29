@@ -76,4 +76,22 @@ describe('useTypingIndicator API polling', () => {
         act(() => { jest.advanceTimersByTime(2_000); });
         expect(chatApi.getTyping).toHaveBeenCalledTimes(calls);
     });
+    it('stops polling and mirrors typing state supplied by the message poll', async () => {
+        const { result, rerender } = renderHook<ReturnType<typeof useTypingIndicator>, { externalTyping: boolean | undefined }>(
+            ({ externalTyping }) => useTypingIndicator({ channelName: 'chat:match1', userId: 'me', pollInterval: 500, externalTyping }),
+            { initialProps: { externalTyping: undefined as boolean | undefined } },
+        );
+        await act(async () => { await Promise.resolve(); });
+        const callsBeforeFolding = (chatApi.getTyping as jest.Mock).mock.calls.length;
+
+        rerender({ externalTyping: true });
+        expect(result.current.partnerTyping).toBe(true);
+        await act(async () => { jest.advanceTimersByTime(5_000); });
+        expect(chatApi.getTyping).toHaveBeenCalledTimes(callsBeforeFolding);
+
+        act(() => result.current.clearTypingIndicator());
+        expect(result.current.partnerTyping).toBe(false);
+        rerender({ externalTyping: false });
+        expect(result.current.partnerTyping).toBe(false);
+    });
 });

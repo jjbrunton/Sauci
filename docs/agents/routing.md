@@ -1,21 +1,58 @@
 # Agent routing and effort
 
-Use one implementation agent by default. Add independent agents only when work is
-actually separable or a risk trigger requires independent judgment.
+The primary agent owns scope, acceptance criteria, task decomposition, and the
+final answer. Use one implementation agent when a bounded handoff will keep noisy
+execution out of the primary context. Do not pay the coordination cost for a
+trivial one-file edit. Add other agents only for separable work or a risk trigger.
 
-| Role | Default effort | Trigger | Do not use for |
-|---|---|---|---|
-| `repo-scout` | low | locate ownership, callers, contracts | editing or design decisions |
-| `implementation` | medium | bounded product or harness change | broad architecture review |
-| `test-writer` | medium | focused regression or missing contract test | rubber-stamping green output |
-| `verifier` | medium | independently drive changed behavior | editing implementation |
-| `database-reviewer` | medium | migrations, RLS, function/query boundaries | ordinary UI changes |
-| `security-reviewer` | high | auth, RLS, crypto, secrets, payments, destructive operations | every routine change |
-| `architecture-reviewer` | high | cross-cutting or hard-to-reverse decisions | local refactors |
+## Cost ladder
 
-Escalate effort only when uncertainty, blast radius, or irreversibility justifies
-it. “Proactively use” is not a trigger. Verification agents return evidence and a
-verdict; they do not make changes.
+Project Codex defaults live in `.codex/config.toml`; task profiles live in
+`.codex/agents/`. An explicit task handoff may raise or lower reasoning effort.
 
-Procedures belong in skills. Agents read the applicable skill and nearest
-`AGENTS.md`, then operate within the task's authorization.
+| Role | Codex model | Default effort | Trigger | Do not use for |
+|---|---|---:|---|---|
+| `repo_scout` | Luna | low | locate ownership, callers, contracts | editing or design decisions |
+| `implementation` | Terra | medium, overridable | bounded product or harness change | broad architecture review |
+| `test_writer` | Terra | medium | focused regression or missing contract test | rubber-stamping green output |
+| `verifier` | Terra | medium | independently drive implemented behavior | editing implementation |
+| `database_reviewer` | Terra | high | migrations, RLS, function/query boundaries | ordinary UI changes |
+| `security_reviewer` | Sol | high | auth, RLS, crypto, secrets, payments, destructive operations | every routine change |
+| `architecture_reviewer` | Sol | high | cross-cutting or hard-to-reverse decisions | local refactors |
+
+Claude profiles under `.claude/agents/` provide equivalent roles when Claude is
+explicitly requested. They are not part of the normal Codex routing path.
+
+## Implementation effort
+
+Keep `implementation` on Terra and choose effort from the task shape:
+
+- `low`: mechanical, fully specified, narrow change with an obvious check.
+- `medium`: normal feature or bug fix with a few files and known contracts.
+- `high`: ambiguous behavior, several interacting modules, concurrency, or
+  difficult debugging.
+- `xhigh`: exceptional Terra implementation where high effort has already proved
+  insufficient or the change has a large but non-security blast radius.
+
+Security and architecture risk are different jobs, not reasons to silently turn
+the implementation agent into a premium generalist. Add the matching read-only
+Sol reviewer and keep implementation on Terra unless the user explicitly asks for
+a different model.
+
+## Handoff contract
+
+Every delegated task includes the objective, owned files or surface, acceptance
+criteria, applicable `AGENTS.md` and skill, allowed side effects, required checks,
+and the evidence to return. The agent must report changed files, commands and
+results, assumptions, and blockers. The primary agent independently reviews the
+diff and decides whether acceptance has been met.
+
+Parallel agents are for independent read-heavy work or non-overlapping ownership.
+Avoid concurrent edits to the same files, shared database state, fixed local
+ports, or one simulator. Subagents consume additional tokens, so parallelism must
+buy meaningful time or independent judgment.
+
+Procedures belong in deterministic skills rather than agent prompts. Agents read
+the nearest `AGENTS.md` and the applicable repository skill, then operate only
+within the task's authorization. Verification agents return evidence and a
+verdict; they do not fix implementation.

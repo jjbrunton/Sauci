@@ -11,7 +11,8 @@ const message = { id: messageId, match_id: matchId, user_id: identity.id, conten
 
 function setup() {
   const repository: ChatRepository = {
-    listMessages: vi.fn(async () => [message]), sendText: vi.fn(async () => message),
+    listMessages: vi.fn(async () => ({ messages: [message], removed_ids: [], server_time: new Date().toISOString(), complete: true })),
+    sendText: vi.fn(async () => message),
     unreadCounts: vi.fn(async () => ({ total: 1, by_match: { [matchId]: 1 } })),
     markMatchRead: vi.fn(async () => ({ updated: 1, read_at: new Date().toISOString() })),
     markDelivered: vi.fn(async () => message), deleteForSelf: vi.fn(async () => undefined),
@@ -41,6 +42,28 @@ describe('chat routes', () => {
     const response = await app.request(`/v1/matches/${matchId}/messages`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: 'hello', user_id: 'attacker' }) });
     expect(response.status).toBe(400);
     expect(repository.sendText).not.toHaveBeenCalled();
+  });
+
+  it('passes a delta cursor and folded typing check through to the repository', async () => {
+    const { app, repository } = setup();
+    const since = '2026-08-28T10:00:00.000Z';
+    const delta = await app.request(`/v1/matches/${matchId}/messages?since=${encodeURIComponent(since)}&typing=true`);
+    expect(delta.status).toBe(200);
+    expect(repository.listMessages).toHaveBeenCalledWith(identity.id, matchId, { since, includeTyping: true });
+
+    // Omitting both keeps the full-snapshot contract the client had before.
+    const snapshot = await app.request(`/v1/matches/${matchId}/messages`);
+    expect(snapshot.status).toBe(200);
+    expect(await snapshot.json()).toMatchObject({ messages: [{ id: messageId }] });
+    expect(repository.listMessages).toHaveBeenLastCalledWith(identity.id, matchId, { includeTyping: false });
+  });
+
+  it('refuses a malformed cursor rather than silently reading everything', async () => {
+    const { app, repository } = setup();
+    const response = await app.request(`/v1/matches/${matchId}/messages?since=yesterday`);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: 'invalid_since' } });
+    expect(repository.listMessages).not.toHaveBeenCalled();
   });
 
   it('supports unread, typing, deletion and reporting actions', async () => {

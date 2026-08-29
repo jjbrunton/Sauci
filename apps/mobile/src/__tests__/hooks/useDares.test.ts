@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { useDares } from "@/features/dares/hooks/useDares";
 import { ApiError, apiClient } from "@/lib/apiClient";
+import type { UseDaresReturn } from "@/features/dares/hooks/useDares";
 import type { SentDare } from "@/features/dares/types";
 
 const incoming: SentDare = {
@@ -88,5 +89,82 @@ describe("useDares", () => {
         const { result } = renderHook(() => useDares());
         await waitFor(() => expect(result.current.loading).toBe(false));
         expect(result.current.error).toBe("offline");
+    });
+});
+
+describe("useDares polling cost", () => {
+    /** Counts requests per endpoint and lets the active payload be swapped mid-test. */
+    function mockCounting(active: () => SentDare[]) {
+        const calls = { active: 0, history: 0, catalog: 0, stats: 0 };
+        jest.spyOn(apiClient, "get").mockImplementation(async (path: string) => {
+            if (path.startsWith("/v1/dares?filter=active")) { calls.active += 1; return { dares: active() } as never; }
+            if (path.startsWith("/v1/dares?filter=history")) { calls.history += 1; return { dares: [] } as never; }
+            if (path === "/v1/dares/packs") { calls.catalog += 1; return catalog as never; }
+            if (path === "/v1/dares/stats") { calls.stats += 1; return stats as never; }
+            throw new Error(`unexpected path ${path}`);
+        });
+        return calls;
+    }
+
+    const flush = async () => { await act(async () => { await Promise.resolve(); await Promise.resolve(); }); };
+    const tick = async () => {
+        await flush();
+        await act(async () => { jest.advanceTimersByTime(5_000); });
+        await flush();
+    };
+
+    beforeEach(() => { jest.restoreAllMocks(); jest.useFakeTimers(); });
+    afterEach(() => jest.useRealTimers());
+
+    it("polls the active list alone and re-reads the static endpoints only when it changes", async () => {
+        let current: SentDare[] = [incoming];
+        const calls = mockCounting(() => current);
+        const { result } = renderHook(() => useDares({ isFocused: true }));
+        await flush();
+        expect(result.current.loading).toBe(false);
+        // The first pass is a full load: nothing is cached yet.
+        expect(calls).toEqual({ active: 1, history: 1, catalog: 1, stats: 1 });
+
+        await tick();
+        await tick();
+        // Two quiet polls cost one request each, not four. The catalogue and the
+        // stats cannot move while the active set is byte-for-byte identical.
+        expect(calls).toEqual({ active: 3, history: 1, catalog: 1, stats: 1 });
+
+        current = [{ ...incoming, status: "active" }];
+        await tick();
+        expect(calls).toEqual({ active: 4, history: 2, catalog: 2, stats: 2 });
+        expect(result.current.active[0]?.status).toBe("active");
+
+        await tick();
+        expect(calls).toEqual({ active: 5, history: 2, catalog: 2, stats: 2 });
+    });
+
+    it("issues nothing at all while the screen is not on top", async () => {
+        const calls = mockCounting(() => [incoming]);
+        const { rerender } = renderHook<UseDaresReturn, { isFocused: boolean }>(
+            ({ isFocused }) => useDares({ isFocused }),
+            { initialProps: { isFocused: false } },
+        );
+        await tick();
+        await tick();
+        expect(calls).toEqual({ active: 0, history: 0, catalog: 0, stats: 0 });
+
+        rerender({ isFocused: true });
+        await flush();
+        expect(calls).toEqual({ active: 1, history: 1, catalog: 1, stats: 1 });
+    });
+
+    it("never overlaps two polls", async () => {
+        let release: (payload: { dares: SentDare[] }) => void = () => undefined;
+        jest.spyOn(apiClient, "get").mockImplementation(async (path: string) => {
+            if (path.startsWith("/v1/dares?filter=active")) return new Promise(resolve => { release = resolve; }) as never;
+            return { dares: [], ...catalog, ...stats } as never;
+        });
+        renderHook(() => useDares({ isFocused: true }));
+        await flush();
+        await act(async () => { jest.advanceTimersByTime(20_000); });
+        expect((apiClient.get as jest.Mock).mock.calls.filter(([path]) => String(path).includes("filter=active"))).toHaveLength(1);
+        await act(async () => { release({ dares: [] }); await Promise.resolve(); });
     });
 });

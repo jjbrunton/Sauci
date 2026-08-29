@@ -8,6 +8,7 @@ type AuthenticatedApp = Hono<{ Variables: { identity: AuthIdentity } }>;
 const id = z.string().uuid();
 const sendBody = z.object({ content: z.string().trim().min(1).max(10_000) }).strict();
 const reportBody = z.object({ reason: z.enum(['harassment', 'spam', 'inappropriate_content', 'other']) }).strict();
+const since = z.string().datetime({ offset: true });
 
 function error(code: string, message: string): ApiErrorResponse {
   return { error: { code, message } };
@@ -25,11 +26,20 @@ async function result<T>(operation: () => Promise<T>) {
 export function registerChatRoutes(app: AuthenticatedApp, repository: ChatRepository): void {
   app.get('/v1/chat/unread', async (c) => c.json(await repository.unreadCounts(c.get('identity').id)));
 
+  // `since` turns this into a delta poll and `typing=true` folds the typing check
+  // into the same request. Both are optional: a call with neither still answers with
+  // the full snapshot under the `messages` key it always used.
   app.get('/v1/matches/:matchId/messages', async (c) => {
     const parsedId = id.safeParse(c.req.param('matchId'));
     if (!parsedId.success) return c.json(error('invalid_match_id', 'A valid match ID is required'), 400);
-    const response = await result(() => repository.listMessages(c.get('identity').id, parsedId.data));
-    return response.ok ? c.json({ messages: response.value }) : c.json(error(response.cause.code, response.cause.message), response.cause.status);
+    const rawSince = c.req.query('since');
+    const parsedSince = rawSince === undefined ? undefined : since.safeParse(rawSince);
+    if (parsedSince && !parsedSince.success) return c.json(error('invalid_since', 'since must be an ISO-8601 timestamp'), 400);
+    const response = await result(() => repository.listMessages(c.get('identity').id, parsedId.data, {
+      ...(parsedSince?.success ? { since: parsedSince.data } : {}),
+      includeTyping: c.req.query('typing') === 'true',
+    }));
+    return response.ok ? c.json(response.value) : c.json(error(response.cause.code, response.cause.message), response.cause.status);
   });
 
   app.post('/v1/matches/:matchId/messages', async (c) => {

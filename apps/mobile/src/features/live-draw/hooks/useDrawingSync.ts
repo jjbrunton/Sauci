@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ApiError } from '../../../lib/apiClient';
 import { appDataApi, type LiveDrawState } from '../../../lib/appDataApi';
+import { usePolling } from '../../../hooks/usePolling';
 import type { StrokeSegment, StrokePoint } from '../types';
 import { updateWidget } from '../utils/widgetBridge';
+
+/** Fast enough for a shared canvas to feel live, and only while one is on screen. */
+const POLL_INTERVAL_MS = 750;
 
 interface UseDrawingSyncConfig {
   coupleId: string;
@@ -14,6 +18,12 @@ interface UseDrawingSyncConfig {
   onUndo: (strokeId: string) => void;
   onRedo: (stroke: StrokeSegment) => void;
   onLoadStrokes: (strokes: StrokeSegment[]) => void;
+  /**
+   * Supplied by the screen rather than read from navigation here, so the hook
+   * stays renderable without a navigator. A canvas nobody is looking at polls
+   * nothing; `usePolling` also stops it when the app goes to the background.
+   */
+  isFocused?: boolean;
 }
 
 interface UseDrawingSyncReturn {
@@ -52,7 +62,7 @@ export function mergeDrawingChanges(base: StrokeSegment[], desired: StrokeSegmen
 }
 
 export function useDrawingSync(config: UseDrawingSyncConfig): UseDrawingSyncReturn {
-  const { coupleId, userId, onLoadStrokes } = config;
+  const { coupleId, userId, onLoadStrokes, isFocused = true } = config;
   const revisionRef = useRef(0);
   const baselineRef = useRef<StrokeSegment[]>([]);
   const workingRef = useRef<StrokeSegment[]>([]);
@@ -132,19 +142,25 @@ export function useDrawingSync(config: UseDrawingSyncConfig): UseDrawingSyncRetu
     void appDataApi.getLiveDraw().then(acceptState).catch(error => console.error('Failed to load live drawing:', error));
   }, [coupleId, acceptState]);
 
-  useEffect(() => {
-    if (!coupleId || !userId) return;
-    let cancelled = false;
-    const poll = async () => {
-      if (pendingWritesRef.current > 0) return;
-      try {
-        const state = await appDataApi.getLiveDraw();
-        if (!cancelled && state.revision > revisionRef.current) acceptState(state);
-      } catch (error) { console.error('Failed to poll live drawing:', error); }
-    };
-    const timer = setInterval(() => void poll(), 750);
-    return () => { cancelled = true; clearInterval(timer); if (throttleRef.current) clearTimeout(throttleRef.current); };
-  }, [coupleId, userId, acceptState]);
+  // Our own writes already return the authoritative state, so reading over the top
+  // of one in flight would only race it back to a revision we are about to replace.
+  const poll = useCallback(async () => {
+    if (pendingWritesRef.current > 0) return;
+    const state = await appDataApi.getLiveDraw();
+    if (state.revision > revisionRef.current) acceptState(state);
+  }, [acceptState]);
+
+  // `leading: false` because the mount effect above already read the initial state;
+  // usePolling adds the overlap guard, backoff and background pause the raw
+  // interval had none of.
+  usePolling(poll, {
+    intervalMs: POLL_INTERVAL_MS,
+    enabled: Boolean(coupleId) && Boolean(userId) && isFocused,
+    leading: false,
+    resetKey: `${coupleId}:${userId ?? ''}`,
+  });
+
+  useEffect(() => () => { if (throttleRef.current) clearTimeout(throttleRef.current); }, []);
 
   const persistStrokes = useCallback((strokes: StrokeSegment[]) => {
     if (throttleRef.current) clearTimeout(throttleRef.current);

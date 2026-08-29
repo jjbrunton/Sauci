@@ -24,6 +24,18 @@ describe('chatApi', () => {
         expect(apiClient.get).toHaveBeenNthCalledWith(2, '/v1/matches/match%2Fid/typing');
     });
 
+    it('encodes the delta cursor and folded typing request into the message query', async () => {
+        (apiClient.get as jest.Mock).mockResolvedValue({ messages: [], removed_ids: [], server_time: 'now', complete: false });
+
+        await chatApi.listMessages('match1', { typing: true });
+        await chatApi.listMessages('match1', { since: '2026-08-27T12:00:00.000+01:00' });
+        await chatApi.listMessages('match1', { since: '2026-08-27T12:00:00.000Z', typing: true });
+
+        expect(apiClient.get).toHaveBeenNthCalledWith(1, '/v1/matches/match1/messages?typing=true');
+        expect(apiClient.get).toHaveBeenNthCalledWith(2, '/v1/matches/match1/messages?since=2026-08-27T12%3A00%3A00.000%2B01%3A00');
+        expect(apiClient.get).toHaveBeenNthCalledWith(3, '/v1/matches/match1/messages?since=2026-08-27T12%3A00%3A00.000Z&typing=true');
+    });
+
     it('uses authenticated unread, receipt, deletion and reporting routes', async () => {
         (apiClient.get as jest.Mock).mockResolvedValue({ total: 0, by_match: {} });
         (apiClient.post as jest.Mock).mockResolvedValue({});

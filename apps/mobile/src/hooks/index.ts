@@ -1,4 +1,7 @@
 export { useAmbientOrbAnimation } from './useAmbientOrbAnimation';
+export { usePolling } from './usePolling';
+export type { UsePollingOptions } from './usePolling';
+export { useCoupleSync, SYNC_INTERVAL_MS } from './useCoupleSync';
 export type { AmbientOrbConfig } from './useAmbientOrbAnimation';
 export { useFeatureInterest } from './useFeatureInterest';
 export { useMediaPicker } from './useMediaPicker';

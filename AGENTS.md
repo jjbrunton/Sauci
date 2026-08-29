@@ -17,7 +17,10 @@ MCP service in one npm/Turborepo workspace.
 5. Read `apps/mobile/DESIGN.md` before mobile UI work.
 6. Keep shared package exports type-only and route them through `src/index.ts`.
 7. Do not commit secrets, generated evidence, local logs, or runtime state.
-8. Scope work to the task. Use high-effort reviewers only for the risk triggers in
+8. Scope work to the task. Route bounded implementation through the project
+   `implementation` agent when delegation is useful; the primary agent retains
+   acceptance, review, and final verification. Do not delegate trivial edits.
+9. Use high-effort reviewers only for the risk triggers in
    `docs/agents/routing.md`.
 
 ## Repository map

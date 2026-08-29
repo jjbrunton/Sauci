@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import { AnswersError, calculateMatchType, type Answer, type MatchType, type QuestionType, type ResponseData } from './types.js';
 
 interface ContextRow { couple_id: string | null; gender: string | null; max_intensity: number; is_premium: boolean }
@@ -44,7 +45,7 @@ export interface AnswersRepository {
   submit(userId: string, input: SubmitInput): Promise<{ response: ResponseRow; match: (MatchRow & { question: QuestionRow }) | null }>;
   update(userId: string, input: UpdateInput): Promise<Record<string, unknown>>;
   responses(userId: string, page: number, limit: number): Promise<{ responses: unknown[]; totalCount: number }>;
-  matches(userId: string, page: number, limit: number, archived: boolean): Promise<{ matches: unknown[]; totalCount: number }>;
+  matches(userId: string, page: number, limit: number, archived: boolean): Promise<{ matches: unknown[]; totalCount: number | null; hasMore: boolean }>;
   markSeen(userId: string, ids: string[]): Promise<void>;
   archive(userId: string, matchId: string, archived: boolean): Promise<void>;
   streak(userId: string): Promise<CoupleStreakView | null>;
@@ -53,8 +54,9 @@ export interface AnswersRepository {
 
 export class PostgresAnswersRepository implements AnswersRepository {
   private readonly pool: Pool;
+  private readonly ownsPool: boolean;
   private zones: Promise<Set<string>> | null = null;
-  constructor(databaseUrl: string) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   private async context(client: Pool | PoolClient, userId: string): Promise<ContextRow> {
     const result = await client.query<ContextRow>('select couple_id, gender, max_intensity, is_premium from profiles where id=$1', [userId]);
@@ -230,12 +232,23 @@ export class PostgresAnswersRepository implements AnswersRepository {
     return {responses:rows.rows.map(this.dates),totalCount:count.rows[0]?.count??0};
   }
 
+  /**
+   * Reading one row past the page decides `hasMore` exactly, and the total — which
+   * the client only records when it refreshes — is counted on the first page only
+   * instead of on every scroll. Unread is aggregated once per couple rather than as
+   * a correlated count per row: the sort key depends on it, so the old subquery
+   * already ran for every candidate match, not just the twenty that were returned.
+   */
   async matches(userId:string,page:number,limit:number,archived:boolean){
     const ctx=await this.context(this.pool,userId); const offset=page*limit;
-    const params=[userId,ctx.couple_id,archived,limit,offset];
-    const base=`from matches m join questions q on q.id=m.question_id left join match_archives a on a.match_id=m.id and a.user_id=$1 where m.couple_id=$2 and (($3 and a.id is not null) or (not $3 and a.id is null))`;
-    const [rows,count]=await Promise.all([this.pool.query(`select m.*,json_build_object('id',q.id,'pack_id',q.pack_id,'text',q.text,'partner_text',q.partner_text,'intensity',q.intensity,'question_type',q.question_type,'config',q.config,'created_at',q.created_at) question,(select count(*)::int from messages msg where msg.match_id=m.id and msg.user_id<>$1 and msg.read_at is null) "unreadCount" ${base} order by "unreadCount" desc,m.created_at desc limit $4 offset $5`,params),this.pool.query<{count:number}>(`select count(*)::int count ${base}`,params.slice(0,3))]);
-    return {matches:rows.rows.map(this.dates),totalCount:count.rows[0]?.count??0};
+    const params=[userId,ctx.couple_id,archived,limit+1,offset];
+    const from=`from matches m join questions q on q.id=m.question_id left join match_archives a on a.match_id=m.id and a.user_id=$1`;
+    const where=`where m.couple_id=$2 and (($3 and a.id is not null) or (not $3 and a.id is null))`;
+    const unread=`unread as (select msg.match_id,count(*)::int c from messages msg join matches um on um.id=msg.match_id and um.couple_id=$2 where msg.user_id<>$1 and msg.read_at is null group by msg.match_id)`;
+    const [rows,count]=await Promise.all([
+      this.pool.query(`with ${unread} select m.*,json_build_object('id',q.id,'pack_id',q.pack_id,'text',q.text,'partner_text',q.partner_text,'intensity',q.intensity,'question_type',q.question_type,'config',q.config,'created_at',q.created_at) question,coalesce(u.c,0) "unreadCount" ${from} left join unread u on u.match_id=m.id ${where} order by "unreadCount" desc,m.created_at desc limit $4 offset $5`,params),
+      page===0?this.pool.query<{count:number}>(`select count(*)::int count ${from} ${where}`,params.slice(0,3)):null]);
+    return {matches:rows.rows.slice(0,limit).map(this.dates),totalCount:count?count.rows[0]?.count??0:null,hasMore:rows.rows.length>limit};
   }
   async markSeen(userId:string,ids:string[]){const ctx=await this.context(this.pool,userId);await this.pool.query('update matches set is_new=false where couple_id=$1 and id=any($2::uuid[])',[ctx.couple_id,ids]);}
   async archive(userId:string,matchId:string,archived:boolean){const ctx=await this.context(this.pool,userId);const found=await this.pool.query('select 1 from matches where id=$1 and couple_id=$2',[matchId,ctx.couple_id]);if(!found.rowCount)throw new AnswersError('match_not_found',404,'Match was not found');if(archived)await this.pool.query('insert into match_archives(match_id,user_id) values($1,$2) on conflict do nothing',[matchId,userId]);else await this.pool.query('delete from match_archives where match_id=$1 and user_id=$2',[matchId,userId]);}
@@ -304,5 +317,5 @@ export class PostgresAnswersRepository implements AnswersRepository {
   }
   private async tx<T>(fn:(client:PoolClient)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query('begin');const value=await fn(c);await c.query('commit');return value;}catch(e){await c.query('rollback');throw e;}finally{c.release();}}
   private dates<T extends Record<string,any>>(row:T):T{return Object.fromEntries(Object.entries(row).map(([k,v])=>[k,v instanceof Date?v.toISOString():v])) as T;}
-  async close(){await this.pool.end();}
+  async close(){await closeResolvedPool(this.pool,this.ownsPool);}
 }

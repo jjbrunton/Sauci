@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
+import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
 import type { MediaKind, MediaObject, MediaUploadContext } from './types.js';
 
 interface MediaRow extends QueryResultRow {
@@ -28,7 +29,8 @@ function object(row: MediaRow): MediaObject {
 
 export class PostgresMediaRepository implements MediaRepository {
   private readonly pool: Pool;
-  constructor(databaseUrl: string) { this.pool = new Pool({ connectionString: databaseUrl }); }
+  private readonly ownsPool: boolean;
+  constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
   async create(userId: string, kind: MediaKind, storageKey: string, mimeType: string, byteSize: number, context: MediaUploadContext) {
     const client = await this.pool.connect();
@@ -102,5 +104,5 @@ export class PostgresMediaRepository implements MediaRepository {
   async acknowledgeDeletion(storageKey: string): Promise<void> {
     await this.pool.query('delete from media_deletion_queue where storage_key=$1',[storageKey]);
   }
-  async close() { await this.pool.end(); }
+  async close(): Promise<void> { await closeResolvedPool(this.pool, this.ownsPool); }
 }

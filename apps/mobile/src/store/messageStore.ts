@@ -19,7 +19,14 @@ interface MessageState {
     unreadCount: number;
     lastMessage: MessageWithMatch | null;
     activeMatchId: string | null; // Track which chat is currently open
+    /**
+     * Bumped by `clearMessages` on sign-out or a couple change, so a reply that
+     * outlives the account that asked for it cannot write into the next one's badge.
+     */
+    generation: number;
     fetchUnreadCount: () => Promise<void>;
+    /** Applies a count the sync summary already reported, without a second request. */
+    setUnreadCount: (total: number) => void;
     addMessage: (message: MessageWithMatch) => void;
     clearLastMessage: () => void;
     setActiveMatchId: (matchId: string | null) => void;
@@ -31,6 +38,7 @@ export const useMessageStore = create<MessageState>((set, get) => ({
     unreadCount: 0,
     lastMessage: null,
     activeMatchId: null,
+    generation: 0,
 
     fetchUnreadCount: async () => {
         const userId = useAuthStore.getState().user?.id;
@@ -39,8 +47,16 @@ export const useMessageStore = create<MessageState>((set, get) => ({
             return;
         }
 
+        const myGeneration = get().generation;
         const { total } = await chatApi.unread();
+        // This total counts one account's messages; after a clear it would show
+        // up as the next account's badge.
+        if (get().generation !== myGeneration) return;
         set({ unreadCount: total });
+    },
+
+    setUnreadCount: (total) => {
+        set({ unreadCount: Math.max(0, total) });
     },
 
     addMessage: (message) => {
@@ -68,18 +84,27 @@ export const useMessageStore = create<MessageState>((set, get) => ({
         const userId = useAuthStore.getState().user?.id;
         if (!userId) return;
 
+        const myGeneration = get().generation;
         const { updated: unreadInMatch } = await chatApi.markRead(matchId);
+        if (unreadInMatch <= 0) return;
 
-        // Refetch global unread count
-        await get().fetchUnreadCount();
+        // Those messages belonged to a couple that is no longer loaded, and the
+        // match they were in is not in the current list, so subtracting them now
+        // would take the old badge off the new account's.
+        if (get().generation !== myGeneration) return;
 
-        // Sync per-match unread count in matchStore
-        if (unreadInMatch > 0) {
-            useMatchStore.getState().updateMatchUnreadCount(matchId, -unreadInMatch);
-        }
+        // The server just told us exactly how many it cleared, so subtract instead
+        // of spending a request to re-read the total; the sync summary corrects
+        // any drift on its next pass.
+        set((state) => ({ unreadCount: Math.max(0, state.unreadCount - unreadInMatch) }));
+        useMatchStore.getState().updateMatchUnreadCount(matchId, -unreadInMatch);
     },
 
     clearMessages: () => {
-        set({ unreadCount: 0, lastMessage: null, activeMatchId: null });
+        set((state) => ({
+            unreadCount: 0, lastMessage: null, activeMatchId: null,
+            // Invalidates any request already in flight for the account being left.
+            generation: state.generation + 1,
+        }));
     },
 }));

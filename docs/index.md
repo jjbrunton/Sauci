@@ -6,6 +6,7 @@ historical notes. Agents should load only the section relevant to their task.
 ## Maintained system documentation
 
 - [System architecture](architecture/system.md)
+- [Client data freshness](architecture/client-data-freshness.md)
 - [Local full-stack development](development/local-stack.md)
 - [Testing strategy](testing/strategy.md)
 - [Database migration safety](operations/database-migrations.md)

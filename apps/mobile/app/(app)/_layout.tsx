@@ -3,11 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { View, ActivityIndicator, StyleSheet, Platform, Text, Pressable, Animated, AppState } from "react-native";
 import { BlurView } from "expo-blur";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, usePacksStore, useStreakStore } from "../../src/store";
+import { useAuthStore, useMatchStore, useMessageStore, useSubscriptionStore, useStreakStore } from "../../src/store";
 import { colors, radius, spacing, typography, shadows } from "../../src/theme";
 import { authClient } from "../../src/lib/authClient";
 import { isBiometricEnabled } from "../../src/lib/biometricAuth";
 import { checkAndRegisterPushToken } from "../../src/lib/notifications";
+import { useCoupleSync } from "../../src/hooks/useCoupleSync";
 import { syncBadgeCount } from "../../src/lib/badge";
 import { BiometricLockScreen } from "../../src/components/BiometricLockScreen";
 import { Events } from "../../src/lib/analytics";
@@ -59,9 +60,8 @@ export default function AppLayout() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading, user, signOut, updateLastActive } = useAuthStore();
-    const { newMatchesCount, pendingQuestions, fetchPendingQuestions, fetchMatches } = useMatchStore();
-    const { unreadCount, lastMessage, fetchUnreadCount, clearLastMessage } = useMessageStore();
-    const { fetchEnabledPacks } = usePacksStore();
+    const { newMatchesCount, pendingQuestions, matches, fetchPendingQuestions, fetchMatches } = useMatchStore();
+    const { unreadCount, lastMessage, clearLastMessage } = useMessageStore();
     const { initializeRevenueCat, refreshSubscriptionStatus } = useSubscriptionStore();
     const { fetchStreak } = useStreakStore();
     const messageToastAnim = useRef(new Animated.Value(-100)).current;
@@ -173,12 +173,8 @@ export default function AppLayout() {
         setIsLocked(false);
     }, []);
 
-    // Fetch unread message count on mount
-    useEffect(() => {
-        if (user?.id) {
-            fetchUnreadCount();
-        }
-    }, [user?.id, fetchUnreadCount]);
+    // The unread badge arrives with the first sync summary, so it needs no request
+    // of its own here.
 
     // Fetch streak data when user is in a couple
     useEffect(() => {
@@ -187,12 +183,15 @@ export default function AppLayout() {
         }
     }, [user?.couple_id, fetchStreak]);
 
-    // Fetch pending questions (Your Turn) when user is in a couple
+    // Fetch pending questions (Your Turn) and matches when user is in a couple.
+    // Both feed tab badges, so they load once here and are kept current by the
+    // sync summary rather than by re-fetching on a timer.
     useEffect(() => {
         if (user?.couple_id) {
-            fetchPendingQuestions();
+            void fetchPendingQuestions();
+            void fetchMatches(true);
         }
-    }, [user?.couple_id, fetchPendingQuestions]);
+    }, [user?.couple_id, fetchPendingQuestions, fetchMatches]);
 
     // Sync app icon badge count whenever matches, messages, or pending questions change
     useEffect(() => {
@@ -214,44 +213,31 @@ export default function AppLayout() {
         }
     }, [user?.id, user?.onboarding_completed]);
 
-    // Poll the self-hosted API for profile, match, pending-question and pack changes.
-    // This replaces the former Supabase Postgres change subscriptions.
+    // One small change summary drives every domain refresh. It replaces a
+    // five-second refetch of profile, matches, pending questions and packs plus a
+    // three-second unread poll, and only asks a store to reload when the server
+    // reports that its data actually moved.
+    useCoupleSync(user?.id, user?.couple_id);
+
+    // Match analytics are derived from the store rather than from a poll response,
+    // so they fire once per genuinely new match however it arrived.
     useEffect(() => {
-        if (!user?.id) return;
-        let cancelled = false;
         matchPollInitializedRef.current = false;
         knownMatchIdsRef.current = new Set();
+    }, [user?.id, user?.couple_id]);
 
-        const poll = async () => {
-            await Promise.allSettled([
-                useAuthStore.getState().fetchUser(),
-                ...(user.couple_id ? [fetchMatches(true), fetchPendingQuestions(), fetchEnabledPacks()] : []),
-            ]);
-            if (cancelled || !user.couple_id) return;
-            const refreshed = useMatchStore.getState().matches;
-            if (matchPollInitializedRef.current) {
-                const added = refreshed.filter(item => !knownMatchIdsRef.current.has(item.id));
-                for (const item of added) Events.matchCreated(item.match_type || "unknown");
-                const previousCount = knownMatchIdsRef.current.size;
-                if (previousCount === 0 && added.length > 0) Events.firstMatch();
-                else if (added.length > 0 && refreshed.length % 10 === 0) Events.milestoneMatch(refreshed.length);
-            }
-            knownMatchIdsRef.current = new Set(refreshed.map(item => item.id));
-            matchPollInitializedRef.current = true;
-        };
-
-        void poll();
-        const timer = setInterval(() => void poll(), 5_000);
-        return () => { cancelled = true; clearInterval(timer); };
-    }, [user?.id, user?.couple_id, fetchMatches, fetchPendingQuestions, fetchEnabledPacks]);
-
-    // Poll the self-hosted API for unread chat state. Chat screens perform their
-    // own message polling; this keeps the global badge current without Supabase Realtime.
     useEffect(() => {
         if (!user?.couple_id) return;
-        const timer = setInterval(() => void fetchUnreadCount(), 3_000);
-        return () => clearInterval(timer);
-    }, [user?.couple_id, fetchUnreadCount]);
+        const known = knownMatchIdsRef.current;
+        const added = matches.filter(item => !known.has(item.id));
+        if (matchPollInitializedRef.current && added.length > 0) {
+            for (const item of added) Events.matchCreated(item.match_type || "unknown");
+            if (known.size === 0) Events.firstMatch();
+            else if (matches.length % 10 === 0) Events.milestoneMatch(matches.length);
+        }
+        knownMatchIdsRef.current = new Set(matches.map(item => item.id));
+        matchPollInitializedRef.current = true;
+    }, [matches, user?.couple_id]);
 
     // Animate message toast when lastMessage changes
     useEffect(() => {

@@ -36,16 +36,33 @@ export type DateSortOrder = "newest" | "oldest";
 
 const BATCH_SIZE = 20;
 
+// Overlap protection independent of the presentational flags: a refresh over cached
+// rows raises `isRefreshing`, not `isLoading`, and still must not run twice. Keyed to
+// the generation that started the request: a stale generation's entry must not block
+// the next account's request, and its `finally` must not clear a newer generation's guard.
+const inFlight = new Map<string, number>();
+
 interface ResponsesState {
     responses: ResponseWithQuestion[];
+    /** First load only. A refresh over rows already on screen must not blank the list. */
     isLoading: boolean;
+    /** Refresh over cached rows; drives pull-to-refresh only. */
+    isRefreshing: boolean;
     isLoadingMore: boolean;
     groupBy: GroupByOption;
     dateSortOrder: DateSortOrder;
     hasMore: boolean;
     page: number;
     totalCount: number | null;
+    /** Null until the first successful read; an empty history is a loaded answer. */
+    loadedAt: number | null;
+    /** Bumped on clear/sign-out so a response that outlives it cannot write into the next account's store. */
+    generation: number;
     fetchResponses: (refresh?: boolean) => Promise<void>;
+    /** Loads the first page once; revisiting the screen reuses what is cached. */
+    ensureResponsesLoaded: () => Promise<void>;
+    /** Marks the cache stale without spending a request; the next ensure reloads it. */
+    invalidateResponses: () => void;
     updateResponse: (
         questionId: string,
         newAnswer: AnswerType,
@@ -61,12 +78,15 @@ interface ResponsesState {
 export const useResponsesStore = create<ResponsesState>((set, get) => ({
     responses: [],
     isLoading: false,
+    isRefreshing: false,
     isLoadingMore: false,
     groupBy: "date",
     dateSortOrder: "newest",
     hasMore: true,
     page: 0,
     totalCount: null,
+    loadedAt: null,
+    generation: 0,
 
     fetchResponses: async (refresh = false) => {
         const userId = useAuthStore.getState().user?.id;
@@ -74,25 +94,31 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
 
         if (!userId || !coupleId) return;
 
+        const myGeneration = get().generation;
         const state = get();
-        if (state.isLoading || (state.isLoadingMore && !refresh)) return;
+        if (inFlight.get('responses') === myGeneration || (state.isLoadingMore && !refresh)) return;
 
+        // Nothing on screen yet is the only case that warrants a full-screen spinner;
+        // every other refresh leaves the cached rows in place until replacements land.
+        const initial = state.loadedAt === null;
         if (refresh) {
-            set({ isLoading: true, page: 0, hasMore: true });
+            set({ isLoading: initial, isRefreshing: !initial, page: 0, hasMore: true });
         } else {
             if (!state.hasMore) return;
             set({ isLoadingMore: true });
         }
 
+        inFlight.set('responses', myGeneration);
         try {
             const currentPage = refresh ? 0 : state.page;
             const result = await apiClient.get<{responses: ResponseWithQuestion[];totalCount:number}>(`/v1/me/responses?page=${currentPage}&limit=${BATCH_SIZE}`);
+            if (get().generation !== myGeneration) return;
             const responses = result.responses;
             const totalCount = result.totalCount;
 
             if (!responses || responses.length === 0) {
                 if (refresh) {
-                    set({ responses: [], totalCount: totalCount ?? 0, isLoading: false, hasMore: false });
+                    set({ responses: [], totalCount: totalCount ?? 0, isLoading: false, isRefreshing: false, hasMore: false, loadedAt: Date.now() });
                 } else {
                     set({ isLoadingMore: false, hasMore: false });
                 }
@@ -100,21 +126,35 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
             }
 
             const transformedResponses = responses;
-            
+
             set((state) => ({
                 responses: refresh
                     ? transformedResponses
                     : [...state.responses, ...transformedResponses],
                 totalCount: refresh ? totalCount : state.totalCount,
                 isLoading: false,
+                isRefreshing: false,
                 isLoadingMore: false,
                 page: currentPage + 1,
-                hasMore: responses.length === BATCH_SIZE
+                hasMore: responses.length === BATCH_SIZE,
+                loadedAt: Date.now(),
             }));
         } catch (error) {
+            if (get().generation !== myGeneration) return;
             console.error("Error in fetchResponses:", error);
-            set({ isLoading: false, isLoadingMore: false });
+            set({ isLoading: false, isRefreshing: false, isLoadingMore: false });
+        } finally {
+            if (inFlight.get('responses') === myGeneration) inFlight.delete('responses');
         }
+    },
+
+    ensureResponsesLoaded: async () => {
+        if (get().loadedAt !== null) return;
+        await get().fetchResponses(true);
+    },
+
+    invalidateResponses: () => {
+        set({ loadedAt: null });
     },
 
     updateResponse: async (
@@ -123,12 +163,20 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
         confirmDelete = false,
         responseData?: ResponseData | null
     ): Promise<UpdateResponseResult> => {
+        const myGeneration = get().generation;
         try {
             const result = await apiClient.patch<UpdateResponseResult>(`/v1/responses/${questionId}`, {
                 new_answer: newAnswer,
                 confirm_delete_match: confirmDelete,
                 response_data: responseData,
             });
+
+            // Rows are keyed by a question id from the shared catalogue, so once the
+            // store has been cleared that same id can name a different account's
+            // answer. Hand the caller the server's result — it is true of whoever
+            // asked — but write nothing, and refresh no matches, for the account
+            // that is loaded now.
+            if (get().generation !== myGeneration) return result;
 
         // If update was successful (not just requiring confirmation), update local state
         if (result.success && !result.requires_confirmation) {
@@ -191,7 +239,15 @@ export const useResponsesStore = create<ResponsesState>((set, get) => ({
     },
 
     clearResponses: () => {
-        set({ responses: [], isLoading: false, groupBy: "date", dateSortOrder: "newest", page: 0, hasMore: true, isLoadingMore: false, totalCount: null });
+        set((state) => ({
+            responses: [], isLoading: false, isRefreshing: false, groupBy: "date", dateSortOrder: "newest",
+            page: 0, hasMore: true, isLoadingMore: false, totalCount: null, loadedAt: null,
+            // Invalidates any request already in flight for the signed-out user.
+            generation: state.generation + 1,
+        }));
+        // See matchStore.clearMatches: the previous user's in-flight page must not
+        // block the next user's.
+        inFlight.clear();
     },
 }));
 

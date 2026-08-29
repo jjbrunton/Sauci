@@ -265,6 +265,53 @@ describe('responsesStore', () => {
         });
     });
 
+    describe('account isolation (generation tokens)', () => {
+        it('does not let a stale fetchResponses response populate the store after clearResponses, and lets the next account start immediately', async () => {
+            let resolve!: (value: unknown) => void;
+            apiGet.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+            const staleFetch = useResponsesStore.getState().fetchResponses(true);
+
+            // Simulates sign-out/account switch while the request is still in flight.
+            useResponsesStore.getState().clearResponses();
+            resolve({ responses: [response({ id: 'stale' })], totalCount: 1 });
+            await staleFetch;
+
+            expect(useResponsesStore.getState().responses).toEqual([]);
+
+            apiGet.mockResolvedValueOnce({ responses: [response({ id: 'fresh' })], totalCount: 1 });
+            await useResponsesStore.getState().fetchResponses(true);
+            expect(useResponsesStore.getState().responses.map((r) => r.id)).toEqual(['fresh']);
+        });
+
+        it('does not let a stale edit rewrite the next account\'s row or refresh its matches', async () => {
+            // Question ids come from the shared catalogue, so the same id names a real
+            // row in both accounts' lists: a stale edit would land on one of them.
+            const fetchMatches = jest.fn();
+            useMatchStore.setState({ fetchMatches } as any);
+            useResponsesStore.setState({
+                responses: [response({ id: 'alice', answer: 'maybe', has_match: false, match_id: undefined })],
+            });
+
+            let resolve!: (value: unknown) => void;
+            apiPatch.mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+            const staleEdit = useResponsesStore.getState().updateResponse('q1', 'yes');
+
+            useResponsesStore.getState().clearResponses();
+            const next = [response({ id: 'bob', answer: 'no', has_match: false, match_id: undefined })];
+            useResponsesStore.setState({ responses: next });
+
+            resolve({ success: true, new_match: { id: 'm2' } });
+            // The caller still hears what the server did for the account that asked.
+            await expect(staleEdit).resolves.toMatchObject({ success: true });
+
+            expect(useResponsesStore.getState().responses).toBe(next);
+            expect(useResponsesStore.getState().responses[0]).toMatchObject({
+                id: 'bob', answer: 'no', has_match: false,
+            });
+            expect(fetchMatches).not.toHaveBeenCalled();
+        });
+    });
+
     describe('state controls', () => {
         it('sets and toggles grouping options', () => {
             useResponsesStore.getState().setGroupBy('pack');

@@ -44,6 +44,11 @@ export function registerAppDataRoutes(app: App, repository: AppDataRepository): 
     const result = await run(() => repository.markMediaViewed(c.get('identity').id, id.data, body.data.expires_at));
     return result.ok ? c.json(result.value) : c.json(error(result.cause.code, result.cause.message), result.cause.status);
   });
+  // The client polls this instead of re-fetching every domain; see SyncSummary.
+  app.get('/v1/me/sync', async c => {
+    const result = await run(() => repository.syncSummary(c.get('identity').id));
+    return result.ok ? c.json(result.value) : c.json(error(result.cause.code, result.cause.message), result.cause.status);
+  });
   app.get('/v1/me/nudge-status', async c => c.json(await repository.nudgeStatus(c.get('identity').id)));
   app.post('/v1/me/nudge', async c => {
     const result = await run(() => repository.sendNudge(c.get('identity').id));

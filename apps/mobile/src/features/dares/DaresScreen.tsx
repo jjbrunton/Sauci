@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { GradientBackground } from "../../components/ui";
 import { Paywall } from "../../components/paywall";
@@ -20,7 +21,8 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export function DaresScreen() {
-    const dares = useDares();
+    const isFocused = useIsFocused();
+    const dares = useDares({ isFocused });
     const [tab, setTab] = useState<Tab>("active");
     const [sheetPack, setSheetPack] = useState<DarePack | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);

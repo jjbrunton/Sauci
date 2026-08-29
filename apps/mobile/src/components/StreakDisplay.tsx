@@ -43,12 +43,12 @@ export function streakStatus(streak: CoupleStreak): { headline: string; status: 
  * Displays the couple's shared streak. The flame pulses while the streak is alive.
  */
 export function StreakDisplay({ showLongest = false, delay = 0, compact = false }: StreakDisplayProps) {
-    const { streak, fetchStreak } = useStreakStore();
+    const { streak, ensureStreakLoaded } = useStreakStore();
 
     // Fetch streak on mount
     useEffect(() => {
-        fetchStreak();
-    }, [fetchStreak]);
+        void ensureStreakLoaded();
+    }, [ensureStreakLoaded]);
 
     // Flame pulse animation
     const scale = useSharedValue(1);
