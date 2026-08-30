@@ -15,6 +15,7 @@ const sendBody = z
     custom_dare_intensity: z.number().int().min(1).max(5).nullish(),
     duration_hours: z.union([z.literal(1), z.literal(6), z.literal(12), z.literal(24), z.literal(72), z.literal(168)]).nullish(),
     sender_notes: z.string().trim().max(500).nullish(),
+    proof_type: z.enum(['none', 'photo', 'audio']).nullish(),
   })
   .strict()
   .refine((value) => Boolean(value.dare_id) !== Boolean(value.custom_dare_text), {
@@ -22,6 +23,8 @@ const sendBody = z
   });
 
 const respondBody = z.object({ action: z.enum(['accept', 'decline']) }).strict();
+
+const submitBody = z.object({ proof_media_id: id.nullish() }).strict();
 
 function error(code: string, message: string): ApiErrorResponse {
   return { error: { code, message } };
@@ -93,8 +96,20 @@ export function registerDareRoutes(app: DaresApp, repository: DaresRepository): 
       : c.json(error(response.cause.code, response.cause.message), response.cause.status);
   });
 
+  app.post('/v1/dares/:dareId/submit', async (c) => {
+    const dareId = id.safeParse(c.req.param('dareId'));
+    if (!dareId.success) return c.json(error('invalid_dare_id', 'A valid dare ID is required'), 400);
+    // Body is optional: dares without a proof requirement submit with no payload.
+    const body = submitBody.safeParse(await c.req.json().catch(() => ({})));
+    if (!body.success) return c.json(error('invalid_proof', 'proof_media_id must be a valid media ID'), 400);
+    const response = await result(() =>
+      repository.submit(c.get('identity').id, dareId.data, body.data.proof_media_id ?? null));
+    return response.ok
+      ? c.json({ dare: response.value })
+      : c.json(error(response.cause.code, response.cause.message), response.cause.status);
+  });
+
   for (const [path, method] of [
-    ['submit', 'submit'],
     ['complete', 'complete'],
     ['cancel', 'cancel'],
   ] as const) {

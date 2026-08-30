@@ -2,6 +2,7 @@ import { memo } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, featureColors, radius, spacing, typography } from "../../../theme";
+import { DareProofView } from "./DareProofView";
 import type { SentDare } from "../types";
 
 const ACCENT = featureColors.dares.accent;
@@ -92,6 +93,23 @@ export const DareCard = memo(function DareCard({ dare, busy, onAction }: DareCar
 
             {dare.sender_notes ? <Text style={styles.notes}>“{dare.sender_notes}”</Text> : null}
 
+            {dare.proof_type !== "none" ? (
+                <View style={styles.proofRow}>
+                    <Ionicons
+                        name={dare.proof_type === "photo" ? "camera-outline" : "mic-outline"}
+                        size={13}
+                        color={ACCENT}
+                    />
+                    <Text style={styles.proofLabel}>
+                        {dare.proof_type === "photo" ? "Photo proof required" : "Audio proof required"}
+                    </Text>
+                </View>
+            ) : null}
+
+            {dare.proof_media_id && dare.proof_type !== "none" ? (
+                <DareProofView proofMediaId={dare.proof_media_id} proofType={dare.proof_type} />
+            ) : null}
+
             {deadline ? (
                 <View style={styles.deadlineRow}>
                     <Ionicons name="time-outline" size={13} color={colors.textTertiary} />
@@ -157,6 +175,13 @@ const styles = StyleSheet.create({
         fontStyle: "italic",
         marginTop: spacing.sm,
     },
+    proofRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.xs,
+        marginTop: spacing.sm,
+    },
+    proofLabel: { ...typography.caption1, color: ACCENT, fontWeight: "600" },
     deadlineRow: {
         flexDirection: "row",
         alignItems: "center",

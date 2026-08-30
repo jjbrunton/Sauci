@@ -196,6 +196,58 @@ describe.skipIf(!url || !local)('dares + PostgreSQL', () => {
     expect((await repo.listDares(recipient, 'history'))[0]!.direction).toBe('incoming');
   });
 
+  async function insertProof(owner: string, coupleId: string | null, mime: string, kind = 'dare_proof') {
+    const id = randomUUID();
+    await pool.query(
+      'insert into media_objects(id,owner_id,couple_id,kind,storage_key,mime_type,byte_size) values($1,$2,$3,$4,$5,$6,100)',
+      [id, owner, coupleId, kind, `${kind}/test/${id}.bin`, mime],
+    );
+    return id;
+  }
+
+  it('stores the proof requirement and defaults to none', async () => {
+    const plain = await repo.send(sender, { dare_id: freeDare });
+    expect(plain).toMatchObject({ proof_type: 'none', proof_media_id: null });
+    const proofed = await repo.send(sender, { dare_id: freeDare, proof_type: 'photo' });
+    expect(proofed.proof_type).toBe('photo');
+    await expect(repo.send(sender, { dare_id: freeDare, proof_type: 'video' as never }))
+      .rejects.toMatchObject({ code: 'invalid_proof_type' });
+  });
+
+  it('requires matching proof media before a proofed dare can be submitted', async () => {
+    const dare = await repo.send(sender, { dare_id: freeDare, proof_type: 'photo' });
+    await repo.respond(recipient, dare.id, 'accept');
+
+    await expect(repo.submit(recipient, dare.id)).rejects.toMatchObject({ code: 'proof_required' });
+    const audio = await insertProof(recipient, couple, 'audio/mp4');
+    await expect(repo.submit(recipient, dare.id, audio)).rejects.toMatchObject({ code: 'proof_type_mismatch' });
+
+    const photo = await insertProof(recipient, couple, 'image/jpeg');
+    const submitted = await repo.submit(recipient, dare.id, photo);
+    expect(submitted).toMatchObject({ status: 'submitted', proof_media_id: photo });
+    expect((await repo.complete(sender, dare.id)).status).toBe('completed');
+  });
+
+  it('refuses proof media the recipient does not own or that is not dare proof', async () => {
+    const dare = await repo.send(sender, { dare_id: freeDare, proof_type: 'photo' });
+    await repo.respond(recipient, dare.id, 'accept');
+
+    const foreign = await insertProof(outsider, otherCouple, 'image/jpeg');
+    await expect(repo.submit(recipient, dare.id, foreign)).rejects.toMatchObject({ code: 'proof_not_found' });
+    const wrongKind = await insertProof(recipient, couple, 'image/jpeg', 'chat');
+    await expect(repo.submit(recipient, dare.id, wrongKind)).rejects.toMatchObject({ code: 'proof_not_found' });
+    const senderOwned = await insertProof(sender, couple, 'image/jpeg');
+    await expect(repo.submit(recipient, dare.id, senderOwned)).rejects.toMatchObject({ code: 'proof_not_found' });
+  });
+
+  it('accepts voluntary proof on dares that did not require any', async () => {
+    const dare = await repo.send(sender, { dare_id: freeDare });
+    await repo.respond(recipient, dare.id, 'accept');
+    const photo = await insertProof(recipient, couple, 'image/jpeg');
+    const submitted = await repo.submit(recipient, dare.id, photo);
+    expect(submitted).toMatchObject({ status: 'submitted', proof_type: 'none', proof_media_id: photo });
+  });
+
   it('rejects durations outside the offered presets', async () => {
     await expect(repo.send(sender, { dare_id: freeDare, duration_hours: 5 })).rejects.toMatchObject({ code: 'invalid_duration' });
   });

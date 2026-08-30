@@ -39,7 +39,7 @@ export class PostgresMediaRepository implements MediaRepository {
       const profile = await client.query<{ couple_id: string | null }>('select couple_id from profiles where id=$1 for update', [userId]);
       if (!profile.rows[0]) throw new MediaError('profile_not_found', 'Profile not found', 404);
       const coupleId = profile.rows[0].couple_id;
-      if ((kind === 'response' || kind === 'chat') && !coupleId) throw new MediaError('couple_required', 'Join a couple before sharing media', 409);
+      if ((kind === 'response' || kind === 'chat' || kind === 'dare_proof') && !coupleId) throw new MediaError('couple_required', 'Join a couple before sharing media', 409);
       if (kind === 'response') {
         if (!context.questionId) throw new MediaError('question_required', 'A question ID is required', 400);
         const question = await client.query('select 1 from questions where id=$1 and deleted_at is null', [context.questionId]);
@@ -84,7 +84,7 @@ export class PostgresMediaRepository implements MediaRepository {
          from media_objects mo join profiles viewer on viewer.id=$1
         where mo.id=$2 and mo.deleted_at is null and (mo.expires_at is null or mo.expires_at>now())
           and not exists(select 1 from messages m where m.media_path='media:'||mo.id::text and (m.media_expired or m.media_expires_at<=now()))
-          and (mo.owner_id=$1 or (mo.kind in ('avatar','response','chat') and mo.couple_id is not null and mo.couple_id=viewer.couple_id))`,
+          and (mo.owner_id=$1 or (mo.kind in ('avatar','response','chat','dare_proof') and mo.couple_id is not null and mo.couple_id=viewer.couple_id))`,
       [userId, mediaId],
     );
     if (!result.rows[0]) throw new MediaError('media_not_found', 'Media not found', 404);

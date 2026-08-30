@@ -595,7 +595,7 @@ Features observed in competitor apps (Desire, Kindu, Spicer, Lovewick):
 | Decline Option | ✅ | No negative impact |
 | Dare History | ✅ | Via `sent_dares` table |
 | Chat per Dare | ✅ | `dare_messages` table |
-| Proof/Verification | ❌ | Not in v1 (could add photo proof later) |
+| Proof/Verification | ✅ | Optional photo/audio proof, chosen by the sender per dare |
 | Daily/Random Dares | ❌ | Not in v1 (could add "random dare" button) |
 | Dare Rewards | ❌ | Not in v1 (could unlock content) |
 | Streak Tracking | ❌ | Not in v1 (could add later) |
