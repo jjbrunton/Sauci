@@ -23,8 +23,8 @@ describe('assetlinks.json', () => {
 
     expect(data[0].target.package_name).toBe('com.sauci.app')
     expect(data[0].target.namespace).toBe('android_app')
-    // The real release cert fingerprint is not present in this repository;
-    // this placeholder must be replaced before Android App Links will verify.
-    expect(data[0].target.sha256_cert_fingerprints[0]).toContain('PLACEHOLDER')
+    // Must be the Play App Signing key certificate fingerprint (Play Console >
+    // Test and release > Setup > App signing), colon-separated uppercase hex.
+    expect(data[0].target.sha256_cert_fingerprints[0]).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/)
   })
 })

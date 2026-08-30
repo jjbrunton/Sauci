@@ -285,10 +285,10 @@ and `apps/web/public/.well-known/assetlinks.json` authorize `sauci.app` to open
 the app for `/join/*`. The Apple Team ID (`BXVPBATDZY`, from
 `apps/mobile/app.json` and `apps/mobile/eas.json`) and bundle/package id
 (`com.sauci.app`) are real values already used elsewhere in the repo. The
-Android release certificate SHA-256 fingerprint in `assetlinks.json` is a
-placeholder (`PLACEHOLDER_ANDROID_RELEASE_SHA256_CERT_FINGERPRINT`) and must
-be replaced with the real release signing certificate fingerprint before
-Android App Links will verify.
+SHA-256 fingerprint in `assetlinks.json` is the Play App Signing key
+certificate fingerprint from the Play Console (Test and release > Setup >
+App signing); if the app signing key ever rotates, this file must be updated
+or Android App Links will stop verifying.
 
 **Mobile link handling:** `apps/mobile/app.json` declares
 `associatedDomains: ["applinks:sauci.app"]` (iOS) and an intent filter for
