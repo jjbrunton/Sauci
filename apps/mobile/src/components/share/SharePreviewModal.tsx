@@ -8,7 +8,6 @@ import {
     Platform,
     Share,
     useWindowDimensions,
-    Image,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
@@ -22,10 +21,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import { colors, gradients, radius, typography, spacing, blur } from "../../theme";
+import { colors, typography, spacing, blur } from "../../theme";
 import { shareToInstagramStories } from "../../lib/instagramShare";
-
-const logo = require("../../../assets/logo.png");
+import { Events } from "../../lib/analytics";
+import { QuestionShareCard } from "./QuestionShareCard";
 
 const MAX_CARD_WIDTH = 340;
 
@@ -54,6 +53,8 @@ export function SharePreviewModal({
     const shareViewRef = useRef<ViewShot>(null);
     const [capturedUri, setCapturedUri] = useState<string | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
+
+    const shareMessage = `${question.text}\n\nPlay it with your partner on https://sauci.app`;
 
     // Capture the card when modal becomes visible
     useEffect(() => {
@@ -87,7 +88,9 @@ export function SharePreviewModal({
         if (!capturedUri) return;
 
         const shared = await shareToInstagramStories(capturedUri);
-        if (!shared) {
+        if (shared) {
+            Events.questionShared("instagram");
+        } else {
             // Instagram Stories sharing unavailable - fall back to the share sheet
             await handleMoreShare();
         }
@@ -96,9 +99,8 @@ export function SharePreviewModal({
     const handleMessagesShare = async () => {
         if (!capturedUri) {
             // Fallback to text
-            await Share.share({
-                message: `${question.text}\n\nDiscover more on sauci.app`,
-            });
+            await Share.share({ message: shareMessage });
+            Events.questionShared("messages");
             return;
         }
 
@@ -109,22 +111,21 @@ export function SharePreviewModal({
                     mimeType: 'image/png',
                     UTI: 'public.png',
                 });
+                Events.questionShared("messages");
             } else {
                 await handleMoreShare();
             }
         } catch (error) {
             console.error('Messages share error:', error);
-            await Share.share({
-                message: `${question.text}\n\nDiscover more on sauci.app`,
-            });
+            await Share.share({ message: shareMessage });
+            Events.questionShared("messages");
         }
     };
 
     const handleMoreShare = async () => {
         if (!capturedUri) {
-            await Share.share({
-                message: `${question.text}\n\nDiscover more on sauci.app`,
-            });
+            await Share.share({ message: shareMessage });
+            Events.questionShared("more");
             return;
         }
 
@@ -136,10 +137,9 @@ export function SharePreviewModal({
                     dialogTitle: 'Share this question',
                 });
             } else {
-                await Share.share({
-                    message: `${question.text}\n\nDiscover more on sauci.app`,
-                });
+                await Share.share({ message: shareMessage });
             }
+            Events.questionShared("more");
         } catch (error) {
             console.error('Share error:', error);
         }
@@ -202,7 +202,7 @@ export function SharePreviewModal({
                                 result: 'tmpfile',
                             }}
                         >
-                            <ShareableCard
+                            <QuestionShareCard
                                 question={question}
                                 packName={packName}
                                 cardWidth={cardWidth}
@@ -287,69 +287,6 @@ function ShareActionButton({
     );
 }
 
-function ShareableCard({
-    question,
-    packName,
-    cardWidth,
-    cardColor,
-}: {
-    question: {
-        text: string;
-        partner_text?: string | null;
-        is_two_part?: boolean;
-    };
-    packName?: string;
-    cardWidth: number;
-    cardColor?: string;
-}) {
-    // Use the card color if provided, otherwise fall back to primary gradient
-    const useGradient = !cardColor;
-
-    return (
-        <View style={[styles.shareableCard, { width: cardWidth }]}>
-            {/* Background - solid color matching what the user saw, or gradient fallback */}
-            {useGradient ? (
-                <LinearGradient
-                    colors={gradients.primary as [string, string]}
-                    style={[StyleSheet.absoluteFill, { borderRadius: radius.xl }]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                />
-            ) : (
-                <View
-                    style={[
-                        StyleSheet.absoluteFill,
-                        { backgroundColor: cardColor, borderRadius: radius.xl }
-                    ]}
-                />
-            )}
-
-            {/* Subtle overlay for depth */}
-            <View style={styles.cardOverlay} />
-
-            {/* Pack name badge */}
-            {packName && (
-                <View style={styles.packBadge}>
-                    <Text style={styles.packBadgeText}>{packName}</Text>
-                </View>
-            )}
-
-            {/* Content */}
-            <View style={styles.shareableContent}>
-                <Text style={styles.questionText}>
-                    {question.text}
-                </Text>
-            </View>
-
-            {/* Branding with logo */}
-            <View style={styles.branding}>
-                <Image source={logo} style={styles.brandingLogo} />
-                <Text style={styles.brandingText}>sauci.app</Text>
-            </View>
-        </View>
-    );
-}
-
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
@@ -417,83 +354,5 @@ const styles = StyleSheet.create({
         ...typography.caption1,
         color: colors.text,
         fontWeight: '500',
-    },
-    // Shareable card styles
-    shareableCard: {
-        aspectRatio: 0.7,
-        borderRadius: radius.xl,
-        overflow: 'hidden',
-        padding: spacing.lg,
-    },
-    cardOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    },
-    packBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.xs,
-        borderRadius: radius.full,
-    },
-    packBadgeText: {
-        ...typography.caption1,
-        color: colors.text,
-        fontWeight: '600',
-    },
-    shareableContent: {
-        flex: 1,
-        justifyContent: 'center',
-        paddingVertical: spacing.xl,
-    },
-    questionText: {
-        ...typography.title1,
-        color: colors.text,
-        fontWeight: '700',
-        lineHeight: 36,
-    },
-    questionTextSmaller: {
-        ...typography.title2,
-        lineHeight: 30,
-    },
-    partnerSection: {
-        marginTop: spacing.lg,
-    },
-    partnerDivider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: spacing.sm,
-        gap: spacing.sm,
-    },
-    partnerDividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    },
-    partnerLabel: {
-        ...typography.caption1,
-        color: 'rgba(255, 255, 255, 0.7)',
-        fontWeight: '500',
-    },
-    partnerText: {
-        ...typography.subhead,
-        color: 'rgba(255, 255, 255, 0.8)',
-        fontStyle: 'italic',
-    },
-    branding: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: spacing.sm,
-    },
-    brandingLogo: {
-        width: 24,
-        height: 24,
-        resizeMode: 'contain',
-    },
-    brandingText: {
-        ...typography.subhead,
-        color: colors.text,
-        fontWeight: '600',
     },
 });
