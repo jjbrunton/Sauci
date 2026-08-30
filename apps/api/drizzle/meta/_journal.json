@@ -141,6 +141,13 @@
       "when": 1788168000000,
       "tag": "0019_quiz",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788168060000,
+      "tag": "0020_quiz_question_pool",
+      "breakpoints": true
     }
   ]
 }

@@ -167,9 +167,22 @@ export class PostgresQuizRepository implements QuizRepository {
         return { session: await this.buildPayload(client, existing.rows[0], userId), created: false };
       }
 
+      // Prefer questions this couple has never had in any prior session (completed or
+      // active), then the least-recently-used ones, with a random tiebreak within each
+      // group so repeat quizzes stay varied instead of always reusing the same pool.
       const questions = await client.query<{ id: string }>(
-        'select id from quiz_questions where is_active = true order by sort_order, id limit $1',
-        [QUESTIONS_PER_SESSION],
+        `select q.id
+         from quiz_questions q
+         left join (
+           select question_id, max(created_at) as last_used
+           from quiz_sessions, unnest(question_ids) as question_id
+           where couple_id = $1
+           group by question_id
+         ) usage on usage.question_id = q.id
+         where q.is_active = true
+         order by (usage.last_used is not null), usage.last_used asc, random()
+         limit $2`,
+        [coupleId, QUESTIONS_PER_SESSION],
       );
       const questionIds = questions.rows.map((row) => row.id);
 
