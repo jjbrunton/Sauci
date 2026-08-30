@@ -1,12 +1,17 @@
 # Agent routing and effort
 
-The primary agent owns scope, acceptance criteria, task decomposition, review,
-and the final answer. Every substantive repository task must delegate at least
-one bounded unit to the best-fit project agent. Use `repo_scout` for read-only
-discovery or analysis and `implementation` for product or harness changes. Add
-other agents only for separable work or the risk triggers below. Skip delegation
-only for trivial conversation, a single obvious lookup, or a mechanical one-line
-edit whose coordination cost exceeds the work.
+Sol is the primary agent and owns scope, risk classification, acceptance
+criteria, task decomposition, progress steering, final diff and evidence review,
+and the final answer. Every substantive repository task must delegate to a
+project agent. Each substantive implementation must delegate one coherent
+execution unit to the Terra `implementation` agent. That handoff normally
+combines scoped discovery, implementation, focused tests, and iteration in one
+continuous task. Add a `repo_scout`, reviewer, test writer, or verifier only for
+separable work or the triggers below. The primary reviews the returned diff and
+evidence, but does not repeat the implementation agent's detailed exploration or
+checks without a concrete reason. Skip delegation only for trivial conversation,
+a single obvious lookup, or a mechanical one-line edit whose coordination cost
+exceeds the work.
 
 ## Implementation and integration
 
@@ -44,10 +49,10 @@ Project Codex defaults live in `.codex/config.toml`; task profiles live in
 
 | Role | Codex model | Default effort | Trigger | Do not use for |
 |---|---|---:|---|---|
-| `repo_scout` | Luna | low | locate ownership, callers, contracts | editing or design decisions |
-| `implementation` | Terra | medium, overridable | bounded product or harness change | broad architecture review |
+| `repo_scout` | Luna | low | separable read-only ownership, caller, or contract lookup | editing or design decisions |
+| `implementation` | Terra | medium, overridable | one continuous scoped discovery, implementation, test, and iteration unit | broad architecture review |
 | `test_writer` | Terra | medium | focused regression or missing contract test | rubber-stamping green output |
-| `verifier` | Terra | medium | independently drive implemented behavior | editing implementation |
+| `verifier` | Terra | medium | user-facing, cross-boundary, or high-risk runtime behavior | editing implementation or low-risk package-local changes |
 | `database_reviewer` | Terra | high | migrations, RLS, function/query boundaries | ordinary UI changes |
 | `security_reviewer` | Sol | high | auth, RLS, crypto, secrets, payments, destructive operations | every routine change |
 | `architecture_reviewer` | Sol | high | cross-cutting or hard-to-reverse decisions | local refactors |
@@ -71,13 +76,26 @@ the implementation agent into a premium generalist. Add the matching read-only
 Sol reviewer and keep implementation on Terra unless the user explicitly asks for
 a different model.
 
+## Verification routing
+
+Use a fresh Terra `verifier` after implementation when the change has
+user-facing runtime behavior, crosses an application, API, data, authentication,
+or provider boundary, or is otherwise high risk. The verifier independently
+drives the acceptance criteria and returns evidence only. It is not required for
+documentation, mechanical configuration, isolated tests, or low-risk
+package-local changes with focused deterministic checks. A verifier may still be
+added when independent observation would materially increase confidence.
+
 ## Handoff contract
 
 Every delegated task includes the objective, owned files or surface, acceptance
 criteria, applicable `AGENTS.md` and skill, allowed side effects, required checks,
 and the evidence to return. The agent must report changed files, commands and
-results, assumptions, and blockers. The primary agent independently reviews the
-diff and decides whether acceptance has been met.
+results, assumptions, and blockers. The primary independently reviews the final
+diff and evidence and decides whether acceptance has been met. It should steer
+the active implementation agent with targeted feedback rather than restart the
+same discovery or verification in another agent unless an independent judgment,
+separable workstream, or the verification-routing trigger requires it.
 
 Parallel agents are for independent read-heavy work or non-overlapping ownership.
 Avoid concurrent edits to the same files, shared database state, fixed local
