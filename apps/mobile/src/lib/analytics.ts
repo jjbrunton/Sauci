@@ -214,6 +214,8 @@ export const Events = {
   questionAnswered: (answer: string, packId?: string) =>
     logEvent("question_answered", { answer, pack_id: packId ?? "unknown" }),
   questionSkipped: () => logEvent("question_skipped"),
+  questionShared: (destination: "instagram" | "messages" | "more") =>
+    logEvent("question_shared", { destination }),
   matchCreated: (matchType: string) => logEvent("match_created", { match_type: matchType }),
   allQuestionsExhausted: () => logEvent("all_questions_exhausted"),
   pendingQuestionsPromptViewed: (count: number) =>
