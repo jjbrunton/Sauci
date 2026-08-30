@@ -59,6 +59,7 @@ e2e/playwright-report/
 
 # Misc
 *.pem
+!apps/mobile/certs/certificate.pem
 .cache/
 .temp/
 .tmp/
