@@ -258,7 +258,7 @@ To verify you're using the correct keystore:
 keytool -list -v -keystore android/sauci-release.keystore -storepass <password>
 ```
 
-Expected SHA1: `C3:70:C5:8C:85:E5:B5:92:97:82:A9:B0:47:98:40:99:AC:C8:47:43`
+Expected EAS production upload-key SHA1: `F0:60:26:C7:54:B0:46:F2:80:FE:AC:43:8A:69:10:BD:9A:62:B4:59`
 
 ---
 
