@@ -25,9 +25,15 @@ MCP service in one npm/Turborepo workspace.
    and prove the relevant compatibility contracts still hold. Preserve deployed
    interfaces and supported client behavior; repository checks alone do not
    prove a live change is safe.
-10. Scope work to the task. Route bounded implementation through the project
-   `implementation` agent when delegation is useful; the primary agent retains
-   acceptance, review, and final verification. Do not delegate trivial edits.
+10. Delegate every substantive repository task to at least one project agent so
+   detailed exploration or execution stays out of the primary context.
+   "Substantive" includes repository exploration, multi-file reasoning,
+   implementation, test execution, or contract/risk analysis. Use `repo_scout`
+   for read-only investigation and `implementation` for bounded changes; use
+   the additional roles according to `docs/agents/routing.md`. The primary
+   agent retains scope, acceptance, review, and the final answer. Skip
+   delegation only for trivial conversation, a single obvious lookup, or a
+   mechanical one-line edit whose coordination cost exceeds the work.
 11. Use high-effort reviewers only for the risk triggers in
    `docs/agents/routing.md`.
 

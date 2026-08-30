@@ -1,5 +1,15 @@
 # Sauci Mobile Release Notes
 
+## v1.0.6 — 30 August 2026
+_iOS build 44 · Android build 48_
+
+A little more clarity, momentum, and playfulness for your shared check-ins.
+
+- **Your turn at a glance** — A private Home prompt now shows when questions from your partner are waiting, without revealing their answers.
+- **New ways to play** — Browse, send, and respond to Dares together from a dedicated shared space.
+- **Streaks that fit your day** — Shared streaks now follow your local day, with clearer progress and reminder controls.
+- **Smoother shared moments** — Leaner syncing keeps questions, matches, chat, and Live Draw feeling current with less unnecessary refreshing.
+
 ## v1.0.1 (Build 30) - January 2025
 
 ### New Features
