@@ -1,6 +1,9 @@
 const configPath = require.resolve("../../app.config");
+const appJson = require("../../app.json");
 
 type UpdateConfig = {
+    version: string;
+    runtimeVersion: string;
     updates: {
         codeSigningCertificate?: string;
         codeSigningMetadata?: Record<string, string>;
@@ -42,5 +45,12 @@ describe("Expo OTA configuration", () => {
 
         expect(config.updates.codeSigningCertificate).toBeUndefined();
         expect(config.updates.codeSigningMetadata).toBeUndefined();
+    });
+
+    it("resolves an explicit runtime version matching the public version", () => {
+        const config = resolveConfig({ RELEASE_CHANNEL: "production" });
+
+        expect(config.runtimeVersion).toBe(appJson.expo.version);
+        expect(config.runtimeVersion).toBe(config.version);
     });
 });

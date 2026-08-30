@@ -36,8 +36,9 @@ Require all of the following:
 - a named branch, normally `main` for a production release;
 - a clean starting worktree with `HEAD` equal to its fetched upstream;
 - the previous reachable `v[0-9]*` release tag and no collision for the next tag;
-- consistent public versions across `app.json`, Android `versionName`, and every
-  iOS `MARKETING_VERSION` (`scripts/set_version.mjs --check`);
+- consistent public and OTA runtime versions across `app.json`, explicit
+  `app.config.js` runtime, Android, and every iOS target
+  (`scripts/set_version.mjs --check`);
 - Node 20, JDK 17 for Android, and Xcode/CocoaPods for iOS;
 - the configured production API/Auth/RevenueCat environment, without printing
   secret values.
