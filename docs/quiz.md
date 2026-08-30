@@ -9,7 +9,7 @@ once both have finished.
 
 | Concern | Location |
 |---|---|
-| Schema and seed content | `apps/api/drizzle/0019_quiz.sql` |
+| Schema and seed content | `apps/api/drizzle/0019_quiz.sql`, `apps/api/drizzle/0020_quiz_question_pool.sql` |
 | HTTP contract | `apps/api/src/domains/quiz/routes.ts` |
 | Session and scoring rules | `apps/api/src/domains/quiz/repository.ts` |
 | Pure scoring function | `apps/api/src/domains/quiz/service.ts` (`computeQuizScore`) |
@@ -29,6 +29,15 @@ a partial unique index on `couple_id` where `status = 'active'`). Starting a
 quiz while one is already active returns that same session (`200`) instead of
 creating a second one; two simultaneous starts race safely because the
 partial unique index, not application locking, is the source of truth.
+
+When a new session is created, the 10 questions are chosen from the active
+pool with a couple-scoped preference order: questions this couple has never
+had in any prior session (completed or active) come first, then the
+least-recently-used ones, with a random tiebreak within each group. This
+keeps repeat quizzes varied instead of always drawing the same
+`sort_order`-first questions. The seeded pool (`0019_quiz.sql` plus
+`0020_quiz_question_pool.sql`) has 36 active questions, so two consecutive
+sessions for the same couple are guaranteed not to overlap.
 
 Answers are submitted as one complete batch per call (`quiz_answers`, upsert
 on `(session_id, user_id, question_id)`). A submission must cover every
@@ -73,8 +82,9 @@ completed session.
 - `apps/api/test/quiz.routes.test.ts`: HTTP contract and error mapping
 - `apps/api/test/quiz.integration.test.ts`: real PostgreSQL, covering the full
   happy path with a hand-computed score, idempotent session start, couple
-  isolation, incomplete answer set rejection, and result blocked before
-  completion
+  isolation, incomplete answer set rejection, result blocked before
+  completion, no question overlap between a completed session and the next
+  one for the same couple, and that selection is scoped per couple
 
 ## Mobile client
 
