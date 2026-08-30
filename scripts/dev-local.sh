@@ -366,6 +366,13 @@ window_environment() {
       )
       WINDOW_FORWARD='SAUCI_ADMIN_API_URL="$SAUCI_ADMIN_API_URL" SAUCI_ADMIN_API_TOKEN="$SAUCI_ADMIN_API_TOKEN" SAUCI_MCP_API_KEY="$SAUCI_MCP_API_KEY"'
       ;;
+    admin)
+      WINDOW_ENV=(
+        "VITE_SUPABASE_URL=$AUTH_URL"
+        "VITE_SUPABASE_ANON_KEY=$AUTH_ANON_KEY"
+      )
+      WINDOW_FORWARD='VITE_SUPABASE_URL="$VITE_SUPABASE_URL" VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY"'
+      ;;
     mobile)
       WINDOW_ENV=(
         "EXPO_PUBLIC_API_URL=$MOBILE_API_URL"
@@ -462,6 +469,7 @@ assert_app_ports_available() {
 cmd_up() {
   preflight
   [ -n "$AUTH_URL" ] || die "SUPABASE_AUTH_URL (or EXPO_PUBLIC_SUPABASE_URL) is required for hosted Auth verification."
+  [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for hosted Auth verification."
   assert_allowed_auth
   prepare_session
   if ! restart_managed_windows; then
@@ -520,12 +528,16 @@ cmd_restart() {
 
   preflight
   case "$name" in
-    api|mobile)
+    api|admin|mobile)
       [ -n "$AUTH_URL" ] || die "SUPABASE_AUTH_URL (or EXPO_PUBLIC_SUPABASE_URL) is required."
       assert_allowed_auth
       ;;
   esac
-  [ "$name" != "mobile" ] || [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for the mobile Auth client."
+  case "$name" in
+    admin|mobile)
+      [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for the ${name} Auth client."
+      ;;
+  esac
 
   tmux has-session -t "$SESSION" 2>/dev/null || die "session not running"
   prepare_session

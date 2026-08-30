@@ -61,7 +61,7 @@ Create the ignored root `.env.local` with the public Auth settings for the
 designated non-production Supabase project (`itbzhrvlgvdmzbnhzhyx`). Set
 `SUPABASE_AUTH_URL` (or `EXPO_PUBLIC_SUPABASE_URL`) and
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`; the launcher uses the URL for the API and both
-values for Expo. It accepts only this designated hosted project or loopback Auth,
+values for Expo and the Admin login. It accepts only this designated hosted project or loopback Auth,
 and explicitly rejects the production project and every other hosted project.
 Environment variables exported in the shell take precedence over `.env.local`.
 The launcher treats `.env.local` as data, never shell code: use unquoted
