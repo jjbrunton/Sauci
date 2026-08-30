@@ -1,6 +1,9 @@
 export type DareStatus =
     | "pending" | "active" | "submitted" | "completed" | "expired" | "declined" | "cancelled";
 
+/** Sender-chosen proof of completion; "none" means a plain "I did it" suffices. */
+export type DareProofType = "none" | "photo" | "audio";
+
 export interface DarePack {
     id: string;
     name: string;
@@ -36,6 +39,8 @@ export interface SentDare {
     direction: "incoming" | "outgoing";
     status: DareStatus;
     sender_notes: string | null;
+    proof_type: DareProofType;
+    proof_media_id: string | null;
     sent_at: string;
     accepted_at: string | null;
     submitted_at: string | null;
@@ -70,7 +75,14 @@ export interface SendDarePayload {
     custom_dare_intensity?: number;
     duration_hours?: number | null;
     sender_notes?: string | null;
+    proof_type?: DareProofType;
 }
+
+export const PROOF_OPTIONS: { label: string; value: DareProofType; icon: string }[] = [
+    { label: "No proof", value: "none", icon: "checkmark-circle-outline" },
+    { label: "Photo", value: "photo", icon: "camera-outline" },
+    { label: "Audio", value: "audio", icon: "mic-outline" },
+];
 
 export const DURATION_OPTIONS: { label: string; hours: number | null }[] = [
     { label: "1 hour", hours: 1 },

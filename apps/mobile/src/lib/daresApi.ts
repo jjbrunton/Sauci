@@ -13,7 +13,11 @@ export const daresApi = {
     send: (payload: SendDarePayload) => apiClient.post<{ dare: SentDare }>("/v1/dares", payload),
     respond: (dareId: string, action: "accept" | "decline") =>
         apiClient.post<{ dare: SentDare }>(`${dare(dareId)}/respond`, { action }),
-    submit: (dareId: string) => apiClient.post<{ dare: SentDare }>(`${dare(dareId)}/submit`),
+    submit: (dareId: string, proofMediaId?: string) =>
+        apiClient.post<{ dare: SentDare }>(
+            `${dare(dareId)}/submit`,
+            proofMediaId ? { proof_media_id: proofMediaId } : undefined,
+        ),
     complete: (dareId: string) => apiClient.post<{ dare: SentDare }>(`${dare(dareId)}/complete`),
     cancel: (dareId: string) => apiClient.post<{ dare: SentDare }>(`${dare(dareId)}/cancel`),
 };

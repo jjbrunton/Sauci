@@ -4,3 +4,7 @@ export { DarePackGrid } from "./DarePackGrid";
 export type { DarePackGridProps } from "./DarePackGrid";
 export { SendDareSheet } from "./SendDareSheet";
 export type { SendDareSheetProps } from "./SendDareSheet";
+export { DareProofSheet } from "./DareProofSheet";
+export type { DareProofSheetProps } from "./DareProofSheet";
+export { DareProofView } from "./DareProofView";
+export type { DareProofViewProps } from "./DareProofView";

@@ -4,6 +4,11 @@ import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../d
 export type DareStatus =
   | 'pending' | 'active' | 'submitted' | 'completed' | 'expired' | 'declined' | 'cancelled';
 
+/** Sender-chosen proof of completion; 'none' means a plain "I did it" suffices. */
+export type DareProofType = 'none' | 'photo' | 'audio';
+
+export const DARE_PROOF_TYPES: readonly DareProofType[] = ['none', 'photo', 'audio'];
+
 /** Free senders get a rolling weekly allowance; receiving and responding are never gated. */
 export const FREE_WEEKLY_SEND_LIMIT = 3;
 
@@ -45,6 +50,8 @@ export interface SentDare {
   direction: 'incoming' | 'outgoing';
   status: DareStatus;
   sender_notes: string | null;
+  proof_type: DareProofType;
+  proof_media_id: string | null;
   sent_at: string;
   accepted_at: string | null;
   submitted_at: string | null;
@@ -79,6 +86,7 @@ export interface SendDareInput {
   custom_dare_intensity?: number | null;
   duration_hours?: number | null;
   sender_notes?: string | null;
+  proof_type?: DareProofType | null;
 }
 
 export class DaresError extends Error {
@@ -111,6 +119,8 @@ interface SentDareRecord extends QueryResultRow {
   recipient_id: string;
   status: DareStatus;
   sender_notes: string | null;
+  proof_type: DareProofType;
+  proof_media_id: string | null;
   sent_at: Date;
   accepted_at: Date | null;
   submitted_at: Date | null;
@@ -124,7 +134,7 @@ export interface DaresRepository {
   listDares(userId: string, filter: 'active' | 'history'): Promise<SentDare[]>;
   send(userId: string, input: SendDareInput): Promise<SentDare>;
   respond(userId: string, dareId: string, action: 'accept' | 'decline'): Promise<SentDare>;
-  submit(userId: string, dareId: string): Promise<SentDare>;
+  submit(userId: string, dareId: string, proofMediaId?: string | null): Promise<SentDare>;
   complete(userId: string, dareId: string): Promise<SentDare>;
   cancel(userId: string, dareId: string): Promise<SentDare>;
   stats(userId: string): Promise<DareStats>;
@@ -132,7 +142,7 @@ export interface DaresRepository {
 }
 
 const BARE_COLUMNS = `id, couple_id, dare_id, dare_text_snapshot, dare_intensity_snapshot,
-  custom_dare_text, sender_id, recipient_id, status, sender_notes,
+  custom_dare_text, sender_id, recipient_id, status, sender_notes, proof_type, proof_media_id,
   sent_at, accepted_at, submitted_at, completed_at, expires_at`;
 
 const SENT_COLUMNS = BARE_COLUMNS.split(',').map((column) => `sd.${column.trim()}`).join(', ');
@@ -172,6 +182,8 @@ function toSentDare(row: SentDareRecord, viewerId: string): SentDare {
     direction: row.recipient_id === viewerId ? 'incoming' : 'outgoing',
     status: row.status,
     sender_notes: row.sender_notes,
+    proof_type: row.proof_type,
+    proof_media_id: row.proof_media_id,
     sent_at: row.sent_at.toISOString(),
     accepted_at: iso(row.accepted_at),
     submitted_at: iso(row.submitted_at),
@@ -323,6 +335,11 @@ export class PostgresDaresRepository implements DaresRepository {
       throw new DaresError('invalid_duration', 'Duration must be one of the offered presets', 400);
     }
 
+    const proofType = input.proof_type ?? 'none';
+    if (!DARE_PROOF_TYPES.includes(proofType)) {
+      throw new DaresError('invalid_proof_type', 'Proof must be none, photo, or audio', 400);
+    }
+
     let text: string;
     let intensity: number;
     let dareId: string | null = null;
@@ -376,15 +393,15 @@ export class PostgresDaresRepository implements DaresRepository {
         `insert into sent_dares (
            couple_id, dare_id, custom_dare_text, custom_dare_intensity,
            dare_text_snapshot, dare_intensity_snapshot,
-           sender_id, recipient_id, sender_notes, expires_at
+           sender_id, recipient_id, sender_notes, proof_type, expires_at
          ) values (
-           $1, $2, $3, $4, $5, $6, $7, $8, $9,
-           case when $10::integer is null then null else now() + ($10::integer * interval '1 hour') end
+           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+           case when $11::integer is null then null else now() + ($11::integer * interval '1 hour') end
          )
          returning ${BARE_COLUMNS}`,
         [
           context.couple_id, dareId, customText, customIntensity, text, intensity,
-          userId, context.partner_id, input.sender_notes?.trim() || null, duration,
+          userId, context.partner_id, input.sender_notes?.trim() || null, proofType, duration,
         ],
       );
       return toSentDare(result.rows[0]!, userId);
@@ -438,8 +455,59 @@ export class PostgresDaresRepository implements DaresRepository {
       : this.transition(userId, dareId, 'recipient', ['pending'], 'declined', null);
   }
 
-  async submit(userId: string, dareId: string): Promise<SentDare> {
-    return this.transition(userId, dareId, 'recipient', ['active'], 'submitted', 'submitted_at');
+  /**
+   * Submission enforces the sender's proof requirement: a proof-required dare
+   * cannot be marked done without media of the matching type. Proof is also
+   * accepted voluntarily on 'none' dares. Media ownership, kind, and couple are
+   * re-checked here so a submit cannot reference someone else's upload.
+   */
+  async submit(userId: string, dareId: string, proofMediaId?: string | null): Promise<SentDare> {
+    return transaction(this.pool, async (client) => {
+      const existing = await client.query<{
+        sender_id: string; recipient_id: string; status: DareStatus;
+        proof_type: DareProofType; couple_id: string;
+      }>(
+        'select sender_id, recipient_id, status, proof_type, couple_id from sent_dares where id = $1 for update',
+        [dareId],
+      );
+      const dare = existing.rows[0];
+      if (!dare || (dare.sender_id !== userId && dare.recipient_id !== userId)) {
+        throw new DaresError('dare_not_found', 'Dare not found', 404);
+      }
+      if (dare.recipient_id !== userId) {
+        throw new DaresError('not_permitted', 'Only the recipient can do that', 403);
+      }
+      if (dare.status !== 'active') {
+        throw new DaresError('invalid_transition', `A ${dare.status} dare cannot change to submitted`, 409);
+      }
+      if (dare.proof_type !== 'none' && !proofMediaId) {
+        throw new DaresError('proof_required', `This dare requires ${dare.proof_type} proof`, 400);
+      }
+      if (proofMediaId) {
+        const media = await client.query<{ kind: string; mime_type: string; owner_id: string; couple_id: string | null }>(
+          'select kind, mime_type, owner_id, couple_id from media_objects where id = $1 and deleted_at is null',
+          [proofMediaId],
+        );
+        const proof = media.rows[0];
+        if (!proof || proof.owner_id !== userId || proof.kind !== 'dare_proof' || proof.couple_id !== dare.couple_id) {
+          throw new DaresError('proof_not_found', 'Proof media not found', 404);
+        }
+        const category = dare.proof_type === 'none'
+          ? (proof.mime_type.startsWith('image/') || proof.mime_type.startsWith('audio/'))
+          : proof.mime_type.startsWith(dare.proof_type === 'photo' ? 'image/' : 'audio/');
+        if (!category) {
+          throw new DaresError('proof_type_mismatch', `This dare requires ${dare.proof_type} proof`, 400);
+        }
+      }
+      const result = await client.query<SentDareRecord>(
+        `update sent_dares
+            set status = 'submitted', submitted_at = now(), proof_media_id = $2::uuid
+          where id = $1
+          returning ${BARE_COLUMNS}`,
+        [dareId, proofMediaId ?? null],
+      );
+      return toSentDare(result.rows[0]!, userId);
+    });
   }
 
   async complete(userId: string, dareId: string): Promise<SentDare> {

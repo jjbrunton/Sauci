@@ -13,9 +13,11 @@ const catalogueDareId = '55555555-5555-4555-8555-555555555555';
 const dare: SentDare = {
   id: dareId, couple_id: '66666666-6666-4666-8666-666666666666', dare_id: catalogueDareId,
   text: 'A dare', intensity: 2, is_custom: false, sender_id: identity.id, recipient_id: partner,
-  direction: 'outgoing', status: 'pending', sender_notes: null,
+  direction: 'outgoing', status: 'pending', sender_notes: null, proof_type: 'none', proof_media_id: null,
   sent_at: new Date().toISOString(), accepted_at: null, submitted_at: null, completed_at: null, expires_at: null,
 };
+
+const proofMediaId = '77777777-7777-4777-8777-777777777777';
 
 function setup(overrides: Partial<DaresRepository> = {}) {
   const repository: DaresRepository = {
@@ -91,7 +93,7 @@ describe('dare routes', () => {
     await post(app, `/v1/dares/${dareId}/respond`, { action: 'decline' });
     expect(repository.respond).toHaveBeenCalledWith(identity.id, dareId, 'decline');
     await post(app, `/v1/dares/${dareId}/submit`);
-    expect(repository.submit).toHaveBeenCalledWith(identity.id, dareId);
+    expect(repository.submit).toHaveBeenCalledWith(identity.id, dareId, null);
     await post(app, `/v1/dares/${dareId}/complete`);
     expect(repository.complete).toHaveBeenCalledWith(identity.id, dareId);
     await post(app, `/v1/dares/${dareId}/cancel`);
@@ -107,6 +109,22 @@ describe('dare routes', () => {
     expect(paywalled.status).toBe(402);
     expect(await paywalled.json()).toMatchObject({ error: { code: 'premium_required' } });
     expect((await post(app, `/v1/dares/${dareId}/submit`)).status).toBe(409);
+  });
+
+  it('accepts a proof requirement on send and rejects unknown ones', async () => {
+    const { app, repository } = setup();
+    const response = await post(app, '/v1/dares', { dare_id: catalogueDareId, proof_type: 'photo' });
+    expect(response.status).toBe(201);
+    expect(repository.send).toHaveBeenCalledWith(identity.id, expect.objectContaining({ proof_type: 'photo' }));
+    expect((await post(app, '/v1/dares', { dare_id: catalogueDareId, proof_type: 'video' })).status).toBe(400);
+  });
+
+  it('passes proof media through on submit and validates its shape', async () => {
+    const { app, repository } = setup();
+    await post(app, `/v1/dares/${dareId}/submit`, { proof_media_id: proofMediaId });
+    expect(repository.submit).toHaveBeenCalledWith(identity.id, dareId, proofMediaId);
+    expect((await post(app, `/v1/dares/${dareId}/submit`, { proof_media_id: 'not-a-uuid' })).status).toBe(400);
+    expect((await post(app, `/v1/dares/${dareId}/submit`, { extra_field: true })).status).toBe(400);
   });
 
   it('exposes the duration presets the send sheet offers', async () => {

@@ -30,7 +30,7 @@ export interface UseDaresReturn {
     refresh: () => Promise<void>;
     send: (payload: SendDarePayload) => Promise<boolean>;
     respond: (dareId: string, action: "accept" | "decline") => Promise<void>;
-    submit: (dareId: string) => Promise<void>;
+    submit: (dareId: string, proofMediaId?: string) => Promise<void>;
     complete: (dareId: string) => Promise<void>;
     cancel: (dareId: string) => Promise<void>;
 }
@@ -167,7 +167,7 @@ export function useDares({ isFocused = true }: UseDaresConfig = {}): UseDaresRet
         refresh,
         send,
         respond: useCallback((dareId, action) => act(dareId, () => daresApi.respond(dareId, action)), [act]),
-        submit: useCallback((dareId) => act(dareId, () => daresApi.submit(dareId)), [act]),
+        submit: useCallback((dareId, proofMediaId) => act(dareId, () => daresApi.submit(dareId, proofMediaId)), [act]),
         complete: useCallback((dareId) => act(dareId, () => daresApi.complete(dareId)), [act]),
         cancel: useCallback((dareId) => act(dareId, () => daresApi.cancel(dareId)), [act]),
     };

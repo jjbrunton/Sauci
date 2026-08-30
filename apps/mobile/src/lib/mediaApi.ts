@@ -3,7 +3,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { ApiError, apiClient, authenticatedFetch } from './apiClient';
 
-export type MediaKind = 'avatar' | 'response' | 'chat' | 'feedback';
+export type MediaKind = 'avatar' | 'response' | 'chat' | 'feedback' | 'dare_proof';
 export interface UploadMediaOptions { kind: MediaKind; mimeType: string; questionId?: string; matchId?: string }
 export interface MediaUploadResponse { reference: string; media: { id: string; mime_type: string; byte_size: number }; message?: Record<string, unknown> }
 

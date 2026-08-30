@@ -7,7 +7,7 @@ import type { SentDare } from "@/features/dares/types";
 const incoming: SentDare = {
     id: "dare-1", couple_id: "couple-1", dare_id: "catalogue-1", text: "A dare", intensity: 2,
     is_custom: false, sender_id: "partner", recipient_id: "me", direction: "incoming",
-    status: "pending", sender_notes: null, sent_at: "2026-08-28T10:00:00.000Z",
+    status: "pending", sender_notes: null, proof_type: "none", proof_media_id: null, sent_at: "2026-08-28T10:00:00.000Z",
     accepted_at: null, submitted_at: null, completed_at: null, expires_at: null,
 };
 
@@ -53,6 +53,23 @@ describe("useDares", () => {
             await result.current.respond("dare-1", "accept");
         });
         expect(postSpy).toHaveBeenCalledWith("/v1/dares/dare-1/respond", { action: "accept" });
+    });
+
+    it("attaches proof media to a submit when one is supplied", async () => {
+        mockLoad();
+        const postSpy = jest.spyOn(apiClient, "post").mockResolvedValue({ dare: { ...incoming, status: "submitted" } } as never);
+        const { result } = renderHook(() => useDares());
+        await waitFor(() => expect(result.current.loading).toBe(false));
+
+        await act(async () => {
+            await result.current.submit("dare-1", "media-1");
+        });
+        expect(postSpy).toHaveBeenCalledWith("/v1/dares/dare-1/submit", { proof_media_id: "media-1" });
+
+        await act(async () => {
+            await result.current.submit("dare-1");
+        });
+        expect(postSpy).toHaveBeenLastCalledWith("/v1/dares/dare-1/submit", undefined);
     });
 
     it("routes a premium refusal to the paywall rather than the error banner", async () => {

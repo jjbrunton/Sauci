@@ -109,14 +109,25 @@ and validated server-side.
 | GET | `/v1/dares?filter=active\|history` | Couple-scoped; `direction` is relative to the caller |
 | GET | `/v1/dares/stats` | Shared scoreboard |
 | GET | `/v1/dares/durations` | Preset list the send sheet renders |
-| POST | `/v1/dares` | `dare_id` **or** `custom_dare_text`, never both |
+| POST | `/v1/dares` | `dare_id` **or** `custom_dare_text`, never both; optional `proof_type` (`none`/`photo`/`audio`) |
 | POST | `/v1/dares/:dareId/respond` | `{ action: "accept" \| "decline" }` |
-| POST | `/v1/dares/:dareId/submit` | Recipient reports done |
+| POST | `/v1/dares/:dareId/submit` | Recipient reports done; `{ proof_media_id }` required when the dare has a proof requirement |
 | POST | `/v1/dares/:dareId/complete` | Sender confirms |
 | POST | `/v1/dares/:dareId/cancel` | Sender withdraws |
 
 The actor always comes from the bearer identity; ownership fields in a request body are
 rejected.
+
+## Proof of completion
+
+The sender may optionally require proof when sending any dare, catalogue or custom:
+`sent_dares.proof_type` is `'none'` (default), `'photo'`, or `'audio'`. The recipient
+uploads the proof first (`POST /v1/media/dare_proof` — images and audio, 25MB cap,
+couple-scoped so the sender can view it) and passes the resulting media id to `submit`.
+The server enforces the requirement: a proofed dare cannot be submitted without media of
+the matching type, and the media must be a `dare_proof` object owned by the recipient in
+the same couple. Voluntary proof on a `'none'` dare is accepted. The proof renders inline
+on the dare card (photo, or an audio player) via the standard signed-URL flow.
 
 ## Mobile
 
@@ -142,4 +153,4 @@ actually changed, or on an explicit refresh or a mutation. See
 
 Per-dare chat. `dare_messages` exists and is wired into the schema, but a second inbox
 split from the main match chat was cut in favour of status transitions plus the sender's
-note. Photo proof, random-dare, and streaks remain unbuilt.
+note. Random-dare and streaks remain unbuilt.

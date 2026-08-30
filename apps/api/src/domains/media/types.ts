@@ -1,4 +1,4 @@
-export const mediaKinds = ['avatar', 'response', 'chat', 'feedback'] as const;
+export const mediaKinds = ['avatar', 'response', 'chat', 'feedback', 'dare_proof'] as const;
 export type MediaKind = typeof mediaKinds[number];
 
 export interface MediaObject {
