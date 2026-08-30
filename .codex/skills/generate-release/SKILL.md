@@ -43,6 +43,10 @@ Require all of the following:
 - the configured production API/Auth/RevenueCat environment, without printing
   secret values.
 
+For an OTA release, run `npm run ota:preflight:production -w @sauci/mobile`
+before any publish. This exercises the EOAS-compatible Expo export environment
+without contacting the update server or uploading an update.
+
 Do not switch branches, discard work, repair credentials, push, or weaken branch
 protection merely to pass preflight. Stop with the exact blocker. Never run
 `expo prebuild` as part of this workflow.

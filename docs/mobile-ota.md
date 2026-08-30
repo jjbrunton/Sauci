@@ -167,6 +167,9 @@ dashboard and supplied as `EOO_TOKEN`; it is a secret and must not be committed.
 ```bash
 cd apps/mobile
 
+# Verify the exact export environment without contacting the update server.
+npm run ota:preflight:production
+
 # Staging: consumed by builds made with the EAS `preview` profile.
 EOO_TOKEN=<token> npm run ota:publish:staging
 
@@ -174,8 +177,29 @@ EOO_TOKEN=<token> npm run ota:publish:staging
 EOO_TOKEN=<token> npm run ota:publish:production
 ```
 
-Both scripts wrap `eoas publish --branch <branch>` with the matching
-`RELEASE_CHANNEL`. Useful flags to pass through:
+The scripts resolve the matching EAS build profile into EOAS's export subprocess.
+EOAS sets `EXPO_NO_DOTENV=1`, so invoking `eoas publish` directly does not load
+profile values from `eas.json`. The wrapper injects the selected profile's public
+configuration, including the required API and hosted Auth values, sets the
+matching `RELEASE_CHANNEL`, and fixes the target branch. It does not print
+configuration values.
+
+Production public API/Auth values come from the checked-in production profile.
+Staging uses the preview API value and requires the designated non-production
+Auth URL and anonymous key in the invoking environment; it rejects the production
+Auth origin. Run its safe export preflight with:
+
+```bash
+EXPO_PUBLIC_SUPABASE_URL=https://itbzhrvlgvdmzbnhzhyx.supabase.co \
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<non-production-anon-key> \
+npm run ota:preflight:staging
+```
+
+`npm run ota:doctor:production` performs EOAS's read-only manifest probes using
+the production profile. It does not export or upload an update. Use the staging
+doctor command with the same non-production Auth environment as its preflight.
+
+Useful flags to pass through to a publish command:
 
 | Flag | Purpose |
 | --- | --- |

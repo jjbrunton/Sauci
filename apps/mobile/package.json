@@ -19,10 +19,14 @@
     "release:android": "dotenv -e .env -- eas build --platform android --profile production --local",
     "release:android:preview": "dotenv -e .env -- eas build --platform android --profile preview --local",
     "release:android:upload": "bundle exec fastlane android upload",
-    "ota:publish:staging": "RELEASE_CHANNEL=staging eoas publish --branch staging",
-    "ota:publish:production": "RELEASE_CHANNEL=production eoas publish --branch production",
+    "ota:preflight:staging": "node scripts/ota-publish.mjs staging --preflight",
+    "ota:preflight:production": "node scripts/ota-publish.mjs production --preflight",
+    "ota:publish:staging": "node scripts/ota-publish.mjs staging",
+    "ota:publish:production": "node scripts/ota-publish.mjs production",
+    "test:ota-publish": "node --test scripts/ota-publish.test.mjs",
     "ota:rollback": "eoas rollback",
-    "ota:doctor": "eoas doctor"
+    "ota:doctor:staging": "node scripts/ota-publish.mjs staging --doctor",
+    "ota:doctor:production": "node scripts/ota-publish.mjs production --doctor"
   },
   "dependencies": {
     "@bacons/apple-targets": "^0.1.6",
