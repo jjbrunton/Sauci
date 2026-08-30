@@ -2,6 +2,11 @@
 
 This guide covers local release builds for Android and iOS.
 
+JavaScript-only changes can also ship over the air between store releases. See
+[Mobile over-the-air updates](mobile-ota.md). Anything that changes native code
+still requires a store build with a bumped `expo.version`, because the OTA
+runtime version follows the app version.
+
 ## Prerequisites
 
 - **Java JDK 17** - Required for Android Gradle builds
