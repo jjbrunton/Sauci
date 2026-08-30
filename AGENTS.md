@@ -36,6 +36,7 @@ MCP service in one npm/Turborepo workspace.
    mechanical one-line edit whose coordination cost exceeds the work.
 11. Use high-effort reviewers only for the risk triggers in
    `docs/agents/routing.md`.
+12. Agents must not use em dash characters in text they add to this repository.
 
 ## Repository map
 

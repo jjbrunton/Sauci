@@ -54,5 +54,9 @@ additional TestFlight distribution requires another fresh authorization.
 
 Preserve platform signing and local EAS versioning. After a build, verify that
 tracked changes are limited to the expected version metadata, then independently
-read the artifact version and signature. Report the artifact, version/build
-number, upload result when authorized, and store read-back state.
+read the artifact version and signature. For an iOS IPA, inspect every packaged
+app extension as well as the containing app and require matching
+`CFBundleShortVersionString` and `CFBundleVersion` values. Treat Xcode archive
+warnings as diagnostic evidence, not the final artifact state: decide whether to
+reject or rebuild only after reading the exported IPA itself. Report the artifact,
+version/build number, upload result when authorized, and store read-back state.
