@@ -132,6 +132,9 @@ export default function PrivacyPolicy() {
             <p className="text-white/70 leading-relaxed mt-4">
               To exercise these rights, please contact us at <a href="mailto:privacy@sauci.app" className="text-primary hover:underline">privacy@sauci.app</a>.
             </p>
+            <p className="text-white/70 leading-relaxed mt-4">
+              For account deletion instructions and an email deletion request, visit our <Link href="/delete-account" className="text-primary hover:underline">account deletion page</Link>.
+            </p>
           </section>
 
           <section>
@@ -176,6 +179,7 @@ export default function PrivacyPolicy() {
           <span className="text-xl font-bold gradient-text">Sauci</span>
           <div className="flex gap-6 text-sm text-white/40">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/delete-account" className="hover:text-white transition-colors">Delete Account</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
           </div>
