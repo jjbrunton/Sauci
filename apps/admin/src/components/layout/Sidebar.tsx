@@ -22,6 +22,9 @@ import {
     Tags,
     Zap,
     HelpCircle,
+    Heart,
+    Swords,
+    Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -89,6 +92,24 @@ const usersNav: NavItem[] = [
         href: '/activity',
         icon: <Activity className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.VIEW_ACTIVITY,
+    },
+    {
+        label: 'Sent Dares',
+        href: '/activity/sent-dares',
+        icon: <Swords className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.VIEW_ACTIVITY,
+    },
+    {
+        label: 'Live Draw Sessions',
+        href: '/activity/live-draw',
+        icon: <Pencil className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.VIEW_USERS,
+    },
+    {
+        label: 'Couples',
+        href: '/couples',
+        icon: <Heart className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.VIEW_USERS,
     },
     {
         label: 'Usage Insights',
