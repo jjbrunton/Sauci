@@ -1,0 +1,3 @@
+# The update-signing private key belongs to the XPREM server, never to the app.
+private-key.pem
+*.key

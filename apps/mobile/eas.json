@@ -7,19 +7,24 @@
     "development": {
       "node": "20.19.4",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "RELEASE_CHANNEL": "development"
+      }
     },
     "preview": {
       "node": "20.19.4",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.preprod.sauci.app"
+        "EXPO_PUBLIC_API_URL": "https://api.preprod.sauci.app",
+        "RELEASE_CHANNEL": "staging"
       }
     },
     "production": {
       "node": "20.19.4",
       "autoIncrement": true,
       "env": {
+        "RELEASE_CHANNEL": "production",
         "EXPO_PUBLIC_API_URL": "https://api.sauci.app",
         "EXPO_PUBLIC_SUPABASE_URL": "https://ckjcrkjpmhqhiucifukx.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNramNya2pwbWhxaGl1Y2lmdWt4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxMDc1ODEsImV4cCI6MjA4MjY4MzU4MX0.7FA_RmFXUjlmZF96O9xlAUfxHrQrSIZcJclNReLL4lI",
