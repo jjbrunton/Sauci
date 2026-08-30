@@ -21,6 +21,7 @@ describe.skipIf(!url || !local)('quiz + PostgreSQL', () => {
   const couple = '55555555-5555-4555-8555-555555555555';
   const soloCouple = '66666666-6666-4666-8666-666666666666';
   const otherCouple = '77777777-7777-4777-8777-777777777777';
+  const userC = '88888888-8888-4888-8888-888888888888';
 
   beforeAll(async () => {
     await admin.query(`create schema "${schema}"`);
@@ -44,8 +45,8 @@ describe.skipIf(!url || !local)('quiz + PostgreSQL', () => {
     );
     await pool.query(
       `insert into profiles(id,couple_id) values
-        ($1,$5),($2,$5),($3,$6),($4,$7)`,
-      [userA, userB, soloUser, outsider, couple, soloCouple, otherCouple],
+        ($1,$5),($2,$5),($3,$6),($4,$7),($8,$7)`,
+      [userA, userB, soloUser, outsider, couple, soloCouple, otherCouple, userC],
     );
   });
 
@@ -205,5 +206,45 @@ describe.skipIf(!url || !local)('quiz + PostgreSQL', () => {
     const { session } = await repo.startSession(userA);
     const current = await repo.currentSession(userB);
     expect(current?.id).toBe(session.id);
+  });
+
+  it('draws the next session from never-used questions once a session completes', async () => {
+    const { session: first } = await repo.startSession(userA);
+    const firstQuestionIds = first.questions.map((question) => question.id);
+    expect(firstQuestionIds).toHaveLength(10);
+
+    const answers = firstQuestionIds.map((id) => ({ question_id: id, self_index: 0, guess_index: 0 }));
+    await repo.submitAnswers(userA, first.id, answers);
+    const completed = await repo.submitAnswers(userB, first.id, answers);
+    expect(completed.status).toBe('completed');
+
+    const { session: second, created } = await repo.startSession(userA);
+    expect(created).toBe(true);
+    const secondQuestionIds = second.questions.map((question) => question.id);
+    expect(secondQuestionIds).toHaveLength(10);
+
+    // The seeded pool has 36 active questions, so the never-used-first preference
+    // guarantees the second session's questions are wholly disjoint from the first.
+    const overlap = secondQuestionIds.filter((id) => firstQuestionIds.includes(id));
+    expect(overlap).toEqual([]);
+  });
+
+  it('scopes selection to each couple independently', async () => {
+    const { session: coupleOneFirst } = await repo.startSession(userA);
+    const coupleOneFirstIds = coupleOneFirst.questions.map((question) => question.id);
+    const answers = coupleOneFirstIds.map((id) => ({ question_id: id, self_index: 0, guess_index: 0 }));
+    await repo.submitAnswers(userA, coupleOneFirst.id, answers);
+    await repo.submitAnswers(userB, coupleOneFirst.id, answers);
+
+    // A different couple with no prior sessions should still be able to draw a
+    // fresh set of 10 questions regardless of what the first couple has used,
+    // since the never-used-for-them preference is scoped per couple.
+    const { session: otherSession, created } = await repo.startSession(outsider);
+    expect(created).toBe(true);
+    expect(otherSession.questions).toHaveLength(10);
+
+    const partnerView = await repo.startSession(userC);
+    expect(partnerView.created).toBe(false);
+    expect(partnerView.session.id).toBe(otherSession.id);
   });
 });
