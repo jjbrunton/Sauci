@@ -175,6 +175,7 @@ export default function RedeemPage() {
           <span className="text-xl font-bold gradient-text">Sauci</span>
           <div className="flex gap-6 text-sm text-white/40">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/delete-account" className="hover:text-white transition-colors">Delete Account</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
           </div>
