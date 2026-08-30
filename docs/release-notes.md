@@ -1,7 +1,7 @@
 # Sauci Mobile Release Notes
 
 ## v1.0.7 - 31 August 2026
-_Build numbers pending artifact verification_
+_Android build 49 · iOS build pending artifact verification_
 
 More ways to discover each other, play together, and keep your shared space moving.
 
