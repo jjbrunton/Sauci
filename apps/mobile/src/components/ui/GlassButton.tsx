@@ -30,6 +30,7 @@ interface GlassButtonProps {
   textStyle?: TextStyle;
   haptic?: boolean;
   icon?: React.ReactNode;
+  testID?: string;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -46,6 +47,7 @@ export function GlassButton({
   textStyle,
   haptic = true,
   icon,
+  testID,
 }: GlassButtonProps) {
   const scale = useSharedValue(1);
 
@@ -104,6 +106,7 @@ export function GlassButton({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
+      testID={testID}
       style={[
         animatedStyle,
         fullWidth && styles.fullWidth,

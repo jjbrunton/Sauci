@@ -25,13 +25,16 @@ MCP service in one npm/Turborepo workspace.
    and prove the relevant compatibility contracts still hold. Preserve deployed
    interfaces and supported client behavior; repository checks alone do not
    prove a live change is safe.
-10. Delegate every substantive repository task to at least one project agent so
-   detailed exploration or execution stays out of the primary context.
-   "Substantive" includes repository exploration, multi-file reasoning,
-   implementation, test execution, or contract/risk analysis. Use `repo_scout`
-   for read-only investigation and `implementation` for bounded changes; use
-   the additional roles according to `docs/agents/routing.md`. The primary
-   agent retains scope, acceptance, review, and the final answer. Skip
+10. The Sol primary agent owns scope, risk classification, acceptance criteria,
+   progress steering, final diff and evidence review, and the final answer.
+   Delegate every substantive repository task to a project agent. Each
+   substantive implementation must use one Terra `implementation` agent as a
+   coherent execution unit, normally combining scoped discovery, implementation,
+   focused tests, and iteration. "Substantive" includes repository exploration,
+   multi-file reasoning, implementation, test execution, or contract/risk
+   analysis. Add a `repo_scout`, reviewer, or verifier only for separable work or
+   the triggers in `docs/agents/routing.md`; do not duplicate the implementation
+   agent's detailed exploration or checks without a concrete reason. Skip
    delegation only for trivial conversation, a single obvious lookup, or a
    mechanical one-line edit whose coordination cost exceeds the work.
 11. Use high-effort reviewers only for the risk triggers in

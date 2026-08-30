@@ -24,6 +24,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Redemption codes](product/redemption.md)
 - [Mobile release process](releasing.md)
 - [Dares loop](dares-loop.md)
+- [Couples quiz](quiz.md)
 
 ## Feature and implementation references
 

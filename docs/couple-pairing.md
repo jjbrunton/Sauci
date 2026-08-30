@@ -263,6 +263,55 @@ DELETE delete-relationship
 Both users: Unpaired
 ```
 
+## Invite Funnel (Join Links)
+
+The invite code can also be delivered as a tappable link instead of requiring
+the recipient to type it in manually.
+
+**Link forms:**
+- Universal/App Link: `https://sauci.app/join/{code}` (served by `apps/web`,
+  opens the app directly on a device that has it installed and verified).
+- Custom scheme: `app.sauci://join?code={code}` (used by the web join page's
+  automatic hand-off attempt, and remains supported for any existing client
+  behavior).
+
+**Web fallback (`apps/web/app/join/[code]/page.tsx`):** validates the code
+shape client-side only (8-character alphanumeric; never calls a private API),
+attempts the custom scheme link, and otherwise shows the code with a copy
+button plus App Store / Play Store links. Copying only copies the raw code.
+
+**Association files:** `apps/web/public/.well-known/apple-app-site-association`
+and `apps/web/public/.well-known/assetlinks.json` authorize `sauci.app` to open
+the app for `/join/*`. The Apple Team ID (`BXVPBATDZY`, from
+`apps/mobile/app.json` and `apps/mobile/eas.json`) and bundle/package id
+(`com.sauci.app`) are real values already used elsewhere in the repo. The
+SHA-256 fingerprint in `assetlinks.json` is the Play App Signing key
+certificate fingerprint from the Play Console (Test and release > Setup >
+App signing); if the app signing key ever rotates, this file must be updated
+or Android App Links will stop verifying.
+
+**Mobile link handling:** `apps/mobile/app.json` declares
+`associatedDomains: ["applinks:sauci.app"]` (iOS) and an intent filter for
+`https://sauci.app/join/*` (Android), in addition to the existing `app.sauci`
+scheme. `apps/mobile/app/_layout.tsx` parses incoming URLs
+(`src/lib/inviteLink.ts`) and either routes a signed-in, onboarded user
+straight to the pairing screen with the code pre-filled, or stashes the code
+(`src/lib/pendingInviteCode.ts`) for signed-out/mid-onboarding users. The
+stashed code is applied once the user reaches the pairing screen or the app's
+initial route (`apps/mobile/app/index.tsx`) after sign-in/onboarding
+completes.
+
+**Deferred clipboard hand-off:** if an unpaired user opens the pairing screen
+with no code from a link or stash, the app checks the clipboard once per
+session (`src/lib/clipboardInviteOffer.ts`) for a string matching the invite
+code shape and offers to use it ("Use code XXXXXXXX from your clipboard?").
+The code is never applied automatically; the user must accept the offer.
+
+**Analytics:** `invite_link_opened` (`source`: `universal_link` | `scheme` |
+`clipboard`), `pairing_code_prefilled` (mobile, Firebase Analytics), and
+`join_page_viewed` / `join_page_code_copied` / `join_page_store_button_clicked`
+(web, PostHog).
+
 ## Cascade Behavior
 
 When a couple is deleted, foreign key cascades clean up:

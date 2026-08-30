@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuthStore, useMatchStore, usePacksStore, useSubscriptionStore } from '../../src/store';
 import { GradientBackground } from '../../src/components/ui';
 import { Paywall } from '../../src/components/paywall';
-import { CompactHeader, ContentRow, DaresTile, LiveDrawTile, PendingQuestionsCard } from '../../src/components/discovery';
+import { CompactHeader, ContentRow, DaresTile, LiveDrawTile, PendingQuestionsCard, QuizTile } from '../../src/components/discovery';
 import { StreakDisplay } from '../../src/components/StreakDisplay';
 import { Events } from '../../src/lib/analytics';
 import { colors, spacing, typography } from '../../src/theme';
@@ -165,6 +165,9 @@ export default function DiscoveryScreen() {
 
           {/* Dares */}
           <DaresTile delay={200} />
+
+          {/* Quiz */}
+          <QuizTile delay={225} />
 
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (
