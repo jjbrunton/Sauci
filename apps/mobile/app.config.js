@@ -78,12 +78,10 @@ if (process.env.RELEASE_CHANNEL) {
 
 module.exports = () => ({
   ...appJson.expo,
-  // Updates are gated on the app version. A JavaScript-only change ships over
-  // the air; anything that changes native code must ship a new store build with
-  // a bumped `version`, which starts a fresh runtime version on the server.
-  runtimeVersion: {
-    policy: 'appVersion',
-  },
+  // Keep this explicit because EOAS validates a primitive runtime string before
+  // upload. The release version script updates it atomically with app.json and
+  // the checked-in native runtime values.
+  runtimeVersion: '1.0.7',
   updates: {
     enabled: true,
     url: OTA_MANIFEST_URL,

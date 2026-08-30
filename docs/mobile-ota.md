@@ -47,14 +47,15 @@ Channels. The client cannot create them.
 
 ### Runtime version
 
-`apps/mobile/app.config.js` sets:
+`apps/mobile/app.config.js` sets an explicit runtime string:
 
 ```js
-runtimeVersion: { policy: 'appVersion' }
+runtimeVersion: '1.0.7'
 ```
 
-The runtime version is therefore the `expo.version` field in `app.json`, for
-example `1.0.7`. An update is only offered to builds whose runtime version
+The release version script updates this string with `expo.version` and the
+checked-in iOS and Android runtime values, so it remains the same value as the
+public app version. An update is only offered to builds whose runtime version
 matches exactly.
 
 The practical rule: **any change that touches native code, native dependencies,
@@ -64,11 +65,10 @@ so old builds stop receiving updates that assume the new native surface.
 JavaScript, asset, and configuration changes that do not alter the native binary
 can ship over the air against the current `version`.
 
-`appVersion` is chosen over `fingerprint` deliberately. Sauci commits its native
-projects and ships several config plugins and an Apple widget target, so a
-fingerprint would churn on native edits that never reach a device, and it would
-be harder to reason about from a store release. `appVersion` ties the runtime
-version to the number already visible in App Store Connect and Google Play.
+An explicit runtime string is used because EOAS requires a concrete value for
+this checked-in bare workflow. The synchronized release script keeps it tied to
+the number visible in App Store Connect and Google Play without relying on Expo
+to resolve a policy during upload.
 
 ## Client configuration
 
@@ -90,7 +90,7 @@ Resolved configuration:
 | `updates.requestHeaders['expo-channel-name']` | `process.env.RELEASE_CHANNEL`, defaulting to `development` |
 | `updates.requestHeaders['expo-app-id']` | `process.env.XPREM_APP_ID` |
 | `updates.requestHeaders['xprem-branch']` | `''` |
-| `runtimeVersion` | `{ policy: 'appVersion' }` |
+| `runtimeVersion` | Explicit public version, currently `1.0.7` |
 
 `expo-updates` only sends request headers that were declared at build time, so
 `xprem-branch` is declared even though it is empty. Removing it would not disable
