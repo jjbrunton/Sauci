@@ -110,7 +110,7 @@ SERVERS=(
   "api|PORT=$API_PORT DATABASE_URL=$LOCAL_DATABASE_URL MEDIA_ROOT=$ROOT/.local/media MEDIA_SIGNING_SECRET=local-media-signing-secret-change-me-123456 MEDIA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT npm run dev -w @sauci/api"
   "worker|DATABASE_URL=$LOCAL_DATABASE_URL CLASSIFIER_ENABLED=false MEDIA_ROOT=$ROOT/.local/media MEDIA_SIGNING_SECRET=local-media-signing-secret-change-me-123456 MEDIA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT npm run dev:worker -w @sauci/api"
   "web|env NEXT_PUBLIC_API_URL=$LOCAL_API_URL npm run dev -w @sauci/web -- --port $WEB_PORT"
-  "admin|env VITE_API_URL=$LOCAL_API_URL npm run dev -w @sauci/admin -- --host 127.0.0.1 --port $ADMIN_PORT"
+  "admin|env VITE_API_URL=/ SAUCI_ADMIN_API_PROXY=$LOCAL_API_URL npm run dev -w @sauci/admin -- --host 127.0.0.1 --port $ADMIN_PORT"
   "mcp|env PORT=$MCP_PORT npm run dev -w sauci-mcp-server"
   "mobile|npm run dev -w @sauci/mobile -- --port $METRO_PORT --localhost"
 )

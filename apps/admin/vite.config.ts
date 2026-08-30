@@ -25,6 +25,14 @@ export default defineConfig({
         host: true,
         port: 3001,
         allowedHosts: ['manage.sauci.app'],
+        // The API has no CORS handling, so local development serves API calls
+        // same-origin and forwards them to the local API process.
+        proxy: {
+            '/v1': {
+                target: process.env.SAUCI_ADMIN_API_PROXY ?? 'http://127.0.0.1:3003',
+                changeOrigin: true,
+            },
+        },
         watch: {
             usePolling: true,
             interval: 100,
