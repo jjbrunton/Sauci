@@ -182,3 +182,53 @@ dependencies {
 
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
+
+// Reanimated 4.1.7 imports Worklets from its pre-AGP-8 CMake output path,
+// while AGP 8.14 writes release outputs below intermediates/cxx/RelWithDebInfo.
+// Keep the checked-in Android project compatible with the supported SDK 54
+// dependency set by materializing that one legacy input after Worklets builds.
+def workletsReleaseAbis = ["armeabi-v7a", "arm64-v8a", "x86", "x86_64"]
+def syncWorkletsReleaseCmakeInputs = tasks.register("syncWorkletsReleaseCmakeInputs") {
+    dependsOn(":react-native-worklets:externalNativeBuildRelease")
+
+    doLast {
+        def workletsIntermediates = file("${rootDir}/../../../node_modules/react-native-worklets/android/build/intermediates")
+        workletsReleaseAbis.each { abi ->
+            def libraries = fileTree(workletsIntermediates) {
+                include "cxx/RelWithDebInfo/**/obj/${abi}/libworklets.so"
+            }.files
+            if (libraries.size() != 1) {
+                throw new GradleException("Expected exactly one Worklets release library for ${abi}, found ${libraries.size()}")
+            }
+            def source = libraries.iterator().next()
+            def destination = file("${workletsIntermediates}/cmake/release/obj/${abi}/libworklets.so")
+            destination.parentFile.mkdirs()
+            java.nio.file.Files.deleteIfExists(destination.toPath())
+            source.withInputStream { input ->
+                destination.withOutputStream { output -> output << input }
+            }
+            if (destination.length() != source.length()) {
+                throw new GradleException("Failed to copy Worklets release library for ${abi}")
+            }
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+    def reanimatedProject = findProject(":react-native-reanimated")
+    reanimatedProject?.tasks?.configureEach { task ->
+        if (task.name == "externalNativeBuildRelease" || task.name == "prefabReleasePackage") {
+            task.dependsOn(syncWorkletsReleaseCmakeInputs)
+        }
+    }
+
+    tasks.configureEach { task ->
+        if (task.name.startsWith("configureCMakeRelWithDebInfo")) {
+            task.dependsOn(
+                ":react-native-worklets:prefabReleasePackage",
+                ":react-native-reanimated:prefabReleasePackage",
+                ":shopify_react-native-skia:prefabReleasePackage",
+            )
+        }
+    }
+}
