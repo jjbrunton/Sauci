@@ -21,13 +21,14 @@ describe.skipIf(!databaseUrl || !isLocal)('admin repository authorization + audi
   const responseQuestion = '88888888-8888-4888-8888-888888888888';
   const responseId = '99999999-9999-4999-8999-999999999999';
   const responseMediaId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const quizCouple = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
   let pool: Pool; let repository: PostgresAdminRepository;
 
   beforeAll(async () => {
     await adminPool.query(`create schema "${schema}"`);
     const isolated = new URL(databaseUrl!); isolated.searchParams.set('options', `-c search_path=${schema}`);
     pool = new Pool({ connectionString: isolated.toString() }); repository = new PostgresAdminRepository(isolated.toString());
-    for (const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0007_billing_redemption.sql','0008_residual_realtime.sql','0009_operations_workers.sql','0010_admin.sql']) {
+    for (const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0007_billing_redemption.sql','0008_residual_realtime.sql','0009_operations_workers.sql','0010_admin.sql','0011_question_pack_average_precision.sql','0012_catalogue_field_parity.sql','0013_dares_loop.sql','0014_daily_limit_local_reset.sql','0015_daily_limit_response_index.sql','0016_couple_streak_locality.sql','0017_streak_reminder_preference.sql','0018_cutover_source_parity.sql','0019_quiz.sql','0020_quiz_question_pool.sql']) {
       const migration = await readFile(new URL(`../drizzle/${name}`, import.meta.url), 'utf8');
       for (const statement of migration.split('--> statement-breakpoint')) if (statement.trim()) await pool.query(statement);
     }
@@ -159,6 +160,40 @@ describe.skipIf(!databaseUrl || !isLocal)('admin repository authorization + audi
 
     await pool.query('update media_objects set owner_id=$2 where id=$1', [responseMediaId, superUser]);
     await expect(repository.responseMedia(responseViewer, responseId)).rejects.toMatchObject({ code: 'response_media_not_found' });
+  });
+
+  it('exposes writable quiz content and read-only quiz activity resources', async () => {
+    await pool.query('insert into couples(id,invite_code) values($1,$2)', [quizCouple, 'QUIZADMN']);
+    await pool.query("update admin_users set permissions=array_append(permissions,'manage_questions') where user_id=$1", [creatorUser]);
+    const creator = await repository.principal(creatorUser);
+    const [question] = await repository.insert(creator, 'quiz_questions', [{
+      prompt_self: 'How do you show affection?', prompt_guess: 'How does your partner show affection?', options: ['Touch', 'Words'],
+    }]);
+    expect(question).toMatchObject({ prompt_self: 'How do you show affection?' });
+
+    const principal = await repository.principal(superUser);
+    const listed = await repository.query(principal, 'quiz_questions', { filters: [{ column: 'id', op: 'eq', value: question!.id }] });
+    expect(listed.count).toBe(1);
+    expect((await repository.query(principal, 'quiz_sessions', {})).count).toBe(0);
+    await expect(repository.insert(principal, 'quiz_sessions', [{
+      couple_id: quizCouple, status: 'active', question_ids: [question!.id],
+    }])).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
+  it('reads sent dares for user support visibility without granting write access', async () => {
+    await pool.query(
+      `insert into sent_dares(couple_id,custom_dare_text,dare_text_snapshot,dare_intensity_snapshot,sender_id,recipient_id,status)
+       values($1,'Give a compliment','Give a compliment',2,$2,$3,'pending')`,
+      [quizCouple, creatorUser, moderatorUser],
+    );
+    const principal = await repository.principal(superUser);
+    const result = await repository.query(principal, 'sent_dares', {});
+    expect(result.count).toBe(1);
+    expect(result.rows[0]).toMatchObject({ dare_text_snapshot: 'Give a compliment' });
+    await expect(repository.insert(principal, 'sent_dares', [{
+      couple_id: quizCouple, custom_dare_text: 'x', dare_text_snapshot: 'x',
+      dare_intensity_snapshot: 1, sender_id: creatorUser, recipient_id: moderatorUser, status: 'pending',
+    }])).rejects.toMatchObject({ code: 'forbidden' });
   });
 
   it('creates all legacy admin and dare cutover tables with preserved foreign keys', async () => {

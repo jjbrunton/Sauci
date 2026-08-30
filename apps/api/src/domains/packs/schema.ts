@@ -35,6 +35,8 @@ export const questionPacks = pgTable('question_packs', {
   contentReviewedAt: timestamp('content_reviewed_at', { withTimezone: true }),
   contentReviewedBy: uuid('content_reviewed_by').references(() => profiles.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  scheduledReleaseAt: timestamp('scheduled_release_at', { withTimezone: true }),
+  releaseNotified: boolean('release_notified').notNull().default(false),
 }, (table) => [index('question_packs_category_id_idx').on(table.categoryId)]);
 
 export const questions = pgTable('questions', {
