@@ -65,6 +65,7 @@ const adminRepository = new PostgresAdminRepository(pool, {
 const app = createApp({
   auth: authVerifier,
   repository,
+  corsAllowedOrigins: config.corsAllowedOrigins,
   coupleService: new CoupleService(coupleRepository),
   packsRepository,
   answersRepository,

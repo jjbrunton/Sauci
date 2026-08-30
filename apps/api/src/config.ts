@@ -2,10 +2,30 @@ import { z } from 'zod';
 
 const optionalString = z.preprocess((value) => value === '' ? undefined : value, z.string().min(1).optional());
 const optionalUuid = z.preprocess((value) => value === '' ? undefined : value, z.string().uuid().optional());
+const corsOrigins = z.string().default('https://sauci.app').transform((value, ctx) => {
+  const origins = value.split(',').map((origin) => origin.trim()).filter(Boolean);
+  if (origins.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'CORS_ALLOWED_ORIGINS must contain at least one origin' });
+    return z.NEVER;
+  }
+  for (const origin of origins) {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.origin !== origin || parsed.username || parsed.password || parsed.pathname !== '/') {
+        throw new Error('not an origin');
+      }
+    } catch {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Invalid CORS origin: ${origin}` });
+      return z.NEVER;
+    }
+  }
+  return origins;
+});
 
 const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3003),
+  CORS_ALLOWED_ORIGINS: corsOrigins,
   DATABASE_URL: z.string().url(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(200).default(10),
   DATABASE_POOL_IDLE_TIMEOUT_MS: z.coerce.number().int().min(0).max(3_600_000).default(30_000),
@@ -30,6 +50,7 @@ const baseSchema = z.object({
 export interface AppConfig {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
+  corsAllowedOrigins: string[];
   databaseUrl: string;
   databasePool: { max: number; idleTimeoutMillis: number; connectionTimeoutMillis: number };
   authIssuer: string;
@@ -84,6 +105,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   return {
     nodeEnv: parsed.NODE_ENV,
     port: parsed.PORT,
+    corsAllowedOrigins: parsed.CORS_ALLOWED_ORIGINS,
     databaseUrl: parsed.DATABASE_URL,
     databasePool: {
       max: parsed.DATABASE_POOL_MAX,

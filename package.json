@@ -25,7 +25,7 @@
     "test:mobile:e2e": "maestro test e2e/maestro",
     "verify:fast": "npm run lint && npm run typecheck && npm test",
     "verify:full": "npm run verify:fast && npm run build && npm run test:api:integration",
-    "verify:e2e": "scripts/with-local-supabase-env.sh tests npm run test -w @sauci/e2e",
+    "verify:e2e": "scripts/dev-local.sh e2e",
     "verify": "npm run verify:full && npm run verify:e2e",
     "db:start": "npx supabase start --workdir apps",
     "db:stop": "npx supabase stop --workdir apps",

@@ -115,3 +115,15 @@ without credentials. `e2e/maestro/login-smoke.yaml` is the authenticated
 standalone-API flow and must fail closed unless the non-production fixture above
 is explicitly supplied. Neither local nor E2E runs may use the production Auth
 project, production subscriber, or production application database.
+
+Run browser E2E through the same launcher:
+
+```bash
+npm run verify:e2e
+```
+
+It starts the stack when needed, waits for API, web, admin, and MCP endpoints,
+and derives Playwright URLs from the configured `SAUCI_*_PORT` values. Set
+`SAUCI_E2E_REUSE=true` only to reuse a healthy stack managed with the same
+configuration. Browser product-data fixtures are direct loopback PostgreSQL
+fixtures that prove the standalone API result; they never use local Supabase.

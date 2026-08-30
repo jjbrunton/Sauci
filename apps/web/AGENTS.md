@@ -6,5 +6,6 @@ Next.js App Router marketing, legal, and redemption UI.
 - Preserve PostHog provider/page-view integration unless the task changes it.
 - Keep metadata current for public pages.
 - Never expose server credentials through `NEXT_PUBLIC_*` variables.
-- Public redemption must use sandbox/local Supabase during automated tests.
+- Public redemption E2E must use the loopback standalone API and PostgreSQL
+  fixture harness, never the retired Supabase data plane.
 - Verify lint, typecheck, build, and the relevant Playwright flow.
