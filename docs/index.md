@@ -11,6 +11,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Testing strategy](testing/strategy.md)
 - [Database migration safety](operations/database-migrations.md)
 - [Backend deployment and branching](operations/backend-deployments.md)
+- [Website deployment](operations/web-deployments.md)
 - [Agent routing and effort](agents/routing.md)
 - [Learning promotion](agents/learnings.md)
 - [Authentication](authentication.md)

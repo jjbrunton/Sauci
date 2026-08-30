@@ -1,5 +1,7 @@
 node_modules
 **/node_modules
+.next
+**/.next
 .git
 .gitignore
 *.md
@@ -23,11 +25,15 @@ apps/mcp
 apps/mobile
 apps/supabase
 apps/web
+!apps/web
+!apps/web/**
 e2e
 evidence
 etc
 infra
 scripts
+!scripts
+!scripts/fix-hoisting.js
 terraform
 .agents
 .claude
