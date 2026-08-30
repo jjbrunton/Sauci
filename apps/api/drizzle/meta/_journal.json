@@ -148,6 +148,13 @@
       "when": 1788168060000,
       "tag": "0020_quiz_question_pool",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788168120000,
+      "tag": "0021_solo_sealed_answers",
+      "breakpoints": true
     }
   ]
 }

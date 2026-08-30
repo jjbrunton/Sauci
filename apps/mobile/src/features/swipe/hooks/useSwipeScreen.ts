@@ -48,7 +48,7 @@ export const useSwipeScreen = () => {
     const [countdown, setCountdown] = useState<string>("");
 
     const { enabledPackIds, ensureEnabledPacksLoaded, packs } = usePacksStore();
-    const { user, partner, couple } = useAuthStore();
+    const { user, partner, couple, sealedCount } = useAuthStore();
 
     const filteredQuestions = filterSupportedQuestions(questions);
 
@@ -128,20 +128,15 @@ export const useSwipeScreen = () => {
                 filtered = data;
             }
 
-            if (partner) {
-                // The daily limit applies to pack browsing too, so it is read in both
-                // modes; the answer gap is deliberately only enforced outside packs.
-                if (packId) {
-                    setIsBlocked(false);
-                    setGapInfo(null);
-                    await checkDailyLimit();
-                } else {
-                    await Promise.all([checkAnswerGap(), checkDailyLimit()]);
-                }
-            } else {
+            // The daily limit applies solo too, since a sealed answer still counts
+            // against it; the answer gap only makes sense once there is a partner
+            // to be ahead of, and checkAnswerGap already no-ops without one.
+            if (packId) {
                 setIsBlocked(false);
                 setGapInfo(null);
-                setDailyLimitInfo(null);
+                await checkDailyLimit();
+            } else {
+                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
             }
 
             if (currentRequestId === fetchRequestId.current) {
@@ -156,7 +151,7 @@ export const useSwipeScreen = () => {
                 setIsLoading(false);
             }
         }
-    }, [packId, partner, checkAnswerGap, checkDailyLimit]);
+    }, [packId, checkAnswerGap, checkDailyLimit]);
 
     const fetchPending = useCallback(async () => {
         const currentRequestId = ++fetchRequestId.current;
@@ -315,13 +310,20 @@ export const useSwipeScreen = () => {
                 uploadResponseMedia,
             });
 
-            const data = await apiClient.post<{ match: unknown | null }>("/v1/responses", {
+            const data = await apiClient.post<{ match: unknown | null; sealed_count?: number }>("/v1/responses", {
                 question_id: questionId,
                 answer,
                 response_data: finalResponseData,
             });
 
             Events.questionAnswered(answer, filteredQuestions[currentIndex]?.pack_id);
+
+            // A solo answer has no partner to match against; the sealed count is
+            // this answer's only visible feedback, so the banner updates instantly
+            // instead of waiting for the couple state to refresh next time round.
+            if (typeof data?.sealed_count === 'number') {
+                useAuthStore.setState({ sealedCount: data.sealed_count });
+            }
 
             const hasMatch = data?.match != null;
 
@@ -423,6 +425,7 @@ export const useSwipeScreen = () => {
         user,
         partner,
         couple,
+        sealedCount,
         enabledPackIds,
         effectiveTotal,
         fetchQuestions,

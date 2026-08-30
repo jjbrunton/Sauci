@@ -3,6 +3,8 @@ import type { Couple, Profile } from '@sauci/shared';
 export interface CoupleStateResponse {
   couple: Couple | null;
   partner: Profile | null;
+  /** Count of this user's banked answers with no couple yet (couple_id IS NULL). */
+  sealed_count: number;
 }
 
 export interface CoupleMutationResponse {

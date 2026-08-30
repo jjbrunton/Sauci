@@ -139,10 +139,15 @@ const sorted = filtered.sort((a, b) => {
 
 | Scenario | Behavior |
 |----------|----------|
-| No packs enabled | Shows "No packs enabled" prompt |
+| No packs enabled | Shows "No packs enabled" prompt (paired couples only; a couple with no configured packs has not chosen yet) |
 | All questions answered | Shows "All caught up!" with refresh button |
-| No partner paired | Shows pairing prompt |
+| No partner paired | Answers straight into the swipe flow instead of a blocking prompt. Every answer is sealed (`couple_id IS NULL`, no match). A persistent banner reports the sealed count with an invite CTA. See [Solo answering and sealed answers](couple-pairing.md#solo-answering-and-sealed-answers). |
 | Pack disabled mid-session | Client filters out questions from disabled packs |
+
+An unpaired user has no `couple_packs` row to configure (it is keyed to
+`couple_id`), so `recommended()`'s "unconfigured couple" fallback (every
+public pack) is what they always see; the pack-selection screen only applies
+once paired.
 
 ## Configuration
 

@@ -68,7 +68,7 @@ erDiagram
         uuid id PK
         uuid user_id FK
         uuid question_id FK
-        uuid couple_id FK
+        uuid couple_id FK "nullable: null is a sealed solo answer, claimed at pairing"
         answer_type answer "yes/no/maybe"
         timestamptz created_at
     }
@@ -196,10 +196,17 @@ allowed.
 5. Match triggers push notification to both partners
 6. Match unlocks chat thread in `messages` table
 
+Without a couple yet, step 3 has no partner response to check: the response is
+saved with `couple_id IS NULL` (a sealed answer) and no match is created. See
+[Solo answering and sealed answers](couple-pairing.md#solo-answering-and-sealed-answers).
+
 ### Couple Pairing Flow
 1. First user creates couple, gets `invite_code`
 2. Second user joins via `manage-couple` edge function with invite code
 3. Both profiles' `couple_id` set to same couple
+4. Every sealed answer (`couple_id IS NULL`) belonging to either member is
+   claimed into the couple, and matches are computed for every question both
+   members have now answered
 
 ### Pack Selection Flow
 1. Couples can enable/disable packs via `couple_packs` junction table

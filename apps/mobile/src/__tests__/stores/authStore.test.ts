@@ -30,10 +30,15 @@ const profile = {
 describe("authStore", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // fetchUser always fetches couple state now, since it also carries the
+        // sealed answer count for a user who has no couple yet. Individual tests
+        // override this when they care about the couple/partner shape.
+        jest.spyOn(coupleApi, "getState").mockResolvedValue({ couple: null, partner: null, sealed_count: 0 });
         useAuthStore.setState({
             user: null,
             couple: null,
             partner: null,
+            sealedCount: 0,
             isLoading: true,
             isAuthenticated: false,
             isAnonymous: false,
@@ -89,12 +94,12 @@ describe("authStore", () => {
             max_intensity: 3,
         };
         useAuthStore.setState({ user: pairedProfile } as any);
-        const stateSpy = jest.spyOn(coupleApi, "getState").mockResolvedValueOnce({ couple, partner });
+        const stateSpy = jest.spyOn(coupleApi, "getState").mockResolvedValueOnce({ couple, partner, sealed_count: 3 });
 
         await useAuthStore.getState().fetchCouple();
 
         expect(stateSpy).toHaveBeenCalledWith();
-        expect(useAuthStore.getState()).toMatchObject({ couple, partner });
+        expect(useAuthStore.getState()).toMatchObject({ couple, partner, sealedCount: 3 });
     });
 
     it("updates activity through the standalone API", async () => {

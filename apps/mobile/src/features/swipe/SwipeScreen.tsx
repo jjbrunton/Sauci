@@ -10,7 +10,7 @@ import { SwipeCardStack } from "./components/SwipeCardStack";
 import { SwipeHeader } from "./components/SwipeHeader";
 import { SwipeUploadOverlay } from "./components/SwipeUploadOverlay";
 import { SwipeLoadingState } from "./components/SwipeLoadingState";
-import { SwipeNoPartnerState } from "./components/SwipeNoPartnerState";
+import { SwipeSealedAnswersBanner } from "./components/SwipeSealedAnswersBanner";
 import { SwipeDailyLimitState } from "./components/SwipeDailyLimitState";
 import { SwipeBlockedState } from "./components/SwipeBlockedState";
 import { SwipeNoPacksState } from "./components/SwipeNoPacksState";
@@ -36,6 +36,7 @@ const SwipeScreen = () => {
         user,
         partner,
         couple,
+        sealedCount,
         enabledPackIds,
         effectiveTotal,
         fetchQuestions,
@@ -49,15 +50,6 @@ const SwipeScreen = () => {
 
     if (isLoading) {
         return <SwipeLoadingState />;
-    }
-
-    if (!partner) {
-        return (
-            <SwipeNoPartnerState
-                hasCouple={!!couple}
-                onPairPress={() => router.push("/pairing")}
-            />
-        );
     }
 
     if (dailyLimitInfo?.is_blocked) {
@@ -85,7 +77,10 @@ const SwipeScreen = () => {
         );
     }
 
-    if (!packId && enabledPackIds.length === 0) {
+    // Pack selection is stored per couple, so it only exists once paired. A solo
+    // user cannot have configured packs yet; recommended() already falls back to
+    // every public pack for them, so this gate would otherwise be a dead end.
+    if (couple && !packId && enabledPackIds.length === 0) {
         return (
             <SwipeNoPacksState onBrowsePacks={() => router.push("/")} />
         );
@@ -117,6 +112,13 @@ const SwipeScreen = () => {
                     onBack={() => router.back()}
                     dailyLimitInfo={dailyLimitInfo}
                 />
+
+                {!partner && (
+                    <SwipeSealedAnswersBanner
+                        sealedCount={sealedCount}
+                        onInvitePress={() => router.push("/pairing")}
+                    />
+                )}
 
                 <SwipeCardStack
                     questions={filteredQuestions}
