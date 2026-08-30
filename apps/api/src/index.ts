@@ -20,6 +20,7 @@ import {
 import { PostgresAnswersRepository } from './domains/answers/repository.js';
 import { PostgresChatRepository } from './domains/chat/repository.js';
 import { PostgresDaresRepository } from './domains/dares/repository.js';
+import { PostgresQuizRepository } from './domains/quiz/repository.js';
 import { PostgresCoupleRepository } from './domains/couples/repository.js';
 import { CoupleService } from './domains/couples/service.js';
 import { PostgresPacksRepository } from './domains/packs/repository.js';
@@ -38,6 +39,7 @@ const packsRepository = new PostgresPacksRepository(pool);
 const answersRepository = new PostgresAnswersRepository(pool);
 const chatRepository = new PostgresChatRepository(pool);
 const daresRepository = new PostgresDaresRepository(pool);
+const quizRepository = new PostgresQuizRepository(pool);
 const profileSettingsRepository = new PostgresProfileSettingsRepository(pool);
 const accountOperationsRepository = new PostgresAccountOperationsRepository(pool);
 const accountOperationsService = new AccountOperationsService(
@@ -68,6 +70,7 @@ const app = createApp({
   answersRepository,
   chatRepository,
   daresRepository,
+  quizRepository,
   profileSettingsRepository,
   accountOperationsService,
   mediaRepository,

@@ -11,3 +11,4 @@ export { useNotificationPreferencesStore } from "./notificationPreferencesStore"
 export type { NotificationPreferences } from "./notificationPreferencesStore";
 export { useStreakStore } from "./streakStore";
 export type { CoupleStreak } from "./streakStore";
+export { useQuizStore } from "./quizStore";
