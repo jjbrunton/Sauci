@@ -1,3 +1,6 @@
 # The update-signing private key belongs to the XPREM server, never to the app.
 private-key.pem
 *.key
+# The public certificate must be committed despite the root *.pem rule: the
+# expo-updates plugin embeds it into every build.
+!certificate.pem

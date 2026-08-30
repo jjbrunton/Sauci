@@ -23,11 +23,10 @@ const OTA_SERVER_URL = 'https://ota.apps.jbrunton.co.uk';
 const OTA_MANIFEST_URL = `${OTA_SERVER_URL}/manifest`;
 
 /**
- * XPREM application UUID, shown in the XPREM dashboard under App Info.
- * PLACEHOLDER until the update server deployment reports the real value.
+ * XPREM application UUID for Sauci, shown in the XPREM dashboard under App
+ * Info. Not a secret; overridable for pointing a build at another app.
  */
-const OTA_APP_ID_PLACEHOLDER = 'REPLACE_WITH_XPREM_APP_ID';
-const OTA_APP_ID = process.env.XPREM_APP_ID || OTA_APP_ID_PLACEHOLDER;
+const OTA_APP_ID = process.env.XPREM_APP_ID || '9a66f3c2-fda7-416f-87e2-6db833b32e9d';
 
 /** Public code-signing certificate downloaded from the XPREM dashboard. */
 const CODE_SIGNING_CERTIFICATE_PATH = './certs/certificate.pem';
@@ -50,14 +49,6 @@ const releaseChannel = process.env.RELEASE_CHANNEL || 'development';
 const codeSigningDisabled = Boolean(process.env.DISABLE_CODE_SIGNING);
 
 function assertUpdateConfigIsReal() {
-  if (OTA_APP_ID === OTA_APP_ID_PLACEHOLDER) {
-    throw new Error(
-      `RELEASE_CHANNEL=${releaseChannel} requires a real XPREM app id. ` +
-        'Set XPREM_APP_ID, or replace the placeholder in apps/mobile/app.config.js. ' +
-        'See docs/mobile-ota.md.',
-    );
-  }
-
   const certificatePath = path.join(__dirname, CODE_SIGNING_CERTIFICATE_PATH);
   const certificate = fs.existsSync(certificatePath)
     ? fs.readFileSync(certificatePath, 'utf8')

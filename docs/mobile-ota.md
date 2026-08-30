@@ -12,8 +12,10 @@ already installed build.
 
 ## Status
 
-The client is wired but not yet live. Two values from the server deployment are
-still outstanding; see [Pending server values](#pending-server-values).
+The client is wired with the real server values (app id
+`9a66f3c2-fda7-416f-87e2-6db833b32e9d` and the Sauci code-signing certificate,
+SHA-256 fingerprint beginning `DF:C9:17:A9`). What remains is the native
+prebuild and a store build; see [Server registration](#server-registration).
 
 ## How it works
 
@@ -96,9 +98,10 @@ branch surfing, it would strip the header from every poll for the life of the
 install.
 
 `RELEASE_CHANNEL` is set per profile in `apps/mobile/eas.json`. The config throws
-a descriptive error whenever `RELEASE_CHANNEL` is set but the app id or the
-certificate is still a placeholder, so a misconfigured build fails at config
-resolution rather than shipping a client that can never validate a manifest.
+a descriptive error whenever `RELEASE_CHANNEL` is set but the committed
+certificate is missing or is the placeholder, so a misconfigured build fails at
+config resolution rather than shipping a client that can never validate a
+manifest.
 
 ### Local development
 
@@ -145,8 +148,8 @@ the request headers, the code-signing metadata, and the certificate contents int
 these files. Those values embed the real app id and certificate, so the native
 projects are deliberately left untouched until both land.
 
-Once the pending values below are in place, regenerate and commit the native
-projects as a reviewed source change:
+With the real app id and certificate now committed, regenerate and commit the
+native projects as a reviewed source change:
 
 ```bash
 cd apps/mobile
@@ -222,24 +225,19 @@ A bad update that prevents the app from starting cannot be fixed over the air on
 devices that never complete a launch. Keep `fallbackToCacheTimeout` short and
 treat a startup-path change as store-release risk, not OTA risk.
 
-## Pending server values
+## Server registration
 
-The client wiring is complete apart from two values owned by the XPREM server
-deployment. Both are non-secret.
+The Sauci app is registered on the XPREM server; the deployment itself is
+documented in the homelab repo (`unraid/docs/xprem-ota.md`).
 
-| Value | Where it goes | How to obtain it |
-| --- | --- | --- |
-| XPREM app id (UUID) | `OTA_APP_ID_PLACEHOLDER` in `apps/mobile/app.config.js`, or the `XPREM_APP_ID` env var | XPREM dashboard, App Info page for the Sauci app |
-| Code-signing certificate (PEM) | Replace the whole of `apps/mobile/certs/certificate.pem` | XPREM dashboard App Info download, or `npx eoas generate-certs` |
+| Value | State |
+| --- | --- |
+| App id | `9a66f3c2-fda7-416f-87e2-6db833b32e9d`, hardcoded in `apps/mobile/app.config.js` (non-secret) |
+| Code-signing certificate | Committed at `apps/mobile/certs/certificate.pem` (public half; CN=Sauci, valid to 2036, SHA-256 fingerprint `DF:C9:17:A9:85:02:DD:EB:86:06:2B:64:8D:73:D2:8C:A2:AA:29:F0:AC:62:A8:76:62:A1:6B:A2:42:B0:3D:71`) |
+| Signing private key | Never leaves the server: keys mode `database`, sealed in the server's Postgres under its master key |
+| Publish token | `XPREM_SAUCI_API_KEY` in the homelab repo `.env`; export as `EOO_TOKEN` when publishing |
+| Channels | `staging` and `production` created server-side, mapped 1:1 to branches of the same names. `development` intentionally has no server channel — dev clients run with `DISABLE_CODE_SIGNING=1` against the packager |
 
-Also required, outside this repository:
-
-- An `EOO_TOKEN` publish token per environment, stored as a secret.
-- `development`, `staging`, and `production` channels created in the dashboard
-  and mapped to branches of the same names.
-- The `private-key.pem` counterpart of the certificate installed in the server key
-  store.
-
-After both values land: replace them, run the prebuild described in
+Remaining before updates flow: run the prebuild described in
 [Native projects](#native-projects), commit the native diff, and cut a new store
 build. Only builds produced after that point can receive updates.
