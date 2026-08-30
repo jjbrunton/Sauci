@@ -5,6 +5,7 @@ import { useAuthStore, usePacksStore, useResponsesStore, useStreakStore } from "
 import { skipQuestion, getSkippedQuestionIds } from "../../../lib/skippedQuestions";
 import { ApiError, apiClient } from "../../../lib/apiClient";
 import { Events } from "../../../lib/analytics";
+import { hasSeenAvatarPrompt, markAvatarPromptSeen } from "../../../lib/avatarPromptSeen";
 import type { AnswerType } from "../../../types";
 import type { DailyLimitInfo, PackInfo, ResponseData } from "../types";
 import {
@@ -45,10 +46,12 @@ export const useSwipeScreen = () => {
     const [showPaywall, setShowPaywall] = useState(false);
     const [packContext, setPackContext] = useState<{ name: string; icon: string } | null>(null);
     const [showConfetti, setShowConfetti] = useState(false);
+    const [showAvatarPrompt, setShowAvatarPrompt] = useState(false);
     const [countdown, setCountdown] = useState<string>("");
+    const hasEvaluatedAvatarPrompt = useRef(false);
 
     const { enabledPackIds, ensureEnabledPacksLoaded, packs } = usePacksStore();
-    const { user, partner, couple } = useAuthStore();
+    const { user, partner, couple, sealedCount } = useAuthStore();
 
     const filteredQuestions = filterSupportedQuestions(questions);
 
@@ -128,20 +131,15 @@ export const useSwipeScreen = () => {
                 filtered = data;
             }
 
-            if (partner) {
-                // The daily limit applies to pack browsing too, so it is read in both
-                // modes; the answer gap is deliberately only enforced outside packs.
-                if (packId) {
-                    setIsBlocked(false);
-                    setGapInfo(null);
-                    await checkDailyLimit();
-                } else {
-                    await Promise.all([checkAnswerGap(), checkDailyLimit()]);
-                }
-            } else {
+            // The daily limit applies solo too, since a sealed answer still counts
+            // against it; the answer gap only makes sense once there is a partner
+            // to be ahead of, and checkAnswerGap already no-ops without one.
+            if (packId) {
                 setIsBlocked(false);
                 setGapInfo(null);
-                setDailyLimitInfo(null);
+                await checkDailyLimit();
+            } else {
+                await Promise.all([checkAnswerGap(), checkDailyLimit()]);
             }
 
             if (currentRequestId === fetchRequestId.current) {
@@ -156,7 +154,7 @@ export const useSwipeScreen = () => {
                 setIsLoading(false);
             }
         }
-    }, [packId, partner, checkAnswerGap, checkDailyLimit]);
+    }, [packId, checkAnswerGap, checkDailyLimit]);
 
     const fetchPending = useCallback(async () => {
         const currentRequestId = ++fetchRequestId.current;
@@ -315,13 +313,20 @@ export const useSwipeScreen = () => {
                 uploadResponseMedia,
             });
 
-            const data = await apiClient.post<{ match: unknown | null }>("/v1/responses", {
+            const data = await apiClient.post<{ match: unknown | null; sealed_count?: number }>("/v1/responses", {
                 question_id: questionId,
                 answer,
                 response_data: finalResponseData,
             });
 
             Events.questionAnswered(answer, filteredQuestions[currentIndex]?.pack_id);
+
+            // A solo answer has no partner to match against; the sealed count is
+            // this answer's only visible feedback, so the banner updates instantly
+            // instead of waiting for the couple state to refresh next time round.
+            if (typeof data?.sealed_count === 'number') {
+                useAuthStore.setState({ sealedCount: data.sealed_count });
+            }
 
             const hasMatch = data?.match != null;
 
@@ -387,9 +392,40 @@ export const useSwipeScreen = () => {
         }
     }, [checkAnswerGap, checkDailyLimit, currentIndex, dailyLimitInfo, filteredQuestions, mode, user?.id]);
 
+    const maybeShowAvatarPrompt = useCallback(async () => {
+        const currentUser = useAuthStore.getState().user;
+        if (!currentUser?.id || currentUser.avatar_url) return;
+
+        const alreadySeen = await hasSeenAvatarPrompt(currentUser.id);
+        if (alreadySeen) return;
+
+        // Marked seen as soon as it is shown, so the prompt appears at most once
+        // even if the user leaves the app before responding to it.
+        await markAvatarPromptSeen(currentUser.id);
+        setShowAvatarPrompt(true);
+        Events.avatarPromptShown('first_match');
+    }, []);
+
     const handleConfettiComplete = useCallback(() => {
         setShowConfetti(false);
         setCurrentIndex(prev => prev + 1);
+
+        // Deferred avatar ask: offered once, right after the couple's first match
+        // celebration finishes, never on top of it.
+        if (!hasEvaluatedAvatarPrompt.current) {
+            hasEvaluatedAvatarPrompt.current = true;
+            void maybeShowAvatarPrompt();
+        }
+    }, [maybeShowAvatarPrompt]);
+
+    const handleAvatarPromptAddPhoto = useCallback(() => {
+        setShowAvatarPrompt(false);
+        Events.avatarPromptAccepted('first_match');
+    }, []);
+
+    const handleAvatarPromptDismiss = useCallback(() => {
+        setShowAvatarPrompt(false);
+        Events.avatarPromptDismissed('first_match');
     }, []);
 
     const getQuestionPackInfo = useCallback(
@@ -419,15 +455,19 @@ export const useSwipeScreen = () => {
         showPaywall,
         packContext,
         showConfetti,
+        showAvatarPrompt,
         countdown,
         user,
         partner,
         couple,
+        sealedCount,
         enabledPackIds,
         effectiveTotal,
         fetchQuestions,
         handleAnswer,
         handleConfettiComplete,
+        handleAvatarPromptAddPhoto,
+        handleAvatarPromptDismiss,
         getQuestionPackInfo,
         checkAnswerGap,
         setFeedbackQuestion,

@@ -12,6 +12,8 @@ interface AuthState {
     user: Profile | null;
     couple: Couple | null;
     partner: Profile | null;
+    /** This user's banked (sealed) answers with no couple yet. Zero once claimed at pairing. */
+    sealedCount: number;
     isLoading: boolean;
     isAuthenticated: boolean;
     isAnonymous: boolean;
@@ -44,6 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     couple: null,
     partner: null,
+    sealedCount: 0,
     isLoading: true,
     isAuthenticated: false,
     isAnonymous: false,
@@ -77,18 +80,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 set({ isAuthenticated: true, isAnonymous });
             }
 
-            // If user has a couple, fetch couple data; otherwise clear couple/partner
-            if (profile?.couple_id) {
-                await get().fetchCouple();
-            } else {
-                set({ couple: null, partner: null });
-            }
+            // Always fetch couple state: it reports the sealed answer count for a
+            // solo user even before any couple exists, not just once paired.
+            await get().fetchCouple();
 
             set({ isLoading: false });
         } catch (error) {
             if (error instanceof ApiError && error.status === 401) {
                 console.log("[Auth] Session rejected by API, signing out");
-                set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
+                set({ user: null, couple: null, partner: null, sealedCount: 0, isAuthenticated: false, isAnonymous: false, isLoading: false });
                 const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
@@ -107,14 +107,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     fetchCouple: async () => {
-        const user = get().user;
-        if (!user?.couple_id) {
-            set({ couple: null, partner: null });
-            return;
-        }
-
-        const { couple, partner } = await coupleApi.getState();
-        set({ couple, partner });
+        // Fetches unconditionally: getState() reports sealed_count for a solo user
+        // who has no couple yet too, not only once paired.
+        const { couple, partner, sealed_count } = await coupleApi.getState();
+        set({ couple, partner, sealedCount: sealed_count });
     },
 
     /**
@@ -141,6 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
              user: null,
              couple: null,
              partner: null,
+             sealedCount: 0,
              isAuthenticated: false,
              isAnonymous: false,
              isLoading: false,
@@ -175,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ...(user === null && { isAnonymous: false }),
             isLoading: false,
             // Clear couple/partner when user is null (signed out)
-            ...(user === null && { couple: null, partner: null })
+            ...(user === null && { couple: null, partner: null, sealedCount: 0 })
         });
         // Clear other stores when user signs out
         if (user === null) {
@@ -215,4 +212,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         void syncTimezone(userId);
     },
 }));
-

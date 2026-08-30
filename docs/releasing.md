@@ -2,6 +2,11 @@
 
 This guide covers local release builds for Android and iOS.
 
+JavaScript-only changes can also ship over the air between store releases. See
+[Mobile over-the-air updates](mobile-ota.md). Anything that changes native code
+still requires a store build with a bumped `expo.version`, because the OTA
+explicit runtime version is synchronized with the app version.
+
 ## Prerequisites
 
 - **Java JDK 17** - Required for Android Gradle builds
@@ -319,7 +324,15 @@ user for fresh authorization immediately before this step.
 
 Version is managed locally by EAS with `appVersionSource: "local"` in
 `apps/mobile/eas.json`. Production builds auto-increment the platform build
-number and synchronize the tracked native version file.
+number and synchronize the tracked native version file. For a public-version
+bump, use the release version script rather than editing individual sources: it
+updates and verifies `app.json`, the explicit Expo runtime string, and the
+checked-in iOS and Android public/runtime values together.
+
+```bash
+node .codex/skills/generate-release/scripts/set_version.mjs --version 1.0.7
+node .codex/skills/generate-release/scripts/set_version.mjs --check
+```
 
 To inspect or deliberately set versions:
 

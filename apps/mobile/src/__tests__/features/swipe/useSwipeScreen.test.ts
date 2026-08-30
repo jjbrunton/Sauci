@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react-native";
 
 import { useSwipeScreen } from "@/features/swipe/hooks/useSwipeScreen";
 import { ApiError, apiClient } from "@/lib/apiClient";
+import { useAuthStore } from "@/store";
 import * as swipeService from "@/features/swipe/services/swipeService";
 import { getSkippedQuestionIds } from "@/lib/skippedQuestions";
 
@@ -15,12 +16,13 @@ jest.mock("expo-router", () => ({
 // Stable identities: the hook's effects key off these, so fresh objects per render
 // would retrigger the fetch effect forever and the screen would never settle.
 jest.mock("@/store", () => {
-    const auth = { user: { id: "user-1" }, partner: { id: "user-2" }, couple: { id: "couple-1", couple_id: "couple-1" } };
+    const auth = { user: { id: "user-1" }, partner: { id: "user-2" }, couple: { id: "couple-1", couple_id: "couple-1" }, sealedCount: 0 };
     const packs = { enabledPackIds: ["pack-1"], ensureEnabledPacksLoaded: async () => undefined, packs: [] };
     const packState = { ...packs, invalidatePacks: jest.fn() };
     const responses = { invalidateResponses: jest.fn() };
     const useAuthStore = () => auth;
     useAuthStore.getState = () => auth.user;
+    useAuthStore.setState = jest.fn();
     const usePacksStore = () => packs;
     usePacksStore.getState = () => packState;
     const useResponsesStore = () => responses;
@@ -144,6 +146,19 @@ describe("useSwipeScreen daily limit", () => {
 
         expect(result.current.currentIndex).toBe(1);
         expect(result.current.dailyLimitInfo).toMatchObject({ responses_today: 5, remaining: 5 });
+    });
+
+    it("updates the sealed answer count optimistically when the server reports one", async () => {
+        // A solo answer has no partner to match against, so sealed_count is the
+        // only feedback the server gives back; the banner reads it from auth state.
+        const { result } = await renderReady();
+
+        jest.spyOn(apiClient, "post").mockResolvedValueOnce({ match: null, sealed_count: 3 });
+        await act(async () => {
+            await result.current.handleAnswer("q1", "yes");
+        });
+
+        expect(useAuthStore.setState).toHaveBeenCalledWith({ sealedCount: 3 });
     });
 
     it("refreshes the shared streak once the answer lands", async () => {

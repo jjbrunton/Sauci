@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-const mcp = process.env.MCP_URL ?? 'http://127.0.0.1:3002';
+const mcp = process.env.MCP_URL;
+if (!mcp) throw new Error('Run E2E through npm run verify:e2e');
 
 test('MCP health is available while tool access requires auth', async ({ request }) => {
   const health = await request.get(`${mcp}/health`);

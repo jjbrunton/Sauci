@@ -35,6 +35,8 @@ export const questionPacks = pgTable('question_packs', {
   contentReviewedAt: timestamp('content_reviewed_at', { withTimezone: true }),
   contentReviewedBy: uuid('content_reviewed_by').references(() => profiles.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  scheduledReleaseAt: timestamp('scheduled_release_at', { withTimezone: true }),
+  releaseNotified: boolean('release_notified').notNull().default(false),
 }, (table) => [index('question_packs_category_id_idx').on(table.categoryId)]);
 
 export const questions = pgTable('questions', {
@@ -61,7 +63,9 @@ export const responses = pgTable('responses', {
   id: uuid('id').primaryKey(),
   userId: uuid('user_id').notNull().references(() => profiles.id, { onDelete: 'cascade' }),
   questionId: uuid('question_id').notNull().references(() => questions.id, { onDelete: 'cascade' }),
-  coupleId: uuid('couple_id').notNull().references(() => couples.id, { onDelete: 'cascade' }),
+  // Nullable: an unpaired user's answer is banked as a sealed answer with no couple
+  // yet. It is claimed into the couple at pairing time; see the answers repository.
+  coupleId: uuid('couple_id').references(() => couples.id, { onDelete: 'cascade' }),
   answer: text('answer').notNull(),
   responseData: jsonb('response_data'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sauci",
     "slug": "sauci",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "app.sauci",
@@ -298,7 +298,19 @@
         }
       ],
       "./plugins/withWidgetExported.js",
-      "./plugins/withNativeWidget.js"
+      "./plugins/withNativeWidget.js",
+      [
+        "react-native-share",
+        {
+          "ios": [
+            "instagram",
+            "instagram-stories"
+          ],
+          "android": [
+            "com.instagram.android"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

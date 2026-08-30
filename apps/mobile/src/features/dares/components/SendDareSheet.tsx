@@ -6,7 +6,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { daresApi } from "../../../lib/daresApi";
 import { colors, featureColors, radius, spacing, typography } from "../../../theme";
-import { DURATION_OPTIONS, type DareItem, type DarePack, type SendDarePayload } from "../types";
+import { DURATION_OPTIONS, PROOF_OPTIONS, type DareItem, type DarePack, type DareProofType, type SendDarePayload } from "../types";
 
 const ACCENT = featureColors.dares.accent;
 
@@ -26,6 +26,7 @@ export function SendDareSheet({ visible, pack, canSendCustom, onClose, onSend, o
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [customText, setCustomText] = useState("");
     const [durationHours, setDurationHours] = useState<number | null>(24);
+    const [proofType, setProofType] = useState<DareProofType>("none");
     const [notes, setNotes] = useState("");
     const [sending, setSending] = useState(false);
 
@@ -35,6 +36,7 @@ export function SendDareSheet({ visible, pack, canSendCustom, onClose, onSend, o
         setSelectedId(null);
         setCustomText("");
         setNotes("");
+        setProofType("none");
         daresApi
             .packDares(pack.id)
             .then((result) => setDares(result.dares))
@@ -52,10 +54,11 @@ export function SendDareSheet({ visible, pack, canSendCustom, onClose, onSend, o
             ? { custom_dare_text: customText.trim(), custom_dare_intensity: 3, duration_hours: durationHours }
             : { dare_id: selectedId!, duration_hours: durationHours };
         if (notes.trim()) payload.sender_notes = notes.trim();
+        if (proofType !== "none") payload.proof_type = proofType;
         const sent = await onSend(payload);
         setSending(false);
         if (sent) onClose();
-    }, [canSubmit, sending, isCustom, customText, selectedId, durationHours, notes, onSend, onClose]);
+    }, [canSubmit, sending, isCustom, customText, selectedId, durationHours, proofType, notes, onSend, onClose]);
 
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -127,6 +130,29 @@ export function SendDareSheet({ visible, pack, canSendCustom, onClose, onSend, o
                                         onPress={() => setDurationHours(option.hours)}
                                         style={[styles.chip, selected && styles.chipSelected]}
                                     >
+                                        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
+                                            {option.label}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </View>
+
+                        <Text style={styles.sectionLabel}>REQUIRE PROOF</Text>
+                        <View style={styles.durationRow}>
+                            {PROOF_OPTIONS.map((option) => {
+                                const selected = option.value === proofType;
+                                return (
+                                    <Pressable
+                                        key={option.value}
+                                        onPress={() => setProofType(option.value)}
+                                        style={[styles.chip, styles.proofChip, selected && styles.chipSelected]}
+                                    >
+                                        <Ionicons
+                                            name={option.icon as keyof typeof Ionicons.glyphMap}
+                                            size={14}
+                                            color={selected ? ACCENT : colors.textSecondary}
+                                        />
                                         <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
                                             {option.label}
                                         </Text>
@@ -229,6 +255,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: spacing.md, paddingVertical: spacing.sm - 2,
         borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     },
+    proofChip: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     chipSelected: { borderColor: ACCENT, backgroundColor: "rgba(212,175,55,0.12)" },
     chipText: { ...typography.footnote, color: colors.textSecondary },
     chipTextSelected: { color: ACCENT, fontWeight: "600" },

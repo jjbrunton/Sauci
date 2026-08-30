@@ -11,8 +11,10 @@ import { QuestionAnalyticsPage } from '@/pages/content/QuestionAnalyticsPage';
 import { TagsPage } from '@/pages/content/TagsPage';
 import { DarePacksPage } from '@/pages/content/DarePacksPage';
 import { DaresPage } from '@/pages/content/DaresPage';
+import { QuizQuestionsPage } from '@/pages/content/QuizQuestionsPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { UserDetailPage } from '@/pages/users/UserDetailPage';
+import { CouplesPage } from '@/pages/users/CouplesPage';
 import { MatchChatPage } from '@/pages/users/MatchChatPage';
 import { AuditLogsPage } from '@/pages/AuditLogsPage';
 import { AdminsPage } from '@/pages/admins/AdminsPage';
@@ -20,6 +22,8 @@ import { RedemptionCodesPage } from '@/pages/RedemptionCodesPage';
 import { FeedbackPage } from '@/pages/FeedbackPage';
 import { UsageInsightsPage } from '@/pages/UsageInsightsPage';
 import { UserActivityPage } from '@/pages/activity/UserActivityPage';
+import { SentDaresPage } from '@/pages/activity/SentDaresPage';
+import { LiveDrawSessionsPage } from '@/pages/activity/LiveDrawSessionsPage';
 import { AiSettingsPage } from '@/pages/AiSettingsPage';
 import { AppSettingsPage } from '@/pages/AppSettingsPage';
 import { FlaggedMessagesPage } from '@/pages/FlaggedMessagesPage';
@@ -108,6 +112,14 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route
+                            path="/quiz-questions"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
+                                    <QuizQuestionsPage />
+                                </ProtectedRoute>
+                            }
+                        />
 
                         {/* User management */}
                         <Route
@@ -143,10 +155,34 @@ function App() {
                             }
                         />
                         <Route
+                            path="/couples"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
+                                    <CouplesPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path="/activity"
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_ACTIVITY}>
                                     <UserActivityPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/activity/sent-dares"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_ACTIVITY}>
+                                    <SentDaresPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/activity/live-draw"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.VIEW_USERS}>
+                                    <LiveDrawSessionsPage />
                                 </ProtectedRoute>
                             }
                         />

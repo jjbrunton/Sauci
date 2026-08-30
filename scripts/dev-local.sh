@@ -107,10 +107,10 @@ LOCAL_ADMIN_SERVICE_TOKEN="${ADMIN_API_SERVICE_TOKEN:-local-sauci-admin-service-
 LOCAL_MCP_API_KEY="${SAUCI_MCP_API_KEY:-local-sauci-mcp-only}"
 
 SERVERS=(
-  "api|PORT=$API_PORT DATABASE_URL=$LOCAL_DATABASE_URL MEDIA_ROOT=$ROOT/.local/media MEDIA_SIGNING_SECRET=local-media-signing-secret-change-me-123456 MEDIA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT npm run dev -w @sauci/api"
+  "api|PORT=$API_PORT DATABASE_URL=$LOCAL_DATABASE_URL CORS_ALLOWED_ORIGINS=http://127.0.0.1:$WEB_PORT MEDIA_ROOT=$ROOT/.local/media MEDIA_SIGNING_SECRET=local-media-signing-secret-change-me-123456 MEDIA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT npm run dev -w @sauci/api"
   "worker|DATABASE_URL=$LOCAL_DATABASE_URL CLASSIFIER_ENABLED=false MEDIA_ROOT=$ROOT/.local/media MEDIA_SIGNING_SECRET=local-media-signing-secret-change-me-123456 MEDIA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT npm run dev:worker -w @sauci/api"
   "web|env NEXT_PUBLIC_API_URL=$LOCAL_API_URL npm run dev -w @sauci/web -- --port $WEB_PORT"
-  "admin|env VITE_API_URL=$LOCAL_API_URL npm run dev -w @sauci/admin -- --host 127.0.0.1 --port $ADMIN_PORT"
+  "admin|env VITE_API_URL=/ SAUCI_ADMIN_API_PROXY=$LOCAL_API_URL npm run dev -w @sauci/admin -- --host 127.0.0.1 --port $ADMIN_PORT"
   "mcp|env PORT=$MCP_PORT npm run dev -w sauci-mcp-server"
   "mobile|npm run dev -w @sauci/mobile -- --port $METRO_PORT --localhost"
 )
@@ -159,6 +159,13 @@ assert_local_database() {
     *) die "Refusing database operation against non-local URL: $LOCAL_DATABASE_URL" ;;
   esac
   [ "$POSTGRES_PORT" = "54320" ] || die "Destructive reset requires the dedicated local PostgreSQL port 54320."
+}
+
+assert_loopback_database() {
+  case "$LOCAL_DATABASE_URL" in
+    postgresql://*@127.0.0.1:*/*|postgresql://*@localhost:*/*) ;;
+    *) die "Refusing E2E fixture operations against non-loopback URL: $LOCAL_DATABASE_URL" ;;
+  esac
 }
 
 assert_allowed_auth() {
@@ -359,6 +366,13 @@ window_environment() {
       )
       WINDOW_FORWARD='SAUCI_ADMIN_API_URL="$SAUCI_ADMIN_API_URL" SAUCI_ADMIN_API_TOKEN="$SAUCI_ADMIN_API_TOKEN" SAUCI_MCP_API_KEY="$SAUCI_MCP_API_KEY"'
       ;;
+    admin)
+      WINDOW_ENV=(
+        "VITE_SUPABASE_URL=$AUTH_URL"
+        "VITE_SUPABASE_ANON_KEY=$AUTH_ANON_KEY"
+      )
+      WINDOW_FORWARD='VITE_SUPABASE_URL="$VITE_SUPABASE_URL" VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY"'
+      ;;
     mobile)
       WINDOW_ENV=(
         "EXPO_PUBLIC_API_URL=$MOBILE_API_URL"
@@ -455,6 +469,7 @@ assert_app_ports_available() {
 cmd_up() {
   preflight
   [ -n "$AUTH_URL" ] || die "SUPABASE_AUTH_URL (or EXPO_PUBLIC_SUPABASE_URL) is required for hosted Auth verification."
+  [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for hosted Auth verification."
   assert_allowed_auth
   prepare_session
   if ! restart_managed_windows; then
@@ -513,12 +528,16 @@ cmd_restart() {
 
   preflight
   case "$name" in
-    api|mobile)
+    api|admin|mobile)
       [ -n "$AUTH_URL" ] || die "SUPABASE_AUTH_URL (or EXPO_PUBLIC_SUPABASE_URL) is required."
       assert_allowed_auth
       ;;
   esac
-  [ "$name" != "mobile" ] || [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for the mobile Auth client."
+  case "$name" in
+    admin|mobile)
+      [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for the ${name} Auth client."
+      ;;
+  esac
 
   tmux has-session -t "$SESSION" 2>/dev/null || die "session not running"
   prepare_session
@@ -569,6 +588,40 @@ cmd_seed() {
   ok "Local migrations applied and configured fixtures created"
 }
 
+wait_for_e2e_service() {
+  local name="$1" url="$2" attempts=0
+  command -v curl >/dev/null 2>&1 || die "curl is required for E2E health checks."
+  until curl --fail --silent --show-error "$url" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+    [ "$attempts" -lt 60 ] || die "Timed out waiting for local $name at $url"
+    sleep 1
+  done
+}
+
+cmd_e2e() {
+  if [ "${SAUCI_E2E_REUSE:-false}" = "true" ]; then
+    preflight
+    assert_loopback_database
+    [ -n "$AUTH_URL" ] || die "SUPABASE_AUTH_URL (or EXPO_PUBLIC_SUPABASE_URL) is required when reusing the local stack."
+    assert_allowed_auth
+  else
+    cmd_up
+  fi
+
+  wait_for_e2e_service "API" "$LOCAL_API_URL/health/live"
+  wait_for_e2e_service "web" "http://127.0.0.1:$WEB_PORT/"
+  wait_for_e2e_service "admin" "http://127.0.0.1:$ADMIN_PORT/"
+  wait_for_e2e_service "MCP" "http://127.0.0.1:$MCP_PORT/health"
+
+  (cd "$ROOT" && env \
+    E2E_DATABASE_URL="$LOCAL_DATABASE_URL" \
+    E2E_API_URL="$LOCAL_API_URL" \
+    WEB_URL="http://127.0.0.1:$WEB_PORT" \
+    ADMIN_URL="http://127.0.0.1:$ADMIN_PORT" \
+    MCP_URL="http://127.0.0.1:$MCP_PORT" \
+    npm run test -w @sauci/e2e)
+}
+
 cmd_native() {
   local platform="$1"
   preflight
@@ -591,9 +644,10 @@ case "${1:-up}" in
   attach) tmux attach -t "$SESSION" ;;
   reset) cmd_reset ;;
   seed) cmd_seed ;;
+  e2e) cmd_e2e ;;
   ios|android) cmd_native "$1" ;;
   help|-h|--help)
-    echo "usage: scripts/dev-local.sh up|down [--all]|status|logs <service>|restart <service>|attach|reset|seed|ios|android"
+    echo "usage: scripts/dev-local.sh up|down [--all]|status|logs <service>|restart <service>|attach|reset|seed|e2e|ios|android"
     ;;
   *) die "unknown command '$1'" ;;
 esac

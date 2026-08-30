@@ -132,9 +132,14 @@ export class PostgresOperationsRepository implements OperationsRepository {
            and exists(select 1 from responses r where r.couple_id=p.couple_id and r.created_at>$1::timestamptz-interval '7 days')
          group by p.id on conflict(dedupe_key) do nothing`, [now]);
 
+      // Sealed answers are the earned-value hook for the nudge: a solo answerer who
+      // has already banked answers gets told what pairing unlocks for them, instead
+      // of the generic invite copy that applies before they have answered anything.
       const unpaired=await client.query(
         `with eligible as (
-           select p.id,p.couple_id is not null has_invite from profiles p left join notification_preferences np on np.user_id=p.id
+           select p.id,p.couple_id is not null has_invite,
+             (select count(*)::int from responses r where r.user_id=p.id and r.couple_id is null) sealed_count
+           from profiles p left join notification_preferences np on np.user_id=p.id
            where extract(hour from $1::timestamptz)>=18 and p.push_token is not null
              and (p.couple_id is null or (select count(*) from profiles member where member.couple_id=p.couple_id)<2)
              and coalesce(np.unpaired_reminders_enabled,true)
@@ -143,10 +148,11 @@ export class PostgresOperationsRepository implements OperationsRepository {
          ), queued as (
            insert into operations_outbox(kind,dedupe_key,recipient_id,payload)
            select 'expo','unpaired:'||to_char($1::timestamptz,'YYYY-MM-DD')||':'||e.id,e.id,
-             jsonb_build_object('title','Sauci','body',case when e.has_invite
-               then 'Your invite code is waiting! Share it with your partner to start discovering what you have in common.'
+             jsonb_build_object('title','Sauci','body',case
+               when e.sealed_count>0 then 'You have '||e.sealed_count||' sealed answer'||(case when e.sealed_count=1 then '' else 's' end)||' waiting. Invite your partner to unlock what you said about them.'
+               when e.has_invite then 'Your invite code is waiting! Share it with your partner to start discovering what you have in common.'
                else 'Ready to get started? Create an invite code and share it with your partner!' end,
-               'data',jsonb_build_object('type','unpaired_reminder'))
+               'data',jsonb_build_object('type','unpaired_reminder','sealed_count',e.sealed_count))
            from eligible e on conflict(dedupe_key) do nothing returning recipient_id
          ) update profiles p set last_unpaired_reminder_at=$1 from queued q where p.id=q.recipient_id returning p.id`, [now,limit]);
 

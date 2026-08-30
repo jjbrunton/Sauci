@@ -87,7 +87,10 @@ Before the first deployment, provide:
 5. A rollback and restore point before any migrated production data is imported.
 6. A separately generated `MEDIA_SIGNING_SECRET` (at least 32 characters) and
    the HTTPS API origin as `MEDIA_PUBLIC_BASE_URL`.
-7. A non-production hosted Auth project and disposable, onboarding-complete test
+7. The public web origin is fixed to `https://sauci.app` by
+   `CORS_ALLOWED_ORIGINS` in the Compose contract. Do not broaden it without a
+   reviewed browser client requirement.
+8. A non-production hosted Auth project and disposable, onboarding-complete test
    identities mapped into the staging database for authenticated mobile acceptance.
 
 Blob deletion is retryable. Database cascades and avatar replacement enqueue

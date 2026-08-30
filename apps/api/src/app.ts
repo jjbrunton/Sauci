@@ -1,5 +1,6 @@
 import type { ApiErrorResponse, MeResponse } from '@sauci/shared';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { bearerToken, type AuthIdentity, type AuthVerifier } from './auth.js';
 import type { ApiRepository } from './db/repository.js';
@@ -36,6 +37,7 @@ type Variables = { identity: AuthIdentity };
 export interface AppDependencies {
   auth: AuthVerifier;
   repository: ApiRepository;
+  corsAllowedOrigins?: string[];
   coupleService?: CoupleService;
   packsRepository?: PacksRepository;
   answersRepository?: AnswersRepository;
@@ -60,6 +62,15 @@ function error(code: string, message: string): ApiErrorResponse {
 
 export function createApp(deps: AppDependencies): Hono<{ Variables: Variables }> {
   const app = new Hono<{ Variables: Variables }>();
+
+  const corsAllowedOrigins = new Set(deps.corsAllowedOrigins ?? ['https://sauci.app']);
+  // The public web redemption form calls the API from a distinct browser origin.
+  // API authentication remains bearer-token based, so this does not grant cross-origin access to protected data.
+  app.use('*', cors({
+    origin: (origin) => corsAllowedOrigins.has(origin) ? origin : null,
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+  }));
 
   app.use('*', async (c, next) => {
     const startedAt = performance.now();

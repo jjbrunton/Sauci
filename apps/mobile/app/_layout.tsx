@@ -117,14 +117,12 @@ export default function RootLayout() {
 
         // Handle initial URL if app was opened via deep link
         const handleDeepLink = async (url: string | null) => {
-            console.log('[DeepLink] handleDeepLink called with URL:', url);
             if (!url) return;
 
             // Invite links (https://sauci.app/join/{code} or app.sauci://join?code={code})
             // are handled separately from the Supabase auth deep link flow below.
             const inviteLink = parseInviteLinkCode(url);
             if (inviteLink) {
-                console.log('[DeepLink] Invite link detected:', inviteLink);
                 Events.inviteLinkOpened(inviteLink.source);
                 await stashPendingInviteCode(inviteLink.code);
 
@@ -204,13 +202,11 @@ export default function RootLayout() {
 
         // Get initial URL
         Linking.getInitialURL().then((url) => {
-            console.log('[DeepLink] getInitialURL returned:', url);
             handleDeepLink(url);
         });
 
         // Listen for new deep links while app is open
         const linkingSubscription = Linking.addEventListener("url", (event) => {
-            console.log('[DeepLink] URL event listener triggered with:', event.url);
             handleDeepLink(event.url);
         });
 

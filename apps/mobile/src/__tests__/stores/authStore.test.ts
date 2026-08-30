@@ -30,10 +30,15 @@ const profile = {
 describe("authStore", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // fetchUser always fetches couple state now, since it also carries the
+        // sealed answer count for a user who has no couple yet. Individual tests
+        // override this when they care about the couple/partner shape.
+        jest.spyOn(coupleApi, "getState").mockResolvedValue({ couple: null, partner: null, sealed_count: 0 });
         useAuthStore.setState({
             user: null,
             couple: null,
             partner: null,
+            sealedCount: 0,
             isLoading: true,
             isAuthenticated: false,
             isAnonymous: false,
@@ -89,12 +94,12 @@ describe("authStore", () => {
             max_intensity: 3,
         };
         useAuthStore.setState({ user: pairedProfile } as any);
-        const stateSpy = jest.spyOn(coupleApi, "getState").mockResolvedValueOnce({ couple, partner });
+        const stateSpy = jest.spyOn(coupleApi, "getState").mockResolvedValueOnce({ couple, partner, sealed_count: 3 });
 
         await useAuthStore.getState().fetchCouple();
 
         expect(stateSpy).toHaveBeenCalledWith();
-        expect(useAuthStore.getState()).toMatchObject({ couple, partner });
+        expect(useAuthStore.getState()).toMatchObject({ couple, partner, sealedCount: 3 });
     });
 
     it("updates activity through the standalone API", async () => {
@@ -107,6 +112,7 @@ describe("authStore", () => {
     });
 
     it("clears user-scoped stores and hosted auth when the API rejects the session", async () => {
+        useAuthStore.setState({ sealedCount: 3 } as any);
         (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
             data: { session: { user: { id: "me" } } },
         });
@@ -117,6 +123,7 @@ describe("authStore", () => {
 
         expect(useAuthStore.getState()).toMatchObject({
             user: null,
+            sealedCount: 0,
             isAuthenticated: false,
             isAnonymous: false,
             isLoading: false,
@@ -126,5 +133,29 @@ describe("authStore", () => {
         expect(useMessageStore.getState().unreadCount).toBe(0);
         expect(useSubscriptionStore.getState().subscription).toMatchObject({ isProUser: false });
         expect(authClient.auth.signOut).toHaveBeenCalled();
+    });
+
+    it("clears sealed answers during an explicit sign-out", async () => {
+        useAuthStore.setState({ user: profile, sealedCount: 3, isAuthenticated: true } as any);
+
+        await useAuthStore.getState().signOut();
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            sealedCount: 0,
+            isAuthenticated: false,
+        });
+    });
+
+    it("clears sealed answers when the auth listener clears the user", () => {
+        useAuthStore.setState({ user: profile, sealedCount: 3, isAuthenticated: true } as any);
+
+        useAuthStore.getState().setUser(null);
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            sealedCount: 0,
+            isAuthenticated: false,
+        });
     });
 });

@@ -16,6 +16,54 @@ A user can be in one of three states:
 | **Waiting** | Set | `null` | Created couple, waiting for partner |
 | **Paired** | Set | Exists | Both partners joined |
 
+Unpaired and Waiting are not dead ends: both states can answer questions
+immediately through the standalone API (`POST /v1/responses`). See
+[Solo answering and sealed answers](#solo-answering-and-sealed-answers) below.
+
+## Solo answering and sealed answers
+
+An Unpaired or Waiting user answers straight into the swipe flow instead of
+being blocked until a partner joins. `responses.couple_id` is nullable
+(`apps/api/drizzle/0022_solo_sealed_answers.sql`): a response submitted with no
+couple is inserted with `couple_id IS NULL` and is called a **sealed answer**.
+It is banked, not lost, and counts toward the daily response limit like any
+other answer, but no match reconciliation runs for it (there is no partner
+response to compare against).
+
+`GET /v1/couple` reports `sealed_count`, the caller's count of responses with
+`couple_id IS NULL`, alongside `couple` and `partner`, so the client can show
+"N sealed answers" before and while waiting to pair. `POST /v1/responses` also
+returns `sealed_count` in its response body for a solo submission (its `match`
+is always `null`).
+
+### Claim on pair
+
+`PostgresCoupleRepository.join()` (`apps/api/src/domains/couples/repository.ts`)
+is the only place membership grows from one member to two. In the same
+transaction that adds the second member, it:
+
+1. Reassigns every sealed answer (`couple_id IS NULL`) belonging to either
+   member to the new couple.
+2. For every question where both members now have an answer, computes the
+   match type with the same rule `calculateMatchType` uses for live answers
+   and upserts into `matches` (respecting the `(couple_id, question_id)`
+   uniqueness), so a couple's history of solo answers surfaces as matches the
+   moment they pair, not only for answers given after pairing.
+
+A user who re-pairs after their previous couple was deleted only has
+`couple_id IS NULL` answers left to claim (the old couple's responses were
+cascade-deleted with it), which this handles the same way as first-time
+pairing.
+
+### Push nudge escalation
+
+The unpaired push reminder (`apps/api/src/domains/operations/repository.ts`,
+`produce()`) reads each eligible recipient's sealed count and leads with it
+once it is greater than zero: "You have N sealed answers waiting. Invite your
+partner to unlock what you said about them." Recipients with no sealed
+answers yet see the original invite-code copy. The existing 3-day cadence and
+18:00-local gate are unchanged.
+
 ## Edge Functions
 
 ### `manage-couple` (POST)

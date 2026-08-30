@@ -12,7 +12,7 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
   const pack='44444444-4444-4444-8444-444444444444',question='55555555-5555-4555-8555-555555555555';let pool:Pool;let repo:PostgresOperationsRepository;let repo2:PostgresOperationsRepository;
   beforeAll(async()=>{
     await admin.query(`create schema "${schema}"`);const url=new URL(databaseUrl!);url.searchParams.set('options',`-c search_path=${schema}`);pool=new Pool({connectionString:url.toString()});repo=new PostgresOperationsRepository(url.toString());repo2=new PostgresOperationsRepository(url.toString());
-    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql','0014_daily_limit_local_reset.sql','0016_couple_streak_locality.sql','0017_streak_reminder_preference.sql']){
+    for(const name of ['0000_identity_and_feature_interests.sql','0001_couples.sql','0002_packs_catalog_progress.sql','0003_answers_matches.sql','0004_chat.sql','0005_profile_settings.sql','0006_media_storage.sql','0009_operations_workers.sql','0010_admin.sql','0014_daily_limit_local_reset.sql','0016_couple_streak_locality.sql','0017_streak_reminder_preference.sql','0022_solo_sealed_answers.sql']){
       const sql=await readFile(new URL(`../drizzle/${name}`,import.meta.url),'utf8');for(const statement of sql.split('--> statement-breakpoint'))if(statement.trim())await pool.query(statement);
     }
     await pool.query('insert into couples(id,invite_code) values($1,$2)',[couple,'ABCD2345']);
@@ -57,6 +57,22 @@ describe.skipIf(!databaseUrl||!local)('PostgresOperationsRepository',()=>{
     await pool.query(`insert into profiles(id,name,email,push_token,onboarding_completed) values($1,'Partner','partner@test','token-partner',false)`,[partner]);
     await pool.query('update profiles set couple_id=$1 where id=$2',[inviteCouple,partner]);
     expect((await pool.query('select count(*)::int count from operations_outbox where dedupe_key=$1',[`discord:couple_paired:${inviteCouple}`])).rows[0].count).toBe(1);
+  });
+
+  it('escalates the unpaired nudge copy with the sealed answer count',async()=>{
+    const solo=randomUUID(),secondQuestion=randomUUID();
+    await pool.query(`insert into profiles(id,name,email,push_token,onboarding_completed) values($1,'Solo','solo@test','token-solo',false)`,[solo]);
+    await pool.query('insert into questions(id,pack_id,text) values($1,$2,$3)',[secondQuestion,pack,'Second question']);
+    await pool.query(`insert into responses(id,user_id,question_id,couple_id,answer) values($1,$2,$3,null,'yes'),($4,$2,$5,null,'maybe')`,
+      [randomUUID(),solo,question,randomUUID(),secondQuestion]);
+
+    await repo.produce(new Date('2026-08-28T18:00:00.000Z'),100);
+    const body=(await pool.query<{body:string;data:{sealed_count:number}}>(
+      `select payload->>'body' body,payload->'data' data from operations_outbox where dedupe_key=$1`,
+      [`unpaired:2026-08-28:${solo}`],
+    )).rows[0];
+    expect(body?.body).toContain('2 sealed answers waiting');
+    expect(body?.data).toMatchObject({sealed_count:2});
   });
 
   it('atomically releases packs, celebrates milestones, and produces a single digest',async()=>{

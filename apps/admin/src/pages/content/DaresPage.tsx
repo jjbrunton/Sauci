@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { IconPreview } from '@/components/ui/icon-picker';
 import { ContentReviewControl } from '@/components/content/ContentReviewControl';
 import type { ContentReviewStatus } from '@sauci/shared';
+import { clampDareIntensity, MAX_DARE_INTENSITY, MIN_DARE_INTENSITY } from '@/lib/dareIntensity';
 
 // =============================================================================
 // Types
@@ -102,9 +103,11 @@ export function DaresPage() {
     // Form state
     const [formData, setFormData] = useState<{
         text: string;
+        intensity: string;
         suggested_duration_hours: string;
     }>({
         text: '',
+        intensity: '1',
         suggested_duration_hours: '',
     });
 
@@ -166,7 +169,7 @@ export function DaresPage() {
 
     const openCreateDialog = () => {
         setEditingDare(null);
-        setFormData({ text: '', suggested_duration_hours: '' });
+        setFormData({ text: '', intensity: '1', suggested_duration_hours: '' });
         setDialogOpen(true);
     };
 
@@ -174,6 +177,7 @@ export function DaresPage() {
         setEditingDare(dare);
         setFormData({
             text: dare.text,
+            intensity: String(dare.intensity ?? 1),
             suggested_duration_hours: dare.suggested_duration_hours?.toString() || '',
         });
         setDialogOpen(true);
@@ -185,10 +189,13 @@ export function DaresPage() {
             return;
         }
 
+        const intensity = clampDareIntensity(formData.intensity);
+
         setSaving(true);
         try {
             const dareData = {
                 text: formData.text,
+                intensity,
                 suggested_duration_hours: formData.suggested_duration_hours
                     ? parseInt(formData.suggested_duration_hours, 10)
                     : null,
@@ -339,6 +346,31 @@ export function DaresPage() {
                             </div>
 
                             <div className="space-y-2">
+                                <Label htmlFor="intensity">Intensity</Label>
+                                <Select
+                                    value={formData.intensity}
+                                    onValueChange={(value) => setFormData(d => ({ ...d, intensity: value }))}
+                                >
+                                    <SelectTrigger id="intensity">
+                                        <SelectValue placeholder="Select an intensity" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Array.from(
+                                            { length: MAX_DARE_INTENSITY - MIN_DARE_INTENSITY + 1 },
+                                            (_, i) => MIN_DARE_INTENSITY + i,
+                                        ).map((level) => (
+                                            <SelectItem key={level} value={String(level)}>
+                                                {level}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    1 is mild, 5 is the most intense. Used to gate dares against a couple's intensity preference.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
                                 <Label>Suggested Duration</Label>
                                 <Select
                                     value={formData.suggested_duration_hours}
@@ -444,6 +476,7 @@ export function DaresPage() {
                                 <TableHead className="w-12">#</TableHead>
                                 <TableHead>Dare</TableHead>
                                 <TableHead className="w-40">Catalogue</TableHead>
+                                <TableHead className="w-20">Intensity</TableHead>
                                 <TableHead className="w-24">Duration</TableHead>
                                 <TableHead className="w-24">Actions</TableHead>
                             </TableRow>
@@ -477,6 +510,11 @@ export function DaresPage() {
                                             onChanged={fetchData}
                                             compact
                                         />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className="text-xs">
+                                            {dare.intensity}
+                                        </Badge>
                                     </TableCell>
                                     <TableCell>
                                         {dare.suggested_duration_hours ? (

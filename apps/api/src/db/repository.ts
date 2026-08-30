@@ -32,6 +32,7 @@ function toProfile(row: ProfileRow): MobileCompatibleProfile {
     is_premium: row.isPremium,
     couple_id: row.coupleId,
     gender: row.gender,
+    usage_reason: row.usageReason,
     show_explicit_content: row.showExplicitContent,
     max_intensity: row.maxIntensity as 1 | 2 | 3 | 4 | 5,
     created_at: row.createdAt.toISOString(),

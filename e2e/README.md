@@ -1,9 +1,20 @@
 # System E2E
 
-Tests assume `scripts/dev-local.sh up` is already running. Execute with
-`npm run verify:e2e`; application data must use the loopback standalone API and
-PostgreSQL. Playwright retains traces, screenshots, and videos on failure under
-ignored output directories.
+Execute with `npm run verify:e2e`. The command starts the documented standalone
+local stack, waits for API, web, admin, and MCP health, and supplies Playwright
+with the ports selected by `scripts/dev-local.sh`. Product-data fixtures use only
+the loopback standalone PostgreSQL database and assert the visible web result
+plus the resulting database state. It never starts or writes to the retired
+Supabase data plane.
+
+To reuse a stack that the same local-stack configuration already manages, set
+`SAUCI_E2E_REUSE=true`. The command still requires the approved local/non-production
+Auth URL, loopback PostgreSQL, and all four local services to be healthy. Keep
+the same `SAUCI_*_PORT` overrides that were used to start that stack; do not pass
+ad-hoc `WEB_URL`, `ADMIN_URL`, or `MCP_URL` values.
+
+Playwright retains traces, screenshots, and videos on failure under ignored
+output directories.
 
 Native flows live under `maestro/` and run with `npm run test:mobile:e2e` after an
 iOS or Android build is installed. `login-screen-smoke.yaml` is credential-free.

@@ -4,9 +4,49 @@
   <dict>
     <key>EXUpdatesCheckOnLaunch</key>
     <string>ALWAYS</string>
+    <key>EXUpdatesCodeSigningCertificate</key>
+    <string>-----BEGIN CERTIFICATE-----
+MIICzTCCAbWgAwIBAgIJAPrPjxnUOGisMA0GCSqGSIb3DQEBCwUAMBAxDjAMBgNV
+BAMTBVNhdWNpMB4XDTI2MDgzMDE4MTAzMFoXDTM2MDgzMDE4MTAzMFowEDEOMAwG
+A1UEAxMFU2F1Y2kwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDWiUac
+8i9bIbNZjv8iunVr6kqlgb9vea98JHz/A83biyszg0+GpmLYsr4zV2F7A6RitiIx
+SOML+wVedyD0F2quWccBGXinvMAds0TxgIOjQfP+8+VJ/duDjveHvn+OFW4s7XxW
+SY7TK1ufDcPWo/f5XzfqtBveug49zv3/F3MwfmMUbEY/zvH7nayPGJNuSyf3wISn
+JIt0BsHNhWykRXCzjaF2fy3nAebOyezbtbapCjUlxPENVtBCzBQ7C9kaQXCBw5mV
+hxhJlOxHWXpHJgDLHpev8A/CWQRh67tsevjKi6R6SDlf0R0xSbDJTElx8goWOOQW
+VO9aDqI+oH0KpWfnAgMBAAGjKjAoMA4GA1UdDwEB/wQEAwIHgDAWBgNVHSUBAf8E
+DDAKBggrBgEFBQcDAzANBgkqhkiG9w0BAQsFAAOCAQEAyUc20bIRCxoBTJg84mPl
+2nFDWSaAfzgo0K0b6x2T1suuq4LAOUgzBqJISrQAALd0besK1qUZSAMhjQu1wPZT
+MHuWRMxQHfOkyHMYUfOoPMS4bE+4K0WjzfoVt3y1A+oxhcIAQUUGyNgNmebfEN07
+JlX0B8UI8aIMjyfpsIDgZx1piHKwittGy/V4MPOLbmT2BBwS9BELcmWE4CwWbfeo
+JM4lXY0hk3M/GTstRYaUKiwBWEU+z1PdAmWAgrtxpVnXN+oaToWh0WbVkbF1K6r5
+3oBGFTL7kT+Wogg9GK04XoAREw0jZJ/k77oJx68lGVBNiB+Ue2KqX0H/0cf2CslY
+Ug==
+-----END CERTIFICATE-----
+</string>
+    <key>EXUpdatesCodeSigningMetadata</key>
+    <dict>
+      <key>keyid</key>
+      <string>main</string>
+      <key>alg</key>
+      <string>rsa-v1_5-sha256</string>
+    </dict>
     <key>EXUpdatesEnabled</key>
-    <false/>
+    <true/>
     <key>EXUpdatesLaunchWaitMs</key>
-    <integer>0</integer>
+    <integer>5000</integer>
+    <key>EXUpdatesRequestHeaders</key>
+    <dict>
+      <key>expo-channel-name</key>
+      <string>production</string>
+      <key>expo-app-id</key>
+      <string>9a66f3c2-fda7-416f-87e2-6db833b32e9d</string>
+      <key>xprem-branch</key>
+      <string/>
+    </dict>
+    <key>EXUpdatesRuntimeVersion</key>
+    <string>1.0.7</string>
+    <key>EXUpdatesURL</key>
+    <string>https://ota.apps.jbrunton.co.uk/manifest</string>
   </dict>
 </plist>

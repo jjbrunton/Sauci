@@ -8,8 +8,9 @@ const allowed: Record<MediaKind, ReadonlySet<string>> = {
   response: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/x-caf']),
   chat: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm']),
   feedback: new Set(['image/jpeg', 'image/png', 'image/webp']),
+  dare_proof: new Set(['image/jpeg', 'image/png', 'image/webp', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/aac', 'audio/x-caf']),
 };
-const limits: Record<MediaKind, number> = { avatar: 10*1024*1024, response: 25*1024*1024, chat: 50*1024*1024, feedback: 10*1024*1024 };
+const limits: Record<MediaKind, number> = { avatar: 10*1024*1024, response: 25*1024*1024, chat: 50*1024*1024, feedback: 10*1024*1024, dare_proof: 25*1024*1024 };
 const extensions: Record<string, string> = { 'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp','image/gif':'.gif','video/mp4':'.mp4','video/quicktime':'.mov','video/webm':'.webm','audio/mp4':'.m4a','audio/m4a':'.m4a','audio/x-m4a':'.m4a','audio/mpeg':'.mp3','audio/wav':'.wav','audio/webm':'.webm','audio/aac':'.aac','audio/x-caf':'.caf' };
 
 export class FilesystemMediaStorage {

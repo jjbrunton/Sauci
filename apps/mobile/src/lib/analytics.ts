@@ -214,6 +214,8 @@ export const Events = {
   questionAnswered: (answer: string, packId?: string) =>
     logEvent("question_answered", { answer, pack_id: packId ?? "unknown" }),
   questionSkipped: () => logEvent("question_skipped"),
+  questionShared: (destination: "instagram" | "messages" | "more") =>
+    logEvent("question_shared", { destination }),
   matchCreated: (matchType: string) => logEvent("match_created", { match_type: matchType }),
   allQuestionsExhausted: () => logEvent("all_questions_exhausted"),
   pendingQuestionsPromptViewed: (count: number) =>
@@ -257,6 +259,10 @@ export const Events = {
   // Profile events
   profileUpdated: (fields: string[]) => logEvent("profile_updated", { fields: fields.join(",") }),
   avatarUploaded: () => logEvent("avatar_uploaded"),
+  avatarSkipped: () => logEvent("avatar_skipped"),
+  avatarPromptShown: (source: string) => logEvent("avatar_prompt_shown", { source }),
+  avatarPromptAccepted: (source: string) => logEvent("avatar_prompt_accepted", { source }),
+  avatarPromptDismissed: (source: string) => logEvent("avatar_prompt_dismissed", { source }),
 
   // Notification events
   notificationPermissionGranted: () => logEvent("notification_permission_granted"),

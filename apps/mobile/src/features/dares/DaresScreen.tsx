@@ -6,9 +6,9 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { GradientBackground } from "../../components/ui";
 import { Paywall } from "../../components/paywall";
 import { colors, featureColors, radius, spacing, typography } from "../../theme";
-import { DareCard, DarePackGrid, SendDareSheet } from "./components";
+import { DareCard, DarePackGrid, DareProofSheet, SendDareSheet } from "./components";
 import { useDares } from "./hooks/useDares";
-import type { DarePack } from "./types";
+import type { DarePack, SentDare } from "./types";
 
 const ACCENT = featureColors.dares.accent;
 
@@ -27,6 +27,7 @@ export function DaresScreen() {
     const [sheetPack, setSheetPack] = useState<DarePack | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [paywallOpen, setPaywallOpen] = useState(false);
+    const [proofDare, setProofDare] = useState<SentDare | null>(null);
 
     const openPaywall = useCallback(() => {
         setSheetOpen(false);
@@ -67,6 +68,14 @@ export function DaresScreen() {
             if (action === "accept" || action === "decline") {
                 void dares.respond(dareId, action);
                 return;
+            }
+            if (action === "submit") {
+                // Proof-required dares detour through the capture sheet before submitting.
+                const dare = dares.active.find((candidate) => candidate.id === dareId);
+                if (dare && dare.proof_type !== "none") {
+                    setProofDare(dare);
+                    return;
+                }
             }
             void dares[action](dareId);
         },
@@ -171,6 +180,12 @@ export function DaresScreen() {
                 onClose={() => setSheetOpen(false)}
                 onSend={dares.send}
                 onRequestPremium={openPaywall}
+            />
+
+            <DareProofSheet
+                dare={proofDare}
+                onClose={() => setProofDare(null)}
+                onSubmit={(dareId, proofMediaId) => dares.submit(dareId, proofMediaId)}
             />
 
             <Paywall

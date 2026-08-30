@@ -81,6 +81,35 @@ describe('Sauci API', () => {
     expect(repository.ready).toHaveBeenCalledOnce();
   });
 
+  it('allows browser preflight requests only from configured web origins', async () => {
+    const app = createApp({
+      auth: verifier(),
+      repository: new MemoryRepository(),
+      corsAllowedOrigins: ['http://127.0.0.1:3010', 'https://sauci.app'],
+    });
+    const response = await app.request('/public/v1/redemptions', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'http://127.0.0.1:3010',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'content-type',
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://127.0.0.1:3010');
+    expect(response.headers.get('access-control-allow-methods')).toContain('POST');
+
+    const rejected = await app.request('/public/v1/redemptions', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://unapproved.example',
+        'access-control-request-method': 'POST',
+      },
+    });
+    expect(rejected.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
   it('fails closed when the bearer token is missing or invalid', async () => {
     const app = createApp({ auth: verifier(), repository: new MemoryRepository() });
     expect((await app.request('/v1/me')).status).toBe(401);

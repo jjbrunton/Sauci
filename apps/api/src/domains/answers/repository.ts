@@ -42,7 +42,7 @@ export interface AnswersRepository {
   pending(userId: string, direction: 'mine' | 'partner', startQuestionId?: string): Promise<Array<{ id: string; question: QuestionRow & { pack: { id: string; name: string; icon: string | null } }; partnerAnsweredAt: string }>>;
   answerGap(userId: string): Promise<{ unanswered_by_partner: number; threshold: number; is_blocked: boolean }>;
   dailyLimit(userId: string): Promise<{ responses_today: number; limit_value: number; remaining: number; reset_at: string | null; is_blocked: boolean }>;
-  submit(userId: string, input: SubmitInput): Promise<{ response: ResponseRow; match: (MatchRow & { question: QuestionRow }) | null }>;
+  submit(userId: string, input: SubmitInput): Promise<{ response: ResponseRow; match: (MatchRow & { question: QuestionRow }) | null; sealed_count?: number }>;
   update(userId: string, input: UpdateInput): Promise<Record<string, unknown>>;
   responses(userId: string, page: number, limit: number): Promise<{ responses: unknown[]; totalCount: number }>;
   matches(userId: string, page: number, limit: number, archived: boolean): Promise<{ matches: unknown[]; totalCount: number | null; hasMore: boolean }>;
@@ -58,10 +58,17 @@ export class PostgresAnswersRepository implements AnswersRepository {
   private zones: Promise<Set<string>> | null = null;
   constructor(connection: DatabaseConnection) { const resolved = resolvePool(connection); this.pool = resolved.pool; this.ownsPool = resolved.owned; }
 
+  /**
+   * couple_id is nullable here: an unpaired user still has a profile and can answer
+   * questions solo, banking them as sealed answers (couple_id IS NULL on responses)
+   * until a partner joins. Callers that need a couple for their own operation (e.g.
+   * matches, streaks) get an empty/no-op result naturally because every downstream
+   * query is scoped by couple_id, which stays null for a solo caller.
+   */
   private async context(client: Pool | PoolClient, userId: string): Promise<ContextRow> {
     const result = await client.query<ContextRow>('select couple_id, gender, max_intensity, is_premium from profiles where id=$1', [userId]);
     const row = result.rows[0];
-    if (!row?.couple_id) throw new AnswersError('no_couple', 409, 'Join a couple before answering questions');
+    if (!row) throw new AnswersError('no_couple', 409, 'Complete signup before answering questions');
     return row;
   }
 
@@ -147,15 +154,25 @@ export class PostgresAnswersRepository implements AnswersRepository {
       await this.assertEligible(client,userId,ctx,q);
       const existing = await client.query('select id from responses where user_id=$1 and question_id=$2 for update', [userId,input.questionId]);
       if (!existing.rowCount) {
-        const catchingUp = await client.query('select 1 from responses where couple_id=$1 and question_id=$2 and user_id<>$3 limit 1',[ctx.couple_id,input.questionId,userId]);
+        // A solo answerer has no partner, so the catch-up exemption never applies:
+        // every sealed answer counts against the daily limit like a fresh one.
+        const catchingUp = ctx.couple_id
+          ? await client.query('select 1 from responses where couple_id=$1 and question_id=$2 and user_id<>$3 limit 1',[ctx.couple_id,input.questionId,userId])
+          : { rowCount: 0 };
         if (!catchingUp.rowCount) {
           const limit = await this.dailyLimitWith(client,userId); if (limit.is_blocked) throw new AnswersError('daily_limit',429,'Daily response limit reached',{ daily_limit: limit.limit_value, responses_today: limit.responses_today, remaining: 0, reset_at: limit.reset_at });
         }
       }
       const response = await client.query<ResponseRow>(`insert into responses(id,user_id,question_id,couple_id,answer,response_data) values(gen_random_uuid(),$1,$2,$3,$4,$5)
         on conflict(user_id,question_id) do update set answer=excluded.answer,response_data=excluded.response_data returning *`,[userId,input.questionId,ctx.couple_id,input.answer,input.responseData ?? null]);
-      const match = await this.reconcileMatch(client,userId,ctx.couple_id!,q,input.answer,input.responseData ?? null,true);
-      await this.touchStreak(client,userId,ctx.couple_id!);
+      if (!ctx.couple_id) {
+        // No couple yet: bank the answer as sealed. It is claimed and reconciled
+        // into matches once a partner joins; see couples repository join().
+        const sealed = await client.query<{ count: number }>('select count(*)::int count from responses where user_id=$1 and couple_id is null',[userId]);
+        return { response: this.dates(response.rows[0]), match: null, sealed_count: sealed.rows[0]?.count ?? 0 };
+      }
+      const match = await this.reconcileMatch(client,userId,ctx.couple_id,q,input.answer,input.responseData ?? null,true);
+      await this.touchStreak(client,userId,ctx.couple_id);
       return { response: this.dates(response.rows[0]), match: match ? { ...this.dates(match), question: this.dates(q) } : null };
     });
   }
@@ -172,9 +189,9 @@ export class PostgresAnswersRepository implements AnswersRepository {
         return { success:false,requires_confirmation:true,match_id:existing.rows[0].id,message_count:count.rows[0]?.count ?? 0 };
       }
       const normalized=q.question_type!=='swipe' && input.answer!=='no' ? (typeof input.responseData==='undefined' ? current.rows[0].response_data : input.responseData) : null;
-      const before=existing.rows[0]; const match=await this.reconcileMatch(client,userId,ctx.couple_id!,q,input.answer,normalized,false);
+      const before=existing.rows[0]; const match=ctx.couple_id?await this.reconcileMatch(client,userId,ctx.couple_id,q,input.answer,normalized,false):null;
       await client.query('update responses set answer=$3,response_data=$4 where user_id=$1 and question_id=$2',[userId,input.questionId,input.answer,normalized]);
-      await this.touchStreak(client,userId,ctx.couple_id!);
+      if (ctx.couple_id) await this.touchStreak(client,userId,ctx.couple_id);
       return { success:true, ...(before&&!match?{match_deleted:true}:{ }), ...(!before&&match?{new_match:this.dates(match)}:{}), ...(before&&match?{match_type_updated:true}:{}) };
     });
   }

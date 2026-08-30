@@ -8,8 +8,9 @@ is proved through the real stack.
 - `verify:fast`: invariant lint, workspace lint/typecheck, and unit tests.
 - `verify:full`: fast gate plus builds and standalone API/PostgreSQL integration
   tests against a loopback database.
-- `verify:e2e`: Playwright browser flows and native Maestro flows against an
-  already-running local stack.
+- `verify:e2e`: starts or safely reuses the documented standalone local stack,
+  then runs Playwright browser flows. Native Maestro flows remain an explicit
+  separate check against that stack.
 - `verify`: full plus E2E; this is the pre-PR target.
 
 The required CI checks also run instrumented coverage for the API and mobile
@@ -35,6 +36,8 @@ a pre-promotion check because it requires running services and test identities.
 - Cross-application browser tests live in `e2e`.
 - Native black-box flows live in `e2e/maestro`.
 
-E2E product-data endpoints must be local or staging, never production. Local
-database tests refuse non-loopback URLs. Authenticated staging acceptance uses
-the designated non-production hosted Auth project and disposable fixture users.
+E2E product-data endpoints and fixture databases must be loopback, never
+production or staging. The browser redemption flow uses a disposable local
+PostgreSQL fixture and verifies the API's resulting state, rather than the
+retired Supabase data plane. Authenticated native acceptance uses the designated
+non-production hosted Auth project and disposable fixture users.
