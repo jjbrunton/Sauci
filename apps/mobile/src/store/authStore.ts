@@ -35,7 +35,8 @@ const getOtherStores = () => {
     const { useNotificationPreferencesStore } = require("./notificationPreferencesStore");
     const { useStreakStore } = require("./streakStore");
     const { useResponsesStore } = require("./responsesStore");
-    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore };
+    const { useQuizStore } = require("./quizStore");
+    return { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore };
 };
 
 
@@ -88,7 +89,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (error instanceof ApiError && error.status === 401) {
                 console.log("[Auth] Session rejected by API, signing out");
                 set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
-                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
+                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
                 useMessageStore.getState().clearMessages();
@@ -96,6 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 useNotificationPreferencesStore.getState().clearPreferences();
                 useStreakStore.getState().clearStreak();
                 useResponsesStore.getState().clearResponses();
+                useQuizStore.getState().clearQuiz();
                 await authClient.auth.signOut();
                 return;
             }
@@ -144,7 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
              isLoading: false,
          });
         // Clear other stores
-        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
+        const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
         useMatchStore.getState().clearMatches();
         usePacksStore.getState().clearPacks();
         useMessageStore.getState().clearMessages();
@@ -152,6 +154,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         useNotificationPreferencesStore.getState().clearPreferences();
         useStreakStore.getState().clearStreak();
         useResponsesStore.getState().clearResponses();
+        useQuizStore.getState().clearQuiz();
 
         // Clear badge on sign out
         const { clearBadge } = require("../lib/badge");
@@ -176,7 +179,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
-            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore } = getOtherStores();
+            const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
             useMatchStore.getState().clearMatches();
             usePacksStore.getState().clearPacks();
             useMessageStore.getState().clearMessages();
@@ -184,6 +187,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             useNotificationPreferencesStore.getState().clearPreferences();
             useStreakStore.getState().clearStreak();
             useResponsesStore.getState().clearResponses();
+            useQuizStore.getState().clearQuiz();
             // Clear badge on sign out
             const { clearBadge } = require("../lib/badge");
             clearBadge();

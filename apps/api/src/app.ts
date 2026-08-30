@@ -15,6 +15,8 @@ import type { ChatRepository } from './domains/chat/repository.js';
 import { registerChatRoutes } from './domains/chat/routes.js';
 import type { DaresRepository } from './domains/dares/repository.js';
 import { registerDareRoutes } from './domains/dares/routes.js';
+import type { QuizRepository } from './domains/quiz/repository.js';
+import { registerQuizRoutes } from './domains/quiz/routes.js';
 import { registerCoupleRoutes } from './domains/couples/routes.js';
 import type { CoupleService } from './domains/couples/service.js';
 import type { PacksRepository } from './domains/packs/repository.js';
@@ -39,6 +41,7 @@ export interface AppDependencies {
   answersRepository?: AnswersRepository;
   chatRepository?: ChatRepository;
   daresRepository?: DaresRepository;
+  quizRepository?: QuizRepository;
   profileSettingsRepository?: ProfileSettingsRepository;
   accountOperationsService?: AccountOperationsService;
   mediaRepository?: MediaRepository;
@@ -126,6 +129,7 @@ export function createApp(deps: AppDependencies): Hono<{ Variables: Variables }>
   if (deps.answersRepository) registerAnswerRoutes(app, deps.answersRepository);
   if (deps.chatRepository) registerChatRoutes(app, deps.chatRepository);
   if (deps.daresRepository) registerDareRoutes(app, deps.daresRepository);
+  if (deps.quizRepository) registerQuizRoutes(app, deps.quizRepository);
   if (deps.profileSettingsRepository) registerProfileSettingsRoutes(app, deps.profileSettingsRepository);
   if (deps.accountOperationsService) registerAccountOperationRoutes(app, deps.accountOperationsService);
   if (deps.mediaRepository && deps.mediaStorage) registerMediaRoutes(app, deps.mediaRepository, deps.mediaStorage);

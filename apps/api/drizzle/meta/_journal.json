@@ -134,6 +134,13 @@
       "when": 1788081480000,
       "tag": "0018_cutover_source_parity",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1788168000000,
+      "tag": "0019_quiz",
+      "breakpoints": true
     }
   ]
 }

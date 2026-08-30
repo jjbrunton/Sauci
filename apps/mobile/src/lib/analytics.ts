@@ -276,6 +276,12 @@ export const Events = {
     logEvent("invite_link_opened", { source }),
   pairingCodePrefilled: () => logEvent("pairing_code_prefilled"),
 
+  // Quiz events
+  quizStarted: () => logEvent("quiz_started"),
+  quizCompleted: (scorePercent: number) => logEvent("quiz_completed", { score_percent: scorePercent }),
+  quizShared: () => logEvent("quiz_shared"),
+  quizPartnerNudged: () => logEvent("quiz_partner_nudged"),
+
   // Tutorial events
   tutorialStarted: (tutorial: "swipe" | "matches") =>
     logEvent("tutorial_started", { tutorial }),
