@@ -13,6 +13,7 @@ import { StreakDisplay } from '../../src/components/StreakDisplay';
 import { Events } from '../../src/lib/analytics';
 import { colors, spacing, typography } from '../../src/theme';
 import type { QuestionPack, Category } from '../../src/types';
+import { pickRecommendedPacks, RECOMMENDED_PACKS_LABEL } from '../../src/features/home/recommendedPacks';
 
 const MAX_CONTENT_WIDTH = 600;
 
@@ -112,6 +113,13 @@ export default function DiscoveryScreen() {
     [packs, categories]
   );
 
+  // A small, cheap personalization: highlight packs that match what the user
+  // said brought them to Sauci during onboarding, ahead of the full catalog.
+  const recommendedPacks = useMemo(
+    () => pickRecommendedPacks(packs, categories, user?.usage_reason ?? null),
+    [packs, categories, user?.usage_reason]
+  );
+
   // Check if user has no packs enabled (empty state)
   const hasNoPacks = packs.length === 0;
 
@@ -168,6 +176,17 @@ export default function DiscoveryScreen() {
 
           {/* Quiz */}
           <QuizTile delay={225} />
+
+          {/* Personalized pick based on the onboarding usage reason */}
+          {recommendedPacks.length > 0 && (
+            <ContentRow
+              title={RECOMMENDED_PACKS_LABEL}
+              packs={recommendedPacks}
+              isPremiumUser={isPremiumUser}
+              delay={240}
+              onShowPaywall={() => setShowPaywall(true)}
+            />
+          )}
 
           {/* Content Rows by Category */}
           {packsByCategory.map((group, index) => (
