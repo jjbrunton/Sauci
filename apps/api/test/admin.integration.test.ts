@@ -196,6 +196,21 @@ describe.skipIf(!databaseUrl || !isLocal)('admin repository authorization + audi
     }])).rejects.toMatchObject({ code: 'forbidden' });
   });
 
+  it('reads notification preferences for user support visibility without granting write access', async () => {
+    await pool.query(
+      "insert into notification_preferences(user_id,matches_enabled,dares_enabled) values($1,true,false)",
+      [creatorUser],
+    );
+    const principal = await repository.principal(superUser);
+    const result = await repository.query(principal, 'notification_preferences', {
+      filters: [{ column: 'user_id', op: 'eq', value: creatorUser }],
+    });
+    expect(result).toMatchObject({ count: 1, rows: [expect.objectContaining({ matches_enabled: true, dares_enabled: false })] });
+    await expect(repository.insert(principal, 'notification_preferences', [{
+      user_id: moderatorUser,
+    }])).rejects.toMatchObject({ code: 'forbidden' });
+  });
+
   it('creates all legacy admin and dare cutover tables with preserved foreign keys', async () => {
     const tables = await pool.query<{ table_name: string }>(
       `select table_name from information_schema.tables where table_schema=current_schema()

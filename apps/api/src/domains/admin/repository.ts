@@ -40,6 +40,7 @@ const resources: Record<string, ResourceRule> = {
   quiz_answers: { read: ['view_users', 'view_activity'] },
   sent_dares: { read: ['view_users', 'view_activity', 'view_chats'] },
   dare_messages: { read: ['view_chats', 'view_activity'] },
+  notification_preferences: { read: 'view_users', idColumn: 'user_id' },
 };
 
 function identifier(value: string): string {
