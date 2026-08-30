@@ -40,6 +40,13 @@ for (const file of allFiles) {
 }
 
 if (!scoped) {
+  const agentsFile = path.join(root, 'AGENTS.md');
+  const agents = await readFile(agentsFile, 'utf8');
+  const noEmDashRule = 'Agents must not use em dash characters in text they add to this repository.';
+  if (!agents.includes(noEmDashRule)) {
+    fail(agentsFile, 'agent writing rule against em dash characters is missing', `restore: ${noEmDashRule}`);
+  }
+
   const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   const codexConfigFile = path.join(root, '.codex', 'config.toml');
   const codexConfig = await readFile(codexConfigFile, 'utf8');
