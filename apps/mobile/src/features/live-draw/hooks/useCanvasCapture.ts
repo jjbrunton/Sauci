@@ -39,7 +39,9 @@ export function useCanvasCapture(): UseCanvasCaptureReturn {
       const fileUri = await captureToFile();
       if (!fileUri) return false;
 
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      // The capture is created by Sauci, so request add-only access rather than
+      // broad photo-library read access.
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') return false;
 
       await MediaLibrary.saveToLibraryAsync(fileUri);

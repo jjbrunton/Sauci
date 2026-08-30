@@ -101,10 +101,14 @@ export function useAvatarPicker(options?: UseAvatarPickerOptions): UseAvatarPick
                     exif: false,
                 });
             } else {
-                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                if (status !== 'granted') {
-                    Alert.alert('Permission Denied', 'Photo library access is required to choose a photo.');
-                    return;
+                // Android's system photo picker grants the selected file directly, so
+                // selecting an avatar does not need broad media-library access.
+                if (Platform.OS !== 'android') {
+                    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                    if (status !== 'granted') {
+                        Alert.alert('Permission Denied', 'Photo library access is required to choose a photo.');
+                        return;
+                    }
                 }
                 result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ['images'],

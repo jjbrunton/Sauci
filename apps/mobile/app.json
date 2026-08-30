@@ -211,6 +211,10 @@
             "buildToolsVersion": "36.0.0",
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
+            "blockedPermissions": [
+              "android.permission.READ_MEDIA_IMAGES",
+              "android.permission.READ_MEDIA_VIDEO"
+            ],
             "extraProguardRules": "-keep class com.facebook.hermes.unicode.** { *; }",
             "useLegacyPackaging": false,
             "manifestPlaceholders": {
