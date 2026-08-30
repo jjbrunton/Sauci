@@ -12,7 +12,7 @@ const couple: Couple = {
 
 function repository(overrides: Partial<CoupleRepository> = {}): CoupleRepository {
   return {
-    getState: vi.fn(async () => ({ couple: null, partner: null })),
+    getState: vi.fn(async () => ({ couple: null, partner: null, sealed_count: 0 })),
     create: vi.fn(async () => couple),
     join: vi.fn(async () => couple),
     cancel: vi.fn(async () => undefined),

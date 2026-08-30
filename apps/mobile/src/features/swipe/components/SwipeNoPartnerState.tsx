@@ -2,6 +2,7 @@ import { Share } from "react-native";
 import { colors } from "../../../theme";
 import { useAuthStore } from "../../../store";
 import { Events } from "../../../lib/analytics";
+import { buildInviteShareMessage } from "../../../lib/inviteShareCopy";
 import { SwipeInfoStateLayout } from "./SwipeInfoStateLayout";
 
 interface SwipeNoPartnerStateProps {
@@ -11,13 +12,13 @@ interface SwipeNoPartnerStateProps {
 
 export const SwipeNoPartnerState = ({ hasCouple, onPairPress }: SwipeNoPartnerStateProps) => {
     const accent = colors.premium.rose;
-    const { couple } = useAuthStore();
+    const { couple, sealedCount } = useAuthStore();
 
     const handleShareCode = async () => {
         if (!couple?.invite_code) return;
         try {
             await Share.share({
-                message: `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`,
+                message: buildInviteShareMessage(couple.invite_code, sealedCount),
             });
             Events.codeShared();
         } catch (error) {

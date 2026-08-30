@@ -14,7 +14,7 @@ const identity: AuthIdentity = {
 
 function setup() {
   const repository: CoupleRepository = {
-    getState: vi.fn(async () => ({ couple: null, partner: null })),
+    getState: vi.fn(async () => ({ couple: null, partner: null, sealed_count: 0 })),
     create: vi.fn(async (_userId, coupleId, inviteCode) => ({
       id: coupleId,
       invite_code: inviteCode,
@@ -43,7 +43,7 @@ describe('couple routes', () => {
     const response = await app.request('/v1/couple');
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ couple: null, partner: null });
+    expect(await response.json()).toEqual({ couple: null, partner: null, sealed_count: 0 });
     expect(repository.getState).toHaveBeenCalledWith(identity.id);
   });
 

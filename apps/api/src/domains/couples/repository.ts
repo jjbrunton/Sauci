@@ -1,6 +1,7 @@
 import type { Couple, Profile } from '@sauci/shared';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import { closeResolvedPool, resolvePool, type DatabaseConnection } from '../../db/pool.js';
+import { calculateMatchType, type Answer } from '../answers/types.js';
 import { CoupleError, type CoupleStateResponse } from './types.js';
 
 interface ProfileRecord extends QueryResultRow {
@@ -77,6 +78,60 @@ async function profileForUpdate(client: PoolClient, userId: string): Promise<{ c
   return profile;
 }
 
+/**
+ * A user answering solo banks each answer with couple_id NULL ("sealed"). Once
+ * pairing reaches two members, every sealed answer belonging to either member is
+ * claimed into the couple, and any question both members now have an answer for
+ * gets its match computed and upserted, reusing the same match-type rules the
+ * live answer flow uses. This only runs from join(), the one place membership can
+ * go from one to two, so it only ever fires once per couple.
+ */
+async function claimSealedAnswers(client: PoolClient, coupleId: string): Promise<void> {
+  await client.query(
+    `update responses set couple_id = $1
+       where couple_id is null and user_id in (select id from profiles where couple_id = $1)`,
+    [coupleId],
+  );
+
+  const pairs = await client.query<{
+    question_id: string;
+    question_type: string;
+    a_user: string;
+    a_answer: Answer;
+    a_data: Record<string, unknown> | null;
+    b_user: string;
+    b_answer: Answer;
+    b_data: Record<string, unknown> | null;
+  }>(
+    `select r1.question_id, q.question_type,
+            r1.user_id a_user, r1.answer a_answer, r1.response_data a_data,
+            r2.user_id b_user, r2.answer b_answer, r2.response_data b_data
+       from responses r1
+       join responses r2 on r2.question_id = r1.question_id and r2.couple_id = r1.couple_id and r2.user_id > r1.user_id
+       join questions q on q.id = r1.question_id
+      where r1.couple_id = $1`,
+    [coupleId],
+  );
+
+  for (const pair of pairs.rows) {
+    const matchType = calculateMatchType({ id: pair.question_id, question_type: pair.question_type as never }, pair.a_answer, pair.b_answer);
+    if (!matchType) {
+      await client.query('delete from matches where couple_id = $1 and question_id = $2', [coupleId, pair.question_id]);
+      continue;
+    }
+    const responseSummary = matchType === 'both_answered'
+      ? { [pair.a_user]: pair.a_data, [pair.b_user]: pair.b_data }
+      : null;
+    await client.query(
+      `insert into matches(couple_id, question_id, match_type, is_new, response_summary)
+       values($1, $2, $3, true, $4)
+       on conflict(couple_id, question_id) do update set
+         match_type = excluded.match_type, response_summary = excluded.response_summary, is_new = true`,
+      [coupleId, pair.question_id, matchType, responseSummary],
+    );
+  }
+}
+
 async function transaction<T>(pool: Pool, work: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
@@ -111,7 +166,8 @@ export class PostgresCoupleRepository implements CoupleRepository {
     if (!profile) {
       throw new CoupleError('profile_not_found', 'Profile not found. Please complete signup first.', 404);
     }
-    if (!profile.couple_id) return { couple: null, partner: null };
+    const sealedCount = await this.sealedCount(userId);
+    if (!profile.couple_id) return { couple: null, partner: null, sealed_count: sealedCount };
 
     const [coupleResult, partnerResult] = await Promise.all([
       this.pool.query<CoupleRecord>(
@@ -129,11 +185,20 @@ export class PostgresCoupleRepository implements CoupleRepository {
       ),
     ]);
     const couple = coupleResult.rows[0];
-    if (!couple) return { couple: null, partner: null };
+    if (!couple) return { couple: null, partner: null, sealed_count: sealedCount };
     return {
       couple: toCouple(couple),
       partner: partnerResult.rows[0] ? toProfile(partnerResult.rows[0]) : null,
+      sealed_count: sealedCount,
     };
+  }
+
+  private async sealedCount(userId: string): Promise<number> {
+    const result = await this.pool.query<{ count: number }>(
+      'select count(*)::int count from responses where user_id = $1 and couple_id is null',
+      [userId],
+    );
+    return result.rows[0]?.count ?? 0;
   }
 
   async create(userId: string, coupleId: string, inviteCode: string): Promise<Couple> {
@@ -183,6 +248,7 @@ export class PostgresCoupleRepository implements CoupleRepository {
       }
 
       await client.query('update profiles set couple_id = $1, updated_at = now() where id = $2', [couple.id, userId]);
+      await claimSealedAnswers(client, couple.id);
       return toCouple(couple);
     });
   }

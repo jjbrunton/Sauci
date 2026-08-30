@@ -16,9 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Clipboard from "expo-clipboard";
-import { useAuthStore } from "../../src/store";
+import { useAuthStore, useMatchStore } from "../../src/store";
 import { coupleApi } from "../../src/lib/coupleApi";
 import { getPairingError } from "../../src/lib/errors";
+import { buildInviteShareMessage } from "../../src/lib/inviteShareCopy";
 import { Events } from "../../src/lib/analytics";
 import { router, useLocalSearchParams } from "expo-router";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
@@ -28,7 +29,7 @@ import { getPendingInviteCode, clearPendingInviteCode } from "../../src/lib/pend
 import { checkClipboardForInviteCode } from "../../src/lib/clipboardInviteOffer";
 
 export default function PairingScreen() {
-    const { fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
+    const { fetchCouple, fetchUser, couple, partner, sealedCount, isLoading: isAuthLoading } = useAuthStore();
     const params = useLocalSearchParams<{ code?: string }>();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,9 +37,13 @@ export default function PairingScreen() {
     const [clipboardOfferCode, setClipboardOfferCode] = useState<string | null>(null);
     const [prefillAttempted, setPrefillAttempted] = useState(false);
 
-    // Redirect if already paired
+    // Redirect if already paired. Pairing claims both members' sealed answers and
+    // computes matches server-side, so the matches store must refetch here too:
+    // whichever partner lands on this redirect first would otherwise show stale,
+    // pre-pairing matches until some unrelated screen happened to refresh it.
     useEffect(() => {
         if (couple && partner) {
+            void useMatchStore.getState().fetchMatches(true);
             router.replace("/(app)");
         }
     }, [couple, partner]);
@@ -145,6 +150,9 @@ export default function PairingScreen() {
 
             await fetchUser(); // Refresh user to get couple_id
             await fetchCouple(); // Fetch couple data
+            // Joining claims both members' sealed answers and computes matches
+            // server-side, so the joiner needs a fresh matches list too.
+            void useMatchStore.getState().fetchMatches(true);
             Events.coupleJoined();
 
             Alert.alert("Success", "You are now paired!", [
@@ -171,7 +179,7 @@ export default function PairingScreen() {
     };
 
     const shareMessage = couple?.invite_code
-        ? `Join me on Sauci! Tap this link to pair up instantly: https://sauci.app/join/${couple.invite_code} (or enter code ${couple.invite_code} in the app)`
+        ? buildInviteShareMessage(couple.invite_code, sealedCount)
         : "";
 
     const shareCode = async () => {
@@ -278,6 +286,21 @@ export default function PairingScreen() {
                                 Share this code with your partner to link your accounts
                             </Text>
                         </Animated.View>
+
+                        {/* Earned value: sealed answers already banked while unpaired */}
+                        {sealedCount > 0 && (
+                            <Animated.View
+                                entering={FadeInDown.delay(250).duration(500)}
+                                style={styles.section}
+                            >
+                                <GlassCard variant="elevated">
+                                    <Text style={styles.sealedCountText} testID="pairing-sealed-count">
+                                        You have already answered {sealedCount} question{sealedCount === 1 ? "" : "s"} about us.
+                                        They will unlock the moment your partner joins.
+                                    </Text>
+                                </GlassCard>
+                            </Animated.View>
+                        )}
 
                         {/* Code Card */}
                         <Animated.View
@@ -644,6 +667,11 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         textAlign: "center",
         maxWidth: 280,
+    },
+    sealedCountText: {
+        ...typography.body,
+        color: colors.text,
+        textAlign: "center",
     },
     section: {
         marginBottom: spacing.md,
