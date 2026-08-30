@@ -11,6 +11,7 @@ import { QuestionAnalyticsPage } from '@/pages/content/QuestionAnalyticsPage';
 import { TagsPage } from '@/pages/content/TagsPage';
 import { DarePacksPage } from '@/pages/content/DarePacksPage';
 import { DaresPage } from '@/pages/content/DaresPage';
+import { QuizQuestionsPage } from '@/pages/content/QuizQuestionsPage';
 import { UsersPage } from '@/pages/users/UsersPage';
 import { UserDetailPage } from '@/pages/users/UserDetailPage';
 import { MatchChatPage } from '@/pages/users/MatchChatPage';
@@ -105,6 +106,14 @@ function App() {
                             element={
                                 <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
                                     <DaresPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/quiz-questions"
+                            element={
+                                <ProtectedRoute requiredPermission={PERMISSION_KEYS.MANAGE_QUESTIONS}>
+                                    <QuizQuestionsPage />
                                 </ProtectedRoute>
                             }
                         />

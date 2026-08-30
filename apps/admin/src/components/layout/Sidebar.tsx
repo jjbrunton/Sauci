@@ -21,6 +21,7 @@ import {
     PieChart,
     Tags,
     Zap,
+    HelpCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -67,6 +68,12 @@ const contentNav: NavItem[] = [
         href: '/tags',
         icon: <Tags className="h-5 w-5" />,
         requiredPermission: PERMISSION_KEYS.MANAGE_PACKS,
+    },
+    {
+        label: 'Quiz Questions',
+        href: '/quiz-questions',
+        icon: <HelpCircle className="h-5 w-5" />,
+        requiredPermission: PERMISSION_KEYS.MANAGE_QUESTIONS,
     },
 ];
 
