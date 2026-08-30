@@ -152,8 +152,15 @@
     {
       "idx": 21,
       "version": "7",
-      "when": 1788168120000,
-      "tag": "0021_solo_sealed_answers",
+      "when": 1788168090000,
+      "tag": "0021_dare_proof",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788168150000,
+      "tag": "0022_solo_sealed_answers",
       "breakpoints": true
     }
   ]

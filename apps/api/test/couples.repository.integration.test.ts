@@ -31,7 +31,7 @@ describe.skipIf(!databaseUrl || !localDatabase)('PostgresCoupleRepository', () =
       '0001_couples.sql',
       '0002_packs_catalog_progress.sql',
       '0003_answers_matches.sql',
-      '0021_solo_sealed_answers.sql',
+      '0022_solo_sealed_answers.sql',
     ]) {
       const migration = await readFile(new URL(`../drizzle/${migrationName}`, import.meta.url), 'utf8');
       for (const statement of migration.split('--> statement-breakpoint')) {

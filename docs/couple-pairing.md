@@ -24,7 +24,7 @@ immediately through the standalone API (`POST /v1/responses`). See
 
 An Unpaired or Waiting user answers straight into the swipe flow instead of
 being blocked until a partner joins. `responses.couple_id` is nullable
-(`apps/api/drizzle/0021_solo_sealed_answers.sql`): a response submitted with no
+(`apps/api/drizzle/0022_solo_sealed_answers.sql`): a response submitted with no
 couple is inserted with `couple_id IS NULL` and is called a **sealed answer**.
 It is banked, not lost, and counts toward the daily response limit like any
 other answer, but no match reconciliation runs for it (there is no partner
