@@ -1,5 +1,16 @@
 # Sauci Mobile Release Notes
 
+## v1.0.7 - 31 August 2026
+_Build numbers pending artifact verification_
+
+More ways to discover each other, play together, and keep your shared space moving.
+
+- **A new way to compare notes** - Take a couples quiz, see how well you know each other, and share your score when you are ready.
+- **Dares with a little more proof** - Photo and voice-note proof give you new ways to bring a dare to life for your partner.
+- **Your answers can wait safely** - Keep answering before you pair; your saved answers stay sealed until your partner joins.
+- **An easier way to get started together** - A gentler welcome and clearer invite links help you find the right first prompt and bring your partner in.
+- **More dependable updates** - The app is ready to receive signed over-the-air improvements more smoothly.
+
 ## v1.0.6 — 30 August 2026
 _iOS build 44 · Android build 48_
 
