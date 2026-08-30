@@ -105,8 +105,10 @@ The API seed is a no-op unless its documented local fixture identity is set.
 
 The Expo window defaults to Metro with
 `EXPO_PUBLIC_API_URL=http://127.0.0.1:3003`. Use `scripts/dev-local.sh ios` or
-`android` to launch the native application against the same API. Physical
-devices require a reachable host URL rather than loopback.
+`android` to launch the native application against the same API. The native
+launcher supplies a UTF-8 locale inside its sanitized environment so CocoaPods
+does not depend on the calling shell's locale. Physical devices require a
+reachable host URL rather than loopback.
 
 `e2e/maestro/login-screen-smoke.yaml` verifies the native build and Auth shell
 without credentials. `e2e/maestro/login-smoke.yaml` is the authenticated

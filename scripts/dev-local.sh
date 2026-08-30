@@ -576,7 +576,8 @@ cmd_native() {
   [ -n "$AUTH_ANON_KEY" ] || die "EXPO_PUBLIC_SUPABASE_ANON_KEY is required for the mobile Auth client."
   assert_allowed_auth
   ensure_infra
-  (cd "$ROOT" && env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" EXPO_PUBLIC_API_URL="$MOBILE_API_URL" \
+  (cd "$ROOT" && env -i PATH="$PATH" HOME="$HOME" TMPDIR="${TMPDIR:-/tmp}" \
+    LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 EXPO_PUBLIC_API_URL="$MOBILE_API_URL" \
     EXPO_PUBLIC_SUPABASE_URL="$AUTH_URL" EXPO_PUBLIC_SUPABASE_ANON_KEY="$AUTH_ANON_KEY" \
     npm run "$platform" -w @sauci/mobile)
 }
