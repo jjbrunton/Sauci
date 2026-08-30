@@ -5,7 +5,9 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 export function useMediaSaver() {
     const [saving, setSaving] = useState(false);
-    const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
+    // Saving app-created/downloaded media only needs add-only access. Passing
+    // writeOnly prevents this path from requesting broad library read access.
+    const [permissionResponse, requestPermission] = MediaLibrary.usePermissions({ writeOnly: true });
 
     const saveMedia = async (uri: string, type: 'image' | 'video') => {
         try {

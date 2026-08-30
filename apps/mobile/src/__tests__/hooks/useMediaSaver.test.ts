@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -46,6 +46,7 @@ describe('useMediaSaver', () => {
 
         expect(result.current.saving).toBe(false);
         expect(typeof result.current.saveMedia).toBe('function');
+        expect(MediaLibrary.usePermissions).toHaveBeenCalledWith({ writeOnly: true });
     });
 
     it('saves local image successfully', async () => {
@@ -180,8 +181,6 @@ describe('useMediaSaver', () => {
     });
 
     it('sets saving to true during operation', async () => {
-        let savingDuringOperation = false;
-
         (MediaLibrary.createAssetAsync as jest.Mock).mockImplementation(async () => {
             // This would capture the saving state during the async operation
             // but since we can't access result.current here synchronously,

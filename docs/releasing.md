@@ -86,6 +86,15 @@ may change: `app.json`, the platform native version file, and the iOS widget
 project rewrite means the source was regenerated and the artifact must be rebuilt
 from the clean tracked sources.
 
+### Android media permission policy
+
+Sauci uses the Android system photo picker for user-selected images and videos.
+Android release manifests must not contain `READ_MEDIA_IMAGES` or
+`READ_MEDIA_VIDEO`. Gallery save flows request add-only access and must not add
+broad read access. After any Expo, media-library, image-picker, or native Android
+change, run `:app:processReleaseMainManifest` and inspect the merged release
+manifest before building an artifact for Google Play.
+
 ### Building an APK (for Testing)
 
 The production profile creates an AAB (Android App Bundle), which can't be directly installed on devices. To build an APK for testing:
