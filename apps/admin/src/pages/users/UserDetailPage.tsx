@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { adminData, adminRequest, adminBinaryRequest } from '@/lib/adminApi';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
@@ -37,12 +37,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Crown, Users, MessageCircle, ChevronRight, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Sparkles, Flame, Trophy, Calendar, AlertCircle, Clock, Pencil } from 'lucide-react';
+import { Crown, Users, MessageCircle, ChevronRight, Gift, Image, Video as VideoIcon, Target, User, Eye, EyeOff, CheckCircle, Package, Sparkles, Flame, Trophy, Calendar, AlertCircle, Clock, Pencil, CreditCard, Bell, Globe, BadgeCheck, HelpCircle, Swords } from 'lucide-react';
 import { format } from 'date-fns';
 import { IconPreview } from '@/components/ui/icon-picker';
 import type { AnswerType, QuestionType } from '@sauci/shared';
 import { ResponseAnswer } from '@/components/content/ResponseAnswer';
 import { MATCH_TYPE_LABELS, type AdminResponseData } from '@/lib/questionResponses';
+import { StrokeCanvas, type StrokeSegment } from '@/components/content/StrokeCanvas';
+import { SENT_DARE_STATUS_LABELS, type SentDareStatus } from '@/lib/sentDares';
 
 type UsageReason = 'improve_communication' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
 type Gender = 'male' | 'female' | 'non-binary' | 'prefer-not-to-say';
@@ -61,6 +63,7 @@ interface Profile {
     usage_reason: UsageReason | null;
     hide_nsfw: boolean | null;
     onboarding_completed: boolean | null;
+    timezone: string | null;
 }
 
 const usageReasonLabels: Record<UsageReason, { label: string; icon: string }> = {
@@ -158,9 +161,70 @@ interface CoupleStreak {
     current_streak: number;
     longest_streak: number;
     last_active_date: string | null;
+    last_completed_date: string | null;
     last_milestone_celebrated: number | null;
     created_at: string;
     updated_at: string;
+}
+
+interface NotificationPreferences {
+    matches_enabled: boolean;
+    messages_enabled: boolean;
+    partner_activity_enabled: boolean;
+    nudges_enabled: boolean;
+    pack_changes_enabled: boolean;
+    new_packs_enabled: boolean;
+    streak_milestones_enabled: boolean;
+    streak_reminders_enabled: boolean;
+    weekly_summary_enabled: boolean;
+    unpaired_reminders_enabled: boolean;
+    catchup_reminders_enabled: boolean;
+    dares_enabled: boolean;
+}
+
+const notificationPreferenceLabels: Record<keyof NotificationPreferences, string> = {
+    matches_enabled: 'Matches',
+    messages_enabled: 'Messages',
+    partner_activity_enabled: 'Partner activity',
+    nudges_enabled: 'Nudges',
+    pack_changes_enabled: 'Pack changes',
+    new_packs_enabled: 'New packs',
+    streak_milestones_enabled: 'Streak milestones',
+    streak_reminders_enabled: 'Streak reminders',
+    weekly_summary_enabled: 'Weekly summary',
+    unpaired_reminders_enabled: 'Unpaired reminders',
+    catchup_reminders_enabled: 'Catch-up reminders',
+    dares_enabled: 'Dares',
+};
+
+interface Subscription {
+    id: string;
+    store: string;
+    product_id: string;
+    status: string;
+    entitlement_ids: string[];
+    purchased_at: string;
+    expires_at: string | null;
+    revenuecat_app_user_id: string;
+}
+
+interface QuizSession {
+    id: string;
+    status: string;
+    score_percent: number | null;
+    completed_at: string | null;
+    created_at: string;
+}
+
+interface SentDare {
+    id: string;
+    dare_text_snapshot: string;
+    custom_dare_text: string | null;
+    sender_id: string;
+    recipient_id: string;
+    status: string;
+    sent_at: string;
+    expires_at: string | null;
 }
 
 const matchTypeLabels = {
@@ -269,25 +333,7 @@ function AdminDecryptedVideo({ messageId }: { messageId: string }) {
     return <video src={url} controls className="w-full h-full object-cover" preload="metadata" />;
 }
 
-interface StrokePoint {
-    x: number;
-    y: number;
-}
-
-interface StrokeSegment {
-    id: string;
-    userId: string;
-    points: StrokePoint[];
-    color: string;
-    width: number;
-    timestamp: number;
-    isEraser: boolean;
-}
-
-const CANVAS_BACKGROUND = '#1a1a2e';
-
 function LiveDrawCanvas({ coupleId }: { coupleId: string }) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
     const [strokes, setStrokes] = useState<StrokeSegment[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -322,56 +368,6 @@ function LiveDrawCanvas({ coupleId }: { coupleId: string }) {
         };
     }, [coupleId]);
 
-    // Render strokes to canvas
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        const dpr = window.devicePixelRatio || 1;
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        ctx.scale(dpr, dpr);
-
-        ctx.fillStyle = CANVAS_BACKGROUND;
-        ctx.fillRect(0, 0, w, h);
-
-        for (const stroke of strokes) {
-            if (stroke.points.length === 0) continue;
-            ctx.strokeStyle = stroke.isEraser ? CANVAS_BACKGROUND : stroke.color;
-            ctx.lineWidth = stroke.width;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-
-            const first = stroke.points[0];
-            ctx.moveTo(first.x * w, first.y * h);
-
-            if (stroke.points.length === 1) {
-                ctx.lineTo(first.x * w + 0.1, first.y * h + 0.1);
-            } else {
-                for (let i = 1; i < stroke.points.length; i++) {
-                    const prev = stroke.points[i - 1];
-                    const curr = stroke.points[i];
-                    const midX = ((prev.x + curr.x) / 2) * w;
-                    const midY = ((prev.y + curr.y) / 2) * h;
-
-                    if (i === 1) {
-                        ctx.lineTo(midX, midY);
-                    } else {
-                        ctx.quadraticCurveTo(prev.x * w, prev.y * h, midX, midY);
-                    }
-                }
-                const last = stroke.points[stroke.points.length - 1];
-                ctx.lineTo(last.x * w, last.y * h);
-            }
-            ctx.stroke();
-        }
-    }, [strokes]);
-
     if (loading) return <Skeleton className="h-64 w-full" />;
     if (error) return <div className="text-sm text-red-500">Failed to load drawing: {error}</div>;
 
@@ -384,13 +380,8 @@ function LiveDrawCanvas({ coupleId }: { coupleId: string }) {
                 </Card>
             ) : (
                 <>
-                    <div className="rounded-xl overflow-hidden border" style={{ background: CANVAS_BACKGROUND }}>
-                        <canvas
-                            ref={canvasRef}
-                            style={{ width: '100%', aspectRatio: '4/3', display: 'block' }}
-                        />
-                    </div>
-                    <p className="text-xs text-muted-foreground">{strokes.length} stroke{strokes.length !== 1 ? 's' : ''} — updates in real-time</p>
+                    <StrokeCanvas strokes={strokes} />
+                    <p className="text-xs text-muted-foreground">{strokes.length} stroke{strokes.length !== 1 ? 's' : ''} - updates in real-time</p>
                 </>
             )}
         </div>
@@ -424,6 +415,10 @@ export function UserDetailPage() {
     const [mediaPage, setMediaPage] = useState(1);
     const [mediaPageSize, setMediaPageSize] = useState(12);
     const [mediaTotal, setMediaTotal] = useState(0);
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences | null>(null);
+    const [quizSessions, setQuizSessions] = useState<QuizSession[]>([]);
+    const [sentDares, setSentDares] = useState<SentDare[]>([]);
     const [loading, setLoading] = useState(true);
 
     const canViewResponses = hasPermission(PERMISSION_KEYS.VIEW_RESPONSES);
@@ -492,6 +487,39 @@ export function UserDetailPage() {
                 .order('created_at', { ascending: false });
             setFeatureInterests((featureInterestsData || []) as FeatureInterest[]);
 
+            // Fetch purchase history so support can see what was bought and when it lapses,
+            // instead of only the profile's is_premium boolean.
+            const { data: subscriptionsData } = await adminData
+                .from('subscriptions')
+                .select('id, store, product_id, status, entitlement_ids, purchased_at, expires_at, revenuecat_app_user_id')
+                .eq('user_id', userId)
+                .order('purchased_at', { ascending: false });
+            setSubscriptions((subscriptionsData || []) as Subscription[]);
+
+            // Fetch notification preferences (read-only visibility for support).
+            const { data: notificationPrefsData } = await adminData
+                .from('notification_preferences')
+                .select('*')
+                .eq('user_id', userId)
+                .maybeSingle();
+            setNotificationPrefs(notificationPrefsData);
+
+            // Fetch recent dares sent by or to this user (sent_dares has no OR support
+            // in the admin query builder, so this issues two filtered queries and merges).
+            const [sentByUser, sentToUser] = await Promise.all([
+                adminData.from('sent_dares')
+                    .select('id, dare_text_snapshot, custom_dare_text, sender_id, recipient_id, status, sent_at, expires_at')
+                    .eq('sender_id', userId).order('sent_at', { ascending: false }).limit(10),
+                adminData.from('sent_dares')
+                    .select('id, dare_text_snapshot, custom_dare_text, sender_id, recipient_id, status, sent_at, expires_at')
+                    .eq('recipient_id', userId).order('sent_at', { ascending: false }).limit(10),
+            ]);
+            const daresById = new Map<string, SentDare>();
+            for (const row of [...(sentByUser.data || []), ...(sentToUser.data || [])] as SentDare[]) {
+                daresById.set(row.id, row);
+            }
+            setSentDares([...daresById.values()].sort((a, b) => new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()).slice(0, 10));
+
             if (profileData?.couple_id) {
                 const { data: partnerData } = await adminData.from('profiles').select('id, name').eq('couple_id', profileData.couple_id).neq('id', userId).single();
                 setPartner(partnerData);
@@ -503,9 +531,20 @@ export function UserDetailPage() {
                     .eq('couple_id', profileData.couple_id)
                     .maybeSingle();
                 setStreak(streakData);
+
+                // Fetch recent quiz sessions for the couple (quiz_sessions has no user_id
+                // column; sessions belong to the couple both partners share).
+                const { data: quizSessionsData } = await adminData
+                    .from('quiz_sessions')
+                    .select('id, status, score_percent, completed_at, created_at')
+                    .eq('couple_id', profileData.couple_id)
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                setQuizSessions((quizSessionsData || []) as QuizSession[]);
             } else {
                 setPartner(null);
                 setStreak(null);
+                setQuizSessions([]);
             }
 
             const responsesFrom = (responsesPage - 1) * responsesPageSize;
@@ -789,12 +828,59 @@ export function UserDetailPage() {
                     </div>
                 </div>
             </div></CardContent></Card>
+            {/* Subscriptions */}
+            {subscriptions.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            Subscriptions
+                        </CardTitle>
+                        <CardDescription>Purchase history from the store, independent of the is_premium flag</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Store</TableHead>
+                                        <TableHead>Product</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Entitlements</TableHead>
+                                        <TableHead>Purchased</TableHead>
+                                        <TableHead>Expires</TableHead>
+                                        <TableHead>RevenueCat User</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {subscriptions.map((subscription) => (
+                                        <TableRow key={subscription.id}>
+                                            <TableCell className="capitalize">{subscription.store.toLowerCase().replace('_', ' ')}</TableCell>
+                                            <TableCell className="font-mono text-xs">{subscription.product_id}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={subscription.status === 'active' ? 'default' : subscription.status === 'billing_issue' ? 'destructive' : 'secondary'} className="capitalize">
+                                                    {subscription.status.replace('_', ' ')}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{subscription.entitlement_ids.join(', ') || '-'}</TableCell>
+                                            <TableCell className="text-sm">{format(new Date(subscription.purchased_at), 'MMM d, yyyy')}</TableCell>
+                                            <TableCell className="text-sm">{subscription.expires_at ? format(new Date(subscription.expires_at), 'MMM d, yyyy') : 'Never'}</TableCell>
+                                            <TableCell className="font-mono text-xs text-muted-foreground">{subscription.revenuecat_app_user_id}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
             {/* Onboarding Details */}
             <Card><CardHeader className="pb-3"><CardTitle className="text-lg flex items-center gap-2"><CheckCircle className="h-5 w-5 text-primary" />Onboarding Details</CardTitle><CardDescription>Information collected during user onboarding</CardDescription></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900"><User className="h-4 w-4 text-blue-600 dark:text-blue-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Gender</p><p className="font-medium">{profile.gender ? genderLabels[profile.gender] : 'Not set'}</p></div></div>
                 <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900"><Target className="h-4 w-4 text-purple-600 dark:text-purple-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Why using Sauci</p><p className="font-medium">{profile.usage_reason ? usageReasonLabels[profile.usage_reason]?.label : 'Not set'}</p></div></div>
                 <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.hide_nsfw ? 'bg-gray-100 dark:bg-gray-800' : 'bg-amber-100 dark:bg-amber-900'}`}>{profile.hide_nsfw ? <EyeOff className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" />}</div><div><p className="text-sm font-medium text-muted-foreground">Hide NSFW</p><p className="font-medium">{profile.hide_nsfw === null ? 'Not set' : profile.hide_nsfw ? 'Yes' : 'No'}</p></div></div>
                 <div className="flex items-start gap-3"><div className={`p-2 rounded-lg ${profile.onboarding_completed ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900'}`}><CheckCircle className={`h-4 w-4 ${profile.onboarding_completed ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`} /></div><div><p className="text-sm font-medium text-muted-foreground">Onboarding</p><p className="font-medium">{profile.onboarding_completed ? 'Completed' : 'Not completed'}</p></div></div>
+                <div className="flex items-start gap-3"><div className="p-2 rounded-lg bg-teal-100 dark:bg-teal-900"><Globe className="h-4 w-4 text-teal-600 dark:text-teal-400" /></div><div><p className="text-sm font-medium text-muted-foreground">Timezone</p><p className="font-medium">{profile.timezone || 'Not reported (UTC fallback)'}</p></div></div>
             </div></CardContent></Card>
             {/* Streak Info */}
             {profile.couple_id && streak && (
@@ -836,6 +922,16 @@ export function UserDetailPage() {
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900">
+                                    <BadgeCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-muted-foreground">Last Completed (both partners)</p>
+                                    <p className="font-medium">{streak.last_completed_date ? format(new Date(streak.last_completed_date), 'MMM d, yyyy') : 'Never'}</p>
+                                    <p className="text-xs text-muted-foreground">Determines whether the streak is alive today or tomorrow</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
                                 <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900">
                                     <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                                 </div>
@@ -844,6 +940,28 @@ export function UserDetailPage() {
                                     <p className="font-medium">{streak.last_milestone_celebrated ? `${streak.last_milestone_celebrated} days` : 'None yet'}</p>
                                 </div>
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            {/* Notification Preferences */}
+            {notificationPrefs && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Bell className="h-5 w-5 text-primary" />
+                            Notification Preferences
+                        </CardTitle>
+                        <CardDescription>Read-only. Configured by the user in the mobile app</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap gap-2">
+                            {(Object.keys(notificationPreferenceLabels) as Array<keyof NotificationPreferences>).map((key) => (
+                                <Badge key={key} variant={notificationPrefs[key] ? 'default' : 'secondary'} className="gap-1">
+                                    {notificationPrefs[key] ? <CheckCircle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+                                    {notificationPreferenceLabels[key]}
+                                </Badge>
+                            ))}
                         </div>
                     </CardContent>
                 </Card>
@@ -868,6 +986,83 @@ export function UserDetailPage() {
                                     </span>
                                 </Badge>
                             ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            {/* Quiz Sessions */}
+            {quizSessions.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5 text-primary" />
+                            Couples Quiz Sessions
+                        </CardTitle>
+                        <CardDescription>Recent quiz sessions for this couple</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Score</TableHead>
+                                        <TableHead>Started</TableHead>
+                                        <TableHead>Completed</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {quizSessions.map((session) => (
+                                        <TableRow key={session.id}>
+                                            <TableCell>
+                                                <Badge variant={session.status === 'completed' ? 'default' : 'secondary'} className="capitalize">{session.status}</Badge>
+                                            </TableCell>
+                                            <TableCell>{session.score_percent !== null ? `${session.score_percent}%` : '-'}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">{format(new Date(session.created_at), 'MMM d, yyyy')}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">{session.completed_at ? format(new Date(session.completed_at), 'MMM d, yyyy') : '-'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            {/* Recent Dares */}
+            {sentDares.length > 0 && (
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Swords className="h-5 w-5 text-primary" />
+                            Recent Dares
+                        </CardTitle>
+                        <CardDescription>Dares this user sent or received. See the Sent Dares page for the full loop and messages</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Dare</TableHead>
+                                        <TableHead>Direction</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Sent</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sentDares.map((dare) => {
+                                        const statusInfo = SENT_DARE_STATUS_LABELS[dare.status as SentDareStatus];
+                                        return (
+                                            <TableRow key={dare.id}>
+                                                <TableCell className="max-w-md line-clamp-2">{dare.custom_dare_text || dare.dare_text_snapshot}</TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">{dare.sender_id === userId ? 'Sent' : 'Received'}</TableCell>
+                                                <TableCell><Badge variant={statusInfo?.variant ?? 'secondary'} className="capitalize">{statusInfo?.label ?? dare.status}</Badge></TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">{format(new Date(dare.sent_at), 'MMM d, yyyy')}</TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
                         </div>
                     </CardContent>
                 </Card>

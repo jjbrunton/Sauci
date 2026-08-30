@@ -33,6 +33,7 @@ import { Plus, Zap, Pencil, Trash2, Loader2, Crown, Eye, EyeOff, ChevronUp, Chev
 import { toast } from 'sonner';
 import { ContentReviewControl } from '@/components/content/ContentReviewControl';
 import type { ContentReviewStatus } from '@sauci/shared';
+import { parseIntensityRange } from '@/lib/dareIntensity';
 
 // =============================================================================
 // Types
@@ -54,6 +55,9 @@ interface DarePack {
     is_explicit: boolean;
     sort_order: number;
     category_id: string | null;
+    min_intensity: number | null;
+    max_intensity: number | null;
+    avg_intensity: number | null;
     created_at: string | null;
     dare_count?: number;
     content_status?: ContentReviewStatus | null;
@@ -68,6 +72,8 @@ interface DarePackFormData {
     is_public: boolean;
     is_explicit: boolean;
     category_id: string;
+    min_intensity: string;
+    max_intensity: string;
 }
 
 // =============================================================================
@@ -96,6 +102,8 @@ export function DarePacksPage() {
             is_public: false,
             is_explicit: false,
             category_id: categoryId ?? '',
+            min_intensity: '',
+            max_intensity: '',
         },
         (pack) => ({
             name: pack.name,
@@ -105,6 +113,8 @@ export function DarePacksPage() {
             is_public: pack.is_public,
             is_explicit: pack.is_explicit,
             category_id: pack.category_id || '',
+            min_intensity: pack.min_intensity != null ? String(pack.min_intensity) : '',
+            max_intensity: pack.max_intensity != null ? String(pack.max_intensity) : '',
         })
     );
 
@@ -209,6 +219,14 @@ export function DarePacksPage() {
             return;
         }
 
+        const { range, error: intensityError } = parseIntensityRange(form.formData.min_intensity, form.formData.max_intensity);
+        if (intensityError) {
+            toast.error(intensityError);
+            return;
+        }
+        const parsedMin = range.min;
+        const parsedMax = range.max;
+
         form.setSaving(true);
         try {
             if (form.editingItem) {
@@ -220,6 +238,8 @@ export function DarePacksPage() {
                     is_public: form.formData.is_public,
                     is_explicit: form.formData.is_explicit,
                     category_id: form.formData.category_id || null,
+                    min_intensity: parsedMin,
+                    max_intensity: parsedMax,
                 });
                 if (error) throw error;
                 toast.success('Dare pack updated');
@@ -232,6 +252,8 @@ export function DarePacksPage() {
                     is_public: form.formData.is_public,
                     is_explicit: form.formData.is_explicit,
                     category_id: form.formData.category_id || null,
+                    min_intensity: parsedMin,
+                    max_intensity: parsedMax,
                     sort_order: totalCount,
                 });
                 if (error) throw error;
@@ -410,6 +432,36 @@ export function DarePacksPage() {
                                 </Select>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="min_intensity">Min Intensity (optional)</Label>
+                                    <Input
+                                        id="min_intensity"
+                                        type="number"
+                                        min={1}
+                                        max={5}
+                                        value={form.formData.min_intensity}
+                                        onChange={(e) => form.setField('min_intensity', e.target.value)}
+                                        placeholder="1"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="max_intensity">Max Intensity (optional)</Label>
+                                    <Input
+                                        id="max_intensity"
+                                        type="number"
+                                        min={1}
+                                        max={5}
+                                        value={form.formData.max_intensity}
+                                        onChange={(e) => form.setField('max_intensity', e.target.value)}
+                                        placeholder="5"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground -mt-2">
+                                Gates whether this pack shows for a couple based on their intensity preference. Leave blank for no gate.
+                            </p>
+
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
                                     <Label>Premium</Label>
@@ -572,6 +624,20 @@ export function DarePacksPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
+                                {(pack.min_intensity != null || pack.max_intensity != null || pack.avg_intensity != null) && (
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                        {(pack.min_intensity != null || pack.max_intensity != null) && (
+                                            <Badge variant="outline" className="text-xs">
+                                                Intensity {pack.min_intensity ?? 1}-{pack.max_intensity ?? 5}
+                                            </Badge>
+                                        )}
+                                        {pack.avg_intensity != null && (
+                                            <Badge variant="outline" className="text-xs">
+                                                Avg {pack.avg_intensity}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-muted-foreground">
                                         {pack.dare_count} dare{pack.dare_count !== 1 ? 's' : ''}
