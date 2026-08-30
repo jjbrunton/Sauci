@@ -23,6 +23,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Subscriptions](subscription-system.md)
 - [Redemption codes](product/redemption.md)
 - [Mobile release process](releasing.md)
+- [Mobile over-the-air updates](mobile-ota.md)
 - [Dares loop](dares-loop.md)
 - [Couples quiz](quiz.md)
 
