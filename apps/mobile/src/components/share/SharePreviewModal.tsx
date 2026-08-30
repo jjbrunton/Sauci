@@ -6,7 +6,6 @@ import {
     Modal,
     TouchableOpacity,
     Platform,
-    Linking,
     Share,
     useWindowDimensions,
     Image,
@@ -23,8 +22,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system/legacy";
 import { colors, gradients, radius, typography, spacing, blur } from "../../theme";
+import { shareToInstagramStories } from "../../lib/instagramShare";
 
 const logo = require("../../../assets/logo.png");
 
@@ -87,31 +86,9 @@ export function SharePreviewModal({
     const handleInstagramShare = async () => {
         if (!capturedUri) return;
 
-        try {
-            // Check if Instagram is installed
-            const instagramUrl = 'instagram://app';
-            const canOpenInstagram = await Linking.canOpenURL(instagramUrl);
-
-            if (canOpenInstagram && Platform.OS === 'ios') {
-                // For iOS, we can use the Instagram Stories URL scheme
-                // First, we need to copy the image to a location Instagram can access
-                const base64 = await FileSystem.readAsStringAsync(capturedUri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
-
-                // Use Instagram Stories URL scheme
-                const instagramStoriesUrl = `instagram-stories://share?source_application=com.sauci.app`;
-
-                // Try to open Instagram Stories with the image
-                // Note: This requires the image to be in the pasteboard on iOS
-                await Linking.openURL(instagramStoriesUrl);
-            } else {
-                // Fallback to regular sharing
-                await handleMoreShare();
-            }
-        } catch (error) {
-            console.error('Instagram share error:', error);
-            // Fallback to regular sharing
+        const shared = await shareToInstagramStories(capturedUri);
+        if (!shared) {
+            // Instagram Stories sharing unavailable - fall back to the share sheet
             await handleMoreShare();
         }
     };

@@ -298,7 +298,19 @@
         }
       ],
       "./plugins/withWidgetExported.js",
-      "./plugins/withNativeWidget.js"
+      "./plugins/withNativeWidget.js",
+      [
+        "react-native-share",
+        {
+          "ios": [
+            "instagram",
+            "instagram-stories"
+          ],
+          "android": [
+            "com.instagram.android"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

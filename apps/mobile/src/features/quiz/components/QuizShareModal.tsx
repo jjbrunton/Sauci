@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-    Linking,
     Modal,
     Platform,
     Share,
@@ -16,8 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system/legacy";
 import { colors, spacing, typography, blur } from "../../../theme";
+import { shareToInstagramStories } from "../../../lib/instagramShare";
 import { Events } from "../../../lib/analytics";
 import { QuizResultsShareCard } from "./QuizResultsShareCard";
 
@@ -63,22 +62,11 @@ export function QuizShareModal({ visible, onClose, scorePercent }: QuizShareModa
     const handleInstagramShare = async () => {
         if (!capturedUri) return;
 
-        try {
-            const instagramUrl = "instagram://app";
-            const canOpenInstagram = await Linking.canOpenURL(instagramUrl);
-
-            if (canOpenInstagram && Platform.OS === "ios") {
-                await FileSystem.readAsStringAsync(capturedUri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
-                const instagramStoriesUrl = "instagram-stories://share?source_application=com.sauci.app";
-                await Linking.openURL(instagramStoriesUrl);
-                Events.quizShared();
-            } else {
-                await handleMoreShare();
-            }
-        } catch (error) {
-            console.error("Instagram share error:", error);
+        const shared = await shareToInstagramStories(capturedUri);
+        if (shared) {
+            Events.quizShared();
+        } else {
+            // Instagram Stories sharing unavailable - fall back to the share sheet
             await handleMoreShare();
         }
     };
