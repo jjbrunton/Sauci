@@ -16,6 +16,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sauci.app",
+      "associatedDomains": [
+        "applinks:sauci.app"
+      ],
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -194,6 +197,23 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
         "com.android.vending.BILLING"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "sauci.app",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {

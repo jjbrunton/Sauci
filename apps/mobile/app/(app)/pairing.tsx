@@ -20,14 +20,21 @@ import { useAuthStore } from "../../src/store";
 import { coupleApi } from "../../src/lib/coupleApi";
 import { getPairingError } from "../../src/lib/errors";
 import { Events } from "../../src/lib/analytics";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { GradientBackground, GlassCard, GlassButton } from "../../src/components/ui";
 import { colors, gradients, spacing, radius, typography, shadows } from "../../src/theme";
+import { isValidInviteCode, normalizeInviteCode } from "../../src/lib/inviteLink";
+import { getPendingInviteCode, clearPendingInviteCode } from "../../src/lib/pendingInviteCode";
+import { checkClipboardForInviteCode } from "../../src/lib/clipboardInviteOffer";
 
 export default function PairingScreen() {
     const { fetchCouple, fetchUser, couple, partner, isLoading: isAuthLoading } = useAuthStore();
+    const params = useLocalSearchParams<{ code?: string }>();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [wasPrefilled, setWasPrefilled] = useState(false);
+    const [clipboardOfferCode, setClipboardOfferCode] = useState<string | null>(null);
+    const [prefillAttempted, setPrefillAttempted] = useState(false);
 
     // Redirect if already paired
     useEffect(() => {
@@ -35,6 +42,64 @@ export default function PairingScreen() {
             router.replace("/(app)");
         }
     }, [couple, partner]);
+
+    // One-time prefill: apply a code carried by a join link (route param), then
+    // a stashed code from before sign-in, and only otherwise offer a clipboard
+    // match. Never auto-submits; the user still taps "Join Partner".
+    useEffect(() => {
+        if (couple) return; // only relevant to the unpaired join flow
+        if (prefillAttempted) return;
+
+        let cancelled = false;
+
+        const applyPrefill = async (code: string) => {
+            if (cancelled) return;
+            setInviteCode(code);
+            setWasPrefilled(true);
+            Events.pairingCodePrefilled();
+        };
+
+        (async () => {
+            const routeCode = typeof params.code === "string" ? normalizeInviteCode(params.code) : "";
+            if (isValidInviteCode(routeCode)) {
+                await applyPrefill(routeCode);
+                await clearPendingInviteCode();
+                if (!cancelled) setPrefillAttempted(true);
+                return;
+            }
+
+            const stashedCode = await getPendingInviteCode();
+            if (stashedCode) {
+                await applyPrefill(stashedCode);
+                await clearPendingInviteCode();
+                if (!cancelled) setPrefillAttempted(true);
+                return;
+            }
+
+            const clipboardCode = await checkClipboardForInviteCode();
+            if (clipboardCode && !cancelled) {
+                setClipboardOfferCode(clipboardCode);
+            }
+            if (!cancelled) setPrefillAttempted(true);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [couple, params.code, prefillAttempted]);
+
+    const acceptClipboardOffer = () => {
+        if (!clipboardOfferCode) return;
+        setInviteCode(clipboardOfferCode);
+        setWasPrefilled(true);
+        Events.inviteLinkOpened("clipboard");
+        Events.pairingCodePrefilled();
+        setClipboardOfferCode(null);
+    };
+
+    const dismissClipboardOffer = () => {
+        setClipboardOfferCode(null);
+    };
 
     // Poll the standalone API while waiting for a partner. Realtime delivery can
     // be added later without coupling product data back to Supabase.
@@ -100,8 +165,13 @@ export default function PairingScreen() {
         }
     };
 
+    const handleInviteCodeChange = (value: string) => {
+        setWasPrefilled(false);
+        setInviteCode(value);
+    };
+
     const shareMessage = couple?.invite_code
-        ? `Join me on Sauci! Download the app at https://sauci.app and use my invite code to pair up: ${couple.invite_code}`
+        ? `Join me on Sauci! Tap this link to pair up instantly: https://sauci.app/join/${couple.invite_code} (or enter code ${couple.invite_code} in the app)`
         : "";
 
     const shareCode = async () => {
@@ -338,6 +408,37 @@ export default function PairingScreen() {
                         </Text>
                     </Animated.View>
 
+                    {/* Clipboard invite code offer */}
+                    {clipboardOfferCode && (
+                        <Animated.View
+                            entering={FadeInDown.duration(400)}
+                            style={styles.section}
+                        >
+                            <View style={styles.clipboardOffer} testID="clipboard-invite-offer">
+                                <Ionicons name="clipboard-outline" size={18} color={colors.primary} />
+                                <Text style={styles.clipboardOfferText}>
+                                    Use code {clipboardOfferCode} from your clipboard?
+                                </Text>
+                                <View style={styles.clipboardOfferActions}>
+                                    <TouchableOpacity
+                                        onPress={dismissClipboardOffer}
+                                        style={styles.clipboardOfferButton}
+                                        testID="clipboard-invite-offer-dismiss"
+                                    >
+                                        <Text style={styles.clipboardOfferDismissText}>Not now</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        onPress={acceptClipboardOffer}
+                                        style={[styles.clipboardOfferButton, styles.clipboardOfferButtonPrimary]}
+                                        testID="clipboard-invite-offer-accept"
+                                    >
+                                        <Text style={styles.clipboardOfferAcceptText}>Use code</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </Animated.View>
+                    )}
+
                     {/* Join Card */}
                     <Animated.View
                         entering={FadeInDown.delay(300).duration(500)}
@@ -346,14 +447,20 @@ export default function PairingScreen() {
                         <Text style={styles.sectionTitle}>Have a code?</Text>
                         <GlassCard>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, wasPrefilled && styles.inputPrefilled]}
                                 placeholder="Enter invite code"
                                 placeholderTextColor={colors.textTertiary}
                                 value={inviteCode}
-                                onChangeText={setInviteCode}
+                                onChangeText={handleInviteCodeChange}
                                 autoCapitalize="characters"
                                 maxLength={8}
+                                testID="invite-code-input"
                             />
+                            {wasPrefilled && (
+                                <Text style={styles.prefilledCaption}>
+                                    Code applied from your invite link
+                                </Text>
+                            )}
                             <GlassButton
                                 onPress={handleJoinCouple}
                                 disabled={isSubmitting}
@@ -435,6 +542,50 @@ const styles = StyleSheet.create({
         letterSpacing: 4,
         fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
         marginBottom: spacing.md,
+    },
+    inputPrefilled: {
+        borderColor: colors.primary,
+    },
+    prefilledCaption: {
+        ...typography.caption1,
+        color: colors.primary,
+        textAlign: "center",
+        marginTop: -spacing.sm,
+        marginBottom: spacing.md,
+    },
+    clipboardOffer: {
+        backgroundColor: colors.backgroundLight,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: spacing.md,
+        gap: spacing.sm,
+    },
+    clipboardOfferText: {
+        ...typography.subhead,
+        color: colors.text,
+    },
+    clipboardOfferActions: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: spacing.sm,
+    },
+    clipboardOfferButton: {
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        borderRadius: radius.sm,
+    },
+    clipboardOfferButtonPrimary: {
+        backgroundColor: colors.primaryLight,
+    },
+    clipboardOfferDismissText: {
+        ...typography.subhead,
+        color: colors.textTertiary,
+    },
+    clipboardOfferAcceptText: {
+        ...typography.subhead,
+        color: colors.primary,
+        fontWeight: "600",
     },
     // ...
     dividerLine: {

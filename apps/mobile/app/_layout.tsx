@@ -46,6 +46,9 @@ import { useAuthStore } from "../src/store";
 import { authClient } from "../src/lib/authClient";
 import { colors, spacing, radius, typography } from "../src/theme";
 import { hasSeenGuestAccountWarning, markGuestAccountWarningSeen } from "../src/lib/guestAccountWarningSeen";
+import { parseInviteLinkCode } from "../src/lib/inviteLink";
+import { stashPendingInviteCode } from "../src/lib/pendingInviteCode";
+import { needsOnboarding } from "../src/constants/onboarding";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +119,22 @@ export default function RootLayout() {
         const handleDeepLink = async (url: string | null) => {
             console.log('[DeepLink] handleDeepLink called with URL:', url);
             if (!url) return;
+
+            // Invite links (https://sauci.app/join/{code} or app.sauci://join?code={code})
+            // are handled separately from the Supabase auth deep link flow below.
+            const inviteLink = parseInviteLinkCode(url);
+            if (inviteLink) {
+                console.log('[DeepLink] Invite link detected:', inviteLink);
+                Events.inviteLinkOpened(inviteLink.source);
+                await stashPendingInviteCode(inviteLink.code);
+
+                const { isAuthenticated, user } = useAuthStore.getState();
+                const onboardingPending = needsOnboarding(user?.onboarding_completed, user?.onboarding_version);
+                if (isAuthenticated && !onboardingPending && !user?.couple_id) {
+                    router.push({ pathname: "/(app)/pairing", params: { code: inviteLink.code } });
+                }
+                return;
+            }
 
             try {
                 // Parse the URL to extract auth parameters
