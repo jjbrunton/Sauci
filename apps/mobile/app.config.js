@@ -48,6 +48,13 @@ const releaseChannel = process.env.RELEASE_CHANNEL || 'development';
  */
 const codeSigningDisabled = Boolean(process.env.DISABLE_CODE_SIGNING);
 
+if (releaseChannel === 'production' && codeSigningDisabled) {
+  throw new Error(
+    'RELEASE_CHANNEL=production does not permit DISABLE_CODE_SIGNING. ' +
+      'Production builds must embed the XPREM code-signing certificate and metadata.',
+  );
+}
+
 function assertUpdateConfigIsReal() {
   const certificatePath = path.join(__dirname, CODE_SIGNING_CERTIFICATE_PATH);
   const certificate = fs.existsSync(certificatePath)

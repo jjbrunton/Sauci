@@ -112,6 +112,7 @@ describe("authStore", () => {
     });
 
     it("clears user-scoped stores and hosted auth when the API rejects the session", async () => {
+        useAuthStore.setState({ sealedCount: 3 } as any);
         (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
             data: { session: { user: { id: "me" } } },
         });
@@ -122,6 +123,7 @@ describe("authStore", () => {
 
         expect(useAuthStore.getState()).toMatchObject({
             user: null,
+            sealedCount: 0,
             isAuthenticated: false,
             isAnonymous: false,
             isLoading: false,
@@ -131,5 +133,29 @@ describe("authStore", () => {
         expect(useMessageStore.getState().unreadCount).toBe(0);
         expect(useSubscriptionStore.getState().subscription).toMatchObject({ isProUser: false });
         expect(authClient.auth.signOut).toHaveBeenCalled();
+    });
+
+    it("clears sealed answers during an explicit sign-out", async () => {
+        useAuthStore.setState({ user: profile, sealedCount: 3, isAuthenticated: true } as any);
+
+        await useAuthStore.getState().signOut();
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            sealedCount: 0,
+            isAuthenticated: false,
+        });
+    });
+
+    it("clears sealed answers when the auth listener clears the user", () => {
+        useAuthStore.setState({ user: profile, sealedCount: 3, isAuthenticated: true } as any);
+
+        useAuthStore.getState().setUser(null);
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            sealedCount: 0,
+            isAuthenticated: false,
+        });
     });
 });

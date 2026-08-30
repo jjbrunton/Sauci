@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch (error) {
             if (error instanceof ApiError && error.status === 401) {
                 console.log("[Auth] Session rejected by API, signing out");
-                set({ user: null, couple: null, partner: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
+                set({ user: null, couple: null, partner: null, sealedCount: 0, isAuthenticated: false, isAnonymous: false, isLoading: false });
                 const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
@@ -137,6 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
              user: null,
              couple: null,
              partner: null,
+             sealedCount: 0,
              isAuthenticated: false,
              isAnonymous: false,
              isLoading: false,
@@ -171,7 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ...(user === null && { isAnonymous: false }),
             isLoading: false,
             // Clear couple/partner when user is null (signed out)
-            ...(user === null && { couple: null, partner: null })
+            ...(user === null && { couple: null, partner: null, sealedCount: 0 })
         });
         // Clear other stores when user signs out
         if (user === null) {
@@ -211,4 +212,3 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         void syncTimezone(userId);
     },
 }));
-

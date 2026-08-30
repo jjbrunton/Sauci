@@ -10,6 +10,8 @@ const files = {
   app: path.join(repoRoot, "apps/mobile/app.json"),
   android: path.join(repoRoot, "apps/mobile/android/app/build.gradle"),
   ios: path.join(repoRoot, "apps/mobile/ios/Sauci.xcodeproj/project.pbxproj"),
+  iosInfo: path.join(repoRoot, "apps/mobile/ios/Sauci/Info.plist"),
+  widgetInfo: path.join(repoRoot, "apps/mobile/targets/widget/Info.plist"),
 };
 
 const semverPattern = /^([0-9]+)\.([0-9]+)\.([0-9]+)$/;
@@ -29,6 +31,8 @@ function readState() {
   const appRaw = fs.readFileSync(files.app, "utf8");
   const androidRaw = fs.readFileSync(files.android, "utf8");
   const iosRaw = fs.readFileSync(files.ios, "utf8");
+  const iosInfoRaw = fs.readFileSync(files.iosInfo, "utf8");
+  const widgetInfoRaw = fs.readFileSync(files.widgetInfo, "utf8");
   const appVersion = JSON.parse(appRaw).expo?.version;
   const androidVersions = [...androidRaw.matchAll(/\bversionName\s+["']([^"']+)["']/g)].map(
     (match) => match[1],
@@ -36,18 +40,35 @@ function readState() {
   const iosVersions = [...iosRaw.matchAll(/\bMARKETING_VERSION\s*=\s*([^;]+);/g)].map(
     (match) => match[1].trim(),
   );
+  const plistVersion = (raw, label) => {
+    const versions = [...raw.matchAll(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/g)].map(
+      (match) => match[1],
+    );
+    if (versions.length !== 1) fail(`expected exactly one ${label} CFBundleShortVersionString`);
+    return versions[0];
+  };
+  const iosInfoVersion = plistVersion(iosInfoRaw, "iOS app Info.plist");
+  const widgetInfoVersion = plistVersion(widgetInfoRaw, "iOS widget Info.plist");
 
   if (typeof appVersion !== "string") fail("apps/mobile/app.json has no expo.version");
   if (androidVersions.length !== 1) fail("expected exactly one Android versionName");
   if (iosVersions.length === 0) fail("found no iOS MARKETING_VERSION values");
 
-  const versions = [appVersion, ...androidVersions, ...iosVersions];
+  const versions = [appVersion, ...androidVersions, ...iosVersions, iosInfoVersion, widgetInfoVersion];
   versions.forEach((version) => parseVersion(version, `configured version ${version}`));
   if (new Set(versions).size !== 1) {
     fail(`public versions disagree: ${versions.join(", ")}`);
   }
 
-  return { appRaw, androidRaw, iosRaw, current: appVersion, iosCount: iosVersions.length };
+  return {
+    appRaw,
+    androidRaw,
+    iosRaw,
+    iosInfoRaw,
+    widgetInfoRaw,
+    current: appVersion,
+    iosCount: iosVersions.length,
+  };
 }
 
 function nextVersion(current, bump) {
@@ -98,8 +119,18 @@ const iosRaw = state.iosRaw.replace(
   /(\bMARKETING_VERSION\s*=\s*)([^;]+)(;)/g,
   `$1${desired}$3`,
 );
+const iosInfoRaw = state.iosInfoRaw.replace(
+  /(<key>CFBundleShortVersionString<\/key>\s*<string>)([^<]+)(<\/string>)/,
+  `$1${desired}$3`,
+);
+const widgetInfoRaw = state.widgetInfoRaw.replace(
+  /(<key>CFBundleShortVersionString<\/key>\s*<string>)([^<]+)(<\/string>)/,
+  `$1${desired}$3`,
+);
 
 fs.writeFileSync(files.app, appRaw);
 fs.writeFileSync(files.android, androidRaw);
 fs.writeFileSync(files.ios, iosRaw);
+fs.writeFileSync(files.iosInfo, iosInfoRaw);
+fs.writeFileSync(files.widgetInfo, widgetInfoRaw);
 console.log(`updated public version ${state.current} -> ${desired}`);
