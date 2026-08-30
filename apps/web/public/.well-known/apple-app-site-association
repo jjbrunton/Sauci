@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "BXVPBATDZY.com.sauci.app",
+        "paths": ["/join/*"]
+      }
+    ]
+  }
+}
