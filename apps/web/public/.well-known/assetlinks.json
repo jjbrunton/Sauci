@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.sauci.app",
+      "sha256_cert_fingerprints": [
+        "65:2F:E7:60:3F:2E:D2:54:8B:4A:EF:0E:F1:AC:35:3E:DD:13:13:EF:35:E7:90:A7:01:1F:89:0F:4F:71:E2:21"
+      ]
+    }
+  }
+]
