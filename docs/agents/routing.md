@@ -1,9 +1,12 @@
 # Agent routing and effort
 
-The primary agent owns scope, acceptance criteria, task decomposition, and the
-final answer. Use one implementation agent when a bounded handoff will keep noisy
-execution out of the primary context. Do not pay the coordination cost for a
-trivial one-file edit. Add other agents only for separable work or a risk trigger.
+The primary agent owns scope, acceptance criteria, task decomposition, review,
+and the final answer. Every substantive repository task must delegate at least
+one bounded unit to the best-fit project agent. Use `repo_scout` for read-only
+discovery or analysis and `implementation` for product or harness changes. Add
+other agents only for separable work or the risk triggers below. Skip delegation
+only for trivial conversation, a single obvious lookup, or a mechanical one-line
+edit whose coordination cost exceeds the work.
 
 ## Implementation and integration
 
