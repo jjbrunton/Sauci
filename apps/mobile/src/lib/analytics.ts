@@ -259,6 +259,10 @@ export const Events = {
   // Profile events
   profileUpdated: (fields: string[]) => logEvent("profile_updated", { fields: fields.join(",") }),
   avatarUploaded: () => logEvent("avatar_uploaded"),
+  avatarSkipped: () => logEvent("avatar_skipped"),
+  avatarPromptShown: (source: string) => logEvent("avatar_prompt_shown", { source }),
+  avatarPromptAccepted: (source: string) => logEvent("avatar_prompt_accepted", { source }),
+  avatarPromptDismissed: (source: string) => logEvent("avatar_prompt_dismissed", { source }),
 
   // Notification events
   notificationPermissionGranted: () => logEvent("notification_permission_granted"),

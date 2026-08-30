@@ -10,6 +10,9 @@ export const profiles = pgTable('profiles', {
   isPremium: boolean('is_premium').notNull().default(false),
   coupleId: uuid('couple_id'),
   gender: text('gender').$type<'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null>(),
+  usageReason: text('usage_reason').$type<
+    'improve_communication' | 'reconnect' | 'spice_up_intimacy' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship' | null
+  >(),
   showExplicitContent: boolean('show_explicit_content').notNull().default(true),
   maxIntensity: integer('max_intensity').notNull().default(5),
   publicKeyJwk: jsonb('public_key_jwk').$type<Record<string, unknown> | null>(),

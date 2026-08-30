@@ -34,7 +34,7 @@ import { Events } from '../../src/lib/analytics';
 import { hasSeenOnboardingPaywall, markOnboardingPaywallSeen } from '../../src/lib/onboardingPaywallSeen';
 import { useAvatarPicker } from '../../src/hooks/useAvatarPicker';
 import { REQUIRED_ONBOARDING_VERSION, ONBOARDING_OFFERING_ID } from '../../src/constants/onboarding';
-import type { Gender } from '../../src/types';
+import type { Gender, UsageReason } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'male', label: 'Male', icon: 'male' },
@@ -42,8 +42,6 @@ const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
     { value: 'non-binary', label: 'Non-binary', icon: 'male-female' },
     { value: 'prefer-not-to-say', label: 'Skip', icon: 'remove-circle-outline' },
 ];
-
-type UsageReason = 'improve_communication' | 'reconnect' | 'deeper_connection' | 'have_fun' | 'strengthen_relationship';
 
 const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
     { value: 'improve_communication', label: 'Improve communication', icon: 'chatbubbles' },
@@ -91,6 +89,13 @@ export default function OnboardingScreen() {
             return;
         }
         setStage('name');
+        Events.onboardingStageComplete('avatar');
+    };
+
+    const handleAvatarSkip = () => {
+        setError(null);
+        setStage('name');
+        Events.avatarSkipped();
         Events.onboardingStageComplete('avatar');
     };
 
@@ -280,6 +285,13 @@ export default function OnboardingScreen() {
                             <GlassButton onPress={handleAvatarContinue} fullWidth size="lg">
                                 Continue
                             </GlassButton>
+                            <Pressable
+                                style={styles.skipButton}
+                                onPress={handleAvatarSkip}
+                                testID="avatar-skip-button"
+                            >
+                                <Text style={styles.skipText}>Skip for now</Text>
+                            </Pressable>
                         </View>
                     </Animated.View>
                 );

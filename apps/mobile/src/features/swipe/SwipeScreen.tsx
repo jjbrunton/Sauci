@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { GradientBackground } from "../../components/ui";
 import { QuestionFeedbackModal } from "../../components/feedback";
 import { MatchConfetti } from "../../components/MatchConfetti";
+import { AvatarPromptCard } from "../../components/AvatarPromptCard";
 import { Paywall } from "../../components/paywall";
 import { useSwipeScreen } from "./hooks/useSwipeScreen";
 import { SwipeCardStack } from "./components/SwipeCardStack";
@@ -32,6 +33,7 @@ const SwipeScreen = () => {
         showPaywall,
         packContext,
         showConfetti,
+        showAvatarPrompt,
         countdown,
         user,
         partner,
@@ -41,6 +43,8 @@ const SwipeScreen = () => {
         fetchQuestions,
         handleAnswer,
         handleConfettiComplete,
+        handleAvatarPromptAddPhoto,
+        handleAvatarPromptDismiss,
         getQuestionPackInfo,
         checkAnswerGap,
         setFeedbackQuestion,
@@ -141,6 +145,15 @@ const SwipeScreen = () => {
             <MatchConfetti
                 visible={showConfetti}
                 onAnimationComplete={handleConfettiComplete}
+            />
+
+            <AvatarPromptCard
+                visible={showAvatarPrompt}
+                onAddPhoto={() => {
+                    handleAvatarPromptAddPhoto();
+                    router.push('/(app)/settings/profile');
+                }}
+                onDismiss={handleAvatarPromptDismiss}
             />
 
             <Paywall

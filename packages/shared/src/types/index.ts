@@ -1,3 +1,12 @@
+/** Why the user says they came to Sauci, collected during onboarding. */
+export type UsageReason =
+    | 'improve_communication'
+    | 'reconnect'
+    | 'spice_up_intimacy'
+    | 'deeper_connection'
+    | 'have_fun'
+    | 'strengthen_relationship';
+
 // User profile (extends Supabase auth.users)
 export interface Profile {
     id: string;
@@ -8,6 +17,8 @@ export interface Profile {
     is_premium: boolean;
     couple_id: string | null;
     gender: 'male' | 'female' | 'non-binary' | 'prefer-not-to-say' | null;
+    /** Why the user came to Sauci, if they shared it during onboarding. */
+    usage_reason?: UsageReason | null;
     show_explicit_content: boolean;
     max_intensity: 1 | 2 | 3 | 4 | 5;
     created_at: string;
