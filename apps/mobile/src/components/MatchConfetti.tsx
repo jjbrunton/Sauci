@@ -307,7 +307,7 @@ export const MatchConfetti: React.FC<Props> = ({ visible, onAnimationComplete })
 
 const styles = StyleSheet.create({
     container: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         zIndex: 1000,
     },
     particle: {

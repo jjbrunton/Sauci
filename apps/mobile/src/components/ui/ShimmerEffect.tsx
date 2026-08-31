@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glowContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   edgeGlowTop: {
     position: 'absolute',

@@ -31,6 +31,8 @@ Ug==
       <key>alg</key>
       <string>rsa-v1_5-sha256</string>
     </dict>
+    <key>EXUpdatesEnableBsdiffPatchSupport</key>
+    <true/>
     <key>EXUpdatesEnabled</key>
     <true/>
     <key>EXUpdatesLaunchWaitMs</key>

@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
         zIndex: 100,
     },
     navBarBackground: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         backgroundColor: colors.background,

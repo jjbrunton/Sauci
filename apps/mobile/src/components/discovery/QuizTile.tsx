@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: radius.lg,
     pointerEvents: 'none',

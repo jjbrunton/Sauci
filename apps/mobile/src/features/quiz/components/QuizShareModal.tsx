@@ -13,7 +13,7 @@ import { BlurView } from "expo-blur";
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import ViewShot from "react-native-view-shot";
+import ViewShot, { type ViewShotRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import { colors, spacing, typography, blur } from "../../../theme";
 import { shareToInstagramStories } from "../../../lib/instagramShare";
@@ -32,7 +32,7 @@ export function QuizShareModal({ visible, onClose, scorePercent }: QuizShareModa
     const insets = useSafeAreaInsets();
     const { width: screenWidth } = useWindowDimensions();
     const cardWidth = Math.min(screenWidth - 64, MAX_CARD_WIDTH);
-    const shareViewRef = useRef<ViewShot>(null);
+    const shareViewRef = useRef<ViewShotRef>(null);
     const [capturedUri, setCapturedUri] = useState<string | null>(null);
     const [isCapturing, setIsCapturing] = useState(false);
 

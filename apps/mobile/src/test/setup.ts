@@ -50,8 +50,6 @@ jest.mock('@supabase/supabase-js', () => {
     };
 });
 
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper', () => ({}), { virtual: true });
-
 jest.mock('react-native-reanimated', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Reanimated = require('react-native-reanimated/mock');
@@ -101,6 +99,11 @@ jest.mock('expo-image-picker', () => ({
         All: 'All',
         Videos: 'Videos',
     },
+}));
+
+jest.mock('expo-media-library', () => ({
+    usePermissions: jest.fn(() => [{ granted: true }, jest.fn(async () => ({ granted: true }))]),
+    createAssetAsync: jest.fn(async () => ({ id: 'mock-asset-id' })),
 }));
 
 jest.mock('expo-file-system/legacy', () => ({

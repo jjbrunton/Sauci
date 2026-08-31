@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
         borderColor: colors.premium.goldLight,
     },
     annualBackground: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: colors.premium.goldLight,
         opacity: 0.3,
     },
@@ -804,7 +804,7 @@ const styles = StyleSheet.create({
 
     // Guest confirm modal
     guestConfirmOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: "rgba(0, 0, 0, 0.8)",
         justifyContent: "center",
         alignItems: "center",

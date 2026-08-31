@@ -191,7 +191,10 @@ cd android && ./gradlew --stop && cd ..
 
 Treat `expo prebuild` as a source change, not a release step. Run it separately
 only when native dependencies intentionally changed, review the full native diff,
-verify it, and commit it before starting the release from a clean worktree.
+verify it, and commit it before starting the release from a clean worktree. Use
+`expo prebuild --clean` (see `docs/mobile-ota.md`); as of `@bacons/apple-targets`
+5.x, a non-clean prebuild against an already-generated iOS project fails while
+updating the widget's Xcode target.
 
 **Out of memory:**
 ```bash
