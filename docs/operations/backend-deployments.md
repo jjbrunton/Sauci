@@ -14,10 +14,14 @@ not deploy the retired Supabase data plane.
 | `master` | frozen legacy default | none | none |
 
 Normal feature pull requests target `staging`. After CI and authenticated staging
-acceptance pass, open a promotion pull request from `staging` to `main`. Do not
-add production-only commits to `main`: production should run the exact commit
-already exercised in staging. Direct pushes to either deployment branch are for
-explicit incident recovery only.
+acceptance pass, open a promotion pull request from `staging` to `main`. Prefer
+that route: production then runs the exact commit already exercised in staging.
+
+When production needs a change that cannot wait for the next promotion, open a
+pull request into `main` from a `hotfix/*` or `release/*` branch. CI enforces
+that naming so a direct-to-main change is always deliberate and visible. Land
+the same commit on `staging` too, or the next promotion will revert it. Direct
+pushes to either deployment branch remain blocked by branch protection.
 
 Each Dokploy Compose application is connected to `jjbrunton/Sauci`, watches its
 single branch with push-triggered automatic deployment, and uses
