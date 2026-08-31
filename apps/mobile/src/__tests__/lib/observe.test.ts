@@ -75,10 +75,24 @@ describe('observe', () => {
             expect.objectContaining({
                 severity: 'fatal',
                 body: 'boom',
-                attributes: { isFatal: true },
             })
         );
         expect(previousHandler).toHaveBeenCalledWith(error, true);
+    });
+
+    it('does not log xprem_js_crash for non-fatal errors but still delegates', () => {
+        const previousHandler = jest.fn();
+        const getInstalledHandler = installFakeErrorUtils(previousHandler);
+
+        withFreshObserveModule(({ installObserveGlobalErrorHandler }) => {
+            installObserveGlobalErrorHandler();
+        });
+
+        const error = new Error('handled');
+        getInstalledHandler()(error, false);
+
+        expect(logEventMock).not.toHaveBeenCalled();
+        expect(previousHandler).toHaveBeenCalledWith(error, false);
     });
 
     it('still calls the previous handler when Observe.logEvent throws', () => {
@@ -92,8 +106,8 @@ describe('observe', () => {
             installObserveGlobalErrorHandler();
         });
 
-        getInstalledHandler()(new Error('boom'), false);
+        getInstalledHandler()(new Error('boom'), true);
 
-        expect(previousHandler).toHaveBeenCalledWith(expect.any(Error), false);
+        expect(previousHandler).toHaveBeenCalledWith(expect.any(Error), true);
     });
 });

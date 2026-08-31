@@ -50,15 +50,18 @@ export function installObserveGlobalErrorHandler() {
   const previousHandler = errorUtils.getGlobalHandler();
 
   errorUtils.setGlobalHandler((error, isFatal) => {
-    try {
-      const message = error instanceof Error ? error.message : String(error);
-      Observe.logEvent("xprem_js_crash", {
-        severity: "fatal",
-        body: message,
-        attributes: { isFatal: Boolean(isFatal) },
-      });
-    } catch (observeError) {
-      console.warn("[Observe] Failed to log xprem_js_crash:", observeError);
+    // Only fatal errors count as a crash; non-fatal handled errors would
+    // otherwise skew update-health tracking.
+    if (isFatal) {
+      try {
+        const message = error instanceof Error ? error.message : String(error);
+        Observe.logEvent("xprem_js_crash", {
+          severity: "fatal",
+          body: message,
+        });
+      } catch (observeError) {
+        console.warn("[Observe] Failed to log xprem_js_crash:", observeError);
+      }
     }
 
     previousHandler(error, isFatal);
