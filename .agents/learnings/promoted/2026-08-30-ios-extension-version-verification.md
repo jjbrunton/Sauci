@@ -3,8 +3,8 @@ id: 2026-08-30-ios-extension-version-verification
 date: 2026-08-30
 status: promoted
 scope: iOS release artifact verification
-evidence: build 45 Xcode archive warning plus direct PlistBuddy inspection of the exported IPA
-destination: .codex/skills/release-mobile/SKILL.md
+evidence: v1.0.6 exported IPA inspection and reproduced v1.0.7 Xcode build-setting mismatch
+destination: apps/mobile/scripts/release-preflight.mjs and .codex/skills/release-mobile/SKILL.md
 review_after: 2027-02-28
 ---
 
@@ -21,19 +21,23 @@ and every packaged extension `Info.plist` with `PlistBuddy`.
 
 ## Cause
 
-The archive warning described an intermediate state and was not authoritative
-for the exported package. Direct IPA inspection showed both the app and
-`LiveDrawWidget.appex` at version 1.0.6 build 45.
+The v1.0.6 archive warning described an intermediate state and was not
+authoritative for that exported package. The later v1.0.7 reproduction found a
+separate real hazard: `CURRENT_PROJECT_VERSION` in both LiveDrawWidget
+configurations can override the widget plist and package an older build number.
 
 ## Remediation
 
-For every iOS release, inspect version and build values in the exported app and
-all packaged extensions. Reject or rebuild only when the final IPA values differ;
-do not accept or reject a release from archive warnings alone.
+Before every iOS release, require public-version parity across app config, both
+plists, and Xcode marketing settings. Require the widget Debug and Release
+`CURRENT_PROJECT_VERSION` values to equal both plists. Then inspect the exported
+app and all packaged extensions. Reject or rebuild only when the final IPA values
+differ; do not accept or reject a release from archive warnings alone.
 
 ## Evidence
 
 `PlistBuddy` read `CFBundleShortVersionString` 1.0.6 and `CFBundleVersion` 45 from
-both packaged plists. `codesign --verify --deep --strict` passed for the app, and
-the verified IPA SHA-256 was
-`9d4779bddac4647911a3a38e4ee37cf794c2b8691e0746a041b629c62b308e7f`.
+both v1.0.6 packaged plists. The v1.0.7 build later proved a stale widget Xcode
+setting can survive plist-only review. `release-preflight.mjs` and its node test
+now reject that mismatch before EAS allocation; exported IPA inspection remains
+the final authority.
