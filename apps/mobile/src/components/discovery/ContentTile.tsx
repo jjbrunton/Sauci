@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
     borderRadius: radius.lg,
     pointerEvents: 'none',

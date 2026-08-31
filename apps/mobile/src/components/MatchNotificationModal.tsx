@@ -344,7 +344,7 @@ export const MatchNotificationModal: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         justifyContent: 'center',
         alignItems: 'center',
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
     },
     flatBackground: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: colors.backgroundLight,
     },
     // Removed blur/gradient styles

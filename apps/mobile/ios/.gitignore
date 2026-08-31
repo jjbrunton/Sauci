@@ -28,3 +28,6 @@ project.xcworkspace
 
 # CocoaPods
 /Pods/
+
+# @bacons/apple-targets generated entitlements cache
+/.targets/

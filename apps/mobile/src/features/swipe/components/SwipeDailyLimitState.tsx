@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     premiumButtonGradient: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
     premiumButtonContent: {
         flexDirection: 'row',

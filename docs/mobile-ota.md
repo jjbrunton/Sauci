@@ -153,9 +153,16 @@ regenerate and review the native diff separately:
 
 ```bash
 cd apps/mobile
-RELEASE_CHANNEL=production npx expo prebuild
+RELEASE_CHANNEL=production npx expo prebuild --clean
 git diff   # retain only reviewed expo-updates native changes
 ```
+
+`--clean` is required as of `@bacons/apple-targets` 5.x: running `expo prebuild`
+without it against an already-generated iOS project fails inside the widget
+target's Xcode project update step (`withIosXcodeProjectBeta2BaseMod`). A clean
+regeneration from the committed source avoids that failure. Run `pod install`
+in `apps/mobile/ios` afterwards to refresh `Podfile.lock` and the `.xcworkspace`
+before committing.
 
 A build produced before this native source change will not check for updates.
 

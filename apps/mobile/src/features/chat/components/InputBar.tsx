@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     },
     // ...
     inputFieldBorder: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         borderRadius: radius.xl,
         borderWidth: 1,
         borderColor: colors.border,

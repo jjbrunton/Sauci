@@ -61,6 +61,17 @@ whole requested pipeline and report, rather than pausing for re-confirmation. A
 request that explicitly narrows scope ("upload only", "TestFlight only", a named
 track) still bounds the work.
 
+Before every production build, run the deterministic source gate:
+
+```bash
+cd apps/mobile
+npm run release:preflight
+```
+
+It checks public and OTA runtime version parity, iOS app/widget build parity,
+and that the public OTA certificate is tracked and not excluded by root archive
+rules. It does not replace inspection of the exported artifact.
+
 ## Ship a verified artifact
 
 Credentials are never committed: production submission credentials are managed
@@ -103,6 +114,23 @@ eas submit --platform android --profile production --path /absolute/path/to/sauc
 eas submit --platform ios --profile production --path /absolute/path/to/sauci.ipa --wait
 ```
 
+Agents must not upload an unverified artifact, whether they use EAS, Fastlane,
+Xcode Organizer, or a store console. Before upload, they must verify and report
+the platform, exact path, bundle/package identifier, version, build number,
+signing identity, SHA-256 digest, and destination. Once those details match the
+user's stated scope, proceed without asking for a second confirmation.
+
+Before an iOS upload, inspect App Store Connect for automatic TestFlight
+distribution. If upload will add the build to existing groups or testers, report
+them before proceeding. If the effect cannot be established, stop. Changing
+automatic-distribution settings is a separate action and requires its own
+authorization.
+
+App Store Connect API group association alone does not reveal whether automatic
+distribution is enabled. Verify the switch in an authenticated App Store Connect
+UI session before upload. If the UI cannot be checked, stop instead of
+inferring the effect from API data.
+
 Do not use `--latest`; always pass the exact verified path. After upload or
 submission, read back the resulting state from Google Play Console or App Store
 Connect (track/rollout status, App Store version state) and report it. If a
@@ -121,6 +149,23 @@ may change: `app.json`, the platform native version file, and the iOS widget
 `Info.plist` for an iOS build. Any widget implementation, resource, or Xcode
 project rewrite means the source was regenerated and the artifact must be rebuilt
 from the clean tracked sources.
+
+Accept an artifact only after independent inspection. Verify Android package,
+version, signer, all four ABIs, required Worklets/Reanimated/Skia libraries,
+forbidden media-read permissions, OTA runtime/channel/certificate, and SHA-256.
+Verify the iOS IPA's app and every extension version/build/signature after export.
+Quarantine or remove a rejected artifact before presenting any artifact for
+upload. Tag the exact verified build-source commit, then promote it through
+staging and main only after the release gates pass.
+
+The committed Android Gradle ordering fix makes Prefab inputs available before
+dependent native tasks. Preserve that explicit dependency ordering. Do not try to
+solve Gradle task validation by removing Firebase or cycling dependency versions.
+
+After Android upload, EAS Submit `FINISHED`, the exact internal/DRAFT/no-rollout
+submit configuration, and the retained artifact digest are the authoritative
+available read-back when direct Play track inspection would require creating an
+edit. Never create an edit merely to claim read-only verification.
 
 ### Android media permission policy
 
@@ -193,6 +238,23 @@ EAS_LOCAL_BUILD_WORKINGDIR=~/eas-builds \
 eas build --platform android --profile production --local
 ```
 
+For local builds, choose stable ignored working and artifact directories and
+retain them with the command log until the artifact is accepted or rejected.
+Check free disk space first. `ENOSPC`, EAS plugin startup, archive construction,
+and dependency installation failures occur before native compilation: fix and
+preflight those inputs without starting another build. Make one meaningful build
+per newly proven input state.
+
+Report provider progress by phase: packaging, native compilation, submission
+queue, or store processing. Do not describe every failure as a rebuild.
+
+If the normal EAS invocation cannot find its local-build plugin, use a matching
+CLI and plugin version and set `EAS_LOCAL_BUILD_PLUGIN_PATH` to that plugin's
+executable `bin/run`, not its package directory. Do not commit or document a
+machine-specific package-cache path. Run `npm run release:preflight:local-eas`
+after setting the variable. See https://docs.expo.dev/build-reference/local-builds/
+and https://github.com/expo/eas-cli/issues/2787.
+
 ### Limitations of Local Builds
 
 - **Single platform only** - Can't use `--platform all`
@@ -221,7 +283,10 @@ cd android && ./gradlew --stop && cd ..
 
 Treat `expo prebuild` as a source change, not a release step. Run it separately
 only when native dependencies intentionally changed, review the full native diff,
-verify it, and commit it before starting the release from a clean worktree.
+verify it, and commit it before starting the release from a clean worktree. Use
+`expo prebuild --clean` (see `docs/mobile-ota.md`); as of `@bacons/apple-targets`
+5.x, a non-clean prebuild against an already-generated iOS project fails while
+updating the widget's Xcode target.
 
 **Out of memory:**
 ```bash
@@ -423,3 +488,12 @@ committed source change before running the release build.
 
 Ensure your Apple Developer certificates and provisioning profiles are up to date in Xcode:
 - **Xcode** → **Settings** → **Accounts** → Download Manual Profiles
+
+For a checked-in entitlement, first read the corresponding Apple App ID
+capability state. EAS capability sync can report success while Apple rejects a
+malformed update, as tracked in https://github.com/expo/eas-cli/issues/3986.
+Read back Associated Domains, regenerate only the affected profile, and decode
+the replacement profile to confirm `com.apple.developer.associated-domains`
+before rebuilding. With noninteractive managed App Store Connect key auth, set
+`EXPO_APPLE_TEAM_ID` when the command cannot otherwise select the correct team.
+Preserve existing certificates and unrelated target profiles.

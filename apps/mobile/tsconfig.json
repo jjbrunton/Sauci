@@ -16,6 +16,10 @@
     "declarationMap": true,
     "noEmit": true,
     "jsx": "react-native",
+    "types": [
+      "node",
+      "jest"
+    ],
     "paths": {
       "@/*": [
         "./src/*"

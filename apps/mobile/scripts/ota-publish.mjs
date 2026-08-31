@@ -3,6 +3,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const projectDir = resolve(import.meta.dirname, '..');
@@ -140,4 +141,8 @@ export function main(args = process.argv.slice(2), environment = process.env) {
   run('npx', ['eoas', 'publish', '--branch', branch, ...parsePublishArgs(rawPublishArgs)], exportEnv);
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) main();
+// Compare real filesystem paths. A URL pathname percent-encodes spaces, so
+// comparing it to process.argv[1] silently skips main() under any checkout
+// whose absolute path contains a space, and every ota:* script then exits 0
+// having done nothing.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
