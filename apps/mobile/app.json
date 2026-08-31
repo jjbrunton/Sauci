@@ -7,6 +7,10 @@
     "icon": "./assets/icon.png",
     "scheme": "app.sauci",
     "userInterfaceStyle": "automatic",
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sauci.app",
