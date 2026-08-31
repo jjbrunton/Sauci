@@ -24,9 +24,14 @@ jobs:
             echo "master is frozen; target staging or main" >&2
             exit 1
           fi
-          if [ "$BASE_BRANCH" = "main" ] && [ "$HEAD_BRANCH" != "staging" ]; then
-            echo "Only staging may be promoted to main" >&2
-            exit 1
+          if [ "$BASE_BRANCH" = "main" ]; then
+            case "$HEAD_BRANCH" in
+              staging|hotfix/*|release/*) ;;
+              *)
+                echo "main takes staging promotions, or a hotfix/* or release/* branch for direct work" >&2
+                exit 1
+                ;;
+            esac
           fi
           if [ "$BASE_BRANCH" != "staging" ] && [ "$BASE_BRANCH" != "main" ]; then
             echo "Feature pull requests target staging; promotions target main" >&2
