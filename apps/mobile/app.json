@@ -7,12 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "app.sauci",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sauci.app",
@@ -223,6 +217,14 @@
     },
     "plugins": [
       "./plugins/withFixHoisting.js",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#1a1a2e"
+        }
+      ],
       "@react-native-firebase/app",
       [
         "expo-build-properties",
@@ -320,7 +322,10 @@
         "origin": false
       },
       "eas": {
-        "projectId": "807ca0af-e9bd-40e8-a658-f3382072c724"
+        "projectId": "807ca0af-e9bd-40e8-a658-f3382072c724",
+        "observe": {
+          "endpointUrl": "https://ota.apps.jbrunton.co.uk/observe/9a66f3c2-fda7-416f-87e2-6db833b32e9d"
+        }
       }
     },
     "owner": "jjbrunton-apps"
