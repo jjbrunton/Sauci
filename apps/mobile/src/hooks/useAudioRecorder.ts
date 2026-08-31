@@ -1,6 +1,19 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { Audio } from 'expo-av';
+import {
+    AudioModule,
+    RecordingPresets,
+    requestRecordingPermissionsAsync,
+    setAudioModeAsync,
+    type AudioRecorder as ExpoAudioRecorder,
+} from 'expo-audio';
+
+// eslint-plugin-import's namespace rule cannot statically resolve the
+// `AudioRecorder` class exposed on the `AudioModule` native module instance,
+// even though it is a valid, type-checked property. Alias it once here so
+// the property is only dereferenced this way in a single, suppressed spot.
+// eslint-disable-next-line import/namespace
+const AudioRecorderClass = AudioModule.AudioRecorder;
 
 export interface UseAudioRecorderOptions {
     /** Maximum recording duration in seconds. Default: 60 */
@@ -15,8 +28,11 @@ const DEFAULT_OPTIONS: Required<Omit<UseAudioRecorderOptions, 'onRecordingComple
     maxDurationSeconds: 60,
 };
 
+/** How often to poll the recorder for duration updates, in milliseconds. */
+const DURATION_POLL_INTERVAL_MS = 100;
+
 /**
- * Hook for audio recording functionality using expo-av.
+ * Hook for audio recording functionality using expo-audio.
  * Handles microphone permissions, recording lifecycle, and cleanup.
  *
  * @param options - Optional configuration for recording
@@ -32,8 +48,9 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
     const [durationSeconds, setDurationSeconds] = useState(0);
     const [recordingUri, setRecordingUri] = useState<string | null>(null);
 
-    // Refs to track recording instance and cleanup
-    const recordingRef = useRef<Audio.Recording | null>(null);
+    // Refs to track recording instance, duration polling, and cleanup
+    const recordingRef = useRef<ExpoAudioRecorder | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const onRecordingCompleteRef = useRef(options?.onRecordingComplete);
 
     // Keep the callback ref up to date
@@ -41,12 +58,19 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
         onRecordingCompleteRef.current = options?.onRecordingComplete;
     }, [options?.onRecordingComplete]);
 
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+    }, []);
+
     /**
      * Request microphone permissions with user-friendly error handling.
      * @returns true if granted, false otherwise
      */
     const requestPermission = useCallback(async (): Promise<boolean> => {
-        const { status } = await Audio.requestPermissionsAsync();
+        const { status } = await requestRecordingPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert(
                 'Microphone Permission',
@@ -68,21 +92,23 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
         }
 
         try {
+            stopPolling();
+
             // Get final status before stopping
-            const status = await recording.getStatusAsync();
+            const status = recording.getStatus();
             const finalDurationMs = status.isRecording ? status.durationMillis : 0;
             const finalDurationSeconds = Math.round(finalDurationMs / 1000);
 
-            // Stop and unload the recording
-            await recording.stopAndUnloadAsync();
+            // Stop the recording
+            await recording.stop();
 
             // Reset audio mode to allow playback
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
+            await setAudioModeAsync({
+                allowsRecording: false,
+                playsInSilentMode: true,
             });
 
-            const uri = recording.getURI();
+            const uri = recording.uri;
             recordingRef.current = null;
 
             if (uri) {
@@ -106,7 +132,7 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
             setState('idle');
             return null;
         }
-    }, []);
+    }, [stopPolling]);
 
     /**
      * Start a new audio recording.
@@ -126,9 +152,9 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
             }
 
             // Configure audio mode for recording
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: true,
-                playsInSilentModeIOS: true,
+            await setAudioModeAsync({
+                allowsRecording: true,
+                playsInSilentMode: true,
             });
 
             // Reset state
@@ -136,15 +162,17 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
             setRecordingUri(null);
             setState('recording');
 
-            // Create and start the recording
-            const { recording } = await Audio.Recording.createAsync(
-                Audio.RecordingOptionsPresets.HIGH_QUALITY
-            );
+            // Create, prepare, and start the recording
+            const recording = new AudioRecorderClass(RecordingPresets.HIGH_QUALITY);
+            await recording.prepareToRecordAsync();
+            recording.record();
 
             recordingRef.current = recording;
 
-            // Set up status update callback to track duration
-            recording.setOnRecordingStatusUpdate((status) => {
+            // Poll for duration updates (expo-audio has no push-based progress
+            // event equivalent to expo-av's setProgressUpdateInterval).
+            pollRef.current = setInterval(() => {
+                const status = recording.getStatus();
                 if (status.isRecording) {
                     const currentSeconds = Math.round(status.durationMillis / 1000);
                     setDurationSeconds(currentSeconds);
@@ -154,10 +182,7 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
                         stopRecording();
                     }
                 }
-            });
-
-            // Set progress update interval (100ms for smooth duration updates)
-            recording.setProgressUpdateInterval(100);
+            }, DURATION_POLL_INTERVAL_MS);
 
             return true;
         } catch (error) {
@@ -167,9 +192,9 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
 
             // Reset audio mode on error
             try {
-                await Audio.setAudioModeAsync({
-                    allowsRecordingIOS: false,
-                    playsInSilentModeIOS: true,
+                await setAudioModeAsync({
+                    allowsRecording: false,
+                    playsInSilentMode: true,
                 });
             } catch {
                 // Ignore errors during cleanup
@@ -184,10 +209,12 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
      * Cleans up any existing recording.
      */
     const resetRecording = useCallback(() => {
+        stopPolling();
+
         // Clean up any existing recording
         if (recordingRef.current) {
             try {
-                recordingRef.current.stopAndUnloadAsync().catch(() => {
+                recordingRef.current.stop().catch(() => {
                     // Ignore errors during cleanup
                 });
             } catch {
@@ -199,26 +226,29 @@ export const useAudioRecorder = (options?: UseAudioRecorderOptions) => {
         setState('idle');
         setDurationSeconds(0);
         setRecordingUri(null);
-    }, []);
+    }, [stopPolling]);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
+            stopPolling();
+
             if (recordingRef.current) {
-                recordingRef.current.stopAndUnloadAsync().catch(() => {
+                recordingRef.current.stop().catch(() => {
                     // Ignore errors during cleanup
                 });
                 recordingRef.current = null;
             }
 
             // Reset audio mode
-            Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
+            setAudioModeAsync({
+                allowsRecording: false,
+                playsInSilentMode: true,
             }).catch(() => {
                 // Ignore errors during cleanup
             });
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {

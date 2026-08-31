@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Audio } from "expo-av";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -59,7 +59,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
         maxDurationSeconds: maxDuration,
     });
 
-    const [sound, setSound] = useState<Audio.Sound | null>(null);
+    const [sound, setSound] = useState<AudioPlayer | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playbackPosition, setPlaybackPosition] = useState(0);
 
@@ -86,7 +86,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
     useEffect(() => {
         return () => {
             if (sound) {
-                sound.unloadAsync();
+                sound.remove();
             }
         };
     }, [sound]);
@@ -113,30 +113,26 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
         await triggerHaptic('light');
 
         if (isPlaying && sound) {
-            await sound.pauseAsync();
+            sound.pause();
             setIsPlaying(false);
             return;
         }
 
         if (sound) {
-            await sound.playAsync();
+            sound.play();
             setIsPlaying(true);
             return;
         }
 
-        const { sound: newSound } = await Audio.Sound.createAsync(
-            { uri: recordingUri },
-            { shouldPlay: true },
-            (status) => {
-                if (status.isLoaded) {
-                    setPlaybackPosition(status.positionMillis / 1000);
-                    if (status.didJustFinish) {
-                        setIsPlaying(false);
-                        setPlaybackPosition(0);
-                    }
-                }
+        const newSound = createAudioPlayer({ uri: recordingUri });
+        newSound.addListener('playbackStatusUpdate', (status) => {
+            setPlaybackPosition(status.currentTime);
+            if (status.didJustFinish) {
+                setIsPlaying(false);
+                setPlaybackPosition(0);
             }
-        );
+        });
+        newSound.play();
         setSound(newSound);
         setIsPlaying(true);
     };
@@ -145,7 +141,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
         if (!recordingUri) return;
         await triggerHaptic('medium');
         if (sound) {
-            await sound.unloadAsync();
+            sound.remove();
             setSound(null);
         }
         onAnswer('yes', { type: 'audio', media_path: recordingUri, duration_seconds: durationSeconds });
@@ -154,7 +150,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
     const handleReRecord = async () => {
         await triggerHaptic('light');
         if (sound) {
-            await sound.unloadAsync();
+            sound.remove();
             setSound(null);
         }
         setIsPlaying(false);
@@ -165,7 +161,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
     const handleCancel = async () => {
         await triggerHaptic('light');
         if (sound) {
-            await sound.unloadAsync();
+            sound.remove();
             setSound(null);
         }
         setIsPlaying(false);
@@ -176,7 +172,7 @@ export default function QuestionCardAudio({ question, packInfo, onAnswer, onRepo
     const handleSkip = async () => {
         await triggerHaptic('light');
         if (sound) {
-            await sound.unloadAsync();
+            sound.remove();
             setSound(null);
         }
         onAnswer('skip');

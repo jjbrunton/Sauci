@@ -28,7 +28,7 @@ function imageMime(uri: string): string {
     return "image/jpeg";
 }
 
-/** expo-av records .m4a on both platforms; web lands on webm. */
+/** expo-audio records .m4a on both platforms; web lands on webm. */
 function audioMime(uri: string): string {
     const ext = uri.split(".").pop()?.toLowerCase() ?? "m4a";
     if (ext === "webm") return "audio/webm";

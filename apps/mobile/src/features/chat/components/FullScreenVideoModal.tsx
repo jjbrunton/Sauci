@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, ActivityIndicator, useWindowDimensions } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +26,30 @@ const FullScreenVideoModalComponent: React.FC<FullScreenVideoModalProps> = ({
 
     // Use safe area insets for button positioning to avoid notch/dynamic island
     const buttonTop = insets.top + 10;
+
+    const player = useVideoPlayer(uri ? { uri } : null, (setupPlayer) => {
+        setupPlayer.loop = false;
+    });
+
+    // Swap the source when a different video is shown, without reloading on
+    // the initial mount (useVideoPlayer already loaded the first source).
+    const mountedUriRef = useRef(uri);
+    useEffect(() => {
+        if (uri && uri !== mountedUriRef.current) {
+            mountedUriRef.current = uri;
+            player.replace({ uri });
+        }
+    }, [uri, player]);
+
+    // Play while the modal is visible, pause otherwise (there is no
+    // declarative `shouldPlay` prop on `VideoView`).
+    useEffect(() => {
+        if (visible) {
+            player.play();
+        } else {
+            player.pause();
+        }
+    }, [visible, player]);
 
     return (
         <Modal
@@ -75,13 +99,11 @@ const FullScreenVideoModalComponent: React.FC<FullScreenVideoModalProps> = ({
                 </TouchableOpacity>
 
                 {uri && (
-                    <Video
-                        source={{ uri }}
+                    <VideoView
+                        player={player}
                         style={{ width: windowWidth, height: windowHeight * 0.8 }}
-                        resizeMode={ResizeMode.CONTAIN}
-                        useNativeControls
-                        shouldPlay={visible}
-                        isLooping={false}
+                        contentFit="contain"
+                        nativeControls
                     />
                 )}
             </View>

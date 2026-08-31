@@ -113,17 +113,66 @@ jest.mock('expo-file-system/legacy', () => ({
     },
 }));
 
-jest.mock('expo-av', () => ({
-    Audio: {
-        requestPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
-        setAudioModeAsync: jest.fn(async () => undefined),
-        Recording: {
-            createAsync: jest.fn(),
-        },
-        RecordingOptionsPresets: {
-            HIGH_QUALITY: {},
-        },
+jest.mock('expo-video', () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const React = require('react');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { View } = require('react-native');
+
+    const createPlayer = () => ({
+        play: jest.fn(),
+        pause: jest.fn(),
+        replay: jest.fn(),
+        replace: jest.fn(),
+        replaceAsync: jest.fn(async () => undefined),
+        seekBy: jest.fn(),
+        addListener: jest.fn(() => ({ remove: jest.fn() })),
+        removeListener: jest.fn(),
+        playing: false,
+        muted: false,
+        loop: false,
+        currentTime: 0,
+        duration: 0,
+        status: 'idle',
+    });
+
+    return {
+        useVideoPlayer: jest.fn((source: unknown, setup?: (player: unknown) => void) => {
+            const player = createPlayer();
+            if (setup) setup(player);
+            return player;
+        }),
+        createVideoPlayer: jest.fn(() => createPlayer()),
+        VideoView: React.forwardRef((props: any, ref: any) =>
+            React.createElement(View, { ...props, ref })
+        ),
+    };
+});
+
+jest.mock('expo-audio', () => ({
+    AudioModule: {
+        AudioRecorder: jest.fn(),
     },
+    RecordingPresets: {
+        HIGH_QUALITY: {},
+        LOW_QUALITY: {},
+    },
+    requestRecordingPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    getRecordingPermissionsAsync: jest.fn(async () => ({ status: 'granted', granted: true })),
+    setAudioModeAsync: jest.fn(async () => undefined),
+    setIsAudioActiveAsync: jest.fn(async () => undefined),
+    useAudioPlayer: jest.fn(),
+    useAudioPlayerStatus: jest.fn(() => ({})),
+    createAudioPlayer: jest.fn(() => ({
+        play: jest.fn(),
+        pause: jest.fn(),
+        remove: jest.fn(),
+        seekTo: jest.fn(async () => undefined),
+        addListener: jest.fn(() => ({ remove: jest.fn() })),
+        currentTime: 0,
+        duration: 0,
+        playing: false,
+    })),
 }));
 
 jest.mock('react-native-compressor', () => ({
