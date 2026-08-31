@@ -68,16 +68,10 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSBonjourServices</key>
-	<array>
-		<string>_expo._tcp</string>
-	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Sauci uses your camera to take photos and videos that you can share privately with your partner.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Sauci uses Face ID to unlock the app and keep your conversations private.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Expo Dev Launcher uses the local network to discover and connect to development servers running on your computer.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sauci uses your microphone to record audio when you capture videos to share privately with your partner.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -88,8 +82,6 @@
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>
 	</array>
-	<key>RCTMetroPort</key>
-	<string>$(RCT_METRO_PORT)</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIBackgroundModes</key>
