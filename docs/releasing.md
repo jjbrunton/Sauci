@@ -59,7 +59,8 @@ production rollout. Rollout is recoverable (staged-rollout halt, phased-release
 pause, OTA supersession, or the next version), so agents should execute the
 whole requested pipeline and report, rather than pausing for re-confirmation. A
 request that explicitly narrows scope ("upload only", "TestFlight only", a named
-track) still bounds the work.
+track) still bounds the work. Building an
+artifact alone does not authorize an upload.
 
 Before every production build, run the deterministic source gate:
 
@@ -133,9 +134,12 @@ inferring the effect from API data.
 
 Do not use `--latest`; always pass the exact verified path. After upload or
 submission, read back the resulting state from Google Play Console or App Store
-Connect (track/rollout status, App Store version state) and report it. If a
-command returns an ambiguous result, inspect EAS and the store first; do not
-retry blind.
+Connect (track/rollout status, App Store version state) and report it. Two
+things still need their own authorization, because neither is part of shipping
+the requested release: distributing to additional TestFlight groups, and
+re-uploading after an ambiguous result. If a command returns an ambiguous
+result, inspect EAS and the store first; do not retry unless the user
+explicitly authorizes another upload.
 
 ### Source integrity
 
@@ -347,7 +351,9 @@ android/app/build/outputs/bundle/release/app-release.aab
 ### Step 5: Upload to Play Store
 
 Apply the artifact-verification policy above before opening or changing the
-release. Prefer the Fastlane `android release` lane; when using the console:
+release. A release request covers the rollout, so carry it through to the track
+the request named. Prefer the Fastlane `android release` lane; when using the
+console:
 
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select **Sauci** app
@@ -356,7 +362,8 @@ release. Prefer the Fastlane `android release` lane; when using the console:
 5. Upload the `.aab` file
 6. Add release notes and roll out the release — Play review runs automatically
    and the rollout proceeds on approval
-7. Read back the track and rollout state
+7. Read back the track and rollout state; halt the rollout if the read-back
+   does not match what was uploaded
 
 A release request includes review submission and rollout; a bad rollout is
 halted from the same release page or superseded by the next version.
@@ -406,8 +413,10 @@ Apply the artifact-verification policy above before using Xcode Organizer.
 
 ### Step 5: Submit in App Store Connect
 
-A release request includes App Review submission and release on approval. Prefer
-the Fastlane `ios release` lane, which does all of this in one step; manually:
+A release request includes App Review submission and release on approval.
+Submission is recoverable: it can be cancelled while waiting for review, and a
+phased release can be paused after approval. Prefer the Fastlane `ios release`
+lane, which does all of this in one step; manually:
 
 1. Go to [App Store Connect](https://appstoreconnect.apple.com)
 2. Select **Sauci**
