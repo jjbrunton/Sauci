@@ -249,6 +249,23 @@ and dependency installation failures occur before native compilation: fix and
 preflight those inputs without starting another build. Make one meaningful build
 per newly proven input state.
 
+Before starting: confirm `eas` is installed and on PATH (scripts call bare
+`eas`); explicitly export `ANDROID_HOME`, `ANDROID_SDK_ROOT`, and `JAVA_HOME`
+(JDK 17) rather than relying on a shell profile, because non-interactive shells
+used for automation do not load it ("SDK location not found" otherwise); ensure
+`EAS_LOCAL_BUILD_WORKINGDIR` does not exist or is empty ("Workingdir is not
+empty" otherwise); and run every command from `apps/mobile`. Capture the full
+build log to a file; do not pipe it through `tail`, which drops the detail
+needed to diagnose a failure.
+
+After a successful iOS build, EAS auto-increment updates both app and widget
+Info.plists but not the widget target's `CURRENT_PROJECT_VERSION` in the
+pbxproj, so `release:preflight` fails until it is synced to the new build
+number (for example `sed -i '' 's/CURRENT_PROJECT_VERSION = 46;/CURRENT_PROJECT_VERSION = 47;/' ios/Sauci.xcodeproj/project.pbxproj`
+for both Debug and Release). If native dependencies changed, also sync
+`ios/Podfile.lock` from the successful build's working directory: the archive's
+`pod install` resolution is authoritative when local CocoaPods is broken.
+
 Report provider progress by phase: packaging, native compilation, submission
 queue, or store processing. Do not describe every failure as a rebuild.
 
@@ -291,6 +308,24 @@ verify it, and commit it before starting the release from a clean worktree. Use
 `expo prebuild --clean` (see `docs/mobile-ota.md`); as of `@bacons/apple-targets`
 5.x, a non-clean prebuild against an already-generated iOS project fails while
 updating the widget's Xcode target.
+
+**After native regeneration:** `expo prebuild --clean` can silently regress
+checked-in native invariants (confirmed during the SDK 54 to 56 upgrade). Before
+committing a regenerated project:
+
+- Diff pbxproj signing and identity keys (PRODUCT_BUNDLE_IDENTIFIER,
+  CODE_SIGN_ENTITLEMENTS) against the last release tag; apple-targets can derive
+  a widget's bundle identifier from its folder name instead of the pinned config.
+- Semantic-diff Info.plist and entitlements files against the last release tag;
+  prebuild can reintroduce dev-launcher-only keys (NSBonjourServices,
+  NSLocalNetworkUsageDescription, RCTMetroPort) and drop widget entitlements.
+- Check android/gradle.properties for a reset `org.gradle.jvmargs` (prebuild
+  resets it to the stock -Xmx2048m/512m, which OOMs release Kotlin/CMake tasks).
+- Run `npm run release:preflight`; it enforces the Android manifest media
+  permission removal and rejects the dev-launcher-only Info.plist keys.
+- Treat `expo-doctor` unmaintained-package warnings as release blockers on an
+  SDK upgrade: a package absent from the new SDK's bundledNativeModules can fail
+  the iOS archive with no compatible release available.
 
 **Out of memory:**
 ```bash
