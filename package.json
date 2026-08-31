@@ -60,7 +60,8 @@
   "overrides": {
     "rollup": "4.54.0",
     "react-native": "0.85.3",
-    "expo": "~56.0.0"
+    "expo": "~56.0.0",
+    "@react-native/metro-config": "0.85.3"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-arm64-musl": "4.54.0",
