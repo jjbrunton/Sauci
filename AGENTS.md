@@ -76,6 +76,7 @@ environment limitation; do not call it a passing product check.
 |---|---|
 | System boundaries and data flow | `docs/architecture/system.md` |
 | Local services, ports, fixtures | `docs/development/local-stack.md` |
+| Dependency and lockfile discipline | `docs/development/dependencies.md` |
 | Test layers and required gates | `docs/testing/strategy.md` |
 | Database migration safety | `docs/operations/database-migrations.md` |
 | Agent roles and effort routing | `docs/agents/routing.md` |

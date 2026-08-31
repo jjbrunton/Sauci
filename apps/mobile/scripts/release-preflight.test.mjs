@@ -67,6 +67,38 @@ test('rejects an OTA certificate without its root archive allowlist', () => {
   }
 });
 
+test('rejects an Android manifest that lost the media permission removal (expo prebuild regression)', () => {
+  const root = fixture();
+  try {
+    const manifest = 'apps/mobile/android/app/src/main/AndroidManifest.xml';
+    replace(
+      root,
+      manifest,
+      '<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>',
+      '<uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
+    );
+    assert.throws(() => validate(root), /READ_MEDIA_IMAGES \(expo prebuild regresses this\)/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('rejects an iOS Info.plist that regained dev-launcher-only keys (expo prebuild regression)', () => {
+  const root = fixture();
+  try {
+    const infoPlist = 'apps/mobile/ios/Sauci/Info.plist';
+    replace(
+      root,
+      infoPlist,
+      '</dict>\n</plist>',
+      '<key>NSBonjourServices</key>\n<array><string>_expo._tcp</string></array>\n</dict>\n</plist>',
+    );
+    assert.throws(() => validate(root), /dev-launcher-only keys reintroduced by expo prebuild: NSBonjourServices/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('requires the local EAS plugin executable rather than its package directory', () => {
   const root = mkdtempSync(join(tmpdir(), 'sauci-eas-plugin-'));
   const executable = join(root, 'bin-run');

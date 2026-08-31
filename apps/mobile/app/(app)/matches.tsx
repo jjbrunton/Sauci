@@ -69,10 +69,12 @@ export default function MatchesScreen() {
         checkNudgeCooldown,
     } = useMatchStore();
     const { user, couple, partner } = useAuthStore();
+    const userId = user?.id;
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isWideScreen = width > MAX_CONTENT_WIDTH;
     const [showTutorial, setShowTutorial] = useState(false);
+    const tutorialDismissedRef = useRef(false);
     const [nudgeFeedback, setNudgeFeedback] = useState<string | null>(null);
     const [headerHeight, setHeaderHeight] = useState(130);
 
@@ -104,21 +106,30 @@ export default function MatchesScreen() {
     // Check if tutorial should be shown when screen is focused or matches change
     useFocusEffect(
         useCallback(() => {
+            let isActive = true;
+
             const checkTutorial = async () => {
-                if (matches.length > 0) {
-                    const seen = await hasSeenMatchesTutorial();
-                    if (!seen) {
+                if (matches.length > 0 && userId) {
+                    const seen = await hasSeenMatchesTutorial(userId);
+                    if (isActive && !tutorialDismissedRef.current && !seen) {
                         setShowTutorial(true);
                     }
                 }
             };
-            checkTutorial();
-        }, [matches.length])
+            void checkTutorial();
+
+            return () => {
+                isActive = false;
+            };
+        }, [matches.length, userId])
     );
 
     const handleTutorialComplete = async () => {
-        await markMatchesTutorialSeen();
+        if (!userId) return;
+
+        tutorialDismissedRef.current = true;
         setShowTutorial(false);
+        await markMatchesTutorialSeen(userId);
     };
 
     // Load whichever view is showing, once. Returning to this tab reuses what is
