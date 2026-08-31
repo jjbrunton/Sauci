@@ -27,7 +27,7 @@
           "group.com.sauci.app"
         ]
       },
-      "buildNumber": "45",
+      "buildNumber": "46",
       "usesAppleSignIn": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
