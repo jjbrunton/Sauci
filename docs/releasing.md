@@ -37,8 +37,9 @@ Output files are placed in the current directory by default.
 
 These scripts create signed artifacts only. They do not upload or submit them.
 An explicit request for a mobile release, upload, or store-submission workflow
-authorizes the requested store upload within its stated platform and destination
-scope. Building an artifact alone does not authorize an upload.
+authorizes the full pipeline within its stated platform and destination scope:
+upload, App Review submission, and rollout. Building an artifact alone does not
+authorize an upload.
 
 Before every production build, run the deterministic source gate:
 
@@ -89,11 +90,17 @@ inferring the effect from API data.
 Do not use `--latest` for a local release. Before upload, verify the artifact's
 package or bundle identifier, public version, build number, signature, and
 SHA-256 digest. After upload, read back the same identity and version from Google
-Play Console or App Store Connect. Public rollout, App Review submission, and
-additional TestFlight group distribution remain separate, explicitly authorized
-actions unless the original request expressly includes them. If an upload command
-returns an ambiguous result, inspect EAS and the store first; do not retry unless
-the user explicitly authorizes another upload.
+Play Console or App Store Connect.
+
+A release request authorizes the whole pipeline for the platforms it names:
+build, verification, upload, App Review submission, and rollout. Carry it
+through and report what happened rather than stopping at upload to re-confirm.
+Every one of those steps is recoverable: a submission can be cancelled, a
+phased release paused, a staged rollout halted. Two things still need their own
+authorization, because neither is part of shipping the release that was asked
+for: distributing to additional TestFlight groups, and re-uploading after an
+ambiguous result. If an upload returns an ambiguous result, inspect EAS and the
+store first; do not retry unless the user explicitly authorizes another upload.
 
 ### Source integrity
 
@@ -305,18 +312,18 @@ android/app/build/outputs/bundle/release/app-release.aab
 ### Step 5: Upload to Play Store
 
 Apply the upload execution policy above before opening or changing the release.
-Uploading the AAB and starting any rollout are separate actions unless the
-original request expressly includes the rollout.
+A release request covers the rollout, so carry it through to the track the
+request named.
 
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select **Sauci** app
 3. Go to **Internal testing**, unless the user authorized a different exact track
 4. **Create new release**
 5. Upload the `.aab` file
-6. Add release notes, save the release as a draft, and read it back
+6. Add release notes, then send the release and read it back
 
-Do not send the draft for review or start a rollout unless the original request
-expressly includes that action.
+Roll out to the track the request named. Halt the rollout if the read-back does
+not match what was uploaded.
 
 ### Verifying Keystore Fingerprint
 
@@ -364,8 +371,9 @@ verified automatic TestFlight distribution before uploading.
 
 ### Step 5: Submit in App Store Connect
 
-Submitting for App Review is not authorized by an upload request unless the
-original request expressly includes App Review submission.
+A release request covers App Review submission, so carry it through. Submission
+is recoverable: it can be cancelled while waiting for review, and a phased
+release can be paused after approval.
 
 1. Go to [App Store Connect](https://appstoreconnect.apple.com)
 2. Select **Sauci**
