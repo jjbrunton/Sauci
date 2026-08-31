@@ -11,5 +11,6 @@ expo-env.d.ts
 *.keystore
 # Fastlane
 fastlane-key.json
+fastlane/.env
 fastlane/report.xml
 fastlane/README.md

@@ -14,12 +14,12 @@ before accepting a build.
 
 A request to generate or create a release authorizes the scoped version edits,
 release notes, local builds, release commits, and one local annotated tag. When
-the request also specifies a mobile release, upload, or store-submission
-workflow, it authorizes the requested store upload within its stated platform
-and destination scope after the exact artifact has been verified. It does not
-authorize pushing commits or tags, changing signing credentials, regenerating
-native projects, a public rollout, App Review submission, or additional
-TestFlight distribution unless the request explicitly includes that action.
+the request also asks to ship, upload, submit, or release to the stores, it
+authorizes the complete store pipeline for the stated platforms after the exact
+artifact has been verified: upload, App Review / Google Play review submission,
+and rollout, including full production rollout (see the `release-mobile` skill).
+It does not authorize pushing commits or tags, changing signing credentials, or
+regenerating native projects unless the request explicitly includes that action.
 
 ## Defaults
 

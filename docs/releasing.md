@@ -2,10 +2,27 @@
 
 This guide covers local release builds for Android and iOS.
 
-JavaScript-only changes can also ship over the air between store releases. See
-[Mobile over-the-air updates](mobile-ota.md). Anything that changes native code
-still requires a store build with a bumped `expo.version`, because the OTA
-explicit runtime version is synchronized with the app version.
+## OTA update or full store release?
+
+Decide the delivery mechanism first — they are different pipelines:
+
+- **OTA update** ([Mobile over-the-air updates](mobile-ota.md)) ships only the
+  JavaScript bundle and assets to already-installed builds. No store review,
+  live in minutes, rolled back by repointing the XPREM channel. Valid only for
+  changes that leave the native binary untouched (no native code, native
+  dependencies, `ios/`/`android/` project changes, permissions, entitlements,
+  Expo SDK, or `expo.version` bump). OTA reaches only installs of the current
+  `expo.version`, because the runtime version is synchronized with the app
+  version.
+- **Full store release** (this document) builds a new signed binary and ships
+  it through App Store Connect and Google Play, including store review. It is
+  required for anything OTA cannot carry. Rollback is coarser: halt a Play
+  staged rollout, pause an iOS phased release, or supersede with the next
+  version (an OTA update can often patch a bad JS-level regression in a live
+  store build immediately).
+
+Prefer OTA when the change qualifies, and always report which mechanism was
+used.
 
 ## Prerequisites
 
@@ -35,49 +52,62 @@ npm run release:ios
 
 Output files are placed in the current directory by default.
 
-These scripts create signed artifacts only. They do not upload or submit them.
-An explicit request for a mobile release, upload, or store-submission workflow
-authorizes the requested store upload within its stated platform and destination
-scope. Building an artifact alone does not authorize an upload.
+These scripts create signed artifacts only. An explicit request for a mobile
+release authorizes the complete pipeline for the stated platforms: build,
+verification, store upload, review submission, and rollout — including full
+production rollout. Rollout is recoverable (staged-rollout halt, phased-release
+pause, OTA supersession, or the next version), so agents should execute the
+whole requested pipeline and report, rather than pausing for re-confirmation. A
+request that explicitly narrows scope ("upload only", "TestFlight only", a named
+track) still bounds the work.
 
-## Submit a local artifact with EAS
+## Ship a verified artifact
 
-The production submission credentials are managed by EAS. Never add App Store
-Connect `.p8` files, Google service-account JSON files, or local credential paths
-to the repository or `eas.json`.
+Credentials are never committed: production submission credentials are managed
+by EAS, and the Fastlane iOS lanes read an App Store Connect API key from the
+environment (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`). Never add `.p8`
+files, Google service-account JSON files, or local credential paths to the
+repository or `eas.json`.
 
-Submit only an independently verified artifact by its exact absolute path:
+Ship only an independently verified artifact by its exact absolute path. Before
+upload, verify and report the platform, exact path, bundle/package identifier,
+version, build number, signing identity, SHA-256 digest, and destination — then
+proceed through upload, review submission, and rollout without asking for a
+second confirmation.
+
+### Full release (upload + review submission + rollout)
 
 ```bash
 cd apps/mobile
 
-# Uploads an Android internal-track draft; it does not roll out the release.
+# Android: commits the release on the production track. Play review runs
+# automatically and rollout proceeds on approval.
+bundle exec fastlane android release aab:/absolute/path/to/sauci.aab
+# Optional: track:beta, rollout:0.1 (10% staged rollout)
+
+# iOS: uploads, creates the App Store version, submits for App Review, and
+# releases automatically on approval.
+bundle exec fastlane ios release ipa:/absolute/path/to/sauci.ipa release_notes:"What's new..."
+# Optional: phased_release:true (7-day phased release), automatic_release:false
+```
+
+### Upload only (when the request stops short of review)
+
+```bash
+cd apps/mobile
+
+# Android internal-track draft; does not roll out the release.
 eas submit --platform android --profile production --path /absolute/path/to/sauci.aab --wait
 
-# Uploads to App Store Connect/TestFlight; it does not submit for App Review.
+# App Store Connect/TestFlight; does not submit for App Review.
 eas submit --platform ios --profile production --path /absolute/path/to/sauci.ipa --wait
 ```
 
-Agents must not upload an unverified artifact, whether they use EAS, Fastlane,
-Xcode Organizer, or a store console. Before upload, they must verify and report
-the platform, exact path, bundle/package identifier, version, build number,
-signing identity, SHA-256 digest, and destination. Once those details match the
-user's stated scope, proceed without asking for a second confirmation.
-
-Before an iOS upload, inspect App Store Connect for automatic TestFlight
-distribution. If upload will add the build to existing groups or testers, report
-them before proceeding. If the effect cannot be established, stop. Changing
-automatic-distribution settings is a separate action and requires its own
-authorization.
-
-Do not use `--latest` for a local release. Before upload, verify the artifact's
-package or bundle identifier, public version, build number, signature, and
-SHA-256 digest. After upload, read back the same identity and version from Google
-Play Console or App Store Connect. Public rollout, App Review submission, and
-additional TestFlight group distribution remain separate, explicitly authorized
-actions unless the original request expressly includes them. If an upload command
-returns an ambiguous result, inspect EAS and the store first; do not retry unless
-the user explicitly authorizes another upload.
+Do not use `--latest`; always pass the exact verified path. After upload or
+submission, read back the resulting state from Google Play Console or App Store
+Connect (track/rollout status, App Store version state) and report it. If a
+command returns an ambiguous result, inspect EAS and the store first; do not
+retry blind.
 
 ### Source integrity
 
@@ -251,19 +281,20 @@ android/app/build/outputs/bundle/release/app-release.aab
 
 ### Step 5: Upload to Play Store
 
-Apply the upload execution policy above before opening or changing the release.
-Uploading the AAB and starting any rollout are separate actions unless the
-original request expressly includes the rollout.
+Apply the artifact-verification policy above before opening or changing the
+release. Prefer the Fastlane `android release` lane; when using the console:
 
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select **Sauci** app
-3. Go to **Internal testing**, unless the user authorized a different exact track
+3. Go to the track named in the request (**Production** for a release request)
 4. **Create new release**
 5. Upload the `.aab` file
-6. Add release notes, save the release as a draft, and read it back
+6. Add release notes and roll out the release — Play review runs automatically
+   and the rollout proceeds on approval
+7. Read back the track and rollout state
 
-Do not send the draft for review or start a rollout unless the original request
-expressly includes that action.
+A release request includes review submission and rollout; a bad rollout is
+halted from the same release page or superseded by the next version.
 
 ### Verifying Keystore Fingerprint
 
@@ -301,8 +332,7 @@ cd ..
 
 ### Step 4: Upload to App Store
 
-Apply the upload execution policy above before using Xcode Organizer. Report any
-verified automatic TestFlight distribution before uploading.
+Apply the artifact-verification policy above before using Xcode Organizer.
 
 1. In Xcode Organizer (Window → Organizer), select the archive
 2. Click **Distribute App**
@@ -311,13 +341,15 @@ verified automatic TestFlight distribution before uploading.
 
 ### Step 5: Submit in App Store Connect
 
-Submitting for App Review is not authorized by an upload request unless the
-original request expressly includes App Review submission.
+A release request includes App Review submission and release on approval. Prefer
+the Fastlane `ios release` lane, which does all of this in one step; manually:
 
 1. Go to [App Store Connect](https://appstoreconnect.apple.com)
 2. Select **Sauci**
 3. Create a new version or select the uploaded build
-4. Fill in release notes and submit for review
+4. Fill in release notes and submit for review, with automatic release on
+   approval unless the request says otherwise
+5. Read back the version state and report it
 
 ---
 

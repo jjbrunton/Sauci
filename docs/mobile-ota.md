@@ -6,9 +6,10 @@ against a self-hosted XPREM update server (formerly `expo-open-ota`) at
 protocol, so the client is stock `expo-updates`; only the endpoint, the request
 headers, and the code-signing certificate are Sauci specific.
 
-Store releases still follow [Mobile release process](releasing.md). OTA never
-replaces a store build; it only refreshes the JavaScript bundle and assets of an
-already installed build.
+Store releases still follow [Mobile release process](releasing.md), which opens
+with the OTA-vs-store-release decision rule. OTA never replaces a store build;
+it only refreshes the JavaScript bundle and assets of an already installed
+build.
 
 ## Status
 
