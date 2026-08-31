@@ -44,7 +44,7 @@
     "@react-native-firebase/app": "^23.8.2",
     "@react-native-firebase/crashlytics": "^23.8.4",
     "@react-native-google-signin/google-signin": "^16.1.1",
-    "@shopify/react-native-skia": "2.6.2",
+    "@shopify/react-native-skia": "^2.6.9",
     "@supabase/supabase-js": "^2.39.0",
     "@tanstack/react-query": "^5.17.0",
     "babel-preset-expo": "~56.0.0",
