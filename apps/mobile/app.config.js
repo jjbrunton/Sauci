@@ -81,7 +81,7 @@ module.exports = () => ({
   // Keep this explicit because EOAS validates a primitive runtime string before
   // upload. The release version script updates it atomically with app.json and
   // the checked-in native runtime values.
-  runtimeVersion: '1.0.7',
+  runtimeVersion: '1.0.8',
   updates: {
     enabled: true,
     url: OTA_MANIFEST_URL,
