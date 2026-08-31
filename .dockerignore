@@ -39,3 +39,11 @@ terraform
 .claude
 .codex
 .ralph
+
+# The admin app builds from this same monorepo context (apps/admin/Dockerfile).
+!apps/admin
+!apps/admin/**
+
+# Host build artefacts must never leak into any image context.
+**/node_modules
+**/dist
