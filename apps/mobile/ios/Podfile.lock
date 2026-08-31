@@ -15,9 +15,6 @@ PODS:
     - ExpoModulesCore
   - EXApplication (56.0.3):
     - ExpoModulesCore
-  - EXAV (16.0.8):
-    - ExpoModulesCore
-    - ReactCommon/turbomodule/core
   - EXConstants (56.0.25):
     - ExpoModulesCore
   - EXJSONUtils (56.0.0)
@@ -233,6 +230,8 @@ PODS:
     - Yoga
   - ExpoAsset (56.0.24):
     - ExpoModulesCore
+  - ExpoAudio (56.0.13):
+    - ExpoModulesCore
   - ExpoBlur (56.0.4):
     - ExpoModulesCore
   - ExpoClipboard (56.0.4):
@@ -337,10 +336,14 @@ PODS:
     - ExpoModulesCore
   - ExpoSymbols (56.0.7):
     - ExpoModulesCore
+  - ExpoSystemUI (56.0.5):
+    - ExpoModulesCore
   - ExpoUI (56.0.26):
     - ExpoModulesCore
     - ExpoModulesWorklets
     - React-RCTFabric
+  - ExpoVideo (56.1.4):
+    - ExpoModulesCore
   - ExpoWidgets (3.0.2):
     - ExpoModulesCore
   - EXStructuredHeaders (56.0.0)
@@ -1988,7 +1991,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-skia (2.6.2):
+  - react-native-skia (2.6.9):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2853,7 +2856,6 @@ PODS:
 DEPENDENCIES:
   - EASClient (from `../../../node_modules/expo-eas-client/ios`)
   - EXApplication (from `../../../node_modules/expo-application/ios`)
-  - EXAV (from `../../../node_modules/expo-av/ios`)
   - EXConstants (from `../../../node_modules/expo-constants/ios`)
   - EXJSONUtils (from `../../../node_modules/expo-json-utils/ios`)
   - EXManifests (from `../../../node_modules/expo-manifests/ios`)
@@ -2866,6 +2868,7 @@ DEPENDENCIES:
   - ExpoAppleAuthentication (from `../../../node_modules/expo-apple-authentication/ios`)
   - ExpoAppMetrics (from `../../../node_modules/expo-app-metrics/ios`)
   - ExpoAsset (from `../../../node_modules/expo-asset/ios`)
+  - ExpoAudio (from `../../../node_modules/expo-audio/ios`)
   - ExpoBlur (from `../../../node_modules/expo-blur/ios`)
   - ExpoClipboard (from `../../../node_modules/expo-clipboard/ios`)
   - "ExpoDomWebView (from `../../../node_modules/@expo/dom-webview/ios`)"
@@ -2892,7 +2895,9 @@ DEPENDENCIES:
   - ExpoSharing (from `../../../node_modules/expo-sharing/ios`)
   - ExpoSplashScreen (from `../../../node_modules/expo-splash-screen/ios`)
   - ExpoSymbols (from `../../../node_modules/expo-symbols/ios`)
+  - ExpoSystemUI (from `../../../node_modules/expo-system-ui/ios`)
   - "ExpoUI (from `../../../node_modules/@expo/ui/ios`)"
+  - ExpoVideo (from `../../../node_modules/expo-video/ios/ExpoVideo.podspec`)
   - "ExpoWidgets (from `../../../node_modules/@bittingz/expo-widgets/ios`)"
   - EXStructuredHeaders (from `../../../node_modules/expo-structured-headers/ios`)
   - "ExtensionStorage (from `../../../node_modules/@bacons/apple-targets/ios`)"
@@ -3024,8 +3029,6 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-eas-client/ios"
   EXApplication:
     :path: "../../../node_modules/expo-application/ios"
-  EXAV:
-    :path: "../../../node_modules/expo-av/ios"
   EXConstants:
     :path: "../../../node_modules/expo-constants/ios"
   EXJSONUtils:
@@ -3050,6 +3053,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-app-metrics/ios"
   ExpoAsset:
     :path: "../../../node_modules/expo-asset/ios"
+  ExpoAudio:
+    :path: "../../../node_modules/expo-audio/ios"
   ExpoBlur:
     :path: "../../../node_modules/expo-blur/ios"
   ExpoClipboard:
@@ -3102,8 +3107,12 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-splash-screen/ios"
   ExpoSymbols:
     :path: "../../../node_modules/expo-symbols/ios"
+  ExpoSystemUI:
+    :path: "../../../node_modules/expo-system-ui/ios"
   ExpoUI:
     :path: "../../../node_modules/@expo/ui/ios"
+  ExpoVideo:
+    :podspec: "../../../node_modules/expo-video/ios/ExpoVideo.podspec"
   ExpoWidgets:
     :path: "../../../node_modules/@bittingz/expo-widgets/ios"
   EXStructuredHeaders:
@@ -3305,7 +3314,6 @@ SPEC CHECKSUMS:
   AppCheckCore: e215d35177a9cf469927863e69c13e220df32a8b
   EASClient: 2321f8d99fa86c710a6f68e017f3b54366baed9f
   EXApplication: e6040c92edc5522accd62852342e6b14742d42c0
-  EXAV: b60fcf142fae6684d295bc28cd7cfcb3335570ea
   EXConstants: a6fea3d870546e8aba088aa2ed05f3c23c1b9030
   EXJSONUtils: dba2755f4e24009eaf87a876b2d615ea06c16e42
   EXManifests: 7e19be8df665a338493060a419847dae76ffcd43
@@ -3318,6 +3326,7 @@ SPEC CHECKSUMS:
   ExpoAppleAuthentication: 3dd8ddd3016396a8171f06af8cc5e3e008e8eaf4
   ExpoAppMetrics: b4eefdedbb1b40b6649407e4d84922139e39ccf4
   ExpoAsset: 3f825e3c30de2d3e8a280b97602a8a607ce864fe
+  ExpoAudio: 2970e2d332b52bfbb64d88564105df4b422c78a4
   ExpoBlur: 234b3c1f42a35851428e10fa9d347701ae707c4d
   ExpoClipboard: 342ae52697ff1cf89b8849bee624a9a320e77d3c
   ExpoDomWebView: 4e53b05879dc73ba374f76bff93dd64c8a0d91b3
@@ -3333,7 +3342,7 @@ SPEC CHECKSUMS:
   ExpoLocalAuthentication: d8dc72d217facafed303ef3417c3f448edf74819
   ExpoLogBox: cdad5c9402a186574fb5924ea91df1f08ba9a98a
   ExpoMediaLibrary: 2597e4d61e8d990bdb9013fe8dc44224f36bdb62
-  ExpoModulesCore: b69cb8de9f9221fc138a13a60c8e7bf0a257c6b0
+  ExpoModulesCore: fbda8071d061c427e06988f5332ad566b893f926
   ExpoModulesJSI: 45a52183c66764d10846ac2493cc8bbc05e1d340
   ExpoModulesWorklets: 19afe32682aa1d17fd0f73b3db85ae0850ed6431
   ExpoModulesWorkletsAdapter: 983091842e6474031ed2a8137f5347eb51e0cc22
@@ -3344,7 +3353,9 @@ SPEC CHECKSUMS:
   ExpoSharing: 5e3ac486863cd9fd6d8a22b11295386609cc8d33
   ExpoSplashScreen: 06ea4c812a646bf65802fe0f87f5fcd8d68a22bf
   ExpoSymbols: 37e96a38eed3fb50af4b7c86b8a80ed3054a0a01
+  ExpoSystemUI: 8f4fb641c6a6ebe2a01dda0fbd3fdd952ab5823a
   ExpoUI: 15c5293922df464aefcfb528396c4db211795322
+  ExpoVideo: 292b8c6be12bacf0b2e5a697276788280cdccdfb
   ExpoWidgets: 366fe61c681044e13b7cc344bdbd319ff5d54b28
   EXStructuredHeaders: 9e89bcdd636ae2ecb59995cfba3230f5d7547c08
   ExtensionStorage: b1b89518395d9d556e00a1b1f299172e49be3dbe
@@ -3366,7 +3377,7 @@ SPEC CHECKSUMS:
   GoogleUtilities: 4e0c2ad9fa0d0d18b5c4df8bf57b461cba35b0bb
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  hermes-engine: 8bd6aa270d3ac186bf1cbd163415001c3fd5249b
+  hermes-engine: 83e9d16623ba92520030c440a3f302e6453ff7e2
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   PromisesSwift: 217dea0fd5d2ad65222a109c48698add13cc1c5b
@@ -3380,7 +3391,7 @@ SPEC CHECKSUMS:
   React: e2dc35338068bbd299c66f043ae0d7f25de8499e
   React-callinvoker: 28b25d21b124c26cebaea713ba7d801b9351dc48
   React-Core: 02ed7d2ffb70437bdf2aba074a13078a7b0b9ff0
-  React-Core-prebuilt: ba446b765744ef1e68074edbae93bd643555634e
+  React-Core-prebuilt: db384cdc31379a5bd7c9a060e3bba6b0f4ebaea1
   React-CoreModules: b3a5a42dadcde3b5d47b325bd912eb2ced89e146
   React-cxxreact: fe8f88dda044e5905e99a00f41b7a874c3908716
   React-debug: 9af1e96a6069c996e3d9f1e493603e74bc9f1593
@@ -3411,7 +3422,7 @@ SPEC CHECKSUMS:
   React-mutationobservernativemodule: a7f3dc483d3e0e0fade0ea00e2cc95e2e462e023
   react-native-compressor: f2f7040aa578b68b1690b41e920140979965b08f
   react-native-safe-area-context: ba7283e541a5f57c6b27a7e33f2c40b8977888c0
-  react-native-skia: ebef3d06fcc4838d53310e7a47625aafa8061216
+  react-native-skia: b685cf397470d1cae3d62235d6223e26718e5e01
   react-native-view-shot: 6da2aaa0404b8d617ab1689550acdb251d759af9
   React-NativeModulesApple: deba264b03bd79c6bd61014fa30e40321b5e443a
   React-networking: 905170b05255ad7025dd16e9d0cf5a7b9458208a
@@ -3446,7 +3457,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 25c9c516839be2c5e3d3344f95dc7da5f7e63fc2
   ReactCodegen: 5b2b5c009cec17b5e848bde3bc067c339009390d
   ReactCommon: 7dfc3250793bf36cf221096ff59e1179e13eef7f
-  ReactNativeDependencies: 14f257e447645e5d8a8c18ef66068f67f7219299
+  ReactNativeDependencies: 1058da702bda6f5989c4af19919dd162cb52fd02
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RevenueCat: 9357239a9f0978285e68983637b8a602e65c94f0
   RNCAsyncStorage: d90e523830fa7705f8c61632479abde871bc792f
