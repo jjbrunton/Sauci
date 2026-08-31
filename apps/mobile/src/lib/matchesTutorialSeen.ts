@@ -1,51 +1,70 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const STORAGE_KEY = "matches_tutorial_seen";
+const STORAGE_KEY_PREFIX = "matches_tutorial_seen";
+const LEGACY_STORAGE_KEY = "matches_tutorial_seen";
 
-async function getStorage(): Promise<boolean> {
+const buildKey = (userId: string): string => `${STORAGE_KEY_PREFIX}_${userId}`;
+
+async function getStorage(userId: string): Promise<boolean> {
     try {
-        let data: string | null = null;
+        const key = buildKey(userId);
 
         if (Platform.OS === "web") {
             if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-                data = window.localStorage.getItem(STORAGE_KEY);
+                return window.localStorage.getItem(key) === "true";
             }
-        } else {
-            data = await SecureStore.getItemAsync(STORAGE_KEY);
+
+            return false;
         }
 
-        return data === "true";
+        const storedValue = await AsyncStorage.getItem(key);
+        if (storedValue !== null) {
+            return storedValue === "true";
+        }
+
+        // Keep dismissals made before the account-scoped AsyncStorage key was
+        // introduced. Future reads use the durable app storage key above.
+        const legacyValue = await SecureStore.getItemAsync(LEGACY_STORAGE_KEY);
+        if (legacyValue === "true") {
+            await AsyncStorage.setItem(key, "true");
+            return true;
+        }
+
+        return false;
     } catch (error) {
         console.error("Error reading matches tutorial state:", error);
     }
     return false;
 }
 
-async function setStorage(seen: boolean): Promise<void> {
+async function setStorage(userId: string, seen: boolean): Promise<void> {
     try {
         const data = seen ? "true" : "false";
+        const key = buildKey(userId);
 
         if (Platform.OS === "web") {
             if (typeof window !== "undefined" && typeof window.localStorage !== "undefined") {
-                window.localStorage.setItem(STORAGE_KEY, data);
+                window.localStorage.setItem(key, data);
             }
         } else {
-            await SecureStore.setItemAsync(STORAGE_KEY, data);
+            await AsyncStorage.setItem(key, data);
         }
     } catch (error) {
         console.error("Error saving matches tutorial state:", error);
     }
 }
 
-export async function hasSeenMatchesTutorial(): Promise<boolean> {
-    return getStorage();
+/** The Matches tutorial is shown at most once per signed-in account. */
+export async function hasSeenMatchesTutorial(userId: string): Promise<boolean> {
+    return getStorage(userId);
 }
 
-export async function markMatchesTutorialSeen(): Promise<void> {
-    await setStorage(true);
+export async function markMatchesTutorialSeen(userId: string): Promise<void> {
+    await setStorage(userId, true);
 }
 
-export async function resetMatchesTutorial(): Promise<void> {
-    await setStorage(false);
+export async function resetMatchesTutorial(userId: string): Promise<void> {
+    await setStorage(userId, false);
 }
