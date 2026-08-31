@@ -223,7 +223,8 @@ export function ProfileScreen() {
                             label="Reset Matches Tutorial"
                             description="Show the tutorial again"
                             onPress={async () => {
-                                await resetMatchesTutorial();
+                                if (!user?.id) return;
+                                await resetMatchesTutorial(user.id);
                                 Alert.alert("Success", "Matches tutorial has been reset.");
                             }}
                         />
