@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useFocusEffect, useIsFocused } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter, useFocusEffect, useIsFocused } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";

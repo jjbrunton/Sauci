@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
   <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" tools:node="remove"/>
   <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" tools:node="remove"/>
@@ -12,7 +12,7 @@
   <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
   <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
   <uses-permission android:name="com.android.vending.BILLING"/>
   <queries>
     <package android:name="com.instagram.android"/>
@@ -22,7 +22,7 @@
       <data android:scheme="https"/>
     </intent>
   </queries>
-  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:requestLegacyExternalStorage="true" android:fullBackupContent="@xml/secure_store_backup_rules" android:dataExtractionRules="@xml/secure_store_data_extraction_rules" android:enableOnBackInvokedCallback="false">
+  <application android:name=".MainApplication" android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:allowBackup="true" android:theme="@style/AppTheme" android:supportsRtl="true" android:enableOnBackInvokedCallback="false" android:requestLegacyExternalStorage="true" android:fullBackupContent="@xml/secure_store_backup_rules" android:dataExtractionRules="@xml/secure_store_data_extraction_rules">
     <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification_icon_color"/>
     <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/notification_icon"/>
     <meta-data android:name="expo.modules.notifications.default_notification_color" android:resource="@color/notification_icon_color"/>
@@ -30,13 +30,14 @@
     <meta-data android:name="expo.modules.updates.CODE_SIGNING_CERTIFICATE" android:value="-----BEGIN CERTIFICATE-----&#xA;MIICzTCCAbWgAwIBAgIJAPrPjxnUOGisMA0GCSqGSIb3DQEBCwUAMBAxDjAMBgNV&#xA;BAMTBVNhdWNpMB4XDTI2MDgzMDE4MTAzMFoXDTM2MDgzMDE4MTAzMFowEDEOMAwG&#xA;A1UEAxMFU2F1Y2kwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDWiUac&#xA;8i9bIbNZjv8iunVr6kqlgb9vea98JHz/A83biyszg0+GpmLYsr4zV2F7A6RitiIx&#xA;SOML+wVedyD0F2quWccBGXinvMAds0TxgIOjQfP+8+VJ/duDjveHvn+OFW4s7XxW&#xA;SY7TK1ufDcPWo/f5XzfqtBveug49zv3/F3MwfmMUbEY/zvH7nayPGJNuSyf3wISn&#xA;JIt0BsHNhWykRXCzjaF2fy3nAebOyezbtbapCjUlxPENVtBCzBQ7C9kaQXCBw5mV&#xA;hxhJlOxHWXpHJgDLHpev8A/CWQRh67tsevjKi6R6SDlf0R0xSbDJTElx8goWOOQW&#xA;VO9aDqI+oH0KpWfnAgMBAAGjKjAoMA4GA1UdDwEB/wQEAwIHgDAWBgNVHSUBAf8E&#xA;DDAKBggrBgEFBQcDAzANBgkqhkiG9w0BAQsFAAOCAQEAyUc20bIRCxoBTJg84mPl&#xA;2nFDWSaAfzgo0K0b6x2T1suuq4LAOUgzBqJISrQAALd0besK1qUZSAMhjQu1wPZT&#xA;MHuWRMxQHfOkyHMYUfOoPMS4bE+4K0WjzfoVt3y1A+oxhcIAQUUGyNgNmebfEN07&#xA;JlX0B8UI8aIMjyfpsIDgZx1piHKwittGy/V4MPOLbmT2BBwS9BELcmWE4CwWbfeo&#xA;JM4lXY0hk3M/GTstRYaUKiwBWEU+z1PdAmWAgrtxpVnXN+oaToWh0WbVkbF1K6r5&#xA;3oBGFTL7kT+Wogg9GK04XoAREw0jZJ/k77oJx68lGVBNiB+Ue2KqX0H/0cf2CslY&#xA;Ug==&#xA;-----END CERTIFICATE-----&#xA;"/>
     <meta-data android:name="expo.modules.updates.CODE_SIGNING_METADATA" android:value="{&quot;keyid&quot;:&quot;main&quot;,&quot;alg&quot;:&quot;rsa-v1_5-sha256&quot;}"/>
     <meta-data android:name="expo.modules.updates.ENABLED" android:value="true"/>
+    <meta-data android:name="expo.modules.updates.ENABLE_BSDIFF_PATCH_SUPPORT" android:value="true"/>
     <meta-data android:name="expo.modules.updates.EXPO_RUNTIME_VERSION" android:value="@string/expo_runtime_version"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH" android:value="ALWAYS"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS" android:value="5000"/>
     <meta-data android:name="expo.modules.updates.EXPO_UPDATE_URL" android:value="https://ota.apps.jbrunton.co.uk/manifest"/>
     <meta-data android:name="expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY" android:value="{&quot;expo-channel-name&quot;:&quot;production&quot;,&quot;expo-app-id&quot;:&quot;9a66f3c2-fda7-416f-87e2-6db833b32e9d&quot;,&quot;xprem-branch&quot;:&quot;&quot;}"/>
     <service android:name="com.reactnativeandroidwidget.RNWidgetCollectionService" android:permission="android.permission.BIND_REMOTEVIEWS"/>
-    <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
+    <activity android:name=".MainActivity" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode|smallestScreenSize|assetsPaths" android:launchMode="singleTask" android:windowSoftInputMode="adjustResize" android:theme="@style/Theme.App.SplashScreen" android:exported="true" android:screenOrientation="portrait">
       <intent-filter>
         <action android:name="android.intent.action.MAIN"/>
         <category android:name="android.intent.category.LAUNCHER"/>
@@ -46,7 +47,6 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="app.sauci"/>
-        <data android:scheme="com.sauci.app"/>
         <data android:scheme="exp+sauci"/>
       </intent-filter>
       <intent-filter android:autoVerify="true" data-generated="true">
@@ -56,7 +56,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
       </intent-filter>
     </activity>
-    <receiver android:name=".widget.LiveDraw" android:exported="true" android:label="Live Draw">
+    <receiver android:name=".widget.LiveDraw" android:exported="false" android:label="Live Draw">
       <intent-filter>
         <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
         <action android:name="com.sauci.app.WIDGET_CLICK"/>

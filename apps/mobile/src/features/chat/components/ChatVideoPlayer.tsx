@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, gradients, spacing, radius } from '../../../theme';
@@ -30,7 +30,6 @@ const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
     urlError,
     onFullScreen,
 }) => {
-    const videoRef = useRef<Video>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [hasEnded, setHasEnded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -42,22 +41,39 @@ const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
     // Skip the cache lookup for local file URIs
     const isLocalFile = signedUrl?.startsWith('file://');
     const videoSource = isLocalFile ? signedUrl : (cachedUri || signedUrl);
-    
-    // Handle playback status updates
-    const handlePlaybackStatusUpdate = useCallback(async (status: AVPlaybackStatus) => {
-        if (!status.isLoaded) {
-            // Log error if load failed
-            if ('error' in status && status.error) {
-                console.error(`[ChatVideoPlayer] Video load error:`, status.error);
-                setIsLoading(false);
-            }
-            return;
+
+    const player = useVideoPlayer(videoSource ? { uri: videoSource } : null, (setupPlayer) => {
+        setupPlayer.loop = false;
+    });
+
+    // Swap the player source when the cached local file becomes available,
+    // without reloading on the initial mount (useVideoPlayer already loaded it).
+    const mountedSourceRef = useRef(videoSource);
+    useEffect(() => {
+        if (videoSource && videoSource !== mountedSourceRef.current) {
+            mountedSourceRef.current = videoSource;
+            player.replace({ uri: videoSource });
         }
+    }, [videoSource, player]);
 
-        setIsLoading(false);
-        setIsPlaying(status.isPlaying);
+    // Handle playback status updates
+    useEffect(() => {
+        const statusSubscription = player.addListener('statusChange', ({ status, error }) => {
+            if (status === 'error') {
+                if (error) {
+                    console.error(`[ChatVideoPlayer] Video load error:`, error);
+                }
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(status === 'loading');
+        });
 
-        if (status.didJustFinish) {
+        const playingSubscription = player.addListener('playingChange', ({ isPlaying: playing }) => {
+            setIsPlaying(playing);
+        });
+
+        const endSubscription = player.addListener('playToEnd', () => {
             setHasEnded(true);
             setIsPlaying(false);
 
@@ -65,22 +81,26 @@ const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
             if (signedUrl && !cachedUri && !isLocalFile) {
                 cacheVideoFile();
             }
-        }
-    }, [signedUrl, cachedUri, isLocalFile, cacheVideoFile]);
+        });
+
+        return () => {
+            statusSubscription.remove();
+            playingSubscription.remove();
+            endSubscription.remove();
+        };
+    }, [player, signedUrl, cachedUri, isLocalFile, cacheVideoFile]);
 
     // Toggle play/pause with native-like behavior
-    const handleTapToPlay = useCallback(async () => {
-        if (!videoRef.current) return;
-
+    const handleTapToPlay = useCallback(() => {
         if (isPlaying) {
-            await videoRef.current.pauseAsync();
+            player.pause();
             setIsPlaying(false);
         } else {
             if (hasEnded) {
-                await videoRef.current.setPositionAsync(0);
+                player.replay();
                 setHasEnded(false);
             }
-            await videoRef.current.playAsync();
+            player.play();
             setIsPlaying(true);
 
             // Start caching when playback starts
@@ -88,19 +108,19 @@ const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
                 cacheVideoFile();
             }
         }
-    }, [isPlaying, hasEnded, signedUrl, cachedUri, cacheVideoFile]);
+    }, [isPlaying, hasEnded, player, signedUrl, cachedUri, cacheVideoFile]);
 
     // Handle full screen
     const handleFullScreen = useCallback(() => {
         const uri = cachedUri || signedUrl;
         if (uri) {
-            if (videoRef.current && isPlaying) {
-                videoRef.current.pauseAsync();
+            if (isPlaying) {
+                player.pause();
                 setIsPlaying(false);
             }
             onFullScreen(uri);
         }
-    }, [cachedUri, signedUrl, isPlaying, onFullScreen]);
+    }, [cachedUri, signedUrl, isPlaying, player, onFullScreen]);
 
     if (urlError || !videoSource) {
         return (
@@ -119,15 +139,11 @@ const ChatVideoPlayerComponent: React.FC<ChatVideoPlayerProps> = ({
             delayLongPress={300}
             style={styles.container}
         >
-            <Video
-                ref={videoRef}
-                source={{ uri: videoSource }}
+            <VideoView
+                player={player}
                 style={styles.video}
-                resizeMode={ResizeMode.COVER}
-                isLooping={false}
-                shouldPlay={false}
-                positionMillis={0}
-                onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                contentFit="cover"
+                nativeControls={false}
             />
 
             {/* Loading indicator */}
@@ -203,13 +219,13 @@ const styles = StyleSheet.create({
         marginTop: spacing.xs,
     },
     loadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.3)',
     },
     playOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         justifyContent: 'center',
         alignItems: 'center',
     },

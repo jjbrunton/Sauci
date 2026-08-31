@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
         padding: spacing.md,
     },
     fullScreenContainer: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(13, 13, 26, 0.85)',
         alignItems: 'center',
         justifyContent: 'center',

@@ -6,9 +6,10 @@ against a self-hosted XPREM update server (formerly `expo-open-ota`) at
 protocol, so the client is stock `expo-updates`; only the endpoint, the request
 headers, and the code-signing certificate are Sauci specific.
 
-Store releases still follow [Mobile release process](releasing.md). OTA never
-replaces a store build; it only refreshes the JavaScript bundle and assets of an
-already installed build.
+Store releases still follow [Mobile release process](releasing.md), which opens
+with the OTA-vs-store-release decision rule. OTA never replaces a store build;
+it only refreshes the JavaScript bundle and assets of an already installed
+build.
 
 ## Status
 
@@ -152,9 +153,16 @@ regenerate and review the native diff separately:
 
 ```bash
 cd apps/mobile
-RELEASE_CHANNEL=production npx expo prebuild
+RELEASE_CHANNEL=production npx expo prebuild --clean
 git diff   # retain only reviewed expo-updates native changes
 ```
+
+`--clean` is required as of `@bacons/apple-targets` 5.x: running `expo prebuild`
+without it against an already-generated iOS project fails inside the widget
+target's Xcode project update step (`withIosXcodeProjectBeta2BaseMod`). A clean
+regeneration from the committed source avoids that failure. Run `pod install`
+in `apps/mobile/ios` afterwards to refresh `Podfile.lock` and the `.xcworkspace`
+before committing.
 
 A build produced before this native source change will not check for updates.
 

@@ -1,5 +1,13 @@
 # Sauci Mobile Release Notes
 
+## v1.0.8 - 31 August 2026
+_Android build 51 - iOS build 47_
+
+A quieter release that makes everything you do together feel steadier.
+
+- **A fresher foundation** - Sauci now runs on the latest app platform, keeping chat, matches, and Live Draw smooth on newer devices and OS versions.
+- **Healthier updates** - The app can now tell us when an update starts cleanly, so we can spot and fix problems before they reach you both.
+
 ## v1.0.7 - 31 August 2026
 _Android build 49 · iOS build 46_
 

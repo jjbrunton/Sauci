@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     overlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: "rgba(0, 0, 0, 0.08)",
     },
     content: {

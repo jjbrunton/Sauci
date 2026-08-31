@@ -12,6 +12,12 @@ module.exports = {
     ],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
+        // react-native-worklets ships a JS-only mock for its native module at
+        // this path (react-native-reanimated depends on it internally and has
+        // no equivalent of its own). Without this, requiring the real
+        // react-native-worklets under Jest throws because no native module is
+        // registered.
+        '^react-native-worklets$': '<rootDir>/../../node_modules/react-native-worklets/src/mock.ts',
     },
     testMatch: [
         '<rootDir>/src/**/__tests__/**/*.(spec|test).(ts|tsx)',

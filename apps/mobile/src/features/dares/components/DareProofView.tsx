@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
+import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { getMediaUrl } from "../../../lib/mediaApi";
 import { colors, featureColors, radius, spacing, typography } from "../../../theme";
 import type { DareProofType } from "../types";
@@ -21,7 +21,7 @@ export interface DareProofViewProps {
 export function DareProofView({ proofMediaId, proofType }: DareProofViewProps) {
     const [url, setUrl] = useState<string | null>(null);
     const [failed, setFailed] = useState(false);
-    const [sound, setSound] = useState<Audio.Sound | null>(null);
+    const [sound, setSound] = useState<AudioPlayer | null>(null);
     const [playing, setPlaying] = useState(false);
     const [loadingAudio, setLoadingAudio] = useState(false);
 
@@ -35,32 +35,30 @@ export function DareProofView({ proofMediaId, proofType }: DareProofViewProps) {
     }, [proofMediaId, proofType]);
 
     useEffect(() => {
-        return () => { if (sound) void sound.unloadAsync(); };
+        return () => { if (sound) sound.remove(); };
     }, [sound]);
 
     const togglePlayback = useCallback(async () => {
         try {
             if (sound) {
-                const status = await sound.getStatusAsync();
-                if (status.isLoaded && status.isPlaying) {
-                    await sound.pauseAsync();
+                if (sound.playing) {
+                    sound.pause();
                     setPlaying(false);
                 } else {
-                    await sound.replayAsync();
+                    await sound.seekTo(0);
+                    sound.play();
                     setPlaying(true);
                 }
                 return;
             }
             setLoadingAudio(true);
             const { url: signedUrl } = await getMediaUrl(proofMediaId);
-            const created = await Audio.Sound.createAsync(
-                { uri: signedUrl },
-                { shouldPlay: true },
-                (status) => {
-                    if (status.isLoaded && status.didJustFinish) setPlaying(false);
-                },
-            );
-            setSound(created.sound);
+            const created = createAudioPlayer({ uri: signedUrl });
+            created.addListener('playbackStatusUpdate', (status) => {
+                if (status.didJustFinish) setPlaying(false);
+            });
+            created.play();
+            setSound(created);
             setPlaying(true);
         } catch {
             setFailed(true);

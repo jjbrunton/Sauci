@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { Audio } from 'expo-av';
+import { createAudioPlayer, type AudioPlayer } from 'expo-audio';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { DecorativeSeparator } from '../../../components/ui';
@@ -237,7 +237,7 @@ const AudioDisplay: React.FC<{
 }> = ({ responseSummary, userId, partnerName }) => {
     const [audioUrls, setAudioUrls] = useState<Record<string, string>>({});
     const [playingId, setPlayingId] = useState<string | null>(null);
-    const [sounds, setSounds] = useState<Record<string, Audio.Sound>>({});
+    const [sounds, setSounds] = useState<Record<string, AudioPlayer>>({});
 
     useEffect(() => {
         const fetchAudioUrls = async () => {
@@ -266,7 +266,7 @@ const AudioDisplay: React.FC<{
         // Cleanup sounds on unmount
         return () => {
             Object.values(sounds).forEach(sound => {
-                sound.unloadAsync();
+                sound.remove();
             });
         };
     }, [responseSummary]);
@@ -283,33 +283,31 @@ const AudioDisplay: React.FC<{
 
         // If already playing this one, pause it
         if (playingId === responderId && sounds[responderId]) {
-            await sounds[responderId].pauseAsync();
+            sounds[responderId].pause();
             setPlayingId(null);
             return;
         }
 
         // Stop any currently playing audio
         if (playingId && sounds[playingId]) {
-            await sounds[playingId].stopAsync();
+            sounds[playingId].pause();
+            await sounds[playingId].seekTo(0);
         }
 
         // Play the selected audio
         try {
             let sound = sounds[responderId];
             if (!sound) {
-                const { sound: newSound } = await Audio.Sound.createAsync(
-                    { uri: audioUrl },
-                    { shouldPlay: false },
-                    (status) => {
-                        if (status.isLoaded && status.didJustFinish) {
-                            setPlayingId(null);
-                        }
+                sound = createAudioPlayer({ uri: audioUrl });
+                sound.addListener('playbackStatusUpdate', (status) => {
+                    if (status.didJustFinish) {
+                        setPlayingId(null);
                     }
-                );
-                sound = newSound;
+                });
                 setSounds(prev => ({ ...prev, [responderId]: sound }));
             }
-            await sound.playFromPositionAsync(0);
+            await sound.seekTo(0);
+            sound.play();
             setPlayingId(responderId);
         } catch (err) {
             console.error('Failed to play audio:', err);
@@ -790,7 +788,7 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     photoLoadingOverlay: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         backgroundColor: 'rgba(0, 0, 0, 0.3)',
         justifyContent: 'center',
         alignItems: 'center',

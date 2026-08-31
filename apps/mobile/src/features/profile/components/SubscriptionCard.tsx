@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     proBorderGradient: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
         opacity: 0.3,
     },
     proCardInner: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     freeBorderGradient: {
-        ...StyleSheet.absoluteFillObject,
+        ...StyleSheet.absoluteFill,
     },
 
     freeHeader: {

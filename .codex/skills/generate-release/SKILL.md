@@ -13,9 +13,13 @@ drafting notes and [references/artifact-verification.md](references/artifact-ver
 before accepting a build.
 
 A request to generate or create a release authorizes the scoped version edits,
-release notes, local builds, release commits, and one local annotated tag. It
-does not authorize pushing commits or tags, uploading binaries, submitting a
-store release, changing signing credentials, or regenerating native projects.
+release notes, local builds, release commits, and one local annotated tag. When
+the request also asks to ship, upload, submit, or release to the stores, it
+authorizes the complete store pipeline for the stated platforms after the exact
+artifact has been verified: upload, App Review / Google Play review submission,
+and rollout, including full production rollout (see the `release-mobile` skill).
+It does not authorize pushing commits or tags, changing signing credentials, or
+regenerating native projects unless the request explicitly includes that action.
 
 ## Defaults
 
@@ -39,6 +43,8 @@ Require all of the following:
 - consistent public and OTA runtime versions across `app.json`, explicit
   `app.config.js` runtime, Android, and every iOS target
   (`scripts/set_version.mjs --check`);
+- `npm run release:preflight -w @sauci/mobile`, which also checks the iOS widget
+  effective build settings and OTA certificate archive inclusion;
 - Node 20, JDK 17 for Android, and Xcode/CocoaPods for iOS;
 - the configured production API/Auth/RevenueCat environment, without printing
   secret values.
@@ -80,6 +86,15 @@ Build from the clean prepared source using the package scripts in
 versioned artifact directory. When building both platforms, build Android first,
 then iOS.
 
+For local EAS, retain the working directory and logs under a stable ignored path,
+set `EAS_LOCAL_BUILD_ARTIFACTS_DIR`, and preflight available disk space before
+starting. Set `EAS_LOCAL_BUILD_PLUGIN_PATH` only to the matching plugin
+executable `bin/run`, never a package directory or a hardcoded cache location.
+Classify plugin, archive, npm, and ENOSPC failures as pre-compilation failures;
+repair and preflight them without spending another build. Make at most one
+meaningful build for each newly proven input state. After a signing, profile, or
+capability failure, read back and prove the provider correction before rebuilding.
+
 After each build:
 
 1. Inspect the worktree before doing anything else. Accept only the documented
@@ -88,15 +103,19 @@ After each build:
    dependency, or native-project regeneration as a failed build.
 2. Independently inspect the binary for package/bundle identifier, public
    version, platform build number, production endpoint configuration where
-   inspectable, and signing identity/fingerprint. Require the embedded public
-   version to equal the requested version.
+   inspectable, signing identity/fingerprint, OTA runtime/channel/certificate,
+   and SHA-256. Require the embedded public version to equal the requested
+   version. For Android, also inspect all required ABIs, Worklets/Reanimated/Skia
+   libraries, and the release permissions. For iOS, inspect every packaged
+   extension after export.
 3. Record the verified platform build number in the new release-note entry.
 4. Commit only the expected metadata and release-note update as
    `chore(<platform>): record v<version> build <number>`. The worktree must be
    clean before starting the next platform build.
 
-Do not accept a successful EAS exit code as proof of a valid artifact. If either
-requested platform fails, do not tag a partial release.
+Do not accept a successful EAS exit code as proof of a valid artifact. Quarantine
+or remove rejected artifacts so only accepted paths can be offered for upload. If
+either requested platform fails, do not tag a partial release.
 
 ## Tag and prove the result
 

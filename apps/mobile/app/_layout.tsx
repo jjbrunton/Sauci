@@ -5,6 +5,11 @@ import "../src/polyfills/web";
 import { initCrashlytics, setUserContext, clearUserContext } from "../src/lib/crashlytics";
 initCrashlytics();
 
+// Install the Observe global JS error handler after Crashlytics so it wraps
+// (and always calls) whatever handler is already registered.
+import { installObserveGlobalErrorHandler, logAppStarted } from "../src/lib/observe";
+installObserveGlobalErrorHandler();
+
 // Analytics imports (initialization deferred until app mounts)
 import { initAnalytics, setUserId, clearUserId, logScreenView, Events } from "../src/lib/analytics";
 
@@ -73,6 +78,7 @@ export default function RootLayout() {
             analyticsInitialized.current = true;
             initAnalytics();
             Events.appOpened("cold");
+            logAppStarted();
         }
     }, []);
 
