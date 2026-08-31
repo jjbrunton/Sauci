@@ -40,6 +40,17 @@ An explicit request for a mobile release, upload, or store-submission workflow
 authorizes the requested store upload within its stated platform and destination
 scope. Building an artifact alone does not authorize an upload.
 
+Before every production build, run the deterministic source gate:
+
+```bash
+cd apps/mobile
+npm run release:preflight
+```
+
+It checks public and OTA runtime version parity, iOS app/widget build parity,
+and that the public OTA certificate is tracked and not excluded by root archive
+rules. It does not replace inspection of the exported artifact.
+
 ## Submit a local artifact with EAS
 
 The production submission credentials are managed by EAS. Never add App Store
@@ -70,6 +81,11 @@ them before proceeding. If the effect cannot be established, stop. Changing
 automatic-distribution settings is a separate action and requires its own
 authorization.
 
+App Store Connect API group association alone does not reveal whether automatic
+distribution is enabled. Verify the switch in an authenticated App Store Connect
+UI session before upload. If the UI cannot be checked, stop instead of
+inferring the effect from API data.
+
 Do not use `--latest` for a local release. Before upload, verify the artifact's
 package or bundle identifier, public version, build number, signature, and
 SHA-256 digest. After upload, read back the same identity and version from Google
@@ -91,6 +107,23 @@ may change: `app.json`, the platform native version file, and the iOS widget
 `Info.plist` for an iOS build. Any widget implementation, resource, or Xcode
 project rewrite means the source was regenerated and the artifact must be rebuilt
 from the clean tracked sources.
+
+Accept an artifact only after independent inspection. Verify Android package,
+version, signer, all four ABIs, required Worklets/Reanimated/Skia libraries,
+forbidden media-read permissions, OTA runtime/channel/certificate, and SHA-256.
+Verify the iOS IPA's app and every extension version/build/signature after export.
+Quarantine or remove a rejected artifact before presenting any artifact for
+upload. Tag the exact verified build-source commit, then promote it through
+staging and main only after the release gates pass.
+
+The committed Android Gradle ordering fix makes Prefab inputs available before
+dependent native tasks. Preserve that explicit dependency ordering. Do not try to
+solve Gradle task validation by removing Firebase or cycling dependency versions.
+
+After Android upload, EAS Submit `FINISHED`, the exact internal/DRAFT/no-rollout
+submit configuration, and the retained artifact digest are the authoritative
+available read-back when direct Play track inspection would require creating an
+edit. Never create an edit merely to claim read-only verification.
 
 ### Android media permission policy
 
@@ -162,6 +195,23 @@ EAS_LOCAL_BUILD_SKIP_CLEANUP=1 \
 EAS_LOCAL_BUILD_WORKINGDIR=~/eas-builds \
 eas build --platform android --profile production --local
 ```
+
+For local builds, choose stable ignored working and artifact directories and
+retain them with the command log until the artifact is accepted or rejected.
+Check free disk space first. `ENOSPC`, EAS plugin startup, archive construction,
+and dependency installation failures occur before native compilation: fix and
+preflight those inputs without starting another build. Make one meaningful build
+per newly proven input state.
+
+Report provider progress by phase: packaging, native compilation, submission
+queue, or store processing. Do not describe every failure as a rebuild.
+
+If the normal EAS invocation cannot find its local-build plugin, use a matching
+CLI and plugin version and set `EAS_LOCAL_BUILD_PLUGIN_PATH` to that plugin's
+executable `bin/run`, not its package directory. Do not commit or document a
+machine-specific package-cache path. Run `npm run release:preflight:local-eas`
+after setting the variable. See https://docs.expo.dev/build-reference/local-builds/
+and https://github.com/expo/eas-cli/issues/2787.
 
 ### Limitations of Local Builds
 
@@ -391,3 +441,12 @@ committed source change before running the release build.
 
 Ensure your Apple Developer certificates and provisioning profiles are up to date in Xcode:
 - **Xcode** → **Settings** → **Accounts** → Download Manual Profiles
+
+For a checked-in entitlement, first read the corresponding Apple App ID
+capability state. EAS capability sync can report success while Apple rejects a
+malformed update, as tracked in https://github.com/expo/eas-cli/issues/3986.
+Read back Associated Domains, regenerate only the affected profile, and decode
+the replacement profile to confirm `com.apple.developer.associated-domains`
+before rebuilding. With noninteractive managed App Store Connect key auth, set
+`EXPO_APPLE_TEAM_ID` when the command cannot otherwise select the correct team.
+Preserve existing certificates and unrelated target profiles.
