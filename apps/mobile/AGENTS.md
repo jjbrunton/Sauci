@@ -13,3 +13,5 @@ native iOS/Android targets.
 - Add stable accessibility labels or `testID` values for critical interactions.
 - Verify focused Jest tests, typecheck, lint, then native/Expo behavior as risk
   requires. UI work needs observable simulator evidence.
+- Before and after any `expo prebuild`, follow the "After native regeneration"
+  checklist in `docs/releasing.md`.

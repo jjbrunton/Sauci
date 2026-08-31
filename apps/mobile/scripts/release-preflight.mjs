@@ -39,6 +39,7 @@ export function validateReleaseSources({ root = repoRoot, isTracked } = {}) {
   const androidGradle = file('apps/mobile/android/app/build.gradle');
   const androidStrings = file('apps/mobile/android/app/src/main/res/values/strings.xml');
   const xcode = file('apps/mobile/ios/Sauci.xcodeproj/project.pbxproj');
+  const androidManifest = file('apps/mobile/android/app/src/main/AndroidManifest.xml');
   const iosInfo = file('apps/mobile/ios/Sauci/Info.plist');
   const widgetInfo = file('apps/mobile/targets/widget/Info.plist');
   const iosExpo = file('apps/mobile/ios/Sauci/Supporting/Expo.plist');
@@ -68,6 +69,17 @@ export function validateReleaseSources({ root = repoRoot, isTracked } = {}) {
   if (!/^\d+$/.test(appBuild) || !/^\d+$/.test(widgetBuild)) fail('iOS build numbers must be positive integers');
   if (appBuild !== widgetBuild || widgetBuildSettings.some((build) => build !== appBuild)) {
     fail(`iOS app, widget, and effective widget Xcode build numbers disagree: app ${appBuild}; widget plist ${widgetBuild}; widget settings ${widgetBuildSettings.join(', ')}`);
+  }
+
+  for (const permission of ['READ_MEDIA_IMAGES', 'READ_MEDIA_VIDEO']) {
+    const removed = new RegExp(`<uses-permission[^>]*android:name="android\\.permission\\.${permission}"[^>]*tools:node="remove"`).test(androidManifest);
+    if (!removed) fail(`AndroidManifest.xml must keep tools:node="remove" on ${permission} (expo prebuild regresses this)`);
+  }
+
+  const forbiddenPlistKeys = ['NSBonjourServices', 'NSLocalNetworkUsageDescription', 'RCTMetroPort'];
+  const foundDevLauncherKeys = forbiddenPlistKeys.filter((key) => iosInfo.includes(key));
+  if (foundDevLauncherKeys.length) {
+    fail(`ios/Sauci/Info.plist must not contain dev-launcher-only keys reintroduced by expo prebuild: ${foundDevLauncherKeys.join(', ')}`);
   }
 
   const tracked = isTracked ?? ((relative) => gitStatus(['ls-files', '--error-unmatch', relative], root) === 0);
