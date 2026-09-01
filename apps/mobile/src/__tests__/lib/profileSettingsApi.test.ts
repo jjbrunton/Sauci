@@ -1,4 +1,4 @@
-import { apiClient } from '../../lib/apiClient';
+import { apiClient, apiRequestWithAccessToken } from '../../lib/apiClient';
 import { profileSettingsApi } from '../../lib/profileSettingsApi';
 
 jest.mock('../../lib/apiClient', () => ({
@@ -7,6 +7,7 @@ jest.mock('../../lib/apiClient', () => ({
         post: jest.fn(),
         patch: jest.fn(),
     },
+    apiRequestWithAccessToken: jest.fn(),
 }));
 
 describe('profileSettingsApi', () => {
@@ -26,5 +27,15 @@ describe('profileSettingsApi', () => {
         expect(apiClient.post).toHaveBeenNthCalledWith(2, '/v1/feedback', {
             type: 'bug', title: 'Title', description: 'Details',
         });
+    });
+
+    it('can bind a profile update to a captured authentication bearer', async () => {
+        await profileSettingsApi.updateProfileWithAccessToken('captured-token', { name: 'Ada' });
+
+        expect(apiRequestWithAccessToken).toHaveBeenCalledWith(
+            '/v1/me/profile',
+            'captured-token',
+            { method: 'PATCH', body: { name: 'Ada' } },
+        );
     });
 });

@@ -37,14 +37,11 @@ async function parseResponse(response: Response): Promise<unknown> {
     }
 }
 
-export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-    const { data, error } = await authClient.auth.getSession();
-    const accessToken = data.session?.access_token;
-
-    if (error || !accessToken) {
-        throw new ApiError("An authenticated session is required", 401, error);
-    }
-
+export async function apiRequestWithAccessToken<T>(
+    path: string,
+    accessToken: string,
+    options: ApiRequestOptions = {},
+): Promise<T> {
     const headers = new Headers(options.headers);
     headers.set("Accept", "application/json");
     headers.set("Authorization", `Bearer ${accessToken}`);
@@ -83,6 +80,17 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     return responseBody as T;
 }
 
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+    const { data, error } = await authClient.auth.getSession();
+    const accessToken = data.session?.access_token;
+
+    if (error || !accessToken) {
+        throw new ApiError("An authenticated session is required", 401, error);
+    }
+
+    return apiRequestWithAccessToken(path, accessToken, options);
+}
+
 export async function authenticatedFetch(path: string, init: RequestInit = {}): Promise<Response> {
     const { data, error } = await authClient.auth.getSession();
     const accessToken = data.session?.access_token;
@@ -94,6 +102,7 @@ export async function authenticatedFetch(path: string, init: RequestInit = {}): 
 
 export const apiClient = {
     get: <T>(path: string) => apiRequest<T>(path),
+    getWithAccessToken: <T>(path: string, accessToken: string) => apiRequestWithAccessToken<T>(path, accessToken),
     post: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: "POST", body }),
     put: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: "PUT", body }),
     patch: <T>(path: string, body?: unknown) => apiRequest<T>(path, { method: "PATCH", body }),

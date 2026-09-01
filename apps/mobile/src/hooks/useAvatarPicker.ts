@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Alert, Platform, ActionSheetIOS } from 'react-native';
+import { Alert, Platform, ActionSheetIOS, Linking } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { uploadMedia } from '../lib/mediaApi';
@@ -88,9 +88,21 @@ export function useAvatarPicker(options?: UseAvatarPickerOptions): UseAvatarPick
             let result: ImagePicker.ImagePickerResult;
 
             if (source === 'camera') {
+                const existingPermission = await ImagePicker.getCameraPermissionsAsync();
+                if (existingPermission.status !== 'granted' && !existingPermission.canAskAgain) {
+                    Alert.alert(
+                        'Camera Access',
+                        'To take a photo, allow camera access in Settings.',
+                        [
+                            { text: 'Not Now', style: 'cancel' },
+                            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+                        ]
+                    );
+                    return;
+                }
+
                 const { status } = await ImagePicker.requestCameraPermissionsAsync();
                 if (status !== 'granted') {
-                    Alert.alert('Permission Denied', 'Camera access is required to take a photo.');
                     return;
                 }
                 result = await ImagePicker.launchCameraAsync({

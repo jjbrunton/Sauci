@@ -46,6 +46,11 @@ if (Platform.OS === "android") {
 import { authClient } from "../../src/lib/authClient";
 import { getAuthError } from "../../src/lib/errors";
 import { Events } from "../../src/lib/analytics";
+import { apiRequestWithAccessToken } from "../../src/lib/apiClient";
+import { formatAppleProfileName } from "../../src/lib/appleProfileName";
+import { persistAppleProfileName } from "../../src/lib/appleProfileNamePersistence";
+import { profileSettingsApi } from "../../src/lib/profileSettingsApi";
+import type { Profile } from "../../src/types";
 import { useAuthStore } from "../../src/store";
 import { GradientBackground, GlassCard, GlassButton, GlassInput } from "../../src/components/ui";
 import { colors, spacing, radius, typography } from "../../src/theme";
@@ -290,7 +295,7 @@ export default function LoginScreen() {
                 console.log("[Apple Sign In] Got credential:", !!credential, "identityToken:", !!credential?.identityToken);
 
                 if (credential.identityToken) {
-                    const { error } = await authClient.auth.signInWithIdToken({
+                    const { data, error } = await authClient.auth.signInWithIdToken({
                         provider: "apple",
                         token: credential.identityToken,
                     });
@@ -299,6 +304,36 @@ export default function LoginScreen() {
                         console.log("[Apple Sign In] Supabase error:", error.message);
                         Alert.alert("Error", getAuthError(error));
                     } else {
+                        const appleProfileName = formatAppleProfileName(credential.fullName);
+                        const userId = data.user?.id;
+                        const accessToken = data.session?.access_token;
+                        if (appleProfileName && userId && accessToken) {
+                            const authStore = useAuthStore.getState();
+                            authStore.setPendingAppleDisplayName({ userId, name: appleProfileName });
+                            try {
+                                await persistAppleProfileName(
+                                    { userId, accessToken },
+                                    appleProfileName,
+                                    {
+                                        getProfile: (token) => apiRequestWithAccessToken<{ profile: Profile }>("/v1/me", token),
+                                        updateProfileName: (token, name) => profileSettingsApi.updateProfileWithAccessToken(token, { name }),
+                                    },
+                                );
+                                await authStore.fetchUser({
+                                    userId,
+                                    accessToken,
+                                    isAnonymous: !!(data.user as { is_anonymous?: boolean } | null)?.is_anonymous,
+                                });
+                            } catch {
+                                // The account session remains valid. Clear the subject-keyed
+                                // temporary name so onboarding safely falls back to its name step.
+                                console.warn("[Apple Sign In] Could not persist supplied name");
+                            } finally {
+                                useAuthStore.getState().clearPendingAppleDisplayName(userId);
+                            }
+                        } else if (appleProfileName) {
+                            Alert.alert("Error", "Apple sign in did not return an authenticated session. Please try again.");
+                        }
                         Events.signIn("apple");
                     }
                 } else {

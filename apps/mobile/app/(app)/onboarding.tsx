@@ -9,14 +9,12 @@ import {
     Platform,
     Keyboard,
     ScrollView,
-    Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
     FadeIn,
-    FadeInUp,
     FadeOut,
     SlideInRight,
     SlideOutLeft,
@@ -32,8 +30,8 @@ import { getProfileError } from '../../src/lib/errors';
 import { registerForPushNotificationsAsync, savePushToken } from '../../src/lib/notifications';
 import { Events } from '../../src/lib/analytics';
 import { hasSeenOnboardingPaywall, markOnboardingPaywallSeen } from '../../src/lib/onboardingPaywallSeen';
-import { useAvatarPicker } from '../../src/hooks/useAvatarPicker';
 import { REQUIRED_ONBOARDING_VERSION, ONBOARDING_OFFERING_ID } from '../../src/constants/onboarding';
+import { activeOnboardingStage, initialOnboardingStage, previousOnboardingStage, type OnboardingStage } from '../../src/lib/onboardingStages';
 import type { Gender, UsageReason } from '../../src/types';
 
 const GENDER_OPTIONS: { value: Gender; label: string; icon: string }[] = [
@@ -51,15 +49,17 @@ const PURPOSE_OPTIONS: { value: UsageReason; label: string; icon: string }[] = [
     { value: 'strengthen_relationship', label: 'Strengthen our relationship', icon: 'shield-checkmark' },
 ];
 
-type Stage = 'avatar' | 'name' | 'gender' | 'purpose' | 'notifications';
+type Stage = OnboardingStage;
 
 export default function OnboardingScreen() {
     const router = useRouter();
     // Only subscribe to stable values to prevent re-renders from background fetchUser calls
     const userId = useAuthStore((s) => s.user?.id);
+    const persistedUserName = useAuthStore((s) => s.user?.name);
+    const pendingAppleDisplayName = useAuthStore((s) => s.pendingAppleDisplayName);
     const fetchUser = useAuthStore((s) => s.fetchUser);
     const initialUser = useRef(useAuthStore.getState().user);
-    const [stage, setStage] = useState<Stage>('avatar');
+    const [stage, setStage] = useState<Stage>(() => initialOnboardingStage(initialUser.current?.name));
     const [name, setName] = useState(initialUser.current?.name || '');
     const [gender, setGender] = useState<Gender | null>(initialUser.current?.gender || null);
     const [usageReason, setUsageReason] = useState<UsageReason | null>(null);
@@ -69,35 +69,15 @@ export default function OnboardingScreen() {
     const inputRef = useRef<TextInput>(null);
     const paywallNavigationRef = useRef(false);
 
-    const {
-        avatarUri,
-        isUploading: isUploadingAvatar,
-        showPicker: handleAvatarPress,
-        uploadAvatar,
-    } = useAvatarPicker({
-        userId,
-        onSelect: () => setError(null),
-    });
+    const pendingDisplayName = pendingAppleDisplayName?.userId === userId ? pendingAppleDisplayName?.name : undefined;
+    const displayName = persistedUserName?.trim() || pendingDisplayName || name;
+    const hasStoredDisplayName = Boolean(persistedUserName?.trim() || pendingDisplayName);
+    const activeStage = activeOnboardingStage(stage, persistedUserName, pendingDisplayName);
+    const previousStage = previousOnboardingStage(activeStage, hasStoredDisplayName);
 
     useEffect(() => {
         Events.onboardingStart();
     }, []);
-
-    const handleAvatarContinue = () => {
-        if (!avatarUri) {
-            setError('Please add a profile photo to continue');
-            return;
-        }
-        setStage('name');
-        Events.onboardingStageComplete('avatar');
-    };
-
-    const handleAvatarSkip = () => {
-        setError(null);
-        setStage('name');
-        Events.avatarSkipped();
-        Events.onboardingStageComplete('avatar');
-    };
 
     const handleNameSubmit = () => {
         if (!name.trim()) {
@@ -154,7 +134,7 @@ export default function OnboardingScreen() {
     };
 
     const handleComplete = async () => {
-        console.log('[Onboarding] handleComplete called, user:', userId, 'name:', name);
+        console.log('[Onboarding] handleComplete called, user:', userId, 'name:', displayName);
         if (!userId) {
             console.error('[Onboarding] No user ID available');
             setError('Not logged in. Please restart the app.');
@@ -165,19 +145,10 @@ export default function OnboardingScreen() {
         setError(null);
 
         try {
-            // Upload avatar if one was selected
-            let avatarUrl: string | null = null;
-            if (avatarUri) {
-                avatarUrl = await uploadAvatar();
-                if (avatarUrl) {
-                    Events.avatarUploaded();
-                }
-            }
-
             const updatedFields: string[] = ["name", "gender", "usage_reason", "max_intensity", "show_explicit_content", "hide_nsfw"];
 
             const updateData = {
-                name: name.trim(),
+                name: displayName.trim(),
                 gender,
                 usage_reason: usageReason,
                 // Preserve the safest legacy profile values. Catalogue
@@ -190,10 +161,6 @@ export default function OnboardingScreen() {
             };
 
             await profileSettingsApi.updateProfile(updateData);
-
-            if (avatarUrl) {
-                updatedFields.push("avatar_url");
-            }
 
             console.log('[Onboarding] Profile updated successfully, fetching user...');
             await fetchUser();
@@ -231,71 +198,7 @@ export default function OnboardingScreen() {
     };
 
     const renderStage = () => {
-        switch (stage) {
-            case 'avatar':
-                return (
-                    <Animated.View
-                        key="avatar"
-                        entering={FadeInUp.duration(500)}
-                        exiting={SlideOutLeft.duration(300)}
-                        style={styles.stageContainer}
-                    >
-                        <View style={styles.header}>
-                            <LinearGradient
-                                colors={gradients.primary as [string, string]}
-                                style={styles.iconContainer}
-                            >
-                                <Ionicons name="heart" size={40} color={colors.text} />
-                            </LinearGradient>
-                            <Text style={styles.title}>Welcome to Sauci</Text>
-                            <Text style={styles.subtitle}>
-                                Add a profile photo so your partner knows it's you
-                            </Text>
-                        </View>
-
-                        <GlassCard style={styles.card}>
-                            <View style={styles.avatarSection}>
-                                <Pressable onPress={handleAvatarPress} style={styles.avatarTouchable}>
-                                    {avatarUri ? (
-                                        <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-                                    ) : (
-                                        <View
-                                            style={styles.avatarPlaceholder}
-                                        >
-                                            <Ionicons name="camera" size={40} color={colors.textSecondary} />
-                                        </View>
-                                    )}
-                                    <View style={styles.avatarBadge}>
-                                        <Ionicons name={avatarUri ? "pencil" : "add"} size={16} color={colors.text} />
-                                    </View>
-                                </Pressable>
-                                <Text style={styles.avatarHint}>
-                                    {avatarUri ? 'Tap to change photo' : 'Tap to add a photo'}
-                                </Text>
-                            </View>
-                            {error && (
-                                <View style={styles.errorContainer}>
-                                    <Ionicons name="alert-circle" size={16} color={colors.error} />
-                                    <Text style={styles.errorText}>{error}</Text>
-                                </View>
-                            )}
-                        </GlassCard>
-
-                        <View style={styles.footer}>
-                            <GlassButton onPress={handleAvatarContinue} fullWidth size="lg">
-                                Continue
-                            </GlassButton>
-                            <Pressable
-                                style={styles.skipButton}
-                                onPress={handleAvatarSkip}
-                                testID="avatar-skip-button"
-                            >
-                                <Text style={styles.skipText}>Skip for now</Text>
-                            </Pressable>
-                        </View>
-                    </Animated.View>
-                );
-
+        switch (activeStage) {
             case 'name':
                 return (
                     <Animated.View
@@ -305,16 +208,12 @@ export default function OnboardingScreen() {
                         style={styles.stageContainer}
                     >
                         <View style={styles.header}>
-                            {avatarUri ? (
-                                <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
-                            ) : (
-                                <LinearGradient
-                                    colors={gradients.primary as [string, string]}
-                                    style={styles.iconContainer}
-                                >
-                                    <Ionicons name="person" size={40} color={colors.text} />
-                                </LinearGradient>
-                            )}
+                            <LinearGradient
+                                colors={gradients.primary as [string, string]}
+                                style={styles.iconContainer}
+                            >
+                                <Ionicons name="person" size={40} color={colors.text} />
+                            </LinearGradient>
                             <Text style={styles.title}>What can we call you?</Text>
                             <Text style={styles.subtitle}>
                                 Nicknames and pet names are welcome too!
@@ -368,7 +267,7 @@ export default function OnboardingScreen() {
                         style={styles.stageContainer}
                     >
                         <View style={styles.header}>
-                            <Text style={styles.greeting}>Hey, {name.trim()}!</Text>
+                            <Text style={styles.greeting}>Hey, {displayName.trim()}!</Text>
                             <Text style={styles.subtitle}>
                                 This helps us show you the right questions
                             </Text>
@@ -576,15 +475,12 @@ export default function OnboardingScreen() {
             >
                 {/* Header with back button and progress dots */}
                 <Animated.View entering={FadeIn.duration(600)} style={styles.headerBar}>
-                    {stage !== 'avatar' ? (
+                    {previousStage ? (
                         <Pressable
                             style={styles.backButton}
                             onPress={() => {
                                 setError(null);
-                                if (stage === 'notifications') setStage('purpose');
-                                else if (stage === 'purpose') setStage('gender');
-                                else if (stage === 'gender') setStage('name');
-                                else if (stage === 'name') setStage('avatar');
+                                setStage(previousStage);
                             }}
                         >
                             <Ionicons name="chevron-back" size={24} color={colors.text} />
@@ -593,11 +489,10 @@ export default function OnboardingScreen() {
                         <View style={styles.backButtonPlaceholder} />
                     )}
                     <View style={styles.progressContainer}>
-                        <View style={[styles.progressDot, stage === 'avatar' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'name' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'gender' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'purpose' && styles.progressDotActive]} />
-                        <View style={[styles.progressDot, stage === 'notifications' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, activeStage === 'name' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, activeStage === 'gender' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, activeStage === 'purpose' && styles.progressDotActive]} />
+                        <View style={[styles.progressDot, activeStage === 'notifications' && styles.progressDotActive]} />
                     </View>
                     <View style={styles.backButtonPlaceholder} />
                 </Animated.View>
@@ -651,18 +546,6 @@ const styles = StyleSheet.create({
         height: 8,
         borderRadius: 4,
         backgroundColor: colors.border,
-    },
-    // ...
-    avatarPlaceholder: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: colors.border,
-        borderStyle: 'dashed',
-        backgroundColor: colors.backgroundLight,
     },
     // ...
     inputContainer: {
@@ -756,47 +639,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         marginBottom: spacing.lg,
         ...shadows.lg,
-    },
-    headerAvatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        marginBottom: spacing.lg,
-        borderWidth: 2,
-        borderColor: colors.primary,
-    },
-    avatarSection: {
-        alignItems: 'center',
-        paddingVertical: spacing.lg,
-    },
-    avatarTouchable: {
-        position: 'relative',
-    },
-    avatarImage: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        borderWidth: 3,
-        borderColor: colors.primary,
-    },
-
-    avatarBadge: {
-        position: 'absolute',
-        bottom: 4,
-        right: 4,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: colors.background,
-    },
-    avatarHint: {
-        ...typography.caption1,
-        color: colors.textSecondary,
-        marginTop: spacing.md,
     },
     title: {
         ...typography.largeTitle,

@@ -1,5 +1,5 @@
 import type { Couple, Profile } from "@/types";
-import { apiRequest } from "./apiClient";
+import { apiRequest, apiRequestWithAccessToken } from "./apiClient";
 
 export interface CoupleStateResponse {
     couple: Couple | null;
@@ -16,6 +16,8 @@ export interface CoupleMutationResponse {
 
 export const coupleApi = {
     getState: () => apiRequest<CoupleStateResponse>("/v1/couple"),
+    getStateWithAccessToken: (accessToken: string) =>
+        apiRequestWithAccessToken<CoupleStateResponse>("/v1/couple", accessToken),
     create: () => apiRequest<CoupleMutationResponse>("/v1/couple", { method: "POST", body: {} }),
     join: (inviteCode: string) => apiRequest<CoupleMutationResponse>("/v1/couple", {
         method: "POST",
