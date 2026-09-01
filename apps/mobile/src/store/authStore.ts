@@ -7,6 +7,22 @@ import { syncTimezone } from "../lib/reportedTimezone";
 import { Events } from "../lib/analytics";
 import type { Profile, Couple } from "@/types";
 
+export interface AuthSessionSnapshot {
+    userId: string;
+    accessToken: string;
+    isAnonymous: boolean;
+}
+
+let fetchUserGeneration = 0;
+
+const snapshotSession = (session: { user?: { id: string; is_anonymous?: boolean }; access_token?: string } | null): AuthSessionSnapshot | null => {
+    if (!session?.user?.id || !session.access_token) return null;
+    return {
+        userId: session.user.id,
+        accessToken: session.access_token,
+        isAnonymous: !!session.user.is_anonymous,
+    };
+};
 
 interface AuthState {
     user: Profile | null;
@@ -17,14 +33,18 @@ interface AuthState {
     isLoading: boolean;
     isAuthenticated: boolean;
     isAnonymous: boolean;
+    /** First-authorization Apple name held only until the API profile reflects it. */
+    pendingAppleDisplayName: { userId: string; name: string } | null;
 
 
     // Actions
-    fetchUser: () => Promise<void>;
+    fetchUser: (expectedSession?: AuthSessionSnapshot) => Promise<void>;
     fetchCouple: () => Promise<void>;
     refreshPartner: () => Promise<Profile | null>;
     signOut: () => Promise<void>;
     setUser: (user: Profile | null) => void;
+    setPendingAppleDisplayName: (pending: { userId: string; name: string } | null) => void;
+    clearPendingAppleDisplayName: (userId: string) => void;
     updateLastActive: () => Promise<void>;
 }
 
@@ -50,45 +70,94 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isLoading: true,
     isAuthenticated: false,
     isAnonymous: false,
+    pendingAppleDisplayName: null,
 
-    fetchUser: async () => {
-        try {
-            // First check if we have a session in storage
+    fetchUser: async (expectedSession) => {
+        const generation = ++fetchUserGeneration;
+        let snapshot: AuthSessionSnapshot | null = expectedSession ?? null;
+        const isCurrentSession = async (snapshot: AuthSessionSnapshot): Promise<boolean> => {
+            if (generation !== fetchUserGeneration) return false;
+
             const { data: { session } } = await authClient.auth.getSession();
+            return generation === fetchUserGeneration
+                && session?.user?.id === snapshot.userId
+                && session.access_token === snapshot.accessToken;
+        };
 
-            if (!session?.user) {
-                set({ user: null, isAuthenticated: false, isAnonymous: false, isLoading: false });
+        try {
+            // Capture the session that owns this refresh. All following API calls
+            // and state writes remain bound to it, never the ambient auth session.
+            snapshot = expectedSession ?? snapshotSession((await authClient.auth.getSession()).data.session);
+
+            if (!snapshot) {
+                if (generation !== fetchUserGeneration) return;
+                set({ user: null, isAuthenticated: false, isAnonymous: false, isLoading: false, pendingAppleDisplayName: null });
                 return;
             }
 
             // This endpoint verifies the Supabase access token and creates the
             // product profile on first use, keeping profile data out of Supabase.
-            const { profile } = await apiClient.get<{ profile: Profile }>("/v1/me");
+            const { profile } = await apiClient.getWithAccessToken<{ profile: Profile }>("/v1/me", snapshot.accessToken);
 
-            const isAnonymous = !!(session.user as { is_anonymous?: boolean }).is_anonymous;
+            if (!(await isCurrentSession(snapshot))) return;
+
+            if (profile.id !== snapshot.userId) {
+                console.error("[Auth] API profile subject did not match the authenticated session");
+                // Fail closed rather than leaving the prior account visible when
+                // an API response cannot be proven to belong to this session.
+                set({ user: null, couple: null, partner: null, sealedCount: 0, isAuthenticated: false, isAnonymous: false, isLoading: false, pendingAppleDisplayName: null });
+                const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
+                useMatchStore.getState().clearMatches();
+                usePacksStore.getState().clearPacks();
+                useMessageStore.getState().clearMessages();
+                useSubscriptionStore.getState().clearSubscription();
+                useNotificationPreferencesStore.getState().clearPreferences();
+                useStreakStore.getState().clearStreak();
+                useResponsesStore.getState().clearResponses();
+                useQuizStore.getState().clearQuiz();
+                return;
+            }
+
+            const isAnonymous = snapshot.isAnonymous;
 
             // Only update user if data actually changed to avoid unnecessary re-renders
             const currentUser = get().user;
             const userChanged = !currentUser || JSON.stringify(currentUser) !== JSON.stringify(profile);
+            // Always fetch couple state: it reports the sealed answer count for a
+            // solo user even before any couple exists, not just once paired.
+            const { couple, partner, sealed_count } = await coupleApi.getStateWithAccessToken(snapshot.accessToken);
+
+            if (!(await isCurrentSession(snapshot))) return;
+
             if (userChanged) {
                 set({
                     user: profile,
+                    couple,
+                    partner,
+                    sealedCount: sealed_count,
                     isAuthenticated: true,
                     isAnonymous,
+                    isLoading: false,
                 });
-            } else if (!get().isAuthenticated) {
-                set({ isAuthenticated: true, isAnonymous });
+            } else {
+                set({
+                    couple,
+                    partner,
+                    sealedCount: sealed_count,
+                    isAuthenticated: true,
+                    isAnonymous,
+                    isLoading: false,
+                });
             }
-
-            // Always fetch couple state: it reports the sealed answer count for a
-            // solo user even before any couple exists, not just once paired.
-            await get().fetchCouple();
-
-            set({ isLoading: false });
         } catch (error) {
+            if (generation !== fetchUserGeneration) return;
+
+            const currentSnapshot = snapshot;
+            if (currentSnapshot && !(await isCurrentSession(currentSnapshot))) return;
+
             if (error instanceof ApiError && error.status === 401) {
                 console.log("[Auth] Session rejected by API, signing out");
-                set({ user: null, couple: null, partner: null, sealedCount: 0, isAuthenticated: false, isAnonymous: false, isLoading: false });
+                set({ user: null, couple: null, partner: null, sealedCount: 0, isAuthenticated: false, isAnonymous: false, isLoading: false, pendingAppleDisplayName: null });
                 const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
                 useMatchStore.getState().clearMatches();
                 usePacksStore.getState().clearPacks();
@@ -141,6 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
              isAuthenticated: false,
              isAnonymous: false,
              isLoading: false,
+             pendingAppleDisplayName: null,
          });
         // Clear other stores
         const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
@@ -169,7 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
             user,
             isAuthenticated: !!user,
-            ...(user === null && { isAnonymous: false }),
+            ...(user === null && { isAnonymous: false, pendingAppleDisplayName: null }),
             isLoading: false,
             // Clear couple/partner when user is null (signed out)
             ...(user === null && { couple: null, partner: null, sealedCount: 0 })
@@ -188,6 +258,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             // Clear badge on sign out
             const { clearBadge } = require("../lib/badge");
             clearBadge();
+        }
+    },
+
+    setPendingAppleDisplayName: (pending) => set({ pendingAppleDisplayName: pending }),
+
+    clearPendingAppleDisplayName: (userId) => {
+        if (get().pendingAppleDisplayName?.userId === userId) {
+            set({ pendingAppleDisplayName: null });
         }
     },
 

@@ -87,6 +87,22 @@ const { error } = await supabase.auth.signInWithIdToken({
 });
 ```
 
+Apple provides the selected full name only on the first native authorization.
+The mobile client formats it and reads the API-owned profile with the exact
+subject and bearer returned by that authorization. It writes the display name
+only when that matching profile name is blank, preserving existing nicknames.
+While this first-auth write is pending, the name is held only in subject-keyed
+mobile state so onboarding does not briefly require it again; failure clears
+that value and safely returns to the normal name step. Apple full/given/family
+names and email are not copied into Supabase user metadata.
+
+Profile refreshes bind both `/v1/me` and couple-state reads to the session
+subject and bearer captured at their start. A response is applied only while
+that exact session remains current, and a returned profile must have the same
+subject. This prevents an older request from replacing a newer account's local
+profile, relationship state, or loading state. A subject mismatch clears the
+in-memory user-scoped state rather than leaving a prior account visible.
+
 **OAuth Fallback (web, Expo Go):**
 ```typescript
 const { error } = await supabase.auth.signInWithOAuth({

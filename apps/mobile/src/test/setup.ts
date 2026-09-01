@@ -92,6 +92,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 );
 
 jest.mock('expo-image-picker', () => ({
+    getCameraPermissionsAsync: jest.fn(async () => ({ status: 'undetermined', canAskAgain: true })),
     requestCameraPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
     launchImageLibraryAsync: jest.fn(async () => ({ canceled: true, assets: [] })),
     launchCameraAsync: jest.fn(async () => ({ canceled: true, assets: [] })),

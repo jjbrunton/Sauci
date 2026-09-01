@@ -1,4 +1,4 @@
-import { ApiError, apiRequest } from "@/lib/apiClient";
+import { ApiError, apiRequest, apiRequestWithAccessToken } from "@/lib/apiClient";
 import { authClient } from "@/lib/authClient";
 
 function response(status: number, body?: unknown) {
@@ -38,6 +38,17 @@ describe("apiClient", () => {
 
         await expect(apiRequest("/v1/me")).rejects.toMatchObject({ status: 401 });
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("uses an explicitly captured bearer without reading a mutable auth session", async () => {
+        fetchMock.mockResolvedValue(response(200, { profile: { id: "user-1" } }));
+        (authClient.auth.getSession as jest.Mock).mockClear();
+
+        await apiRequestWithAccessToken("/v1/me", "captured-token");
+
+        const headers = fetchMock.mock.calls[0][1].headers as Headers;
+        expect(headers.get("Authorization")).toBe("Bearer captured-token");
+        expect(authClient.auth.getSession).not.toHaveBeenCalled();
     });
 
     it("preserves API status and error details", async () => {

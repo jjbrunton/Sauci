@@ -41,9 +41,14 @@ if (Platform.OS === "android") {
 import { GradientBackground, GlassButton, GlassCard, GlassInput } from "../../../components/ui";
 import { colors, spacing, radius, typography } from "../../../theme";
 import { authClient } from "../../../lib/authClient";
+import { apiRequestWithAccessToken } from "../../../lib/apiClient";
+import { formatAppleProfileName } from "../../../lib/appleProfileName";
+import { persistAppleProfileName } from "../../../lib/appleProfileNamePersistence";
 import { getAuthError } from "../../../lib/errors";
+import { profileSettingsApi } from "../../../lib/profileSettingsApi";
 import { useAuthStore } from "../../../store";
 import { ScreenHeader } from "../components";
+import type { Profile } from "../../../types";
 
 type SaveMode = "magic-link" | "password";
 
@@ -182,28 +187,40 @@ export function SaveAccountScreen() {
                 return;
             }
 
-            // Apple only provides name/email on first auth grant
-            if (credential.fullName) {
-                const nameParts = [
-                    credential.fullName.givenName,
-                    credential.fullName.middleName,
-                    credential.fullName.familyName,
-                ].filter(Boolean);
-                const fullName = nameParts.join(" ");
+            const appleProfileName = formatAppleProfileName(credential.fullName);
+            if (appleProfileName) {
+                try {
+                    const { data: { session } } = await authClient.auth.getSession();
+                    if (!session?.user.id || !session.access_token) {
+                        throw new Error("Apple account link did not retain an authenticated session");
+                    }
 
-                if (fullName) {
-                    await authClient.auth.updateUser({
-                        data: {
-                            full_name: fullName,
-                            given_name: credential.fullName.givenName,
-                            family_name: credential.fullName.familyName,
+                    await persistAppleProfileName(
+                        { userId: session.user.id, accessToken: session.access_token },
+                        appleProfileName,
+                        {
+                            getProfile: (token) => apiRequestWithAccessToken<{ profile: Profile }>("/v1/me", token),
+                            updateProfileName: (token, name) => profileSettingsApi.updateProfileWithAccessToken(token, { name }),
                         },
-                    });
+                    );
+                } catch {
+                    // Identity linking succeeded. Do not retain the raw Apple name in Auth
+                    // metadata if the separate API profile update is temporarily unavailable.
+                    console.warn("[Apple Link] Could not persist supplied name");
                 }
             }
 
             // Refresh user/profile
-            await fetchUser();
+            const { data: { session } } = await authClient.auth.getSession();
+            if (session?.user.id && session.access_token) {
+                await fetchUser({
+                    userId: session.user.id,
+                    accessToken: session.access_token,
+                    isAnonymous: !!(session.user as { is_anonymous?: boolean }).is_anonymous,
+                });
+            } else {
+                await fetchUser();
+            }
 
             showSuccess("Account saved with Apple.");
             router.navigate("/(app)/profile" as any);

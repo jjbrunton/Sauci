@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import { apiClient, apiRequestWithAccessToken } from './apiClient';
 import type { Gender } from '../types';
 import type { NotificationPreferences } from '../store/notificationPreferencesStore';
 
@@ -20,6 +20,8 @@ type PreferenceKey = keyof Omit<NotificationPreferences, 'user_id' | 'created_at
 
 export const profileSettingsApi = {
     updateProfile: (update: ProfileUpdate) => apiClient.patch<{ updated: true }>('/v1/me/profile', update),
+    updateProfileWithAccessToken: (accessToken: string, update: ProfileUpdate) =>
+        apiRequestWithAccessToken<{ updated: true }>('/v1/me/profile', accessToken, { method: 'PATCH', body: update }),
     updateLastActive: () => apiClient.post<void>('/v1/me/activity'),
     getNotificationPreferences: () => apiClient.get<NotificationPreferences>('/v1/me/notification-preferences'),
     updateNotificationPreference: (key: PreferenceKey, value: boolean) =>

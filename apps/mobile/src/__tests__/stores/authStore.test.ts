@@ -30,10 +30,14 @@ const profile = {
 describe("authStore", () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        (authClient.auth.getSession as jest.Mock).mockResolvedValue({
+            data: { session: { user: { id: "me" }, access_token: "token-me" } },
+        });
         // fetchUser always fetches couple state now, since it also carries the
         // sealed answer count for a user who has no couple yet. Individual tests
         // override this when they care about the couple/partner shape.
         jest.spyOn(coupleApi, "getState").mockResolvedValue({ couple: null, partner: null, sealed_count: 0 });
+        jest.spyOn(coupleApi, "getStateWithAccessToken").mockResolvedValue({ couple: null, partner: null, sealed_count: 0 });
         useAuthStore.setState({
             user: null,
             couple: null,
@@ -42,6 +46,7 @@ describe("authStore", () => {
             isLoading: true,
             isAuthenticated: false,
             isAnonymous: false,
+            pendingAppleDisplayName: null,
         } as any);
         useMatchStore.setState({ matches: [{ id: "m1" }], newMatchesCount: 1 } as any);
         usePacksStore.setState({ enabledPackIds: ["p1"] } as any);
@@ -64,13 +69,13 @@ describe("authStore", () => {
 
     it("bootstraps and reads the profile through GET /v1/me", async () => {
         (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
-            data: { session: { user: { id: "me", is_anonymous: true } } },
+            data: { session: { user: { id: "me", is_anonymous: true }, access_token: "token-me" } },
         });
-        const getSpy = jest.spyOn(apiClient, "get").mockResolvedValueOnce({ profile });
+        const getSpy = jest.spyOn(apiClient, "getWithAccessToken").mockResolvedValueOnce({ profile });
 
         await useAuthStore.getState().fetchUser();
 
-        expect(getSpy).toHaveBeenCalledWith("/v1/me");
+        expect(getSpy).toHaveBeenCalledWith("/v1/me", "token-me");
         expect(useAuthStore.getState()).toMatchObject({
             user: profile,
             isAuthenticated: true,
@@ -114,9 +119,9 @@ describe("authStore", () => {
     it("clears user-scoped stores and hosted auth when the API rejects the session", async () => {
         useAuthStore.setState({ sealedCount: 3 } as any);
         (authClient.auth.getSession as jest.Mock).mockResolvedValueOnce({
-            data: { session: { user: { id: "me" } } },
+            data: { session: { user: { id: "me" }, access_token: "token-me" } },
         });
-        jest.spyOn(apiClient, "get").mockRejectedValueOnce(new ApiError("Unauthorized", 401));
+        jest.spyOn(apiClient, "getWithAccessToken").mockRejectedValueOnce(new ApiError("Unauthorized", 401));
         (authClient.auth.signOut as jest.Mock).mockResolvedValueOnce({ error: null });
 
         await useAuthStore.getState().fetchUser();
@@ -133,6 +138,123 @@ describe("authStore", () => {
         expect(useMessageStore.getState().unreadCount).toBe(0);
         expect(useSubscriptionStore.getState().subscription).toMatchObject({ isProUser: false });
         expect(authClient.auth.signOut).toHaveBeenCalled();
+    });
+
+    it("does not let an older session response overwrite a newer profile", async () => {
+        let currentSession = { user: { id: "user-a" }, access_token: "token-a" };
+        (authClient.auth.getSession as jest.Mock).mockImplementation(async () => ({ data: { session: currentSession } }));
+
+        let resolveA!: (value: { profile: Profile }) => void;
+        let resolveB!: (value: { profile: Profile }) => void;
+        const getSpy = jest.spyOn(apiClient, "getWithAccessToken")
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveA = resolve; }))
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveB = resolve; }));
+
+        const firstFetch = useAuthStore.getState().fetchUser();
+        currentSession = { user: { id: "user-b" }, access_token: "token-b" };
+        const secondFetch = useAuthStore.getState().fetchUser();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        resolveB({ profile: { ...profile, id: "user-b", name: "Newer Name" } as Profile });
+        await secondFetch;
+        resolveA({ profile: { ...profile, id: "user-a", name: "Older Name" } as Profile });
+        await firstFetch;
+
+        expect(getSpy).toHaveBeenNthCalledWith(1, "/v1/me", "token-a");
+        expect(getSpy).toHaveBeenNthCalledWith(2, "/v1/me", "token-b");
+        expect(useAuthStore.getState()).toMatchObject({
+            user: expect.objectContaining({ id: "user-b", name: "Newer Name" }),
+            isAuthenticated: true,
+            isLoading: false,
+        });
+    });
+
+    it("does not let an older couple response overwrite a newer session", async () => {
+        let currentSession = { user: { id: "user-a" }, access_token: "token-a" };
+        (authClient.auth.getSession as jest.Mock).mockImplementation(async () => ({ data: { session: currentSession } }));
+        jest.spyOn(apiClient, "getWithAccessToken")
+            .mockResolvedValueOnce({ profile: { ...profile, id: "user-a", name: "Older Name" } })
+            .mockResolvedValueOnce({ profile: { ...profile, id: "user-b", name: "Newer Name" } });
+
+        let resolveCoupleA!: (value: { couple: null; partner: null; sealed_count: number }) => void;
+        jest.spyOn(coupleApi, "getStateWithAccessToken")
+            .mockImplementationOnce(() => new Promise((resolve) => { resolveCoupleA = resolve; }))
+            .mockResolvedValueOnce({ couple: null, partner: null, sealed_count: 7 });
+
+        const firstFetch = useAuthStore.getState().fetchUser();
+        for (let attempt = 0; attempt < 10 && !resolveCoupleA; attempt += 1) {
+            await Promise.resolve();
+        }
+        expect(resolveCoupleA).toBeDefined();
+        currentSession = { user: { id: "user-b" }, access_token: "token-b" };
+        const secondFetch = useAuthStore.getState().fetchUser();
+        await secondFetch;
+        resolveCoupleA({ couple: null, partner: null, sealed_count: 1 });
+        await firstFetch;
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: expect.objectContaining({ id: "user-b", name: "Newer Name" }),
+            sealedCount: 7,
+            isLoading: false,
+        });
+    });
+
+    it("rejects a mismatched API profile without signing out the active session", async () => {
+        useAuthStore.setState({
+            user: profile,
+            couple: { id: "prior-couple", invite_code: "PRIOR123", created_at: profile.created_at },
+            partner: { ...profile, id: "prior-partner", name: "Prior Partner" },
+            sealedCount: 4,
+            isAuthenticated: true,
+            isAnonymous: true,
+            pendingAppleDisplayName: { userId: "me", name: "Prior Name" },
+        } as any);
+        jest.spyOn(apiClient, "getWithAccessToken").mockResolvedValueOnce({
+            profile: { ...profile, id: "different-user", name: "Wrong Subject" },
+        });
+
+        await useAuthStore.getState().fetchUser();
+
+        expect(useAuthStore.getState()).toMatchObject({
+            user: null,
+            couple: null,
+            partner: null,
+            sealedCount: 0,
+            isAuthenticated: false,
+            isAnonymous: false,
+            isLoading: false,
+            pendingAppleDisplayName: null,
+        });
+        expect(useMatchStore.getState().matches).toEqual([]);
+        expect(usePacksStore.getState().enabledPackIds).toEqual([]);
+        expect(useMessageStore.getState().unreadCount).toBe(0);
+        expect(useSubscriptionStore.getState().subscription).toMatchObject({ isProUser: false });
+        expect(authClient.auth.signOut).not.toHaveBeenCalled();
+        expect(coupleApi.getStateWithAccessToken).not.toHaveBeenCalled();
+    });
+
+    it("does not sign out a newer session when an older request is rejected", async () => {
+        let currentSession = { user: { id: "user-a" }, access_token: "token-a" };
+        (authClient.auth.getSession as jest.Mock).mockImplementation(async () => ({ data: { session: currentSession } }));
+
+        let rejectA!: (error: Error) => void;
+        const getSpy = jest.spyOn(apiClient, "getWithAccessToken")
+            .mockImplementationOnce(() => new Promise((_, reject) => { rejectA = reject; }))
+            .mockResolvedValueOnce({ profile: { ...profile, id: "user-b", name: "Newer Name" } });
+
+        const firstFetch = useAuthStore.getState().fetchUser();
+        currentSession = { user: { id: "user-b" }, access_token: "token-b" };
+        const secondFetch = useAuthStore.getState().fetchUser();
+        await Promise.resolve();
+        await Promise.resolve();
+        await secondFetch;
+        rejectA(new ApiError("Unauthorized", 401));
+        await firstFetch;
+
+        expect(getSpy).toHaveBeenCalledTimes(2);
+        expect(authClient.auth.signOut).not.toHaveBeenCalled();
+        expect(useAuthStore.getState().user).toMatchObject({ id: "user-b", name: "Newer Name" });
     });
 
     it("clears sealed answers during an explicit sign-out", async () => {
@@ -157,5 +279,15 @@ describe("authStore", () => {
             sealedCount: 0,
             isAuthenticated: false,
         });
+    });
+
+    it('keeps a pending Apple name scoped to its original subject', () => {
+        useAuthStore.getState().setPendingAppleDisplayName({ userId: 'apple-user', name: 'Ada Lovelace' });
+        useAuthStore.getState().clearPendingAppleDisplayName('other-user');
+
+        expect(useAuthStore.getState().pendingAppleDisplayName).toEqual({ userId: 'apple-user', name: 'Ada Lovelace' });
+
+        useAuthStore.getState().clearPendingAppleDisplayName('apple-user');
+        expect(useAuthStore.getState().pendingAppleDisplayName).toBeNull();
     });
 });
