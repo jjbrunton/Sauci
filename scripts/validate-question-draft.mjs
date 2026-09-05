@@ -5,9 +5,13 @@ import { readFile } from 'node:fs/promises';
 const draftPath = new URL('../docs/product/question-drafts/play-safe-spicy-v1.json', import.meta.url);
 const snapshotPath = new URL('../apps/supabase/catalog-snapshots/production-2026-08-28.json', import.meta.url);
 const markdownPath = new URL('../docs/product/question-drafts/play-safe-spicy-v1.md', import.meta.url);
+const textSourcePath = new URL('../docs/product/question-drafts/text-answer-concept-source.md', import.meta.url);
+const audioSourcePath = new URL('../docs/product/question-drafts/audio-concept-source.md', import.meta.url);
 const draft = JSON.parse(await readFile(draftPath, 'utf8'));
 const snapshot = JSON.parse(await readFile(snapshotPath, 'utf8'));
 const markdown = await readFile(markdownPath, 'utf8');
+const textSource = await readFile(textSourcePath, 'utf8');
+const audioSource = await readFile(audioSourcePath, 'utf8');
 const errors = [];
 const expect = (condition, message) => { if (!condition) errors.push(message); };
 const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -18,7 +22,9 @@ const gendered = /\b(?:boyfriend|girlfriend|husband|wife|him|her|his|hers)\b/i;
 const photoUnsafe = /\b(?:body part|lingerie|nude|naked|proof|skin|undress|your body)\b/i;
 const artificialSuffix = /\b(?:option|response focus|voice focus|visual cue|variant|version)\s*\d+\b/i;
 const malformedOrFallback = /\b(?:let your partner to|as they for|share this private idea|take the complementary role|response focus|voice focus|bolder mood|confident outfit|unfamiliar private dynamic)\b/i;
-const genericOutcome = /\b(?:this match reveals whether|specific written starting point|take the complementary role)\b/i;
+const genericOutcome = /\b(?:this match reveals whether|specific written starting point|take the complementary role|gains a personal cue for a close conversation)\b/i;
+const incompleteSwipe = /^(?:a |an |the |trying |swapping )/i;
+const nonActionableSwipe = /^(?:close|private|shared|more|something|anything|it|that)\b/i;
 const markdownPackNames = {
   'taking-the-lead': 'Taking the Lead',
   'clothes-confidence': 'Clothes and Confidence',
@@ -29,6 +35,36 @@ const markdownPackNames = {
   'giving-receiving-attention': 'Giving and Receiving Attention',
   'aftercare-reconnection': 'Aftercare and Reconnection',
 };
+const sourcePackSlugs = {
+  'flirty communication': 'flirty-communication',
+  anticipation: 'anticipation',
+  'taking the lead': 'taking-the-lead',
+  following: 'following',
+  'shared control': 'shared-control',
+  'sensory cues': 'sensory-cues',
+  'private performance': 'private-performance',
+  'clothes and confidence': 'clothes-confidence',
+  'fantasy exchange': 'fantasy-exchange',
+  roleplay: 'roleplay',
+  'settings and atmosphere': 'settings-atmosphere',
+  'boundaries and check-ins': 'boundaries-check-ins',
+  'surprise and novelty': 'surprise-novelty',
+  'long-distance desire': 'long-distance-desire',
+  'giving and receiving attention': 'giving-receiving-attention',
+  'aftercare and reconnection': 'aftercare-reconnection',
+};
+const parseSource = (source, pattern, type) => [...source.matchAll(pattern)].map((match) => ({
+  pack_slug: sourcePackSlugs[match[1].toLowerCase()],
+  intensity: Number(match[2]),
+  text: match[3],
+  intended_outcome: match[4],
+  question_type: type,
+}));
+const textSourceRows = parseSource(textSource, /^\d+\. \*\*Theme:\*\* (.+?) \| \*\*Intensity:\*\* (\d)\s*\r?\n\s*\*\*Prompt:\*\* (.+?)\s*\r?\n\s*\*\*Intended outcome:\*\* (.+?)$/gm, 'text_answer');
+const audioSourceRows = parseSource(audioSource, /^\d+\. Theme: (.+?) \| Intensity: (\d)\s*\r?\n\s*Prompt: (.+?)\s*\r?\n\s*Intended outcome: (.+?)$/gm, 'audio');
+expect(textSourceRows.length === 100, `expected 100 text source rows, got ${textSourceRows.length}`);
+expect(audioSourceRows.length === 70, `expected 70 audio source rows, got ${audioSourceRows.length}`);
+const sourceKey = (row) => JSON.stringify([row.pack_slug, row.intensity, row.text, row.intended_outcome]);
 
 expect(Array.isArray(draft.packs) && Array.isArray(draft.questions), 'draft must contain packs and questions arrays');
 const questions = draft.questions ?? [];
@@ -42,6 +78,8 @@ const packCounts = new Map();
 const draftTexts = new Map();
 const openingCounts = new Map();
 const ngramRows = new Map();
+const outcomeClusters = new Map();
+const responseLeadingVerbs = new Map();
 const requiredFormatOpenings = new Set(['share a photo of', 'who is more likely']);
 const snapshotTexts = new Set((snapshot.tables?.questions ?? []).map((row) => normalize(row.text)));
 for (const [index, question] of questions.entries()) {
@@ -71,6 +109,25 @@ for (const [index, question] of questions.entries()) {
     expect(!text.includes('—'), `${label} contains an em dash`);
   }
   const normalized = normalize(question.text);
+  if (question.question_type === 'swipe') {
+    expect(!incompleteSwipe.test(question.text) && !nonActionableSwipe.test(question.text), `${label} swipe text must be a complete actionable proposal`);
+    if (question.partner_text !== null) {
+      expect(question.text !== question.partner_text, `${label} asymmetric swipe must use distinct partner wording`);
+      expect(!incompleteSwipe.test(question.partner_text) && !nonActionableSwipe.test(question.partner_text), `${label} asymmetric partner_text must be a complete actionable proposal`);
+    }
+  }
+  if (question.question_type === 'text_answer' || question.question_type === 'audio') {
+    const leadingVerb = normalized.split(' ')[0];
+    const key = `${question.question_type}:${leadingVerb}`;
+    responseLeadingVerbs.set(key, (responseLeadingVerbs.get(key) ?? 0) + 1);
+    const outcomeCluster = normalize(question.intended_outcome)
+      .replace(/\b(?:your|partner|the|couple|one|a|an|and|or|can|to|with|for|of|that|this|their|them|you)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const rows = outcomeClusters.get(outcomeCluster) ?? [];
+    rows.push(label);
+    outcomeClusters.set(outcomeCluster, rows);
+  }
   const opening = normalized.split(' ').slice(0, 4).join(' ');
   if (!requiredFormatOpenings.has(opening)) {
     openingCounts.set(opening, (openingCounts.get(opening) ?? 0) + 1);
@@ -103,6 +160,24 @@ for (const [opening, count] of openingCounts) {
 }
 for (const [ngram, rows] of ngramRows) {
   expect(rows.length <= 10, `six-word phrase repeats ${rows.length} times across non-inverse rows: ${ngram}`);
+}
+for (const [type, sourceRows] of [['text_answer', textSourceRows], ['audio', audioSourceRows]]) {
+  const catalogueRows = questions.filter((question) => question.question_type === type);
+  const sourceKeys = new Set(sourceRows.map(sourceKey));
+  expect(sourceKeys.size === sourceRows.length, `${type} source contains duplicate concepts`);
+  expect(catalogueRows.length === sourceRows.length, `${type} source and catalogue counts differ`);
+  for (const question of catalogueRows) {
+    expect(sourceKeys.has(sourceKey(question)), `${type} row ${question.id} differs from the authored source`);
+  }
+}
+for (const [key, count] of responseLeadingVerbs) {
+  const [type, leadingVerb] = key.split(':');
+  const total = type === 'text_answer' ? 100 : 70;
+  expect(count <= Math.ceil(total * 0.6), `${type} leading verb "${leadingVerb}" repeats ${count} times`);
+}
+for (const [cluster, rows] of outcomeClusters) {
+  expect(cluster.length >= 16, `${rows.join(', ')} has an overly generic response outcome`);
+  expect(rows.length === 1, `response outcome cluster repeats across ${rows.join(', ')}`);
 }
 for (const [type, count] of Object.entries({ swipe: 300, text_answer: 100, audio: 70, photo: 40, who_likely: 40 })) expect(typeCounts[type] === count, `expected ${count} ${type}, got ${typeCounts[type]}`);
 for (const [level, count] of Object.entries({ 1: 0, 2: 120, 3: 300, 4: 130, 5: 0 })) expect(intensityCounts[level] === count, `expected ${count} intensity ${level}, got ${intensityCounts[level]}`);
