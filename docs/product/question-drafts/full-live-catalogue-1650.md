@@ -1,0 +1,3992 @@
+# Full live catalogue, 1,650 rows
+
+Status: source-only planning document. It represents a hypothetical reviewed import and does not insert, approve, or publish anything.
+
+## Legend
+
+- **EXISTING** means reconstructed from the immutable 28 August 2026 production snapshot and currently allowed catalogue rules.
+- **NEW** means a proposed source-only row.
+- Type is the existing app interaction type. Partner text appears only for asymmetric swipe rows.
+
+## Distribution
+
+| Scope | Total | Swipe | Text answer | Audio | Photo | Who likely |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Existing | 591 | 396 | 9 | 38 | 37 | 111 |
+| New | 1,059 | 404 | 241 | 182 | 143 | 89 |
+| Finished catalogue | 1,650 | 800 | 250 | 220 | 180 | 200 |
+
+- Relationship and romantic content, intensity 1-2: 825 rows.
+- Adult-leaning private content, intensity 3-4: 825 rows.
+
+## Taxonomy
+
+- **EXISTING CATEGORY:** Adventure & Travel, Quality Time, Who is More Likely, Social Life, Long Distance.
+- **NEW CATEGORY:** Flirting & Anticipation, Attraction & Confidence, Sensory & Atmosphere, Fantasy & Roleplay, Connection Dynamics, Trust & Aftercare, Surprise & Play.
+
+## EXISTING CATEGORY: Adventure & Travel
+
+### EXISTING PACK: Weekend Warriors
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0056ea4f-c56c-468c-9236-2a560b66557a`
+  - Text: Go to a trivia night at a local pub
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `04974845-afa1-4f7c-af85-a28392cca229`
+  - Text: Take a scenic train ride somewhere new
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `04f9b3cf-8657-41a1-aa90-374c663f2339`
+  - Text: Who is more likely to try a new restaurant without checking reviews?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0abe2515-efdc-4cb7-88c1-7b2b8c6f22cf`
+  - Text: Take a mixology or bartending class
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `0adabe45-e147-42fb-9280-ba3bfe66997b`
+  - Text: Who is more likely to suggest a road trip on a whim?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0c44d8c4-edb6-41d0-a614-0eb7d7acea43`
+  - Text: Try an indoor skydiving experience
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `0dc38582-9079-46c1-9cc3-cab052e76736`
+  - Text: Who is more likely to spend the entire weekend on the couch?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `0f152c86-35d1-4e58-9d14-feee1e044443`
+  - Text: Share a photo from a favourite weekend adventure
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `193be11c-8331-4b24-88f7-9cd7abd97732`
+  - Text: Share a photo of a place nearby you've been wanting to visit together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2349f6f7-0221-48e6-9acf-85897c993748`
+  - Text: Visit a local attraction you've never been to
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `235606a1-12b1-491a-bd8d-0c9a845072e1`
+  - Text: Pitch your ideal weekend getaway in 30 seconds
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `25d0e614-39da-435b-8680-701bd18e2912`
+  - Text: Visit a zoo or aquarium together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2c883d53-76c1-4962-8216-897e51739fef`
+  - Text: Go antiquing or thrift shopping together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `2ec33a72-b54a-4374-be05-a359a57ee564`
+  - Text: Who is more likely to sleep in and miss the adventure?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `30000066-cf3a-4042-b9a2-9390249ef0b6`
+  - Text: Go go-karting or to an arcade
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `3126499c-997d-4b61-a5b7-292a20f023ef`
+  - Text: Tell your partner about your favorite weekend memory together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `335208be-9de7-4b81-8d8c-b798d1f449c1`
+  - Text: Have a paint and sip night at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `35ed873c-ae25-43af-b527-65dcbaf68106`
+  - Text: Go to a flea market and find unique items
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `380e3831-8cbd-4d62-825a-5f147c8a492c`
+  - Text: Describe a weekend adventure you'd love to go on together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `42235a13-85bb-4160-a9d1-c5dc2cc371a0`
+  - Text: Try a new local coffee shop and share a pastry
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5c87844c-5a37-49e6-9493-d591dbe5bd57`
+  - Text: Go axe throwing or to a shooting range
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `5d9f5ad4-fbe8-4f3a-9974-9db919bfc380`
+  - Text: Take a photo of your ideal weekend morning setup
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `60ee1e1e-7d4e-4d2a-863e-ec7ca36dd8f1`
+  - Text: Go roller skating or rollerblading
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `69659c0c-d67d-4851-a898-8933cabcb97e`
+  - Text: Take a photography walk around your city
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6aa03f83-a911-406f-926e-534f7b8c82a3`
+  - Text: Go to a drive-in movie theater
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6d5553b1-c897-443c-b39a-d4afb967586f`
+  - Text: Play laser tag together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6e04f9b9-6d2a-4dac-964b-2f5ad4bb3bd7`
+  - Text: Have a movie marathon day with all your favorite snacks
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `71f7afbd-7467-4bca-bff7-04c3dd3e8977`
+  - Text: Who is more likely to drag the other to a flea market?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `74e5062d-7c1f-4711-8722-5e5986c9bcbf`
+  - Text: Take a scenic drive with a curated nostalgic playlist
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `76bcda56-04d0-443a-9c6f-7f807e7b9b71`
+  - Text: Describe the best weekend you've spent together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7c3b9f44-1ade-47ea-a9fa-acfe4d474877`
+  - Text: Go to a concert or live music event
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `836c0a11-441b-442b-8931-4c85d92ff07b`
+  - Text: Plant a small garden or herb box
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `868db117-c54d-47c6-a4c7-41e585dbee3b`
+  - Text: Spend a day at an amusement park
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `88f1c7c0-0165-432e-8833-ca3a18f8fdd4`
+  - Text: Who is more likely to overpack for a weekend trip?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8970f32a-373b-46f2-9ea3-88ad6ebc8d12`
+  - Text: Go to an escape room together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8bd8524a-5d1c-48ab-899b-a94e886b3ccd`
+  - Text: Binge a new TV series together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8bdf385c-7e6e-4be1-af04-0813fe8fbbaf`
+  - Text: Geocache around local area together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8f3b78d7-3713-44d3-895d-aa70100aa2d8`
+  - Text: Build something together with LEGOs
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `936ea8cb-a104-4ca9-8f88-8b0be67f5aab`
+  - Text: Visit a planetarium together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a5838c77-fc84-4af9-a774-7f17b7604b0f`
+  - Text: Go bowling or play mini golf
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `a9ef8e16-d566-493f-ac5b-c3727d81ddb6`
+  - Text: Have a spa day at home with face masks and massages
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `af2a81ec-7f49-4311-b535-b2e319ff2b65`
+  - Text: Have a karaoke night at home or at a bar
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b47f0a7c-c94e-41f0-9d83-951e40afd117`
+  - Text: Have a game night with board games or video games
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b4c7150a-740d-4b6f-8535-75f5509da7ef`
+  - Text: Go to a local sports game
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b66c8232-6e94-4a9d-8298-47cf204f3fa8`
+  - Text: Do a puzzle together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `b6a6850a-44a9-40db-955a-70c434bc8c92`
+  - Text: Who is more likely to get competitive at mini golf?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `b793ff20-242e-4779-a763-520993217736`
+  - Text: Who is more likely to suggest an unplanned road trip?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bfb20348-f09b-4e75-880d-067508e77ab3`
+  - Text: Go to a local bookstore and find books for each other
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c6df5666-d696-42bf-9c30-38888a1731e3`
+  - Text: Take a pottery or art class together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d01319cf-4915-452d-8e5e-84866b30c78e`
+  - Text: Learn a new recipe from a cooking video
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d8b91e5a-0cc5-469b-8ab6-76d3e847b992`
+  - Text: Have a themed movie night with decorations and costumes
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e0eb79c3-707e-48f4-8211-ac3682e8ea7c`
+  - Text: Go to an indoor trampoline park
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e2d4103a-4111-47bf-bbe3-480f773dd591`
+  - Text: Have a DIY craft day together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e516126e-0c1b-4038-be7d-56cf35fa946c`
+  - Text: Play video games together and order takeout
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `eb195627-289e-4c99-9d6c-458ba3103c9c`
+  - Text: Birdwatch in local sanctuary together
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `eee1dc81-33f6-4f3d-9a30-3301ddc393a5`
+  - Text: Show a place on your bucket list for a weekend trip
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fc18a0df-5fc1-411b-83cf-1d085a40f8a9`
+  - Text: Have a backyard camping night
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fd086e7e-7f6b-427f-9903-8fb47edee8ff`
+  - Text: Build a blanket fort and read inside
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fda1f943-47e5-4031-b137-80406f082bd2`
+  - Text: Plan and host a small dinner party with your partner
+
+### EXISTING PACK: Food & Culture
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `04057cec-ae1a-4c95-a67d-41045da80d80`
+  - Text: Have a fondue night at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `065d4877-7fab-4ba2-8873-40e1b4f34dcd`
+  - Text: Visit a local winery or brewery for a tasting
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `07efd76b-5256-4d30-b98c-85650bf85526`
+  - Text: Show a restaurant or cafe you want to take your partner to
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `16368812-b7e0-4554-bf38-a85cff3055e5`
+  - Text: Name a cuisine you want to explore together and why
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `1fcba1a6-8d47-4f2e-8333-f4386d28f18a`
+  - Text: Who is the better cook?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `25a7f3b6-3c4e-4d5a-be76-b34e4e8be792`
+  - Text: Teach your partner to cook a dish from your heritage
+  - Partner text: Cook a traditional dish from your partner's heritage
+  - Inverse: c7c7e95f-f49b-4ecf-b07a-b88314474e98
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `2e6b1756-f5b0-4b20-8e39-7a18dc949678`
+  - Text: Describe the best meal you've ever had together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3157f7f1-9991-4bee-b60d-d8773db885fc`
+  - Text: Go to a live theater performance together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `315e2f48-2c69-4cc4-94c0-e2b926a33e88`
+  - Text: Take turns picking surprise restaurants for date nights
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4ad0b5a1-3c04-42bd-bc5a-9599c6fbdfc0`
+  - Text: Explore a neighborhood known for its food scene
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4b078e58-0e5a-4c5a-abe0-a7736fcb1725`
+  - Text: Attend a comedy show together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `55d2fc37-cce5-46db-82f0-3a442da5641d`
+  - Text: Who is more likely to order something weird off the menu?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5661013f-c574-4d7c-8d2c-7318b2f21db2`
+  - Text: Create your own signature cocktail as a couple
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `59754e51-69ae-4f9c-9393-1ec2c05e2a40`
+  - Text: Visit a coffee roastery or tea house
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5de02ab1-4d66-430e-b7f2-c94de2470475`
+  - Text: Take a chocolate or dessert making class
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5debc75d-37c1-4be0-91a7-aad2ae69b8eb`
+  - Text: Cook every meal from a cookbook together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `602a15d2-60ee-4952-b69d-20c9e9fb3729`
+  - Text: Do a blind taste test challenge together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `60a9b916-8a1b-4233-ae97-fe96cbc5be93`
+  - Text: Who is the pickier eater?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `66176658-a4fc-4f91-9e87-92422a6de935`
+  - Text: Take a photo of something in your kitchen that tells a story
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `682ee4a2-5530-45c2-aa43-6eb196c6cc1d`
+  - Text: Share a photo of the last meal you cooked or ate together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `69d9e606-45bd-4b1f-9b10-0e9c7d55f8e2`
+  - Text: Have a picnic with food you've made together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6e90c6e2-44f4-4298-bdbb-04d07c6b0a68`
+  - Text: Visit a farmers market and cook with what you find
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `70c1c133-bfb5-4fad-87e7-3f47473791f1`
+  - Text: Go to a fancy restaurant and try the tasting menu
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `746cafa1-3080-4e4c-ad5e-71b6b14107ce`
+  - Text: Recreate a famous dish from a movie or TV show
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `778f7171-e9f3-45ba-9e5e-a09451e61b37`
+  - Text: Share a photo of a dish you've been craving lately
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7a22f8b4-57bf-4411-bfba-39da212b08c6`
+  - Text: Attend an opera, ballet, or symphony together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7c3013fe-4030-423c-9adf-a70fe6916e78`
+  - Text: Learn to make cocktails or mocktails together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8281bea5-863b-408b-b3c4-1f1673c58210`
+  - Text: Who is more likely to binge a cooking show?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `89420598-2ecb-484d-bb08-f733e2366b42`
+  - Text: Who is more likely to try an unusual local delicacy while traveling?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `915612f9-0750-4ddd-86c1-904c21fe9c8e`
+  - Text: Who is more likely to send back a dish at a restaurant?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `985c3eac-d2a6-4d6a-bc6c-aba454caf2d2`
+  - Text: Have a progressive dinner at different restaurants in one night
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9cd12f7c-ef54-426a-b4cb-2175754f0723`
+  - Text: Make homemade ice cream or gelato together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a8f4ad13-3903-423d-8516-966127de9b73`
+  - Text: Visit a museum and discuss your favorite exhibits
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b48c066a-8bf8-4393-9d38-cf7690911d7e`
+  - Text: Watch a foreign film and cook food from that country
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b54fb802-9917-46f8-b934-9ecce4d89125`
+  - Text: Go truffle hunting or mushroom foraging
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b5a01916-83c8-4fea-a3a6-f0fe74a84399`
+  - Text: Visit a historical landmark and learn its story together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b774cc6c-49ba-4677-b488-571590fd8599`
+  - Text: Visit an ethnic grocery store and cook something new
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b9f446d8-af16-4ddd-8242-46a7e7f811f5`
+  - Text: Attend a cultural festival or celebration
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `be0d8d8a-c6a3-4dc2-adf9-f2b8e2729236`
+  - Text: Who is more likely to send food back at a restaurant?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c7c7e95f-f49b-4ecf-b07a-b88314474e98`
+  - Text: Cook a traditional dish from your partner's heritage
+  - Partner text: Teach your partner to cook a dish from your heritage
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d631415d-0bb7-4cc7-9e28-96b181945559`
+  - Text: Take a food tour of your city
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `da572f0d-889c-4940-b557-81445c537f6e`
+  - Text: Learn about local edible plants together, then forage and cook a meal with them
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `df6ac96c-5714-4bcd-b99f-1954062ec15f`
+  - Text: Attend a food festival together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `dfee4cf3-8b26-4837-a59d-54e28526e069`
+  - Text: Tell your partner about a cuisine you've always wanted to try together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `e90af7e6-b111-45dc-84eb-8d8b354e496d`
+  - Text: Describe a meal from your childhood that means a lot to you
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e9eacfe0-bf86-4bfe-bae5-f2469b7fd493`
+  - Text: Visit an art gallery and discuss which pieces you'd buy
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f95aa4a3-9840-43a9-ac61-b670b29b905a`
+  - Text: Host a themed dinner party together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f9844bbf-ff74-4997-a982-5d069e698204`
+  - Text: Try a new cuisine neither of you has had before
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fe505582-28fb-4b66-9e49-3317969a3a16`
+  - Text: Make sushi or dumplings at home together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fef29ec7-4fd8-4eb8-8a00-f025798cb7c6`
+  - Text: Try making homemade pasta or bread together
+
+### EXISTING PACK: Outdoor Explorers
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `071adc14-4f78-4a98-9194-a058ac4c05fd`
+  - Text: Camp under the stars together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `09149a81-1287-4b0c-a12d-77a504a6b993`
+  - Text: Go ice skating on a frozen lake or outdoor rink
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0b7c274a-b688-4a50-a900-3e079e21e8ab`
+  - Text: Explore tide pools at low tide
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0faa2f8b-ebb3-4c10-b14d-dbb4ddcbd908`
+  - Text: Go fishing together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `103b4058-32aa-43c6-8f31-4224714da5bf`
+  - Text: Go bird watching and try to identify different species
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `14ff688f-e615-4460-9fb1-748652777f1f`
+  - Text: Tell your partner about a time in nature that felt magical
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1aacaa3a-edfb-49bf-ae44-221179022723`
+  - Text: Have a beach day and build sandcastles together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `26cfcdde-b107-4a68-9c0c-dc09e3575016`
+  - Text: Try stand-up paddleboard yoga together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `29adde23-58b9-4eb4-8010-d54a53fa5a86`
+  - Text: Go on a multi-day backpacking trip
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `29d10dfa-5a6e-42cb-b412-afa760acb285`
+  - Text: Go berry picking or apple picking
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `34b1035a-819d-451b-b108-883912a0775e`
+  - Text: Go skiing or snowboarding together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `3ab2a455-5d0a-4fab-ba91-62437fd19073`
+  - Text: Describe your dream outdoor adventure together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `3c7af0a6-2257-4874-8efb-c52f3ce140fe`
+  - Text: Who is more likely to get sunburnt?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `41bb5268-514d-4797-8b59-0db7f2fb5976`
+  - Text: Go sledding or tubing down a snowy hill
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `434ec872-a068-4ef9-9cdf-5f20a26116b2`
+  - Text: Who is more likely to suggest a spontaneous hike?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `435599df-aff6-437a-8ca5-65e31182d748`
+  - Text: Share a photo of your favorite outdoor spot
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4afd4a26-c9b7-418b-989d-a8d273ade423`
+  - Text: Go rock climbing or bouldering together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4dcc1d84-13ed-4c4b-90af-a887d05b77ff`
+  - Text: Visit a waterfall and swim if possible
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `50feee25-8557-4232-b046-a63e88809381`
+  - Text: Watch meteor shower together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `512482ee-7d5f-437a-8e47-31af21d1d204`
+  - Text: Rent a cabin in the woods for a weekend
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `649056c2-87fb-4679-9e5d-9947ce664d90`
+  - Text: Explore a cave or cavern together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `68a2f345-1c9f-4c8b-ace9-474d618eccc4`
+  - Text: Who is more likely to forget the sunscreen?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `73d01aef-2448-4183-bb41-f0b5401c673e`
+  - Text: Go swimming in a natural body of water
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `790e3413-62b8-4402-9efa-e80693aa8cd7`
+  - Text: Have a sunset picnic at a scenic overlook
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7d64a4eb-8118-4e24-b28a-e281a57a78b0`
+  - Text: Go surfing or take surfing lessons together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `833b0c25-818f-429f-93f0-349905bb8186`
+  - Text: Go geocaching together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `89970bff-19a4-424b-8c70-9ae47fabec5d`
+  - Text: Canoe or raft down a river
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `8d1446af-cc6d-43a4-a10a-77ac3d769407`
+  - Text: Show a view you want to experience with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `926d0370-713e-4937-9ec7-beb31f76c9be`
+  - Text: Visit a lighthouse and explore the area
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `9c5a5dc4-6ebd-45ce-9109-eaafc8c8fd34`
+  - Text: Who would survive longer in the wilderness?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9dd83b2b-b5ef-43b7-8493-a2a23154527f`
+  - Text: Take a scenic drive through the mountains or countryside
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a25e4c17-d7c8-4e75-aa72-917b9ce461d3`
+  - Text: Go for a bike ride through a new area
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a8c14570-e7a6-4b0c-8692-ff85632a0d4e`
+  - Text: Go cliff jumping into safe water
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ab26b309-b22d-4150-8f3e-591ba4969386`
+  - Text: Rent kayaks or paddleboards for the day
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `ada27db7-7e70-4afb-89d3-12d0b41f5c3b`
+  - Text: Describe your dream outdoor adventure in a voice note
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b4a7bf0e-734f-4ea6-9c45-fbe6c2f91ed3`
+  - Text: Plant a tree or start a garden together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `b4aebdde-cdb3-4028-9004-f94e9e2f3d79`
+  - Text: Who is more likely to complain about the weather?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `be1832c6-ec15-44c0-b201-c117eac66080`
+  - Text: Take a nature photography walk together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c136d7f6-b5e9-4d9c-b2f8-5b8869b47e43`
+  - Text: Go horseback riding together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `cbd00446-75a0-4975-81fc-ec23f79ee5b4`
+  - Text: Tell your partner about the most beautiful place you've been
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cc873e05-b4fc-4b38-904c-aaca42bfc183`
+  - Text: Take a sunrise or sunset walk on the beach
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `df094400-b1a2-4819-9d3f-a07129bce40a`
+  - Text: Have a snowball fight or build a snowman together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `ea02b1f9-0fbb-4b7a-be30-294ac7bfb11a`
+  - Text: Who is more likely to want to keep hiking when the other is done?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ed28be4d-b06c-4c1c-a98f-9f19fd8cc3c7`
+  - Text: Set up a hammock and relax in nature
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f26f2fb1-f63a-4a3a-9f2c-94b4b35482b3`
+  - Text: Go on a hike to a scenic viewpoint
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `f319d7c9-c69a-4bc5-b73f-9d8a2dd242e6`
+  - Text: Share a photo from your favourite outdoor spot
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f4a8aae2-8ab6-4bc2-a527-04cacadcdcba`
+  - Text: Go on a night hike with flashlights
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `f66572e0-cd54-44e7-923b-58bf148b8faf`
+  - Text: Who is more likely to complain about the weather?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `f6fe1bd6-9ab6-4842-b968-5697cbeab640`
+  - Text: Take a photo of the view from your window right now
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `f8f6bcc7-c88e-4200-9b76-783d5ee3fca7`
+  - Text: Who is more likely to get lost on a trail?
+
+## EXISTING CATEGORY: Quality Time
+
+### EXISTING PACK: Everyday Moments
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `00c6cf2f-ccae-4b25-a7ae-f4ad3b518400`
+  - Text: Receive a forehead kiss when your partner leaves for work
+  - Partner text: Give your partner a forehead kiss when leaving for work
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `04f814c7-fe42-475b-92ec-8bcccb899e4a`
+  - Text: Hold hands during a short walk
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0df340a5-0082-4945-a941-f622f3056cb9`
+  - Text: Leave a sticky note somewhere your partner will find it
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `0f433c7a-239f-4687-95ad-0c16e57b4efa`
+  - Text: Take a photo of your partner's favourite spot in the house
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `1306ace2-cfaa-4188-ab41-4cea4bc4646e`
+  - Text: Share a photo of something small that made your day better
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `14dcf39b-00ac-4d3b-9de2-96fc9d211c51`
+  - Text: Who is more likely to leave dishes in the sink?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `16af7b91-53fb-4042-bc8d-fccab3b9a386`
+  - Text: Dance together in the kitchen while waiting for food to cook
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `187f06d9-f5aa-4007-981b-b8968b9db292`
+  - Text: Share a dessert after dinner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1d69d309-fa6b-473a-ba36-4160b1e00096`
+  - Text: Have your partner surprise you with your favorite snack
+  - Partner text: Pick up their favorite snack on the way home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1dd2a480-9a22-4448-bc26-671efbd2099f`
+  - Text: Take turns picking what to watch
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `2630d294-e6ff-451b-8b91-a6221fe97d8e`
+  - Text: Take a photo of your workspace or desk setup
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `289664d4-715d-4490-a042-5df5f8e58369`
+  - Text: Write down your partner's current favourite thing
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `30f13b18-af32-443b-9f73-938b74e21839`
+  - Text: Who is more likely to do the dishes without being asked?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `366a116a-3a0a-4b11-8c9d-39dbdad86027`
+  - Text: Who is more likely to cook dinner on a weeknight?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `387d46a8-741f-45ed-b757-0adc44b7be1c`
+  - Text: Share a meal without any screens
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3f7081fb-4a34-4eb1-b87c-168d00b0819e`
+  - Text: Make their side of the bed
+  - Partner text: Have your partner make your side of the bed
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `46750ecb-bd76-479d-a9d6-75d2e5ebb9b7`
+  - Text: Do a quick 10-minute tidy up of your space together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `4d3c4907-6fe1-4ef9-99fe-15878e856eec`
+  - Text: Who is more likely to fall asleep on the couch?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4f53c62a-93d7-4a95-a481-e913bee97918`
+  - Text: Send a random midday text just to say you're thinking of them
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `504ef7ac-a36c-4485-9904-2286d65f8865`
+  - Text: Pick up their favorite snack on the way home
+  - Partner text: Have your partner surprise you with your favorite snack
+  - Inverse: 1d69d309-fa6b-473a-ba36-4160b1e00096
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `566560b0-3c4a-4e1c-bd10-1b725fb1e5dd`
+  - Text: Describe your favourite part of a typical day together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5ab79134-b54b-42e2-a48c-ace15e525325`
+  - Text: Text your partner a photo of something that reminded you of them
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `5e449ead-d7a7-4181-b173-b25842c7c916`
+  - Text: Who is more likely to hog the blanket?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `5ef321d1-166f-4d32-a1ff-2c9bd084c5cb`
+  - Text: Share a photo of something mundane that reminds you of your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `624f6e03-585c-4d68-895e-35def16b841c`
+  - Text: Make coffee or tea for your partner in the morning
+  - Partner text: Receive a morning coffee or tea made by your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `729b2362-73be-4b93-ae77-57458f3b79e2`
+  - Text: Listen to a podcast together during a car ride
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7672a04a-ed06-45c7-90f4-5d4153fd6fa0`
+  - Text: Be walked to the door by your partner
+  - Partner text: Walk your partner to the door when they leave
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `82dc1df7-f7b2-4b85-986d-950b7fa2fb22`
+  - Text: Share a photo of your morning coffee or breakfast
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `87920d90-6ae8-433c-9faa-08da28149a03`
+  - Text: Cook breakfast side by side
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `88bfc530-d64e-4e60-be4b-ed98d4aff187`
+  - Text: Walk your partner to the door when they leave
+  - Partner text: Be walked to the door by your partner
+  - Inverse: 7672a04a-ed06-45c7-90f4-5d4153fd6fa0
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8c940b25-ce4f-40e5-bea9-544673e5b362`
+  - Text: Give your partner a quick shoulder rub while they're working
+  - Partner text: Receive a quick shoulder rub while working
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `8e0e331d-a06a-404e-969a-2efecda84eb3`
+  - Text: Tell your partner what you were just thinking about
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8e524378-ef7b-4446-982f-552ebd373adf`
+  - Text: Who is more likely to make the other laugh at a random moment?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9423806b-a46c-40ef-a29a-91c59fbdadec`
+  - Text: Receive a quick shoulder rub while working
+  - Partner text: Give your partner a quick shoulder rub while they're working
+  - Inverse: 8c940b25-ce4f-40e5-bea9-544673e5b362
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `95d507ed-d5fc-4517-9a7c-e9da298a37af`
+  - Text: Who is more likely to wake up first?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `96ffe218-aa58-4b5a-90c9-875820b25203`
+  - Text: Receive a morning coffee or tea made by your partner
+  - Partner text: Make coffee or tea for your partner in the morning
+  - Inverse: 624f6e03-585c-4d68-895e-35def16b841c
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `97633ea6-8b44-4f96-8b69-4ff5756de8af`
+  - Text: Have your partner make your side of the bed
+  - Partner text: Make their side of the bed
+  - Inverse: 3f7081fb-4a34-4eb1-b87c-168d00b0819e
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9a6ba270-d82d-4afe-8bfe-013f2498af6e`
+  - Text: Watch the sunrise or sunset together without phones
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a948939a-767f-4502-a512-aba6d6f33343`
+  - Text: Stretch or do light yoga together in the morning
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a9702285-3a8f-4dca-86b9-5c26a5f9eb59`
+  - Text: Set up tomorrow's coffee maker together before bed
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a9e5caf8-a62b-48f1-b2e4-7ef29fb6ea9b`
+  - Text: Compliment something specific about your partner
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `bddd9de4-53a1-4243-9df8-a792911cc486`
+  - Text: Describe your favorite daily ritual you share together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c8d36d07-dfa4-432e-b736-7ffc0421d1c3`
+  - Text: Share one thing you're grateful for about each other before bed
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cc6da0b2-9176-443d-9a38-acc1f8194926`
+  - Text: Scroll through old photos together and reminisce
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d4e2f69a-3f86-4656-a525-480afa496cc7`
+  - Text: Put away your phones for an hour and just be together
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `da05b6da-4124-4ce5-86d4-4f3fe73b21ce`
+  - Text: What's a habit of your partner's you secretly love?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `dc125d13-5755-4d78-9239-f09c11fca14d`
+  - Text: Read next to each other in comfortable silence
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e361ecf1-a8b9-4eeb-b1cb-6db8550455e7`
+  - Text: Take a walk around the block together after dinner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e7299acc-556e-4b66-9869-3c5c16573c65`
+  - Text: Give your partner a forehead kiss when leaving for work
+  - Partner text: Receive a forehead kiss when your partner leaves for work
+  - Inverse: 00c6cf2f-ccae-4b25-a7ae-f4ad3b518400
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ebb44978-4ed7-4c5c-bde6-53b181b3d5a6`
+  - Text: Share the best and worst parts of your day
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `ed92790f-6e7d-4f3a-83b3-d20cafbfa0e1`
+  - Text: Tell your partner about a small thing they do that makes your day
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `edb8c4a5-b4a8-41fe-b5ce-45b03561660d`
+  - Text: Who is more likely to suggest ordering takeout?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fdd65985-ba3f-4afc-8da1-6895c99c6515`
+  - Text: Ask about a work project they mentioned last week
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ffdfe209-5a08-47fe-b832-5aa6c1389a8b`
+  - Text: Share music recommendations and listen together
+
+### EXISTING PACK: Relationship Essentials
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `01af3c21-2e90-497f-967a-0ac4a1a88100`
+  - Text: Write down what you're grateful for in your relationship
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `128c2de3-f04b-4839-9819-e7591b799f0f`
+  - Text: Encourage your partner to pursue their passion
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `1d2f3aac-785f-46ce-9cdd-941175550251`
+  - Text: Tell your partner what you admire most about them
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `1e4fe539-695f-4634-b4f6-8be00486003f`
+  - Text: Who is more likely to say I love you first each day?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `227648c9-9427-455f-84e3-9f42c315e555`
+  - Text: Tell your partner what you appreciate about them
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `31c0bc3e-5a17-49c4-94cf-53e33c2bbca8`
+  - Text: Who is more likely to remember small details about the other?
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `3499a881-80df-405f-839c-722ca58bc79b`
+  - Text: Describe your partner in three words
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `36ec00cf-5739-443f-98f2-9bc0571c01c8`
+  - Text: Make each other laugh until you cry
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3d91d972-6c4f-4c46-9a63-df59a12349dd`
+  - Text: Share something you've never told anyone
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4109bf96-1175-496d-bb27-516da70e9910`
+  - Text: Ask your partner how you can support them better
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4350592b-5813-41b7-946b-e4b8474567b7`
+  - Text: Share your most embarrassing story with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4debb15a-0a3c-4281-9e1f-fc71248e0063`
+  - Text: Celebrate a recent win your partner had
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `4fa3562c-6648-4e02-b1e8-2634c0c73d4c`
+  - Text: Describe a moment when you felt most connected to your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `50b6928f-c897-42b0-b435-ea2bb1402d88`
+  - Text: Cook a new recipe together from scratch
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `544d5ff8-0025-4aca-87b9-56b44ccf60a3`
+  - Text: Who is more likely to remember an anniversary or special date?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `54c81a14-4141-4525-b169-1d6778937e80`
+  - Text: Discuss how you each handle disagreements
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5695eb74-cfb8-4ce2-9e20-ed281e3d6694`
+  - Text: Plan a surprise date for your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `590dc3e8-541e-4992-bcba-fe994c4d1f20`
+  - Text: Try learning a new skill together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `5cb76f03-f5de-4d96-a30b-c2bd5602784e`
+  - Text: Who is more likely to apologise first after an argument?
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `5e7223e0-adc0-47aa-a49f-7e4d51d89366`
+  - Text: Tell your partner one thing you appreciate about them that you don't say enough
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7dddd107-5f9e-4fec-a4cc-506cbc1823a0`
+  - Text: Who is more likely to compromise during a disagreement?
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `80f3abdd-a11f-4956-854f-933444d1936b`
+  - Text: Write something you've been meaning to say to your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `832378c6-6029-4e57-93a8-806490c04ef4`
+  - Text: Share a current worry or fear with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8d2f209c-3c06-4143-906b-8ecede45f79d`
+  - Text: Share something you're proud of with your partner
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `9132db89-647f-42ba-ab3e-6e6946989046`
+  - Text: Describe in your own words what makes your relationship work
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `951b501c-71c8-495f-9c81-4e72bb1c201a`
+  - Text: Who is more likely to bring up something that's bothering them?
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `98239357-4237-4073-9487-5daf5aa83788`
+  - Text: Write one thing you'd never want to change about your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `98fa7dc7-066f-4297-906a-1a4bd07300e5`
+  - Text: Watch the sunrise or sunset together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `997f7106-39f7-4903-a0ba-d6051b151736`
+  - Text: Tell your partner about a time they made you feel truly safe
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `a2e08a8a-65aa-4c02-b219-4fa8d52b5ad1`
+  - Text: Share a photo that represents your relationship
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a41bde58-9477-4167-9e45-28bc04993ae9`
+  - Text: Check in with your partner, ask about their day, and listen with your full attention
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a5bc9fbd-7f89-4156-b197-1cbf550603ba`
+  - Text: Play a board game or card game together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a5dc180f-2b8b-4682-b9fc-5fcf9211db47`
+  - Text: List three things you love about your partner
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `abbe6e70-bcf3-47db-83b7-2f6218258b61`
+  - Text: Who is more likely to say "I love you" first each day?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b15b0ef0-d307-4075-8863-995e2750f5e8`
+  - Text: Compliment your partner on something specific
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b164ffdc-e9dc-4577-98cb-ebb46f85e962`
+  - Text: Talk about what makes you feel loved
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bd0f71c3-e13d-42e9-803c-729a3118d393`
+  - Text: Discuss your relationship goals together
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `c1ab6505-5fb3-4555-9e3a-abf491c0c355`
+  - Text: Share a photo of something that reminds you of your relationship
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cc662b9e-d312-4260-bb9e-eb3f3d418c72`
+  - Text: Visit a place neither of you have been
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d183db7c-ef85-4d01-ae11-182251adab51`
+  - Text: Give your partner a long hug
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d2d164ae-0689-490e-b1f1-fc9f70091109`
+  - Text: Take a walk together without your phones
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d2e82429-5598-40f4-bcf8-863db30c9a07`
+  - Text: Make a bucket list together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `dc2dc5ff-abed-41ea-8c69-ec691d0345df`
+  - Text: Share your love languages with each other
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `de7a663c-ddc7-49da-9778-a12d4c79bafd`
+  - Text: Thank your partner for something they do regularly
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `eef033ff-1a7c-41b8-9dc3-1d142fa8f034`
+  - Text: Actively listen to your partner's concerns and offer your support
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `eefe36ea-65e9-4499-ab2a-78d5b4ede4c1`
+  - Text: Put your phones on 'Do Not Disturb' and enjoy an hour of uninterrupted conversation.
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `f5084c81-3d3a-4e84-b8e6-8e28c5e0cbfc`
+  - Text: Who is more likely to apologize first after an argument?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f52133e8-9963-4ff9-af9c-13c05a7ea71f`
+  - Text: Discuss what trust means to both of you
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `f7b16b5b-440a-457a-81c1-cb65729dcebd`
+  - Text: Show something your partner gave you that you treasure
+
+### EXISTING PACK: Date Night Ideas
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `033c0402-82ae-4fa6-ae12-c034dd66f261`
+  - Text: Visit a local brewery or winery for tasting
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `05203ef6-c7c2-4052-ae01-c70602b76504`
+  - Text: Pitch your dream date night from start to finish
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `06a9e6e8-5210-4a57-a0cb-7c68f302238e`
+  - Text: Who is more likely to try something completely new on a date?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0ba6195f-a9d3-45be-948f-184a76257653`
+  - Text: Visit an arcade and compete for high scores
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0cec3d3c-b437-4451-9143-89c3bb1b9a66`
+  - Text: Do a paint and sip class
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0d1ff550-216a-446e-b56c-28e6b447b7b7`
+  - Text: Find a rooftop bar with a view
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0d5e7ba3-3fd1-432d-8ab6-d8288a845803`
+  - Text: Attend a sporting event together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0e45a7a2-2f62-4b5f-a085-498686c02a49`
+  - Text: See a movie at the theater
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `0ffcbc53-acf7-49be-9fef-282f6bc14c16`
+  - Text: Describe a date you'd plan with an unlimited budget
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1e9f0b47-6e0e-48ab-b20a-68a9efda9f09`
+  - Text: Play pool or darts at a bar
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `22340c6e-1df0-4bf6-8304-dc41b1440e2b`
+  - Text: Pack a thermos and have tea outdoors
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `24c2afb8-117c-4d8a-a7a2-5d9796b25593`
+  - Text: Draw portraits of each other at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2c46ef31-232c-4b4b-aea9-f7aba6b56938`
+  - Text: Take a boat ride or ferry together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `2cb2fff7-619c-4802-ba7d-ce3575cfc5c8`
+  - Text: Describe the best date you've been on together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3113c72e-1920-4631-bba7-09998a265db0`
+  - Text: Visit a cat café or animal café
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `315f601a-58fb-4161-a068-0d5fdde60d86`
+  - Text: Get street food and walk around
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `332e33b6-b5b4-4120-992b-c23cc0dd28a4`
+  - Text: Build a blanket fort and watch movies
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `345990d0-a809-42f6-ba7f-4aa5728c11d8`
+  - Text: Spend the afternoon at a tea house
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3536112c-d04f-43f2-9244-b81ce0f204e3`
+  - Text: Explore a museum you've never been to
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3898aa69-551f-477d-badf-77493526066f`
+  - Text: Spend the day at the beach
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3a0ce015-57fe-47ba-bc8e-0138e6ef9985`
+  - Text: Host a board game night at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3ab50667-e6ac-48c0-84c1-89b5cf53c465`
+  - Text: Try the tasting menu at an upscale restaurant
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3df966fa-eb03-49cc-a7d8-73abfe1c6dce`
+  - Text: Visit a contemporary art exhibition
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `40795cc9-f76d-40c6-b67c-1742cb9acc92`
+  - Text: Have a picnic at the park
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `40e93ebf-91c2-46bf-8e2e-d004aa2df877`
+  - Text: Visit the weirdest shop you can find
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `41d478c0-8acd-49f3-b811-380b1e274650`
+  - Text: Explore a library you've never been to
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `41d9361a-b9c5-4094-9c16-1a62fc3a842a`
+  - Text: Visit a botanical garden or arboretum
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `43937964-71d3-4f0b-988c-dd6364bac8f5`
+  - Text: Who is more likely to lose track of time on a date because you're having too much fun?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `44cb18e9-ddb2-4c20-8985-66e836e81c5b`
+  - Text: Go to a comedy show together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4768a124-4394-4d0c-bcb5-5b570b795f82`
+  - Text: Try an escape room together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `484836a2-87f4-4ca5-8b23-06b1aa586e13`
+  - Text: Spend an afternoon at a vintage shop
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `498d24d7-6b09-4b8f-812b-305879c24900`
+  - Text: Take a couples massage class together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `49b4f522-c85a-4e44-b544-da106de7f65b`
+  - Text: Browse a flea market or antique shop
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `4aed8698-ebea-469a-8c5a-311c71e036ec`
+  - Text: Visit a pottery studio and make something
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `4eae3bcc-6a07-49c0-826f-98ae3dc5c334`
+  - Text: Share a photo of a restaurant or cafe you'd love to take your partner to
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5051e5c4-18db-4d91-a12e-61aec87d9372`
+  - Text: Take a dance class together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5125cb73-2391-4fcd-9893-14cd50f2730b`
+  - Text: Go for a hike at a local trail
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5427cf43-b1fd-421f-bc99-c66e6ebccaad`
+  - Text: Sing karaoke together at a bar
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `54acacb8-486f-4b25-a00f-dfea11b9a0e4`
+  - Text: Browse a bookstore together for an hour
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5600c09d-ec95-4eeb-9f16-e6003710747e`
+  - Text: Pick seasonal fruit at an orchard
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5ba6057c-9c9e-4e55-b608-1c5b29fcc014`
+  - Text: Take a photography walk together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5bfe3022-332f-4400-b6e8-496246b6dc3f`
+  - Text: Visit every shop on a street you like
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5e53d64b-c37d-436e-a9ae-dbd741a8f20d`
+  - Text: Explore a neighborhood you've never visited
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5e6ab841-af4e-4bdd-9390-fd5ccfeb9550`
+  - Text: Go to a psychic or tarot reader together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `5efb1d8e-7359-4ee2-89bc-9364e116dba9`
+  - Text: Pitch your dream date in 30 seconds
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5f95fbb8-6dff-4e43-a866-efa8928ca5f0`
+  - Text: Visit a historical site or monument
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6013d058-6468-4b86-a23a-b7dd402df94d`
+  - Text: Take a yoga class as a couple
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `62361680-78ce-4321-96c5-3ecca91fd93b`
+  - Text: Attend a poetry reading or book launch
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `672e1007-3a98-4e64-9078-5eb01e812c98`
+  - Text: Visit a lake and walk around it
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `68007a33-2fb7-4141-9c44-54db4a6a60c2`
+  - Text: Share a photo of a dish you'd love to cook together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `68d7dd81-577b-4540-ae3d-31492719a51a`
+  - Text: Rent bikes and explore a new area
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6dd82a0b-660f-4516-8926-710144021c72`
+  - Text: Have a movie marathon night
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6dfd8aa6-c468-47be-8212-cd0719671036`
+  - Text: Attend a local festival or street fair
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `707f0066-1486-4e40-8801-c195ca056fec`
+  - Text: Book a sauna session together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `71b6124e-08c4-488b-a538-5df146dbc6a4`
+  - Text: Visit a local craft market together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `765ca3e6-4171-45fc-bb91-f95562d454d3`
+  - Text: Take a cooking class together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `772c75ad-3684-4d76-aab1-5687620fc2ed`
+  - Text: Who is more likely to plan a surprise date?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `774dc342-1a8c-429f-9195-dc09b944653f`
+  - Text: Book a reservation at a fancy restaurant
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `78f5dc2c-14ba-4883-882e-f5bc70299f2a`
+  - Text: Take a scenic drive with no destination
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `791aa5f1-ff2b-4426-9d82-caeb849a9f68`
+  - Text: Go swimming at a natural pool or lake
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7bc14367-b444-47de-b9e5-dbd357c80590`
+  - Text: Who is more likely to get lost on the way to a date?
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `7c3840e7-ade7-4e7a-aaf7-a0a59e19daec`
+  - Text: Take a photo of your date night outfit
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7d4f3d34-afeb-468e-8965-43a5b3c7a61e`
+  - Text: Go to an open mic night
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `824efb5f-2cc5-45d0-a902-189d2bf1f265`
+  - Text: Take a guided tour of your city
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `82c4ee0e-3367-44b5-af90-6dc118bafc3f`
+  - Text: Order takeout from a cuisine you rarely try
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `83d016f9-5012-499c-8a0e-7dc3ad728948`
+  - Text: Find a waterfall to visit together
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `85d5baa3-54ab-47e6-90af-71f462a7f0a2`
+  - Text: Write a fake review of your last date together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8654df8b-d7ab-4307-8ee5-23a55f7a7c8d`
+  - Text: Go to a trivia night at a local bar
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `86bfe9a5-fd79-4a0d-814d-1ddb6331fafd`
+  - Text: Share a photo of a place that reminds you of a great date
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `896e6999-3fe4-4982-a35f-7f4b62955dcb`
+  - Text: Watch the sunrise from a high point
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8aae8516-9507-4485-a53b-563805b68903`
+  - Text: Get lost in a new part of the city
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `8e411dec-2c3b-48c1-afea-f1bf3cdfa4a6`
+  - Text: Go stargazing with a blanket and wine
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8f641acb-0a56-4789-b1f5-27c1fd045306`
+  - Text: Find the best croissant in your city
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8fd66ece-9a47-480b-863f-89df625312ac`
+  - Text: Go axe throwing together
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `907b83af-45e9-4bb4-b2ac-080dc11b778b`
+  - Text: Show something you'd wear on a special date
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9374783a-fcf3-47ff-a131-cb3e02701ded`
+  - Text: Try a restaurant neither of you have been to
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9739c682-9900-4fb2-909e-9e6e66747e9a`
+  - Text: Go ice skating at a rink
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `99cd4861-1e7d-4030-945e-a6a40d52eb65`
+  - Text: Try a pottery or ceramics class
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `9e30421c-efc1-462d-aa4c-30c1b07368fb`
+  - Text: Watch the sunset from a scenic spot
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a4cef514-03d2-4197-8d4e-5021d31af967`
+  - Text: Walk through the city at night
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a56c2028-d04a-4f55-92e8-65e7a203a78b`
+  - Text: See a play or musical at the theater
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a57f7d5a-6844-4c5a-8579-4c1ad18e5f91`
+  - Text: Play mini golf at a local course
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a65d5936-abb0-4ebc-92f2-8ae5e61cb945`
+  - Text: Attend a live music concert or show
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a957e04f-334d-470e-8539-fc5d0d6b10ff`
+  - Text: Go out for breakfast at a local diner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b1353308-e693-4f68-bb94-48a35caab680`
+  - Text: Go to a jazz bar or live music venue
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b42afe0c-d799-45d1-9320-8417a8c162ff`
+  - Text: Attend a free lecture or talk together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b494278f-0e7f-4788-95cb-d7b508119d1a`
+  - Text: Cook a fancy three-course meal at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b5ed03aa-210b-4bab-88c1-054d22a50d38`
+  - Text: Go bowling together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b63e3415-184f-41fb-b7dd-b28b5bed35de`
+  - Text: Visit an art museum or gallery
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b9531e38-1830-40be-8798-02e6750d66de`
+  - Text: Walk along the river or canal
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bdd08f44-e6df-4355-9067-8c14bde5bfa4`
+  - Text: Visit an observation deck or viewpoint
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c04e9483-bafc-4211-8556-4a0122a50e00`
+  - Text: Visit a night market and try street food
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c69c0976-c2ee-4d67-abd6-761b835af8cc`
+  - Text: Visit a farmers market on the weekend
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cc892e3e-9a50-4ff6-818b-e6a20737fb2e`
+  - Text: Go sledding or build a snowman
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ccb0e6fc-d69c-482b-bad1-dcd58bb30032`
+  - Text: Take photos of interesting architecture together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cde4aca9-9645-441c-9391-66512dc9aeba`
+  - Text: Try every dessert at a patisserie
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d339aabc-4216-4a96-ba97-72229a561fad`
+  - Text: Go for a walk in the woods
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d603dba1-ec8b-4e4f-ad73-a613ed6a97a9`
+  - Text: Order dessert at three different places
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `d82d8b69-9568-4e87-8881-db26fc98660f`
+  - Text: Who is more likely to pick the same restaurant every time?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d9739fe6-a128-43a4-8cf4-a154fdcb0900`
+  - Text: Visit a Christmas market together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `dd4656db-9578-42f8-b91a-52a3c0b8fefc`
+  - Text: Who is more likely to plan a surprise date?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e04d5574-bf78-4680-b7aa-f9fc8116fb8d`
+  - Text: Go kayaking or paddle boarding together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e4479555-e9cb-4386-bae6-8640c1e8c041`
+  - Text: Walk through the old town or historic district
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e5f46788-7614-48e9-afbe-982217b75346`
+  - Text: Go birdwatching at a nature reserve
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e7aac5c9-cdd2-4d1b-870a-45b34edaadca`
+  - Text: Have coffee and cake at a cozy café
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e835f7ad-c1aa-4244-9cd5-c8b72af6ff13`
+  - Text: Have drinks at a speakeasy or hidden bar
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `e923e0dd-15d5-47d8-99c6-0acb3e7012c6`
+  - Text: Who is more likely to pick the restaurant?
+- **EXISTING** | Type: `swipe` | Intensity: 2 | ID: `ed463547-35cc-4efa-a78b-dcc6a14d0509`
+  - Text: Get massages side by side at a spa
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f1efc207-89b5-4bf9-8ae6-aa93154d68f3`
+  - Text: Create a photo album of your relationship
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f371ff3c-2ac8-4b13-8de8-f913107ac1f1`
+  - Text: Get brunch at a spot with outdoor seating
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f3b317a9-ec6a-4be2-bf3d-66e12feb26d2`
+  - Text: Visit a thermal spa or hot spring
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `f7313670-82ea-4c13-b3c1-8b2b87eacf3b`
+  - Text: Describe the best date you've ever been on together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fc50882d-dc78-4729-9db5-a17ed97e4f21`
+  - Text: Go to a food truck festival or market
+
+## EXISTING CATEGORY: Who is More Likely
+
+### EXISTING PACK: Our Future
+
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `05241e88-485c-41a3-b52a-9e747544984a`
+  - Text: Who is more likely to want to travel the world together?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `05dce85e-ee02-479d-8643-8c95c48698ed`
+  - Text: Who is more likely to plan the next holiday?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `0c668dbc-bf25-4a0b-a950-1558f837eb7c`
+  - Text: Who is more likely to suggest getting a pet?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `1997b73c-7c5c-4a14-a52f-5fc4c5639453`
+  - Text: Who is more likely to plan date nights years into the relationship?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `2ebd73b4-75a2-4c64-8e52-75bcac7a17b5`
+  - Text: Who is more likely to start a new tradition for the two of you?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `33aa46d2-ee59-4851-81e2-556201398b70`
+  - Text: Who is more likely to suggest a couples bucket list?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6bbc4b71-11ba-4e16-9b5e-350b795f8ad8`
+  - Text: Who is more likely to plan a road trip on a whim?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6c35cece-56a8-4043-b146-133020f9b247`
+  - Text: Who is more likely to decorate a home you share?
+
+### EXISTING PACK: Between the Lines
+
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `0a80d77a-b56c-4142-b142-dbd7da773b12`
+  - Text: Who is more likely to know exactly what the other needs without asking?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `1175ba0e-a704-401d-9558-5e6fc8445252`
+  - Text: Who is more likely to cry at a meaningful moment?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `1cbb26d7-2651-424c-a5cb-6fdc1e784910`
+  - Text: Who is more likely to put the relationship before being right?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `27ab0d3d-af9d-461a-9f73-b0dc000b1018`
+  - Text: Who is more likely to express love through actions rather than words?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `2dfd531b-4b39-4691-9f34-4a99f11319cd`
+  - Text: Who is more likely to make a sacrifice without mentioning it?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `30e2a7c1-87fb-4cd3-95b6-45307a29ba19`
+  - Text: Who is more likely to write their feelings down instead of saying them?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `3f0250a0-d4e3-41ef-8aa8-58ccfa1384bb`
+  - Text: Who is more likely to hold on to a sentimental keepsake?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `6503c6ef-9acc-4b1b-8bea-7d2f7983165f`
+  - Text: Who is more likely to stay quiet and just hold the other?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `8b359e68-1245-4b8f-81c6-34ffcc7294de`
+  - Text: Who is more likely to be vulnerable first?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `a1a5b084-498e-450f-96ec-1be2befc57d0`
+  - Text: Who is more likely to revisit old photos and get emotional?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `b5da744a-e761-4e69-9182-0c571744f0ef`
+  - Text: Who is more likely to say "I need you" out loud?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `bfeb1c7b-0e02-4b56-9f13-2141a26a792a`
+  - Text: Who is more likely to bring up a tough conversation because it matters?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `d83496ef-a46a-4ad1-9b69-ab897a8e521c`
+  - Text: Who is more likely to remember the exact moment they knew it was love?
+- **EXISTING** | Type: `who_likely` | Intensity: 2 | ID: `da84696f-9391-40e4-aeef-39098e13316f`
+  - Text: Who is more likely to notice a change in the other's mood instantly?
+
+### EXISTING PACK: Everyday Us
+
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `0c064e50-92f1-45bd-bac9-5583bfe63dbd`
+  - Text: Who is more likely to suggest a spontaneous date night?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `276561c2-9e8b-4b6b-9cb3-16f03b0a44f7`
+  - Text: Who is more likely to send a random "thinking of you" text?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `2f47b9e8-03d8-4285-9548-d63e4bc59a33`
+  - Text: Who is more likely to leave a sweet note for the other to find?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `3003ca93-0a7c-44c4-a19e-332513b91e71`
+  - Text: Who is more likely to say "I love you" first thing in the morning?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `3912ffee-5545-4b49-a919-c6acae25c5c2`
+  - Text: Who is more likely to remember an anniversary without a reminder?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `5c1f486e-e825-415a-848e-7e62b3bbb642`
+  - Text: Who is more likely to fall asleep during a movie?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7805428d-633e-43ee-ae5a-b14e067c8549`
+  - Text: Who is more likely to cook dinner just because?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `83cd7c2d-0523-4f76-932a-d80ecaa5c571`
+  - Text: Who is more likely to apologise first after a silly argument?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8ccd78b7-c1eb-4ded-9781-79ddcf01a8ac`
+  - Text: Who is more likely to start a dance in the kitchen?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8e680a6f-f964-4692-80f1-778d21540af4`
+  - Text: Who is more likely to plan a surprise for the other?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `aaf68be2-948d-4e51-85e3-38e7a41759e1`
+  - Text: Who is more likely to stay up late just to keep talking?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `c4b73821-8036-4660-9145-1c6d0f062cb9`
+  - Text: Who is more likely to hog the blanket?
+
+### EXISTING PACK: Growing Together
+
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `292d61c7-8c46-4f46-95af-ee3ce59fc645`
+  - Text: Who is more likely to be the calm one in a stressful moment?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `51d3705e-eb81-4f4f-a37e-5aacf6e8e723`
+  - Text: Who is more likely to make the other laugh on a bad day?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6290faea-8adf-4f05-bb56-2385d137db46`
+  - Text: Who is more likely to suggest trying something new together?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `680c2ef4-147f-49de-9cfa-c71e25443ecc`
+  - Text: Who is more likely to check in on the other's mental health?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6c3bdf87-9376-4757-809c-7b4235fcbab0`
+  - Text: Who is more likely to celebrate the small wins?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `71ac3ebd-98fc-464f-9531-3fef8a6ec0c3`
+  - Text: Who is more likely to give the better pep talk?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8ed6c945-14ed-4158-b469-f3660c1a6ed1`
+  - Text: Who is more likely to push both of you outside your comfort zone?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `b10213dd-379a-48d4-bbf9-9eb57ba9da04`
+  - Text: Who is more likely to encourage the other to chase a dream?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `e3aabd31-0383-4188-86d1-3353ca43de06`
+  - Text: Who is more likely to notice when something is wrong without being told?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `e5d756ee-274c-49ab-aaf2-92972187ebc4`
+  - Text: Who is more likely to say "I'm proud of you"?
+
+## EXISTING CATEGORY: Social Life
+
+### EXISTING PACK: Hosting
+
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `02bbfcb2-5275-430f-b9aa-0c9b689f68e4`
+  - Text: Show a dish or drink you'd serve at your next party
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `0abf8171-a30c-42ec-ba13-fb32029e4843`
+  - Text: Who is more likely to keep the party going past midnight?
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `1164b811-c395-4890-aba8-2018876c62b5`
+  - Text: Pitch your partner on a theme for your next gathering
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1c6f202d-a4c3-41d7-89a8-fe8cb3405d5a`
+  - Text: Host brunch for a small group
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `202014f8-4e84-4f32-b5b3-52a61bb46a17`
+  - Text: Cook a full meal for guests together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `25599daf-daf2-4d79-8a0f-c542dde0f054`
+  - Text: Throw a birthday party for one of you at home
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `271b3058-c4ea-4682-9e6f-811d1c69f59a`
+  - Text: Have a fire pit or balcony hangout
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `28321319-8c1e-487a-b813-1c92ce085d27`
+  - Text: Who is more likely to overdo it on the snacks and decorations?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2bd4df5e-13fe-4dc6-9104-8a6ffd623fdd`
+  - Text: Have one other couple over for a double date at home
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `2c944d6b-4eab-4fcc-962d-12cf5337ed8e`
+  - Text: Who is more likely to still be cleaning five minutes before guests arrive?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `34396dac-5c44-453c-b95b-2863da8be2bc`
+  - Text: Have a quiet night in with just one friend
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `37576772-4a7f-43b1-9822-0fa780925894`
+  - Text: Share a photo of your favourite spot in your home to entertain
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `40556785-a3b3-4eb4-9ab1-f8efb37312ca`
+  - Text: Host a watch party for a game or show
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `45b51d72-569b-4ace-af84-6034b0632f7a`
+  - Text: Host a potluck where everyone brings something
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `644679c1-2d9e-4959-a2fe-34239b3da694`
+  - Text: What's your signature dish you'd make for guests? Describe it
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6aadbf6a-ca6e-48d1-ae9c-afdf10099d99`
+  - Text: Throw a party with more than 15 people
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7971f5ff-0fca-4fee-bb20-03c345dc7612`
+  - Text: Have friends over and just order takeout
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7a54f0e0-f12a-495e-813e-c31ccfb03fdf`
+  - Text: Who is more likely to stress about a messy kitchen before guests arrive?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7f1cfe6b-df0a-4cd3-829a-28c1662de6e2`
+  - Text: Who is more likely to invite too many people?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8257c7ba-77ca-4ac5-b6e6-26b9b3c012e9`
+  - Text: Throw a New Year's Eve or special occasion party
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `88c022af-70be-4821-bcfd-40366e82f826`
+  - Text: Share a photo of your dream hosting setup or table setting
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8a32560b-7c7d-4bcc-8c66-df0738c8ed3c`
+  - Text: Have overnight guests stay at your place
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `91f1d381-ba8b-4c21-9753-210a1ff3bead`
+  - Text: Host a holiday dinner for friends or family
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9429b308-0b5f-4265-bc10-a40913cd4c0f`
+  - Text: Throw a housewarming or apartment reveal party
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `963e3d70-1d98-420d-9bd9-98dd6731f3b8`
+  - Text: Throw a themed party
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `9b2a317c-a65c-4315-b0bc-b43921ff9bb7`
+  - Text: Describe your dream dinner party guest list
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a64f0e4c-3805-4e54-809f-82f9962cd1af`
+  - Text: Host a game night with board games or cards
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b91daa1e-4426-4af4-96e9-c5b8bfd0f36a`
+  - Text: Host family at your place for a weekend
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `bbd41442-7d77-49f2-8d25-c3018504efca`
+  - Text: Describe your dream dinner party - who's invited and what's on the menu?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c049db5e-eb6c-4c26-ada1-c4ccb90751d2`
+  - Text: Host a dinner party with assigned seating and courses
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c277d1f5-d135-4834-a264-dba97db27ec7`
+  - Text: Have a BBQ or outdoor gathering
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c388edf8-cc58-44bf-a9fd-f3664698a853`
+  - Text: Let guests stay for multiple nights
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `cc6f2518-d2f5-4405-a9bc-5395ab92c67f`
+  - Text: Host a casual last-minute hangout with no prep
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `dbf2f67b-e46a-4549-b6d0-47200ec240f4`
+  - Text: Invite coworkers over to your place
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `e696ad1f-3d69-4fab-9d17-1143672c2493`
+  - Text: Who is more likely to over-prepare for guests?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `f00ebb52-c7c5-4d99-bba5-de7472807de5`
+  - Text: Who is the better DJ at a house party?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f8452115-2813-494b-8610-799e0989d020`
+  - Text: Have a cocktail party with drinks and appetizers
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `faed0776-538c-459c-bda6-1dcd67c0ef6b`
+  - Text: Host a movie night with snacks
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fe68d060-33e7-4c45-ab49-67f6e2a55a5b`
+  - Text: Combine friend groups at a gathering
+
+### EXISTING PACK: Finding Your Vibe
+
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `089d99c5-9453-41f2-bf71-67eaf0e9f7ef`
+  - Text: Who is more likely to cancel plans to stay in?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0b40f9e6-a7d5-4c53-95a1-59b9758de64e`
+  - Text: Spend a weekend with your partner's friends
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1b5ab189-da79-4fa4-8084-04c7c64d0531`
+  - Text: Have a quiet night at a low-key restaurant with one other couple
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `1b6a51a5-6cf3-4fdd-a1cd-6ee0a3d8ccee`
+  - Text: Share a photo of something that captures your vibe as a couple
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `258cfcfd-200a-4d76-9506-b9ec78887199`
+  - Text: Who is more likely to start a karaoke session?
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `2bddbc2e-677d-4062-ba13-c8ea03e16512`
+  - Text: Tell your partner about a hobby you'd love to try together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `301f11ef-1218-491e-a02e-51607fe1a6c3`
+  - Text: Spend a whole day doing activities with another couple
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `37c693b0-0f60-4f80-b4d4-d23d466384ca`
+  - Text: Stay in and have friends over for board games
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `393466d6-e0f2-488c-9d0e-adcf80da383b`
+  - Text: Attend a work event or party as your partner's plus one
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3b65e231-01cd-41bc-83a0-0d4dc444c18e`
+  - Text: Go to a festival or large outdoor event
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `3b84730f-4084-452e-9bb7-a277d948c8c4`
+  - Text: Attend a wedding or formal event together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `42d10260-280e-41df-82f5-267bd28cbedd`
+  - Text: Describe your perfect low-key evening together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `43fa5df8-2081-4037-87c4-498bbaac018f`
+  - Text: Throw a bigger party and invite multiple friend groups
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `46ff2ec8-f112-4bd6-a939-9a84e2266dc4`
+  - Text: Go to a house party together
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `47fd81eb-3119-477b-9002-881fbdfcfc2d`
+  - Text: Describe your perfect night out in a voice note
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `49747b46-a399-4b8c-bb22-5bfb24a78b10`
+  - Text: Show a place you'd love to hang out at together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `4cf63c0e-f47f-429c-bb26-212d483f0bbe`
+  - Text: Who is more likely to befriend a stranger at a party?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5c4c0a48-0e20-46bb-bbfc-f2eeef67e6b6`
+  - Text: Plan a group trip with other couples
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6ba65060-cfbe-42a7-8963-4ef73f7b23ac`
+  - Text: Who is more likely to suggest a spontaneous night out?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6c9c140e-3b4a-4656-957d-b60231c5af03`
+  - Text: Who is more likely to be the last one on the dance floor?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6f1fb5b0-ce5d-4a18-a641-2d0823d3c6c7`
+  - Text: Who is more likely to be the designated driver?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `6fff11bb-b291-4995-b928-73dc8eafb2fd`
+  - Text: Who is more likely to make friends with a stranger at a party?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `73be96c3-e707-4d07-a361-a7117dca69e4`
+  - Text: Host a holiday gathering at your place
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7806f8ae-ef16-4714-a494-014a7b1c3034`
+  - Text: Join a sports league, club, or class together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7b1b560c-cfd3-49dc-9280-bb39eb22cc41`
+  - Text: Go to a bar with a group of friends
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7edf0bfb-c463-4da6-b9c9-c90e484ef0ed`
+  - Text: Go to a trivia night or pub quiz with friends
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `8bc83032-a1ae-4cca-a703-cdee055a2090`
+  - Text: Who is more likely to cancel plans last minute?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b5bacac1-c3c3-43a8-916f-13b1c2aee213`
+  - Text: Have brunch with friends
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ba5b76fc-9ffd-4c41-a678-e47ba89b5a0f`
+  - Text: Go on a date night out in public without other people
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bb0b89d5-109e-43af-966a-83e3072006ef`
+  - Text: Say no to plans and stay in together instead
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bb223d55-ea57-40fc-88ad-f952b56437eb`
+  - Text: Go to a friend's birthday party together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c88a0626-e752-49db-a82e-0349e04bcda0`
+  - Text: Go to a networking event or mixer together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `d83ed4d7-c6b3-4f3c-98fd-acc7254f6f9b`
+  - Text: Host a small dinner party with just two other couples
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e63a6c37-c7de-4360-8c3a-8846ae00f7db`
+  - Text: Go to a loud club or concert together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `ecd4cb40-fc68-4b86-a322-ffbac5b94a78`
+  - Text: Who is more likely to suggest leaving early?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f01e405c-4a56-4c96-8f83-97ccd9ab6ea4`
+  - Text: Have a BBQ or outdoor hangout at your place
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `f56e5add-45d4-4d0f-9a39-3028c0607f22`
+  - Text: Share a photo of your go-to going-out outfit
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f63db03d-bdf9-4a6a-8e21-7c4294cf79ed`
+  - Text: Meet your partner's family for a gathering
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f6eb405e-b82a-4407-a6a2-be316a1d59f2`
+  - Text: Have a double date with another couple
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fa77bea2-7ddc-4a9f-af25-260278c90a2a`
+  - Text: Meet up with friends spontaneously with no planning
+
+## EXISTING AND NEW CATEGORY: Long Distance
+
+### EXISTING PACK: Staying Close
+
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0034cf93-00ef-4353-aa74-d06c543c7912`
+  - Text: Video call your partner during your lunch break
+  - Partner text: Enjoy a quick lunch date over video call
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `014f0a16-b268-4297-8102-023260535c56`
+  - Text: Text your partner random questions throughout the day
+  - Partner text: Answer your partner's random questions
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `02209865-18a1-4993-86b1-d1b06f685d52`
+  - Text: Take a photo of your pillow and empty bed
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0227101f-c534-4083-a211-5e1cebcc7394`
+  - Text: See your partner's location to know they're safe
+  - Partner text: Share your location with your partner for safety
+  - Inverse: 7d6e8a05-0895-49f0-8e1f-5a988d76d246
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `03de94f6-2f64-446d-adca-443d47ef085c`
+  - Text: Call your partner while you're on a walk just to chat
+  - Partner text: Take a walk with your partner over the phone
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `072e4671-73bf-442b-b15c-e4dbf081c80f`
+  - Text: Send a photo of your current view right now
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `08a4eb98-514b-4e6b-b1d6-92391eb01665`
+  - Text: Be surprised with a delivery meal from your partner
+  - Partner text: Surprise your partner by ordering delivery to their house
+  - Inverse: 49f41670-8ca4-42b2-b7c1-75e453a2da6d
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `0c87f2de-6ab2-45dd-8d99-dcee1d241f97`
+  - Text: Video call while you both get ready for the day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `10d8a8bf-00c1-42e4-99ef-fc2b0c3b1047`
+  - Text: Plan the details of your next visit together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1138495b-5103-42da-974c-42d71de93631`
+  - Text: Share your coffee order for your next visit
+  - Partner text: Learn your partner's go-to coffee order
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `11ae147a-c15b-4eb7-81c1-ff8317e18b77`
+  - Text: Receive an inside joke from your partner
+  - Partner text: Send your partner a meme that only they would understand
+  - Inverse: c079ef00-ac2e-4b14-8bd7-b4d268b36818
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `1858233a-a587-47b0-ba72-8a4a3b4c8f37`
+  - Text: Who is more likely to call the other first?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1b3096c8-1e0d-499d-aa12-241632a2dcb5`
+  - Text: Send your partner a playlist you made for them
+  - Partner text: Receive a playlist curated just for you
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1cb20918-47a2-4e66-b282-6f83b7fc0dfc`
+  - Text: Send a photo of something that reminded you of an inside joke
+  - Partner text: Get a reference only you two would understand
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1eb512c4-f2bc-4354-b2d1-697bc8206283`
+  - Text: Get a track that reminded your partner of you
+  - Partner text: Send your partner a song you heard that made you think of them
+  - Inverse: 47229ec1-cac7-4efb-bafe-ee30289feffb
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `1ec6c031-3039-4b1d-82c7-7919feccd9d3`
+  - Text: Video call each other while doing chores
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `23613a4a-f68c-4642-ae30-23eb0c47ef63`
+  - Text: Show your partner what you're eating without them
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `279efde2-3859-4ef4-abe3-53dd827ba4b7`
+  - Text: Start a new show and promise not to watch ahead
+  - Partner text: Start a new show and promise not to watch ahead
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2834e038-7983-4d11-a4b7-53bd04d265b6`
+  - Text: Get a personal review from your partner
+  - Partner text: Send a voice note recommending something you watched
+  - Inverse: 68e8669e-28ae-44fc-a959-e6750624ed66
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2a5decb5-c9a3-4ddc-962a-47199a8c25ae`
+  - Text: Get a random screenshot from your partner
+  - Partner text: Screenshot something funny from your day and send it with no context
+  - Inverse: 7745b4b3-18e0-470b-88cf-e6a178b4a35c
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `2c2ab731-fd82-43ea-8775-62864f28dde3`
+  - Text: See proof your partner is counting down to your visit
+  - Partner text: Send your partner a screenshot of your calendar with their visit blocked out
+  - Inverse: 9a3fd7fc-2b2c-4d1f-aede-a1e9584a36d7
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `2cc1e745-1d02-4ba0-a341-5a894c74339c`
+  - Text: Record a voice note saying good morning to your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `39866a6f-08a4-4ed0-8103-c7ba6adac716`
+  - Text: Learn your partner's go-to coffee order
+  - Partner text: Share your coffee order for your next visit
+  - Inverse: 1138495b-5103-42da-974c-42d71de93631
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `420b7950-d49b-472c-8754-87d518ffe606`
+  - Text: Get a reference only you two would understand
+  - Partner text: Send a photo of something that reminded you of an inside joke
+  - Inverse: 1cb20918-47a2-4e66-b282-6f83b7fc0dfc
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `47229ec1-cac7-4efb-bafe-ee30289feffb`
+  - Text: Send your partner a song you heard that made you think of them
+  - Partner text: Get a track that reminded your partner of you
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `47d3f0ff-d351-47f7-89f2-90d4929ace42`
+  - Text: Share a photo of something that made you smile today
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `49cfc131-d4bf-45f4-afce-a0f3b57f6525`
+  - Text: Fall asleep together on a video call
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `49f41670-8ca4-42b2-b7c1-75e453a2da6d`
+  - Text: Surprise your partner by ordering delivery to their house
+  - Partner text: Be surprised with a delivery meal from your partner
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `4d8812b9-4050-4c1d-b586-042c1b093ef4`
+  - Text: Who is more likely to fall asleep on a video call?
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `52f9949b-11c2-4056-8afd-eec77d2692dd`
+  - Text: Write three things you're grateful for about your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `558cfea7-9e1b-4f1c-a1f7-4aae08a5cb2d`
+  - Text: Receive a snack-filled care package from your partner
+  - Partner text: Send your partner a care package of their favorite snacks
+  - Inverse: c903d6ca-5973-484f-b40d-95f4c19b384b
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `57769c36-54a6-4015-8b79-1314a5eba6fd`
+  - Text: Hear your partner's terrible singing just for you
+  - Partner text: Send your partner a voice note of you singing badly to a song that reminds you of them
+  - Inverse: aafcc3b2-0f78-465c-b5c9-aa8f8e068da2
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5a2453c2-8204-418b-aedc-ad0e0797d535`
+  - Text: Live vicariously through your partner's obligations
+  - Partner text: Text your partner updates from a social event they'd hate
+  - Inverse: 8ec4dc5b-0093-47e4-bfc7-88bcc693cb0f
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `5cd68100-fa1f-4c4c-bd28-d5b0862feea4`
+  - Text: Wake up to a voice note from your partner
+  - Partner text: Leave a voice note for your partner to wake up to
+  - Inverse: b4b25e0e-5c5e-4140-aee0-cfed8d8e5aa9
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `605b5503-1790-45f2-a627-ac9ddd474de4`
+  - Text: Share a podcast episode and discuss it after
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `61d2e0f9-9db9-4063-b8e7-6e5444f9d140`
+  - Text: Send your partner a voice note on your commute
+  - Partner text: Get a voice note from your partner during their day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `68e8669e-28ae-44fc-a959-e6750624ed66`
+  - Text: Send a voice note recommending something you watched
+  - Partner text: Get a personal review from your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6c28a7d0-e729-4ff8-9011-f71f1b1dc4d9`
+  - Text: Stay on a call while you both scroll silently
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `6c2b3221-af1c-49b9-8051-e182eb2dd61e`
+  - Text: Go grocery shopping virtually with your partner
+  - Partner text: Video call your partner while you grocery shop
+  - Inverse: bd7e42e8-651e-4562-bac7-743ae86fa0eb
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `7359a078-006c-4c2c-9896-42028bca97eb`
+  - Text: Record yourself humming or singing a song that reminds you of your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `739a4610-3cb1-457f-b02e-7ad469c98295`
+  - Text: Enjoy a quick lunch date over video call
+  - Partner text: Video call your partner during your lunch break
+  - Inverse: 0034cf93-00ef-4353-aa74-d06c543c7912
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `76809d82-6d34-4f4d-aaa6-65c88cfb0e70`
+  - Text: Tell your partner one thing that made you smile today
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7745b4b3-18e0-470b-88cf-e6a178b4a35c`
+  - Text: Screenshot something funny from your day and send it with no context
+  - Partner text: Get a random screenshot from your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `77b722cb-02d0-4373-8355-f91d7d427213`
+  - Text: Get a voice note from your partner during their day
+  - Partner text: Send your partner a voice note on your commute
+  - Inverse: 61d2e0f9-9db9-4063-b8e7-6e5444f9d140
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7bec2d4c-2d99-457c-ae5f-d0c864c11263`
+  - Text: Make a shared note of restaurants to try when you're together
+  - Partner text: Build a list for your next visit
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7d6e8a05-0895-49f0-8e1f-5a988d76d246`
+  - Text: Share your location with your partner for safety
+  - Partner text: See your partner's location to know they're safe
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `7edac12a-86cd-4ec0-99a8-80997b4c401a`
+  - Text: Who is more likely to cry at the airport?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `7f29dbab-fb93-4e37-9256-df039dad4298`
+  - Text: Do the same Wordle and compare results
+  - Partner text: Compete on a daily puzzle with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `81613e08-15de-4c88-b481-9b67eaf472b2`
+  - Text: Build a list for your next visit
+  - Partner text: Make a shared note of restaurants to try when you're together
+  - Inverse: 7bec2d4c-2d99-457c-ae5f-d0c864c11263
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8744354b-a1fb-47d8-834b-7ab9916107ce`
+  - Text: Challenge your partner to an online board game
+  - Partner text: Be challenged to an online board game by your partner
+- **EXISTING** | Type: `text_answer` | Intensity: 1 | ID: `8826af23-8a75-401d-82f4-4714bf65923e`
+  - Text: Describe your favourite inside joke together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8bc0df6f-99bf-455e-9cd1-6a9ead086224`
+  - Text: Watch a live sports game or event together while texting reactions
+  - Partner text: React to something live with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8bc360aa-7990-4ce5-bb20-24db07df40cb`
+  - Text: Send a voice note venting about your day
+  - Partner text: Listen to your partner vent about their day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8dc09fe2-c9d6-46ed-8762-efb4e8432255`
+  - Text: Watch a documentary together and discuss it
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `8ec4dc5b-0093-47e4-bfc7-88bcc693cb0f`
+  - Text: Text your partner updates from a social event they'd hate
+  - Partner text: Live vicariously through your partner's obligations
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `926c08aa-9719-450c-8c74-7addaf96a175`
+  - Text: Share your daily highs and lows over text
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `92ad8115-9946-4c17-be24-3d80b1af2f37`
+  - Text: Share a photo of your current cozy setup
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `92e901a0-7c97-4d33-9f77-ed7f05f4d268`
+  - Text: Do a virtual museum tour together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9545b299-9f9e-44d7-b290-80197c49fab6`
+  - Text: Take a walk with your partner over the phone
+  - Partner text: Call your partner while you're on a walk just to chat
+  - Inverse: 03de94f6-2f64-446d-adca-443d47ef085c
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `96eaba00-6a0b-4be7-b5ea-bf5b36f28865`
+  - Text: Sing or hum a song that reminds you of your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `9a3fd7fc-2b2c-4d1f-aede-a1e9584a36d7`
+  - Text: Send your partner a screenshot of your calendar with their visit blocked out
+  - Partner text: See proof your partner is counting down to your visit
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `a36ae975-7b23-4b42-9a46-a80d7eb162fa`
+  - Text: Do an online workout class together over video
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `aafcc3b2-0f78-465c-b5c9-aa8f8e068da2`
+  - Text: Send your partner a voice note of you singing badly to a song that reminds you of them
+  - Partner text: Hear your partner's terrible singing just for you
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ad963f7b-dc80-4820-8cdd-cc8c8ba24a6b`
+  - Text: Listen to your partner vent about their day
+  - Partner text: Send a voice note venting about your day
+  - Inverse: 8bc360aa-7990-4ce5-bb20-24db07df40cb
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b05f1e94-ccbd-44be-8717-ea07604e0f5f`
+  - Text: React to something live with your partner
+  - Partner text: Watch a live sports game or event together while texting reactions
+  - Inverse: 8bc0df6f-99bf-455e-9cd1-6a9ead086224
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `b48795c0-d449-49ce-a4bb-d031400f1ae1`
+  - Text: Leave a voice note describing the best part of your day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b4b25e0e-5c5e-4140-aee0-cfed8d8e5aa9`
+  - Text: Leave a voice note for your partner to wake up to
+  - Partner text: Wake up to a voice note from your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b5b19d6c-c8c5-4c66-b4b3-b999d4c663e6`
+  - Text: Send your partner a photo of your workspace
+  - Partner text: See where your partner spends their day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `b77ee68f-99d9-4491-9a46-63ec92bfc266`
+  - Text: Receive a candid snapshot of your partner's day
+  - Partner text: Send a random photo of your current view
+  - Inverse: f7ffa693-ce4f-4ed7-bbe6-f087dd75bd54
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ba04c795-a3a4-463e-954c-89c0170df223`
+  - Text: Answer your partner's random questions
+  - Partner text: Text your partner random questions throughout the day
+  - Inverse: 014f0a16-b268-4297-8102-023260535c56
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bcdd05fa-5600-405c-a262-54deed7596e7`
+  - Text: Watch and react to the same videos together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bd7e42e8-651e-4562-bac7-743ae86fa0eb`
+  - Text: Video call your partner while you grocery shop
+  - Partner text: Go grocery shopping virtually with your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bd9d7480-d29d-4c80-ac88-d7194ca13c0f`
+  - Text: Work silently together on a video call
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `bf16ccc7-7366-44a6-a0cf-a1f74dcedc42`
+  - Text: Be challenged to an online board game by your partner
+  - Partner text: Challenge your partner to an online board game
+  - Inverse: 8744354b-a1fb-47d8-834b-7ab9916107ce
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c079ef00-ac2e-4b14-8bd7-b4d268b36818`
+  - Text: Send your partner a meme that only they would understand
+  - Partner text: Receive an inside joke from your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c55131f9-97d5-444d-a92e-38e49137087a`
+  - Text: Receive a playlist curated just for you
+  - Partner text: Send your partner a playlist you made for them
+  - Inverse: 1b3096c8-1e0d-499d-aa12-241632a2dcb5
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c8c021cc-c519-4c8d-b3f9-8345c0ee5bd5`
+  - Text: Play a co-op video game together online
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `c903d6ca-5973-484f-b40d-95f4c19b384b`
+  - Text: Send your partner a care package of their favorite snacks
+  - Partner text: Receive a snack-filled care package from your partner
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ca708d37-9525-48ff-a746-af7c74eb683d`
+  - Text: Create a shared bucket list of things to do together
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `cd2d6062-f673-48ce-a66b-5b0f996ecc1e`
+  - Text: Who is more likely to send a random "I miss you" text?
+- **EXISTING** | Type: `who_likely` | Intensity: 1 | ID: `cdc1bf4d-2fae-40e0-bb49-59383715c2be`
+  - Text: Who is more likely to plan a surprise visit?
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ce87cd53-b0d3-4691-9a52-ef4bd25388d8`
+  - Text: Start a shared photo album of your day-to-day moments
+- **EXISTING** | Type: `audio` | Intensity: 1 | ID: `d8f492b2-ffcc-4be9-8f01-38124c1fd18a`
+  - Text: Record a bedtime voice note for your partner to fall asleep to
+- **EXISTING** | Type: `photo` | Intensity: 1 | ID: `dee9eeca-8f26-4ac1-9710-56a42ba2e03e`
+  - Text: Send a photo of your morning coffee or tea
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `e9578a77-52de-408d-a222-de8cffcd8b27`
+  - Text: Video call from bed to wind down together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ed6ae70d-94fa-452d-90e5-60896e97c03a`
+  - Text: Keep each other updated on your pet or plants like co-parents
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `ef7c08a3-4e2f-4ba7-bffc-6442411e657d`
+  - Text: Have a virtual happy hour together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f12f856e-feb4-46a6-ad48-074825a65ed9`
+  - Text: See where your partner spends their day
+  - Partner text: Send your partner a photo of your workspace
+  - Inverse: b5b19d6c-c8c5-4c66-b4b3-b999d4c663e6
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f63d2217-3259-4dae-b032-2d1d4711657a`
+  - Text: Order the same takeout and eat together on video
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f78ea055-1867-4469-bbd2-17eec6ae4f84`
+  - Text: Read the same book chapter and discuss it together
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f7ed9c14-72eb-4dbc-9001-dacfdbbf452a`
+  - Text: Cook dinner together over a video call
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `f7ffa693-ce4f-4ed7-bbe6-f087dd75bd54`
+  - Text: Send a random photo of your current view
+  - Partner text: Receive a candid snapshot of your partner's day
+- **EXISTING** | Type: `swipe` | Intensity: 1 | ID: `fe31965f-f36b-4a18-80e0-fd225007b73b`
+  - Text: Compete on a daily puzzle with your partner
+  - Partner text: Do the same Wordle and compare results
+  - Inverse: 7f29dbab-fb93-4e37-9256-df039dad4298
+
+### NEW PACK: Long Distance Desire
+
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `1209065c-92ee-4013-8439-43a94526cb91`
+  - Text: Let your partner send you a voice note describing the first thing they want to do when you next have time alone together.
+  - Partner text: Send your partner a voice note describing the first thing you want to do when you next have time alone together.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `14ac46ba-4f2d-4f43-8e2e-9940df6f24d4`
+  - Text: Leave a message about one promise that would make the waiting between visits feel more connected.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `14ee15d1-93e4-4631-83b8-b2dc250d9c28`
+  - Text: In two sentences, record one feeling and one request for the first private hour after you reunite.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `18876d4d-74c2-4338-873c-4bf60ea84364`
+  - Text: Let your partner send you a message telling you what they miss most about being close to you.
+  - Partner text: Send your partner a message telling them what you miss most about being close to them.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `1dff3868-68af-42a6-878c-fe1001e9ee70`
+  - Text: Tell your partner the phrase you would like to hear before your next reunion.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `22cf97b8-538f-459f-8cf9-42c936eee9a2`
+  - Text: Describe the kind of voice note that makes you feel close even when you cannot be together.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `239b430a-ddce-4a43-8bad-5fdfefd82907`
+  - Text: Create a photo of two notes labelled hope and boundary for something you might discuss when you reunite.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `2fd55c00-74d9-449c-8e97-20803acda350`
+  - Text: Let your partner send you a photo of something that reminds them of your chemistry.
+  - Partner text: Send your partner a photo of something that reminds you of your chemistry.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `347d52d9-13f4-4002-82e2-22a0db0d9ea4`
+  - Text: Describe a tiny ritual you would like to share on the evenings you cannot be together.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `4451af6e-6054-45c4-8e6d-8bf8814268ba`
+  - Text: Send your partner a photo of something that reminds you of your chemistry.
+  - Partner text: Let your partner send you a photo of something that reminds them of your chemistry.
+  - Inverse: 2fd55c00-74d9-449c-8e97-20803acda350
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `4705e835-ad91-49bc-87d5-f545fa96dc94`
+  - Text: Arrange a private call where you both say one thing you hope to explore together when you reunite.
+  - Partner text: Let your partner arrange a private call where you both say one thing you hope to explore together when you reunite.
+  - Inverse: bbe5baa4-9f2d-4da9-87b8-880241e9b63d
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `6dcc1ae6-7050-4918-8a54-776ab968f2a2`
+  - Text: Tell your partner what you would like to plan together before your next time in the same place.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `7d784ae6-ada4-43cf-8826-5f10e825e43f`
+  - Text: Write the message that would make you feel closest to your partner when you are apart.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `8321ee0b-e3d7-496e-81ef-871c802aa1d6`
+  - Text: Record the everyday sound from your life that you wish your partner could hear when you are apart.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `84da4eb8-bc9d-4e77-82ca-13827e987de9`
+  - Text: Let your partner ask you for one honest promise about how you will make time for each other when distance ends.
+  - Partner text: Ask your partner for one honest promise about how you will make time for each other when distance ends.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `8bf57355-4f2c-4b14-84de-e22716165154`
+  - Text: Send each other one voice note that makes the next reunion feel closer.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `9038c551-da9a-4c2f-8039-c96cbd13c02f`
+  - Text: Photograph a map detail for a future visit and add a note about the kind of private time you hope to protect.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `9758244c-fc2f-4757-86d1-5721a49c31ef`
+  - Text: Write the private promise you would like to exchange before a longer period apart.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `97920341-bea6-4a0f-8cf6-a16accc9b1d3`
+  - Text: Leave a private voice note describing how you would like your reunion to begin when you next have uninterrupted time together.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10115-7b2d-5c4e-8f91-100000000114`
+  - Text: Write the message that makes you feel closest when you are apart.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10116-7b2d-5c4e-8f91-100000000115`
+  - Text: Describe a tiny ritual you would share on evenings you cannot meet.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10117-7b2d-5c4e-8f91-100000000116`
+  - Text: Share what you would like to plan before your next time in the same place.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10118-7b2d-5c4e-8f91-100000000117`
+  - Text: Write a private promise you would exchange before a longer period apart.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10119-7b2d-5c4e-8f91-100000000118`
+  - Text: Explain how your partner can make a distant day feel less ordinary.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10120-7b2d-5c4e-8f91-100000000119`
+  - Text: Describe the anticipation you would like to build before seeing each other again.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10121-7b2d-5c4e-8f91-100000000120`
+  - Text: Name a question you wish your partner asked more often while you are apart.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10122-7b2d-5c4e-8f91-100000000121`
+  - Text: Write about the part of your shared routine you miss most and want to recreate.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ac72c24a-6c5f-4fa1-82f0-5d8dccb60868`
+  - Text: Send your partner a message telling them what you miss most about being close to them.
+  - Partner text: Let your partner send you a message telling you what they miss most about being close to you.
+  - Inverse: 18876d4d-74c2-4338-873c-4bf60ea84364
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `acaa9bd6-ccb0-4ac0-80ec-2df024a8ef1e`
+  - Text: Show a shared playlist screen and circle the track that best matches your current mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `aebc08e3-6439-4957-8137-b7919055b325`
+  - Text: Plan the first hour of your next reunion from different places.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `aee7bc5a-cabe-4b58-8f5e-12a510e470de`
+  - Text: Capture a postcard or view from where you are, with one note about what you want to share later.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000015`
+  - Text: Mail or send your partner a note they can keep.
+  - Partner text: Keep a note your partner has mailed or sent to you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000016`
+  - Text: Keep a note your partner has mailed or sent to you.
+  - Partner text: Mail or send your partner a note they can keep.
+  - Inverse: b2000000-0000-4000-8000-000000000015
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000043`
+  - Text: Record a voice note describing the reunion you are looking forward to.
+  - Partner text: Receive a voice note from your partner describing the reunion they are looking forward to.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000044`
+  - Text: Receive a voice note from your partner describing the reunion they are looking forward to.
+  - Partner text: Record a voice note describing the reunion you are looking forward to.
+  - Inverse: b2000000-0000-4000-8000-000000000043
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000087`
+  - Text: Plan a reunion ritual for the next time you are apart.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000107`
+  - Text: Plan a reunion surprise whose outline your partner approves before the details stay secret.
+  - Partner text: Approve the outline of a reunion surprise your partner plans before the details stay secret.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000108`
+  - Text: Approve the outline of a reunion surprise your partner plans before the details stay secret.
+  - Partner text: Plan a reunion surprise whose outline your partner approves before the details stay secret.
+  - Inverse: b2000000-0000-4000-8000-000000000107
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20041-8c3e-5d4f-9a12-200000000040`
+  - Text: Who is more likely to keep a shared ritual going while you are apart?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20042-8c3e-5d4f-9a12-200000000041`
+  - Text: Which partner would send the message that makes distance feel smaller?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20043-8c3e-5d4f-9a12-200000000042`
+  - Text: Who is best at turning a reunion into something deliberately special?
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `bbe5baa4-9f2d-4da9-87b8-880241e9b63d`
+  - Text: Let your partner arrange a private call where you both say one thing you hope to explore together when you reunite.
+  - Partner text: Arrange a private call where you both say one thing you hope to explore together when you reunite.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `d0e3a26f-26b6-423d-8bbd-c6858b4d49a6`
+  - Text: Ask your partner for one honest promise about how you will make time for each other when distance ends.
+  - Partner text: Let your partner ask you for one honest promise about how you will make time for each other when distance ends.
+  - Inverse: 84da4eb8-bc9d-4e77-82ca-13827e987de9
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `d361ae2b-73e1-443d-84c0-853c0703fdf4`
+  - Text: Photograph a handwritten reunion message that would make your partner smile from another place.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `d455b729-cdff-4bcc-8e57-00bde3c8822e`
+  - Text: Record an everyday sound that makes you feel closer to your partner when you are apart.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `d56474c8-b62e-46b9-8705-6e2a8e2b580b`
+  - Text: Send your partner a voice note describing the first thing you want to do when you next have time alone together.
+  - Partner text: Let your partner send you a voice note describing the first thing they want to do when you next have time alone together.
+  - Inverse: 1209065c-92ee-4013-8439-43a94526cb91
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `d6daae26-79b3-47a9-8310-a84ccde5c569`
+  - Text: Speak about the boundary you would want honoured before discussing an adventurous reunion idea.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e716ce0d-8bcc-4d2e-818a-d9327084727f`
+  - Text: Choose a song for you and your partner to listen to at the same time from different places.
+  - Partner text: Let your partner choose a song for you to listen to at the same time from different places.
+  - Inverse: e77547fc-b5fd-46b8-8532-a65978134de5
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e77547fc-b5fd-46b8-8532-a65978134de5`
+  - Text: Let your partner choose a song for you to listen to at the same time from different places.
+  - Partner text: Choose a song for you and your partner to listen to at the same time from different places.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e88a361b-708a-4ffc-8ddb-d365c2a6faf7`
+  - Text: Plan a video-date mood for your partner to join from wherever they are.
+  - Partner text: Let your partner plan a video-date mood for you to join from wherever you are.
+  - Inverse: eed56452-0afc-4666-8d11-03dae31e0fc6
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e947d7da-1ac0-485e-8df9-ebacbe5f86a5`
+  - Text: Share a photo of a small saved object that reminds you how your partner makes you feel valued.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `ec387dc2-2fab-443e-8ca7-5682314c8312`
+  - Text: Have a private call where you share one hope and one boundary for your next time alone together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `eed56452-0afc-4666-8d11-03dae31e0fc6`
+  - Text: Let your partner plan a video-date mood for you to join from wherever you are.
+  - Partner text: Plan a video-date mood for your partner to join from wherever they are.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `f622b44c-6c56-411f-89f6-ff77804c6f5c`
+  - Text: Use a voice note to name the private signal that would help you feel connected when you are apart.
+
+## NEW CATEGORY: Flirting & Anticipation
+
+### NEW PACK: Flirty Communication
+
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `01097e93-2afb-4953-8c40-33e04978e121`
+  - Text: Who is more likely to choose the private challenge level?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `01f45796-0cf3-46b1-85e2-fd057103be2e`
+  - Text: Hear one private thought from your partner that makes them feel closer to you.
+  - Partner text: Tell your partner one private thought that makes you feel closer to them.
+  - Inverse: 2b9db682-26d6-4a01-8d73-b59a39615130
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `02f09589-95f7-4a36-856d-78f89bfcfdd7`
+  - Text: Ask your partner to give you a private instruction in a message.
+  - Partner text: Give your partner a private instruction in a message.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `04f33ea3-212f-4aa1-82ea-1e35dc3e1b3b`
+  - Text: Ask your partner to choose one compliment you should hear in a more intimate setting.
+  - Partner text: Choose one compliment your partner should hear in a more intimate setting.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `05e24051-4b5b-4a70-85f3-791fa0cc70b2`
+  - Text: Finish this sentence for your partner: “When you look at me like that, I want you to know...”
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `0b6c5a61-2202-47b3-8022-0ce00c98941a`
+  - Text: Use a deliberate pause to describe the kind of playful remark that always makes you smile.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `109edd9f-0e3f-4cc6-89b2-7b2b0dccc4f1`
+  - Text: Ask your partner to tell you what they find hardest to resist about you.
+  - Partner text: Tell your partner what you find hardest to resist about them.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `1150cd6e-d41f-4489-8d54-dbfc91004f68`
+  - Text: Leave a calm audio note about the reassurance you want before you share a private wish.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `12f60857-7d09-4e52-84cc-10642e79720b`
+  - Text: Give your partner a private instruction in a message.
+  - Partner text: Ask your partner to give you a private instruction in a message.
+  - Inverse: 02f09589-95f7-4a36-856d-78f89bfcfdd7
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `191de6c6-c82c-4bea-8491-8039a9711796`
+  - Text: Ask your partner to tell you one private wish they want you to consider.
+  - Partner text: Tell your partner one private wish you want them to consider.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `298f2bdd-4c9e-4e2c-8879-f5f54ebee488`
+  - Text: Share a photo of a book cover or film poster that inspires a date mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2b9db682-26d6-4a01-8d73-b59a39615130`
+  - Text: Tell your partner one private thought that makes you feel closer to them.
+  - Partner text: Hear one private thought from your partner that makes them feel closer to you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `2e2ac779-1580-43b2-8a0d-02fdad597c08`
+  - Text: Write the compliment you most want your partner to give you before a close moment.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2ee0b818-5b40-4a9b-8f2d-73cf799b040e`
+  - Text: Tell your partner what you find hardest to resist about them.
+  - Partner text: Ask your partner to tell you what they find hardest to resist about you.
+  - Inverse: 109edd9f-0e3f-4cc6-89b2-7b2b0dccc4f1
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `39e586eb-2b45-4f66-8b94-755bd1428cc4`
+  - Text: Show a photo of a colour or pattern that matches the tone of message you enjoy receiving.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3a445ab7-5f9c-492b-854e-4bb331c677d5`
+  - Text: Choose one compliment your partner should hear in a more intimate setting.
+  - Partner text: Ask your partner to choose one compliment you should hear in a more intimate setting.
+  - Inverse: 04f33ea3-212f-4aa1-82ea-1e35dc3e1b3b
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `3a518207-1496-4e1f-8b9e-26e883c61188`
+  - Text: Capture a page with a short phrase that represents your favourite kind of private banter.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `3ab903eb-272b-496f-8980-d167016ec485`
+  - Text: Share a photo of an object that makes you feel more confident.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `4465742e-9353-4726-88a5-7a4d9c8860fa`
+  - Text: Who is more likely to suggest a new private dynamic?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `525b6ef9-4c9c-48dc-807c-3c0239ec67a0`
+  - Text: Who is more likely to choose the boldest date mood?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `5f5f6e6a-a65c-408f-8762-27f4717848e0`
+  - Text: Who is more likely to turn a small detail into a private ritual?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `6644149f-008d-4864-8799-1939043cd43b`
+  - Text: Describe a private scenario you would like your partner to set up for you.
+  - Partner text: Set up a private scenario your partner describes wanting.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `66a4bd59-8214-4cc7-8400-debded9ddb0b`
+  - Text: Record a soft voice note naming the compliment that makes you feel genuinely noticed.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `6715cebb-17b4-4be1-838f-0393db3c67aa`
+  - Text: Who is more likely to plan a more adventurous private date?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `69e2a9a1-8f1f-4cbb-8249-04c2a3204dc6`
+  - Text: Who is more likely to suggest a private experiment?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `6ddb35ab-3c41-47d2-810f-b549334bcab4`
+  - Text: Who is more likely to make a private date feel more charged?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `70021c4c-0a58-405e-8a64-a8b1158231c3`
+  - Text: Who is more likely to choose the most adventurous detail?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `796ea7de-c18e-490c-8f18-39cfcceb2433`
+  - Text: Who is more likely to suggest something outside the usual routine?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `7bbd77ec-38a5-423e-81f4-37011fa3c303`
+  - Text: Who is more likely to suggest a private challenge?
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `7e0531ff-5f5d-49cc-870b-35e0be5cf97a`
+  - Text: Share one private wish each and discuss what would make it feel exciting and safe.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `7e3997e3-af44-44f9-8e28-a6031813e7a0`
+  - Text: Tell your partner one thing they do that immediately changes the mood between you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `7f756505-88f2-498e-88c2-40466ae3cfa3`
+  - Text: Exchange a private message naming one thing you find irresistible about each other.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `82d012fb-875a-40ec-83c3-20331d2e05c4`
+  - Text: Share a photo of a card or note that feels flirty.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `8596edef-cc09-4e1b-81b4-9c420087179c`
+  - Text: Who is more likely to ask for a more daring version?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `938a9836-554c-46e0-8703-6649c9563273`
+  - Text: Set up a private scenario your partner describes wanting.
+  - Partner text: Describe a private scenario you would like your partner to set up for you.
+  - Inverse: 6644149f-008d-4864-8799-1939043cd43b
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `93d1d7de-7460-4ca8-8717-a14efd5f9802`
+  - Text: In your most confident voice, tell your partner what makes you feel unmistakably wanted by them.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `93dd40b6-4ca7-409e-8215-68395c77c4c1`
+  - Text: Who is more likely to choose a bolder private mood?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `9445787f-8df1-4c22-86ad-9786584dadd4`
+  - Text: Share a photo of a private-date idea written on paper.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `98ca4f3b-c07d-4816-8ae1-16ef2c7a3d67`
+  - Text: Say the check-in question that would make you comfortable hearing a bolder private suggestion.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `9a1591c9-0ba5-485e-8c4f-c3a5196992c3`
+  - Text: Take a photo of a sentence fragment you would enjoy finishing aloud with your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `9ccf1434-638b-4350-8ff4-fc8ebcfdf763`
+  - Text: Give each other one compliment that feels more personal than usual.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `a4d443de-bf1d-41e3-85a3-dac3da03c6ab`
+  - Text: Who is more likely to suggest a private confidence boost?
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10001-7b2d-5c4e-8f91-100000000000`
+  - Text: Write the compliment you secretly hope your partner notices without prompting.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10002-7b2d-5c4e-8f91-100000000001`
+  - Text: Describe the playful phrase that makes you feel instantly chosen.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10003-7b2d-5c4e-8f91-100000000002`
+  - Text: Share the message you would save and reread on a difficult day.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10004-7b2d-5c4e-8f91-100000000003`
+  - Text: Explain how your partner can tell you are inviting more flirtation.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10005-7b2d-5c4e-8f91-100000000004`
+  - Text: Write the bolder invitation you wish felt easy to send.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10006-7b2d-5c4e-8f91-100000000005`
+  - Text: Name the kind of private praise that would make you blush in a good way.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10007-7b2d-5c4e-8f91-100000000006`
+  - Text: Describe a conversation topic that makes ordinary chatting feel more charged.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10008-7b2d-5c4e-8f91-100000000007`
+  - Text: Write the exact response that makes you feel safe after saying something vulnerable.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10009-7b2d-5c4e-8f91-100000000008`
+  - Text: Explain the private joke you would like to turn into a flirtier ritual.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `aaee2618-2b3b-433d-88f4-345fddba6438`
+  - Text: Describe a private conversation you would love to have when you both feel especially open.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `af54d565-4fa7-41da-8dac-5913b16e3cc0`
+  - Text: Share a photo of a note that describes a private mood.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `b0e0e94b-995f-4d4b-84dc-4e47ec7b0878`
+  - Text: Share a photo of a handwritten note for your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000001`
+  - Text: Write a private compliment on a note for your partner.
+  - Partner text: Find a private compliment your partner has written on a note for you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000002`
+  - Text: Find a private compliment your partner has written on a note for you.
+  - Partner text: Write a private compliment on a note for your partner.
+  - Inverse: b2000000-0000-4000-8000-000000000001
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000017`
+  - Text: Send a message describing how you would like to be greeted in private.
+  - Partner text: Receive a message from your partner describing how they would like to be greeted in private.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000018`
+  - Text: Receive a message from your partner describing how they would like to be greeted in private.
+  - Partner text: Send a message describing how you would like to be greeted in private.
+  - Inverse: b2000000-0000-4000-8000-000000000017
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000019`
+  - Text: Say aloud one quality that makes your partner feel desired.
+  - Partner text: Hear your partner say aloud one quality that makes you feel desired.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000020`
+  - Text: Hear your partner say aloud one quality that makes you feel desired.
+  - Partner text: Say aloud one quality that makes your partner feel desired.
+  - Inverse: b2000000-0000-4000-8000-000000000019
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000066`
+  - Text: Trade one compliment that is too personal for a group chat.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000072`
+  - Text: Choose a question that makes flirting feel easy.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000074`
+  - Text: Swap one sentence about what makes you feel pursued.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000079`
+  - Text: Choose a phrase that feels like an invitation to get closer.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000102`
+  - Text: Plan a private-date surprise with two pre-agreed limits.
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20001-8c3e-5d4f-9a12-200000000000`
+  - Text: Who is more likely to turn a sincere compliment into a lingering private moment?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20002-8c3e-5d4f-9a12-200000000001`
+  - Text: Which partner is quickest to spot when the other is inviting a little more flirtation?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20003-8c3e-5d4f-9a12-200000000002`
+  - Text: Who would be more comfortable sending the first bold message after a good date?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20004-8c3e-5d4f-9a12-200000000003`
+  - Text: Who is most likely to make a private joke feel newly charged?
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `ba983634-9cb2-4bf7-86d6-ef574fda3b7a`
+  - Text: Photograph a handwritten compliment you would be pleased for your partner to save.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `c07b956b-fbf4-4c41-8f1e-64c0cf7ef96a`
+  - Text: Who is more likely to turn confidence into a plan?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c0b329d3-1707-4549-8e8b-8741341a15dc`
+  - Text: Invite your partner to send you a voice note that builds anticipation.
+  - Partner text: Send your partner a voice note that builds anticipation.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c34b8219-16d5-4741-8d43-36faa1dafe17`
+  - Text: Send your partner a voice note that builds anticipation.
+  - Partner text: Invite your partner to send you a voice note that builds anticipation.
+  - Inverse: c0b329d3-1707-4549-8e8b-8741341a15dc
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `c6de0494-dc62-4d7a-84c8-f053123d382a`
+  - Text: Whisper the first sentence you would enjoy hearing when your partner wants a closer conversation.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `cbf21d70-48e9-4a33-8e40-bddeb42a7d48`
+  - Text: Describe the kind of teasing remark that feels playful to you rather than awkward.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `cc4ed14d-9d32-483f-8f4b-85cf49e5780c`
+  - Text: Frame a sealed envelope labelled with one question you want your partner to ask before a bolder idea.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `d066d491-9bd1-4ca4-8deb-395242249dd3`
+  - Text: Write a one-line invitation that would make you smile if your partner sent it unexpectedly.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `d0733d23-0b55-401b-8703-439dd9cb89c4`
+  - Text: Who is more likely to leave a flirty note?
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `d206f3e7-3767-4e09-87fc-70f73454e7b1`
+  - Text: Record a voice note finishing this sentence: “When you look at me like that, I want you to know...”
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `d23d838a-d5ae-4bab-86ef-35fa52e6a85e`
+  - Text: Record the invitation you would most like to hear when your partner wants to turn an ordinary evening into a close one.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `d7839bca-96d6-424a-8221-d51e917437f0`
+  - Text: Tell a tiny story about the look from your partner that stays in your mind after you part.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `d7c188c2-1d42-4e20-82f0-839713a79f2c`
+  - Text: Send an image of the contact nickname or notification setting that makes messages from your partner feel special.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d7c5debf-cf56-4480-86c2-0f1a06f82e68`
+  - Text: Receive a message from your partner describing the kind of attention they would love later.
+  - Partner text: Send your partner a message describing the kind of attention you would love later.
+  - Inverse: e0f6a733-b9f1-468e-8a23-db55a2107df5
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `de35f166-dbbd-4b10-8c23-1f265cfeefd2`
+  - Text: Share a photo of an object that could set a playful private mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e0f6a733-b9f1-468e-8a23-db55a2107df5`
+  - Text: Send your partner a message describing the kind of attention you would love later.
+  - Partner text: Receive a message from your partner describing the kind of attention they would love later.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `e1df8bc5-3378-47fb-8ff8-809f9b59e2f4`
+  - Text: Who is more likely to make a private moment feel intense?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e8de5c9a-4a87-4bb5-8765-ec08d09e25c0`
+  - Text: Send each other a voice note that sets a private mood.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `f44640cb-9d0e-4877-8e7f-43e4f0fe7434`
+  - Text: Create a still life with a note containing a conversation starter you would like your partner to use.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `f4798e53-139b-4d13-8bf8-4d2a26843776`
+  - Text: In a warm, playful tone, record the compliment from your partner that would make you smile all day.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `f5793098-3309-40b4-81bf-23d065eaef6c`
+  - Text: Leave your partner a voice note with one bold thing you would love them to say quietly when you are alone together.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `f7324247-be28-4b83-8349-b8827fdd2d5c`
+  - Text: In a bright, teasing tone, tell your partner one small thing they do that changes your mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f857814a-d5cf-4300-825d-bec3dffec0c2`
+  - Text: Tell your partner one private wish you want them to consider.
+  - Partner text: Ask your partner to tell you one private wish they want you to consider.
+  - Inverse: 191de6c6-c82c-4bea-8491-8039a9711796
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `ffec43f7-cddd-4d00-8dc8-53431e7861a7`
+  - Text: Write the boldest thing you would like your partner to say to you privately, in your own words.
+
+### NEW PACK: Anticipation
+
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `03ed6043-3ea5-4f7d-81fa-bc5cdcb0d000`
+  - Text: Wait for your partner to give you the cue to begin a private plan.
+  - Partner text: Give your partner the cue to begin a private plan.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `0d9bfdd7-7283-4144-8ae0-4c452bf675db`
+  - Text: Tell your partner about a plan detail you would rather discover gradually than learn all at once.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `15daa6a1-1000-49fc-8380-8f82d084ab3c`
+  - Text: Write what you would enjoy being asked to choose before your next intimate evening.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `16291ff0-0572-479b-83cd-b772af4cc382`
+  - Text: Describe a small change to your usual evening routine that would make it feel more intentional.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `19072a26-f4bc-4ee7-8d93-320647023777`
+  - Text: Plan a private surprise for your partner within limits you agree first.
+  - Partner text: Ask your partner to plan a private surprise within limits you agree first.
+  - Inverse: e8588b1e-f3c5-4ac6-8b21-0d8da3c023c2
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `1cb96c3b-f8ab-4189-8ad1-dc4ecaac69d5`
+  - Text: Describe the ideal first hint that a special evening together is coming.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `20b0419b-bbd3-440e-8386-92225cd7edbd`
+  - Text: Describe, with a smile in your voice, the first detail that makes you excited to see your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `225a2271-9c69-4e2e-8597-54d0cb67fd9b`
+  - Text: Let your partner decide when you are allowed to open a private surprise.
+  - Partner text: Decide when your partner is allowed to open a private surprise.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `2763a722-c300-4b5c-8ce3-19b2418555ea`
+  - Text: Plan a private experience where neither of you knows the full sequence beforehand.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2a9f5553-9015-4079-8cc1-0aed85d83c3f`
+  - Text: Ask your partner to create a private clue trail leading to what they want.
+  - Partner text: Create a private clue trail leading to what you want from your partner.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `34d19197-0b5a-488e-83f2-72e8015715f5`
+  - Text: Take a photo of a handwritten hint you would be happy to leave for your partner.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `37eeb5e7-2ce0-4b5b-8562-1e52e0453aa5`
+  - Text: Describe, in a low and unhurried voice, the mood you want waiting for you after a busy day apart.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `404fb4b4-6fbd-42a6-8045-abf4497a5f5d`
+  - Text: Plan a private surprise for each other using only a few clues.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `474c37df-1313-4047-8029-848c6bdd92cc`
+  - Text: Record a private tease that hints at the kind of attention you would love from your partner later, without explaining every detail.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `47f77525-add9-4ae9-81f2-57b343b653b5`
+  - Text: Phrase a private invitation as a question your partner could answer in their own time.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `5011ab29-d99c-4e5b-8c14-757b1de88b5d`
+  - Text: Share a photo of a song queue that builds anticipation.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `5409ec30-acbc-4f4e-8f5b-ab67aad4aba2`
+  - Text: Who is more likely to suggest a slower build-up?
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `56892de1-96d8-4eed-854b-328423730f19`
+  - Text: Share one private surprise you would genuinely enjoy your partner planning for you.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `5dae0716-21b7-4f9d-873f-eacd0580fe65`
+  - Text: Show two closed boxes labelled reveal and wait.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `60c7b1bc-defa-4e0b-8d58-812286a70a7d`
+  - Text: Create a small mood board with one boundary you would want checked before a bolder surprise.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `61eb0128-8a68-4f5b-863a-b5ee138460ac`
+  - Text: Count slowly from three to one and name a different form of attention at each number.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `64e6c7b0-eaf1-49f1-8d5c-0b2a7aaf7370`
+  - Text: Agree on a private signal that starts an anticipated experience.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `76a6e182-0d21-4c54-876a-b7f642990c67`
+  - Text: Tell your partner what preparation would make you feel more relaxed before a private date at home.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `78a22757-5ab4-42fc-82be-375e04ea96de`
+  - Text: Arrange three ordinary objects as clues for a surprise you would enjoy unfolding gradually.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `7c697de4-f0cc-4e80-823e-f6120a9f5c12`
+  - Text: Record a short countdown-style note about one small thing you are looking forward to doing together later.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `7c735072-a264-4bc8-8316-6d7e26ab2fa9`
+  - Text: Leave each other one private hint about something you want to try together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `7f338bac-dc52-4fdc-8ea9-8b2f87849b3b`
+  - Text: Choose a small signal that tells your partner you want their attention.
+  - Partner text: Let your partner choose a small signal that means they want your attention.
+  - Inverse: bafc484e-001b-4ebf-85f7-a666f43bf02c
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `895af0c1-4cbb-40a2-878a-052fb1dceab4`
+  - Text: Let your partner choose the order of a private experience without telling you.
+  - Partner text: Choose the order of a private experience without telling your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `8dd41f73-8ec3-49ef-8f45-d581d99d85a8`
+  - Text: Explain the boundary you would set before letting your partner arrange a more adventurous surprise.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `8f8b7ba6-073e-4b2e-8567-1b6a62721255`
+  - Text: Record the first message you would want from your partner before a deliberately flirty date night.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `92f072f7-23d6-4049-8f99-bdc658b0ba03`
+  - Text: Create a private clue trail leading to what you want from your partner.
+  - Partner text: Ask your partner to create a private clue trail leading to what they want.
+  - Inverse: 2a9f5553-9015-4079-8cc1-0aed85d83c3f
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `9319f755-853c-4bc7-8303-81fd6b591eb6`
+  - Text: Photograph a wrapped note with one clue that would make you curious rather than overwhelmed.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `98eabb56-6a1c-49f7-87d1-f0c299b0858d`
+  - Text: Who is more likely to make anticipation last longer?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `9f525ab7-c37c-4174-8f05-3d4a4a395ee6`
+  - Text: Share a photo of an object that represents anticipation to you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a13011ea-04ca-4195-8b9f-981c75435e28`
+  - Text: Give your partner the cue to begin a private plan.
+  - Partner text: Wait for your partner to give you the cue to begin a private plan.
+  - Inverse: 03ed6043-3ea5-4f7d-81fa-bc5cdcb0d000
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10010-7b2d-5c4e-8f91-100000000009`
+  - Text: Describe the first sign that tells you a date is becoming something special.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10011-7b2d-5c4e-8f91-100000000010`
+  - Text: Write the small preparation that helps you arrive feeling present.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10012-7b2d-5c4e-8f91-100000000011`
+  - Text: Share the message that would make the hours before seeing your partner feel exciting.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10013-7b2d-5c4e-8f91-100000000012`
+  - Text: Explain what kind of plan makes you enjoy waiting for a private evening.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10014-7b2d-5c4e-8f91-100000000013`
+  - Text: Write about an unexpected detail your partner could arrange just for you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10015-7b2d-5c4e-8f91-100000000014`
+  - Text: Describe the moment you would like your partner to start building suspense.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10016-7b2d-5c4e-8f91-100000000015`
+  - Text: Name the choice you would like to make together before a bolder date.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10017-7b2d-5c4e-8f91-100000000016`
+  - Text: Write a promise you would enjoy making before an intimate evening.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10018-7b2d-5c4e-8f91-100000000017`
+  - Text: Describe what would make a reunion feel more deliberately romantic.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `a677b169-55cd-438d-8b0a-f94f0fa171ef`
+  - Text: Photograph two cards marked change it and keep going.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `af31da62-8690-4182-8f82-683b083b097a`
+  - Text: Choose the order of a private experience without telling your partner.
+  - Partner text: Let your partner choose the order of a private experience without telling you.
+  - Inverse: 895af0c1-4cbb-40a2-878a-052fb1dceab4
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000003`
+  - Text: Plan a small clue that signals a private date is coming.
+  - Partner text: Spot a small clue your partner has planned to signal a private date.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000004`
+  - Text: Spot a small clue your partner has planned to signal a private date.
+  - Partner text: Plan a small clue that signals a private date is coming.
+  - Inverse: b2000000-0000-4000-8000-000000000003
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000021`
+  - Text: Arrange a private date where your partner chooses the first surprise.
+  - Partner text: Choose the first surprise in a private date your partner arranges.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000022`
+  - Text: Choose the first surprise in a private date your partner arranges.
+  - Partner text: Arrange a private date where your partner chooses the first surprise.
+  - Inverse: b2000000-0000-4000-8000-000000000021
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000023`
+  - Text: Leave a handwritten invitation for a more intimate evening together.
+  - Partner text: Find a handwritten invitation from your partner for a more intimate evening together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000024`
+  - Text: Find a handwritten invitation from your partner for a more intimate evening together.
+  - Partner text: Leave a handwritten invitation for a more intimate evening together.
+  - Inverse: b2000000-0000-4000-8000-000000000023
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000073`
+  - Text: Set a private-date mood that feels a little braver than usual.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000094`
+  - Text: Share a harmless secret signal that means you are in the mood for more closeness.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000099`
+  - Text: Make a list of private ideas that are a yes, a maybe, and a no.
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20005-8c3e-5d4f-9a12-200000000004`
+  - Text: Who is more likely to plan the detail that makes a date feel worth waiting for?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20006-8c3e-5d4f-9a12-200000000005`
+  - Text: Which partner would build suspense with a small clue before seeing each other?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20007-8c3e-5d4f-9a12-200000000006`
+  - Text: Who tends to make preparation feel like part of the romance?
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `b837b28c-089e-4cb0-864b-da0ce14588ab`
+  - Text: Write the kind of message that would make you look forward to seeing your partner later.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `bafc484e-001b-4ebf-85f7-a666f43bf02c`
+  - Text: Let your partner choose a small signal that means they want your attention.
+  - Partner text: Choose a small signal that tells your partner you want their attention.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `bc549b37-393f-42e2-8651-c71eb1eb3268`
+  - Text: Write a short countdown message you would like to receive before a night focused on the two of you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c3b42c25-57aa-4e63-8cc7-6dad4c920689`
+  - Text: Let your partner choose one thing to postpone to make the build-up longer.
+  - Partner text: Choose one thing to postpone to make the build-up longer for your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ca9b07b9-64ce-4e7c-8730-68057686f296`
+  - Text: Decide when your partner is allowed to open a private surprise.
+  - Partner text: Let your partner decide when you are allowed to open a private surprise.
+  - Inverse: 225a2271-9c69-4e2e-8597-54d0cb67fd9b
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `cd57ce0c-8440-4a11-8ee8-b75d45692e0b`
+  - Text: Share a screenshot-free photo of a playlist screen that creates a sense of build-up for you.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `d11240fc-c996-424f-81d0-45f2583f8c11`
+  - Text: Who is more likely to ask for more anticipation?
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `d2612c64-1a53-46cc-8576-55ce0853bd48`
+  - Text: Record the kind of clue you enjoy receiving before a surprise, keeping the delivery playful.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `d7d6c2ba-d587-49bf-8d2d-6be4462cc9d2`
+  - Text: Speak the one question you would want asked before a date detail becomes bolder than usual.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `d9ade91e-9991-4327-8b15-5cb5be05784b`
+  - Text: Ask your partner to plan the first few minutes of a private date.
+  - Partner text: Plan the first few minutes of a private date for your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `da47fbde-7d4d-4a8c-8c69-2976c40a7e01`
+  - Text: Plan the first few minutes of a private date for your partner.
+  - Partner text: Ask your partner to plan the first few minutes of a private date.
+  - Inverse: d9ade91e-9991-4327-8b15-5cb5be05784b
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `e2d9c463-d3a1-4a6a-8df5-ec45fe5e9f9b`
+  - Text: Who is more likely to start a private conversation about curiosity?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e8588b1e-f3c5-4ac6-8b21-0d8da3c023c2`
+  - Text: Ask your partner to plan a private surprise within limits you agree first.
+  - Partner text: Plan a private surprise for your partner within limits you agree first.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `f2519fa2-392d-4c83-83da-ca038959c3e3`
+  - Text: Leave a voice note naming the one thing your partner could do before you meet that would put you in a more daring mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fa49deac-1931-4e37-8a4b-7105497bbf4b`
+  - Text: Choose one thing to postpone to make the build-up longer for your partner.
+  - Partner text: Let your partner choose one thing to postpone to make the build-up longer.
+  - Inverse: c3b42c25-57aa-4e63-8cc7-6dad4c920689
+
+## NEW CATEGORY: Attraction & Confidence
+
+### NEW PACK: Giving Receiving Attention
+
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `12d4a51b-c379-46f7-8167-312e0fca1cfb`
+  - Text: Choose how you want your partner to make you feel desired in private.
+  - Partner text: Make your partner feel desired in private in the way they choose.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `19de98a6-bcb0-4640-81e8-db4cacad6adf`
+  - Text: Share a photo of a private invitation you have written.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `1a9a5de1-9553-4ee3-8aa0-a9322f2a2922`
+  - Text: Take turns receiving five uninterrupted minutes of affectionate attention.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `1bbc2021-2e32-43f7-88dc-e6fbe5b11ad1`
+  - Text: Share a photo of a small detail that makes you feel desired.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `1ec2a8f4-13c8-4193-8a4b-7a255db0115c`
+  - Text: Write one request you would enjoy hearing from your partner when they want your attention.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `1eeaaa2a-b1ee-4d81-885c-4a6587be215f`
+  - Text: Capture two blank cards labelled ask and listen, then let your partner choose one to answer.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `2186665d-a324-4fd1-896c-ef145df0efa9`
+  - Text: Share a picture of a cup, book, or chair that represents being given unhurried attention.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `2e054135-437c-434d-8a7f-9dc49515a306`
+  - Text: Photograph a handwritten compliment you would be happy to find from your partner.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `306e9471-8aba-4318-8e1c-088f2fc21228`
+  - Text: Who is more likely to make a private invitation feel special?
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `32ee31a5-1f30-4642-818f-23147085806a`
+  - Text: Take turns creating a private experience centred entirely on the other person’s enjoyment.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `35de4a10-5eab-46b7-8a87-4a687a96d3b9`
+  - Text: Give your partner your full focus while they set the pace.
+  - Partner text: Ask your partner to give you their full focus while you set the pace.
+  - Inverse: e7703b5b-e617-48de-8879-7e512ec232e2
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `39a979e7-9119-4c25-831c-6437e9f5af09`
+  - Text: Describe the kind of praise you most enjoy receiving privately.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `3b766d9c-8648-4a34-8e7b-65f0285d1f9e`
+  - Text: Let your partner choose one part of you to compliment slowly and sincerely.
+  - Partner text: Choose one part of your partner to compliment slowly and sincerely.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `3d1d4f44-a85b-4603-84b0-7e33f8db4169`
+  - Text: Tell your partner, in an unhurried voice, what helps you accept care without second-guessing it.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `3e71f490-f779-488a-8529-92111ad4e7df`
+  - Text: In a warm, deliberate voice, tell your partner where you would like their focus to be during a private moment.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `413b13df-59ed-457b-8ec6-0cef7eedd9e0`
+  - Text: Agree to ask directly for what you want and answer honestly about what you can give.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `471bd751-002b-4836-88f8-82e1eed8baac`
+  - Text: Let your partner choose how they want you to focus on them during private time.
+  - Partner text: Choose how you want your partner to focus on you during private time.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `491beb73-f6a5-46b7-8c2f-c175cbb0b668`
+  - Text: Speak slowly about a moment when your partner gave you their full attention.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `4d9e76da-3f75-42e4-8345-7d66a8a1f3b6`
+  - Text: Describe one way your partner can give you their full attention that you rarely ask for.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `591750d5-4f4f-4564-8c20-0d350476a7cb`
+  - Text: Leave a playful voice message describing the compliment you most enjoy receiving from your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `5c2624f1-440d-4e60-88ac-21778b74aea7`
+  - Text: Make a low-key audio invitation for the kind of focused private time you would welcome.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `60885dd2-c40c-4aa3-8b47-c145340f34e8`
+  - Text: Give each other a turn where one person only receives and the other only gives attention.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `62cfcbf0-95fa-4a2f-8b73-9c5545f6b3a3`
+  - Text: Choose one part of your partner to compliment slowly and sincerely.
+  - Partner text: Let your partner choose one part of you to compliment slowly and sincerely.
+  - Inverse: 3b766d9c-8648-4a34-8e7b-65f0285d1f9e
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `6ba819e1-b0bd-46c7-8e9c-935e48b00ef8`
+  - Text: Take a close photo of a small wrapped gift that suggests a thoughtful surprise.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `70b7f358-abb1-47d2-83ad-6eb109c0621a`
+  - Text: Frame an empty place setting as a visual invitation to linger over a conversation.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `75b12cc5-d751-4703-83a4-c819587c546c`
+  - Text: Receive a slow, uninterrupted moment of affection chosen by your partner.
+  - Partner text: Give your partner a slow, uninterrupted moment of affection you choose.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `792f6339-e40b-4578-8ad1-e3f3857f8a7f`
+  - Text: Use a bright, confident tone to name one way you love making your partner feel wanted.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `822eed5b-24d6-4a75-8df5-98afcc6d52b3`
+  - Text: Make your partner feel desired in private in the way they choose.
+  - Partner text: Choose how you want your partner to make you feel desired in private.
+  - Inverse: 12d4a51b-c379-46f7-8167-312e0fca1cfb
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `8aa7bfe7-a065-4e08-85fd-3b5184182567`
+  - Text: Record the kind of praise you would most enjoy giving your partner when they make you feel desired.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `8cc1f702-1bcf-43a7-869f-8d12af895487`
+  - Text: Who is more likely to make the first move?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `93113077-4b91-4dcb-8043-3f5ce016423d`
+  - Text: Take turns asking for the kind of private attention you most want.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `93b73455-da2d-4dac-896c-e76a8c4fb5de`
+  - Text: Whisper the opening line of a private request you would like to make more often.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a2b30ce4-c564-4c06-831f-e8cd52fe09af`
+  - Text: Give your partner the kind of private attention they ask for without asking for anything back first.
+  - Partner text: Receive the kind of private attention you ask for without giving anything back first.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10123-7b2d-5c4e-8f91-100000000122`
+  - Text: Describe one way your partner can give you full attention that you rarely request.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10124-7b2d-5c4e-8f91-100000000123`
+  - Text: Write a note about the detail your partner notices that makes you feel understood.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10125-7b2d-5c4e-8f91-100000000124`
+  - Text: Share what you enjoy doing when you want to make your partner feel desired.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10126-7b2d-5c4e-8f91-100000000125`
+  - Text: Describe the praise you most enjoy receiving privately.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10127-7b2d-5c4e-8f91-100000000126`
+  - Text: Write the request you would enjoy hearing when your partner wants your attention.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10128-7b2d-5c4e-8f91-100000000127`
+  - Text: Explain the private gesture that would make you feel unmistakably chosen.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10129-7b2d-5c4e-8f91-100000000128`
+  - Text: Name something your partner could stop doing so their attention feels more complete.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10130-7b2d-5c4e-8f91-100000000129`
+  - Text: Describe how you would like to return your partner’s attention after they make you feel special.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10131-7b2d-5c4e-8f91-100000000130`
+  - Text: Write about the kind of focused listening that makes private conversation feel more charged for you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b0948aa0-8d0c-4dbe-852f-811d6011a35a`
+  - Text: Receive the kind of private attention you ask for without giving anything back first.
+  - Partner text: Give your partner the kind of private attention they ask for without asking for anything back first.
+  - Inverse: a2b30ce4-c564-4c06-831f-e8cd52fe09af
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000011`
+  - Text: Give your partner an unhurried shoulder massage.
+  - Partner text: Receive an unhurried shoulder massage from your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000012`
+  - Text: Receive an unhurried shoulder massage from your partner.
+  - Partner text: Give your partner an unhurried shoulder massage.
+  - Inverse: b2000000-0000-4000-8000-000000000011
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000045`
+  - Text: Give your partner your full attention while they describe what helps them feel wanted.
+  - Partner text: Describe what helps you feel wanted while your partner gives you their full attention.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000046`
+  - Text: Describe what helps you feel wanted while your partner gives you their full attention.
+  - Partner text: Give your partner your full attention while they describe what helps them feel wanted.
+  - Inverse: b2000000-0000-4000-8000-000000000045
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000080`
+  - Text: Compare the sort of praise that lands best for each of you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000084`
+  - Text: Set aside uninterrupted time to say what you each want more of.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000088`
+  - Text: Take turns planning a moment when the other simply receives attention.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000106`
+  - Text: Create a private mood board for a fantasy you both feel safe discussing.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20044-8c3e-5d4f-9a12-200000000043`
+  - Text: Who is more likely to notice when the other needs undivided attention?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20045-8c3e-5d4f-9a12-200000000044`
+  - Text: Which partner is quickest to make the other feel chosen in a crowded week?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20046-8c3e-5d4f-9a12-200000000045`
+  - Text: Who would remember the exact kind of praise their partner enjoys most?
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `baaacee5-7e96-4db7-8e68-d90ce4d2bc8f`
+  - Text: Ask your partner to give you their full attention while you share what feels romantic to you.
+  - Partner text: Give your partner your full attention while they share what feels romantic to them.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `bad11e75-6aeb-404b-8732-a7b874221e79`
+  - Text: Give your partner your full attention while they share what feels romantic to them.
+  - Partner text: Ask your partner to give you their full attention while you share what feels romantic to you.
+  - Inverse: baaacee5-7e96-4db7-8e68-d90ce4d2bc8f
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c0c21ba9-61be-44db-8281-35354e2478a3`
+  - Text: Ask your partner for one kind of private attention they will focus on giving.
+  - Partner text: Let your partner ask for one kind of private attention you will focus on giving.
+  - Inverse: f97d91a3-0521-4b4c-8afb-2474793d62a4
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `c6a83aaf-5d7c-4b14-8570-dc848c0eccde`
+  - Text: Leave a voice note describing how you know the difference between rushed affection and attention that feels fully present.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `c73c76f7-fe8d-417e-8022-5a19fe21c9bc`
+  - Text: Record one affectionate way your partner could make you feel noticed when you are both at home.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `c81b9451-6fca-4b94-8b23-7687815aef8a`
+  - Text: Show a note with one sentence that would make it easier to ask for more attention.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `cffa6caf-77df-4c56-88e8-042e10818bb7`
+  - Text: Record a warm note telling your partner which small kindness makes you feel most noticed.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d135520a-4212-4da9-814e-aff1432c5203`
+  - Text: Give your partner a slow, uninterrupted moment of affection you choose.
+  - Partner text: Receive a slow, uninterrupted moment of affection chosen by your partner.
+  - Inverse: 75b12cc5-d751-4703-83a4-c819587c546c
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d2257297-c3f3-43d6-8de3-0b003dd52733`
+  - Text: Choose how you want your partner to focus on you during private time.
+  - Partner text: Let your partner choose how they want you to focus on them during private time.
+  - Inverse: 471bd751-002b-4836-88f8-82e1eed8baac
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `d7cadbc0-7364-4460-8d34-f58c899f6d0f`
+  - Text: Tell each other one way you want to feel desired, then make space for both requests.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `dc83f9c3-ed6d-4e07-8ab8-6de7e5c8d450`
+  - Text: Write about a moment when you feel most noticed by your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e7703b5b-e617-48de-8879-7e512ec232e2`
+  - Text: Ask your partner to give you their full focus while you set the pace.
+  - Partner text: Give your partner your full focus while they set the pace.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `ef2f7126-c9ea-47e9-8b57-ba931971f268`
+  - Text: Tell your partner what you enjoy doing when you want to make them feel desired.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `f60b63df-2050-4ad6-863f-8b7c5dd4b652`
+  - Text: Record the one thing your partner could do to make you feel they have set aside the whole evening just for you.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `f8741c8e-c2c6-4037-8b2b-37c36cfd2641`
+  - Text: Share a photo of a closed notebook titled What helps me receive, with no pages visible.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f97d91a3-0521-4b4c-8afb-2474793d62a4`
+  - Text: Let your partner ask for one kind of private attention you will focus on giving.
+  - Partner text: Ask your partner for one kind of private attention they will focus on giving.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `fe7ebf6a-2499-46ad-85d6-0e54309f3a06`
+  - Text: Share the private gesture that would make you feel unmistakably chosen by your partner.
+
+### NEW PACK: Private Performance
+
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `060c6b7c-b0d6-4b4e-8311-de7200fd8256`
+  - Text: Describe the reaction from your partner that would make you want to be more expressive.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `089b9290-88a8-4922-8fd1-a45a2c66034b`
+  - Text: Leave a voice note acting out the confident version of yourself you would like to bring into a private date night.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `137e0671-b52a-4fa6-853f-fad1a0a4a8f2`
+  - Text: Capture a chair, lamp, or room corner that you would turn into a tiny stage.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `15506545-bbc7-44e0-8eb8-b912237ce563`
+  - Text: Record a playful introduction as though you are welcoming your partner to a date night you designed just for them.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `1892ef15-3808-4a98-80d7-4a495c790ecf`
+  - Text: Tell your partner what kind of attention helps you feel confident being watched by them.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `18bb8a37-80b2-473b-8b60-44444762f7f2`
+  - Text: Let your partner lead a five-minute close moment while you can pause it.
+  - Partner text: Lead a five-minute close moment while your partner can pause it.
+  - Inverse: ef004056-c670-4ccb-86eb-0504ab20a37b
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `194541bb-1f7e-4163-852d-2c5585b6c515`
+  - Text: Make a dramatic trailer for a private evening, focusing only on the mood you want to create.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `2025bccf-ea55-4285-8ad6-7011580ab336`
+  - Text: Photograph a costume accessory that makes you laugh and feel more confident.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `232f7716-1cf7-49d5-8e0b-dacc900eaf43`
+  - Text: Let your partner tell you, face to face, the version of you they find hardest to resist.
+  - Partner text: Tell your partner, face to face, the version of them you find hardest to resist.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `252f8bff-d92f-44f8-8795-7817a2c5d1b6`
+  - Text: Show a handwritten title for a pretend show you would put on for your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `30c5f3c1-36a0-4750-86af-3431a57eab36`
+  - Text: Let your partner write and read you a short invitation for a private evening together.
+  - Partner text: Write and read your partner a short invitation for a private evening together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `325b0b77-212e-43e8-864c-e8ec65fd9a9e`
+  - Text: Give your partner a short, confident compliment speech before your next date night.
+  - Partner text: Let your partner give you a short, confident compliment speech before your next date night.
+  - Inverse: f493ec1b-b903-426a-8b18-8476f918bc3a
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `342dca46-ff17-4302-8023-96bb2cf65136`
+  - Text: Let your partner choose a song for you to slow-dance to together at home.
+  - Partner text: Choose a song for you and your partner to slow-dance to together at home.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `3603587a-9152-417d-8f24-5ae759f0fd0d`
+  - Text: Use an exaggerated announcer voice to welcome your partner into a cosy date atmosphere.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `3c1e0dc2-f533-4994-8d41-0ec9bc3113c6`
+  - Text: Write a private dare you would enjoy accepting from your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4963b3f0-b5ba-4e04-8d50-a4a6d944bd92`
+  - Text: Ask your partner to sit back while you set the pace for the first part of your evening.
+  - Partner text: Let your partner ask you to sit back while they set the pace for the first part of your evening.
+  - Inverse: e30de43d-62ee-41db-8059-2b75eb50e375
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `53fc3524-d20c-407c-8c35-cf1feb6f7724`
+  - Text: In a stage whisper, name the feedback question you want after trying something more expressive together.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `58f39f5e-3866-4104-865c-1b5e3f427e58`
+  - Text: Frame a simple cue card containing a pause signal for a more daring performance game.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `60965c87-f787-4769-8e25-c30bc4d8f35a`
+  - Text: Speak as a confident character and introduce the quality you would like your partner to encourage.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `66f726db-2b23-4136-8c8a-87e092d71075`
+  - Text: Write and read your partner a short invitation for a private evening together.
+  - Partner text: Let your partner write and read you a short invitation for a private evening together.
+  - Inverse: 30c5f3c1-36a0-4750-86af-3431a57eab36
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `66fadb88-d6b7-4b06-861f-f401e7ebd3a7`
+  - Text: In character, record a short mystery message that gives your partner one clue about a private surprise.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `6985e39d-4358-4a3d-8961-a753e93138f1`
+  - Text: Record the permission-based invitation you would use before showing your partner a bolder side of yourself.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `6f165eda-5855-4d44-89ec-23d3996f61e8`
+  - Text: Perform a playful audio introduction that celebrates one quality your partner brings into a room.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `70a99352-4f74-41c1-80b1-4e3a7672694f`
+  - Text: Write about a playful thing you would enjoy doing just to make your partner smile in private.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `7ecf997d-282b-4795-8a6a-4f532b86c134`
+  - Text: Create an image with a mirror, music screen, or prop that represents the character energy you want to try.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `82660d96-4758-40fe-8876-30ff0d7087b1`
+  - Text: Describe the song or rhythm that makes you feel most expressive when your partner is watching.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `85d218a4-d8f7-478f-8c2e-fc50159fbe06`
+  - Text: Receive a dramatic, affectionate introduction from your partner.
+  - Partner text: Give your partner a dramatic, affectionate introduction.
+  - Inverse: 99afc3b9-779a-43d5-87f1-dea81e9a4130
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `8a3e2b6d-535d-4eeb-859b-e353d56daef2`
+  - Text: Choose a song for you and your partner to slow-dance to together at home.
+  - Partner text: Let your partner choose a song for you to slow-dance to together at home.
+  - Inverse: 342dca46-ff17-4302-8023-96bb2cf65136
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `8b6caa10-8275-4c23-83ac-6b939569d489`
+  - Text: Describe a song that would make you feel expressive if you had the room to yourselves.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `8bd34397-f1dc-49df-8fd5-833d9146b1bc`
+  - Text: Let your partner choose a song and perform a playful lip-sync just for you.
+  - Partner text: Choose a song and perform a playful lip-sync just for your partner.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `91e43720-de55-4e71-8122-a0e498ca0fa0`
+  - Text: Share a lyric-free playlist screen that would set the pace for a private dance.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `9206d99b-6de3-4597-8ec1-bcb40ea3b0d1`
+  - Text: Record a dramatic trailer voice-over for the next adventurous evening you want to create together.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `943b36bc-0266-40c2-80ca-eac25c6ded88`
+  - Text: Let your partner make you laugh with a deliberately over-the-top romantic introduction.
+  - Partner text: Make your partner laugh with a deliberately over-the-top romantic introduction.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `9661cb4b-0884-4db8-87a3-85f0c6013c9e`
+  - Text: Make your partner laugh with a deliberately over-the-top romantic introduction.
+  - Partner text: Let your partner make you laugh with a deliberately over-the-top romantic introduction.
+  - Inverse: 943b36bc-0266-40c2-80ca-eac25c6ded88
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9736f5d1-bbe7-406a-8818-1f0704ef9f68`
+  - Text: Tell your partner, face to face, the version of them you find hardest to resist.
+  - Partner text: Let your partner tell you, face to face, the version of you they find hardest to resist.
+  - Inverse: 232f7716-1cf7-49d5-8e0b-dacc900eaf43
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `99afc3b9-779a-43d5-87f1-dea81e9a4130`
+  - Text: Give your partner a dramatic, affectionate introduction.
+  - Partner text: Receive a dramatic, affectionate introduction from your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10055-7b2d-5c4e-8f91-100000000054`
+  - Text: Write about a playful thing you would do just to make your partner smile privately.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10056-7b2d-5c4e-8f91-100000000055`
+  - Text: Describe a song that makes you feel expressive when you have privacy.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10057-7b2d-5c4e-8f91-100000000056`
+  - Text: Explain what kind of attention makes you feel comfortable being watched.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10058-7b2d-5c4e-8f91-100000000057`
+  - Text: Share a private dare you would genuinely enjoy accepting.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10059-7b2d-5c4e-8f91-100000000058`
+  - Text: Write the reaction from your partner that would make you more expressive.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10060-7b2d-5c4e-8f91-100000000059`
+  - Text: Describe a moment where you would enjoy being the focus of your partner’s attention.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10061-7b2d-5c4e-8f91-100000000060`
+  - Text: Name a small performance you would enjoy rehearsing for your partner.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10062-7b2d-5c4e-8f91-100000000061`
+  - Text: Write about how you would like your partner to ask for a private show of confidence.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10063-7b2d-5c4e-8f91-100000000062`
+  - Text: Explain what would make a bolder private performance feel rewarding afterward.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a8ec9b86-791c-4e39-88b5-0ac2919a1e57`
+  - Text: Accept your partner’s invitation to dance to the song they chose.
+  - Partner text: Choose a song and invite your partner to dance to it with you.
+  - Inverse: ad9432ef-79f8-4bd0-85ba-3fc0a7ecb49d
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ad9432ef-79f8-4bd0-85ba-3fc0a7ecb49d`
+  - Text: Choose a song and invite your partner to dance to it with you.
+  - Partner text: Accept your partner’s invitation to dance to the song they chose.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000039`
+  - Text: Prepare an outfit for a private reveal and tell your partner the theme.
+  - Partner text: Choose an outfit for a private reveal after your partner shares the theme.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000040`
+  - Text: Choose an outfit for a private reveal after your partner shares the theme.
+  - Partner text: Prepare an outfit for a private reveal and tell your partner the theme.
+  - Inverse: b2000000-0000-4000-8000-000000000039
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000055`
+  - Text: Prepare a private reveal after checking what would feel comfortable for your partner.
+  - Partner text: Approve a private reveal your partner prepares after checking what feels comfortable for you.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000056`
+  - Text: Approve a private reveal your partner prepares after checking what feels comfortable for you.
+  - Partner text: Prepare a private reveal after checking what would feel comfortable for your partner.
+  - Inverse: b2000000-0000-4000-8000-000000000055
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000057`
+  - Text: Make a confident request for the kind of attention you want in private.
+  - Partner text: Hear a confident request from your partner for the kind of attention they want in private.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000058`
+  - Text: Hear a confident request from your partner for the kind of attention they want in private.
+  - Partner text: Make a confident request for the kind of attention you want in private.
+  - Inverse: b2000000-0000-4000-8000-000000000057
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b5954b10-606d-4fa3-85fa-eaf3385bc53c`
+  - Text: Choose a song and perform a playful lip-sync just for your partner.
+  - Partner text: Let your partner choose a song and perform a playful lip-sync just for you.
+  - Inverse: 8bd34397-f1dc-49df-8fd5-833d9146b1bc
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20020-8c3e-5d4f-9a12-200000000019`
+  - Text: Who is more likely to become expressive once they feel completely safe to be watched?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20021-8c3e-5d4f-9a12-200000000020`
+  - Text: Which partner would invent a playful private dare that suits the other?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20022-8c3e-5d4f-9a12-200000000021`
+  - Text: Who gives the kind of reaction that makes the other feel braver?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b6f5b9cf-100a-4a26-844d-c2b88f397829`
+  - Text: Let your partner reveal one new side of their confidence through a private dance for you.
+  - Partner text: Reveal one new side of your confidence through a private dance for your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `bd35ebb6-8b78-4b77-8bea-e782dc9dac15`
+  - Text: Write a short note about what makes a date feel exciting and read it to your partner.
+  - Partner text: Hear your partner read a short note about what makes a date feel exciting.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `d51404b4-7c24-47e5-8271-3b22984b08c8`
+  - Text: Share a private moment where you would enjoy being the centre of your partner’s attention.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `dd43b49d-e054-4ead-81ff-c6c6bf2f87fa`
+  - Text: Reveal one new side of your confidence through a private dance for your partner.
+  - Partner text: Let your partner reveal one new side of their confidence through a private dance for you.
+  - Inverse: b6f5b9cf-100a-4a26-844d-c2b88f397829
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `df517093-e40e-4966-8798-6841e6c347a1`
+  - Text: Hear your partner read a short note about what makes a date feel exciting.
+  - Partner text: Write a short note about what makes a date feel exciting and read it to your partner.
+  - Inverse: bd35ebb6-8b78-4b77-8bea-e782dc9dac15
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e30de43d-62ee-41db-8059-2b75eb50e375`
+  - Text: Let your partner ask you to sit back while they set the pace for the first part of your evening.
+  - Partner text: Ask your partner to sit back while you set the pace for the first part of your evening.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `e8ad6ba2-f21f-4b35-8ede-f814d3003f56`
+  - Text: Photograph a harmless prop you would use for a dramatic entrance.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `ef004056-c670-4ccb-86eb-0504ab20a37b`
+  - Text: Lead a five-minute close moment while your partner can pause it.
+  - Partner text: Let your partner lead a five-minute close moment while you can pause it.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f493ec1b-b903-426a-8b18-8476f918bc3a`
+  - Text: Let your partner give you a short, confident compliment speech before your next date night.
+  - Partner text: Give your partner a short, confident compliment speech before your next date night.
+
+### NEW PACK: Clothes Confidence
+
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `08a23208-e133-42ca-8fea-796f1a42ebb3`
+  - Text: Share the private look you would be excited to reveal to your partner, in your own words.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `11571104-90fe-45dd-8747-b1051b9c2040`
+  - Text: Record why one accessory feels like part of your personality rather than just an outfit detail.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `13c891bb-8dd2-469a-88d5-099480e9b9c6`
+  - Text: Record the outfit-related surprise you would enjoy receiving from your partner after they check it feels right for you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `1d791b70-578e-487e-8e13-f108f4d07b7b`
+  - Text: Write the colour you would love your partner to notice you wearing.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `1dfb27c2-1e67-41f2-8b9f-1b754237192c`
+  - Text: Show a getting-ready item that makes you feel more deliberate before seeing your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1e1b4602-8dcb-43d0-85e5-a21a52dc9da8`
+  - Text: Choose a 'stay in' outfit for your partner that feels intentionally different from everyday clothes.
+  - Partner text: Let your partner choose a 'stay in' outfit for you that feels intentionally different from everyday clothes.
+  - Inverse: 92085256-ce8f-4d8c-8e7e-61e234f2096b
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `204b17a1-1128-4a0e-80c5-ac39914e54ed`
+  - Text: Frame two accessories beside a note asking which feels more daring but still comfortable.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `242a1d05-6b81-4341-8dbf-9fadddd09aae`
+  - Text: Describe an outfit that makes you feel more like yourself on a date with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `25174e2e-2b8e-4171-8746-e518d2b438cf`
+  - Text: Describe the compliment about your appearance that would feel most meaningful from your partner.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `2721caf7-3692-45eb-8c01-7c583443d924`
+  - Text: Share a photo of a colour swatch you would enjoy your partner noticing on you.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `2a5cf805-22e4-42b4-8982-ce7df60a88de`
+  - Text: Capture a closed wardrobe door with a note naming one compliment that would help you step out confidently.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `33b6340f-0b87-4a31-84bd-a0a72765c0c7`
+  - Text: Let your partner choose one outfit detail for your next date that makes them smile.
+  - Partner text: Choose one outfit detail for your partner's next date that makes you smile.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `3771069c-4330-492f-88a0-e38029b11235`
+  - Text: Photograph an accessory laid out where it catches the light in a way you enjoy.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `3792b604-cc4a-4ee8-8913-c8e888000b09`
+  - Text: In a playful voice, share the first reaction you would enjoy hearing after trying a new style.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `3c07cd62-925a-4c2a-80f7-3427d389a25c`
+  - Text: Tell your partner what you would enjoy choosing for them to wear on a private date night.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `433f364d-36c3-4562-89ca-4488c539565b`
+  - Text: Record how you feel when you wear the outfit that makes you walk a little taller.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `48c2f293-2d14-4138-84b4-f32f1977468d`
+  - Text: Let your partner send you a message before your date saying exactly what they hope you will wear.
+  - Partner text: Send your partner a message before your date saying exactly what you hope they will wear.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4eb80f7a-874b-4aa5-8848-2d2b7ef219c2`
+  - Text: Put together a look for your partner that feels more daring than their usual style.
+  - Partner text: Let your partner put together a look for you that feels more daring than your usual style.
+  - Inverse: 81cfe9e6-12f9-478f-884b-607426a22ed2
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4f8e295f-272a-488d-88cf-336400211bd8`
+  - Text: Choose an accessory for your partner to wear as a private signal between you.
+  - Partner text: Let your partner choose an accessory for you to wear as a private signal between you.
+  - Inverse: a1b216b2-6ddb-4c43-800b-242680270bcd
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `63892235-75e2-48b2-8363-6bbb81aa4f2a`
+  - Text: Explain the getting-ready ritual that helps you arrive feeling settled and attractive.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `658ec47e-0907-4098-8016-4b47b1ab545c`
+  - Text: Share a photo of an outfit that makes you feel confident.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `681123f4-33a3-444b-868a-7500277d8df8`
+  - Text: Who is more likely to choose the private date outfit?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `68afc4c9-f53f-474a-8970-e4aa4e59c50c`
+  - Text: Share a photo of an accessory your partner might choose for you.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `74db05f9-8577-4c2e-8520-eb21ff7daf46`
+  - Text: Share a photo of a favourite outfit detail.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `76e11907-dc88-44ba-8cbe-56befca23bec`
+  - Text: Share one compliment about how the other partner looks when they feel most like themselves.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `779466c3-b10e-4811-8e8d-4a3d84063522`
+  - Text: Share a photo of a colour pairing for a playful date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `7baab3f0-c4c8-4d64-896c-e04cb00b00b9`
+  - Text: Ask your partner to wear the colour you most associate with them feeling confident.
+  - Partner text: Let your partner ask you to wear the colour they most associate with you feeling confident.
+  - Inverse: fffe7ca2-625c-458c-835c-cb82b3ae545f
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `7bdb1217-55fa-4172-84d5-cc6fa5875bac`
+  - Text: Wear the small style detail your partner chose for your next date-night look.
+  - Partner text: Choose one small style detail for your partner’s next date-night look.
+  - Inverse: c1f81833-1668-4b34-8a46-1f0e04dce0bf
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `81cfe9e6-12f9-478f-884b-607426a22ed2`
+  - Text: Let your partner put together a look for you that feels more daring than your usual style.
+  - Partner text: Put together a look for your partner that feels more daring than their usual style.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `84780873-eed4-4eda-8b06-8e3ddc0de619`
+  - Text: Take a detail shot of fabric, shoes, or a bag that suggests the mood you want for a date.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `8c687c7c-40c3-4f32-8cd9-0ad323b37dbf`
+  - Text: Leave a voice note telling your partner what kind of look from them catches your attention first.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `92085256-ce8f-4d8c-8e7e-61e234f2096b`
+  - Text: Let your partner choose a 'stay in' outfit for you that feels intentionally different from everyday clothes.
+  - Partner text: Choose a 'stay in' outfit for your partner that feels intentionally different from everyday clothes.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9656003b-2134-4980-8eec-7d0212ced819`
+  - Text: Ask your partner to get ready slowly while you give them one sincere compliment at each step.
+  - Partner text: Let your partner ask you to get ready slowly while they give you one sincere compliment at each step.
+  - Inverse: bce468e8-e16b-4248-88c1-0f8bc0be6241
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a1b216b2-6ddb-4c43-800b-242680270bcd`
+  - Text: Let your partner choose an accessory for you to wear as a private signal between you.
+  - Partner text: Choose an accessory for your partner to wear as a private signal between you.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `a21ca060-34f6-4eac-868d-16d88e3fc8e9`
+  - Text: Leave a reassuring audio note about what would help you try a more daring look while staying yourself.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `a3f412f4-756c-485e-8717-c0a5ce6da468`
+  - Text: Agree a private dress code for a date night that feels new to you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10064-7b2d-5c4e-8f91-100000000063`
+  - Text: Describe an outfit that makes you feel most like yourself beside your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10065-7b2d-5c4e-8f91-100000000064`
+  - Text: Write the colour you would enjoy having your partner notice.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10066-7b2d-5c4e-8f91-100000000065`
+  - Text: Share one getting-ready ritual that makes you feel more alluring.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10067-7b2d-5c4e-8f91-100000000066`
+  - Text: Explain what you would enjoy choosing for your partner to wear.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10068-7b2d-5c4e-8f91-100000000067`
+  - Text: Describe the appearance compliment that would matter most to you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10069-7b2d-5c4e-8f91-100000000068`
+  - Text: Write about a private look you would be excited to reveal.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10070-7b2d-5c4e-8f91-100000000069`
+  - Text: Name a detail you would like your partner to notice before anyone else.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10071-7b2d-5c4e-8f91-100000000070`
+  - Text: Describe how your partner could make getting ready feel more like part of the date.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10141-7b2d-5c4e-8f91-100000000140`
+  - Text: Write the accessory or finishing detail that makes you feel quietly confident around your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `a68349a4-0143-4823-82d3-4b3d7c1788e8`
+  - Text: Talk through a dress-code idea you would be curious to discuss before either of you chooses it.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000005`
+  - Text: Pick an accessory that makes your partner feel noticed.
+  - Partner text: Wear an accessory your partner has picked to make you feel noticed.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000006`
+  - Text: Wear an accessory your partner has picked to make you feel noticed.
+  - Partner text: Pick an accessory that makes your partner feel noticed.
+  - Inverse: b2000000-0000-4000-8000-000000000005
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000069`
+  - Text: Each choose one piece of clothing that makes you feel especially confident.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000086`
+  - Text: Choose an outfit theme for a private date at home.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2fff3a0-5e31-481b-8d10-dc09d1acabf3`
+  - Text: Wear something that makes you feel more confident than usual for an evening at home.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20023-8c3e-5d4f-9a12-200000000022`
+  - Text: Who is more likely to make getting ready feel like part of the date?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20024-8c3e-5d4f-9a12-200000000023`
+  - Text: Which partner notices a confidence-boosting detail before anyone else does?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20025-8c3e-5d4f-9a12-200000000024`
+  - Text: Who would choose a look designed to catch the other’s attention?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `b74e504c-ac27-42b5-86aa-0a0b2364ac3e`
+  - Text: Share a photo of a colour that makes you feel bold.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `bce468e8-e16b-4248-88c1-0f8bc0be6241`
+  - Text: Let your partner ask you to get ready slowly while they give you one sincere compliment at each step.
+  - Partner text: Ask your partner to get ready slowly while you give them one sincere compliment at each step.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `c1f81833-1668-4b34-8a46-1f0e04dce0bf`
+  - Text: Choose one small style detail for your partner’s next date-night look.
+  - Partner text: Wear the small style detail your partner chose for your next date-night look.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `cb2f95fc-3154-4a7f-8217-2076eeff99b2`
+  - Text: Let your partner choose the dress code for a private evening, within limits you both agree first.
+  - Partner text: Choose the dress code for a private evening, within limits you both agree first.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `d72dbc15-24af-4889-8f08-062de6e3062b`
+  - Text: Share a photo of a private-date outfit you would like your partner to notice.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `dcc6b4d0-71ff-4047-8dd8-09750e531656`
+  - Text: Say the appearance compliment that makes you stand a little taller, using the tone you want from your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `df064fa7-68ca-45c3-88c8-b507dbe1e89a`
+  - Text: Send your partner a message before your date saying exactly what you hope they will wear.
+  - Partner text: Let your partner send you a message before your date saying exactly what they hope you will wear.
+  - Inverse: 48c2f293-2d14-4138-84b4-f32f1977468d
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `e17b0aa4-207e-40b7-843c-3e504e8a2bb8`
+  - Text: Write about one detail of getting ready that makes you feel more alluring.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e2ad333e-0b16-4ffc-8f26-727284af7d8e`
+  - Text: Create an outfit collage that shows a version of confidence you would like to try.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e42105b7-470c-4d8c-8e6d-e808d6b7a9a6`
+  - Text: Share a photo of an accessory that helps you feel confident.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `e6ce2b7d-77c7-4884-8810-f42d7a8b316f`
+  - Text: In an encouraging voice, tell your partner how you would like them to make you feel confident before a private evening.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `e7792ea2-b71e-4639-8eae-4d3e34028190`
+  - Text: Describe the look you would like your partner to notice first when you have chosen it for yourself.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `e82509f4-0462-4e0b-8783-b7079e2a23d1`
+  - Text: Share a photo of a colour that feels more daring than usual.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `f6273a9b-090d-4260-8a41-d1ba40d2c272`
+  - Text: Choose one outfit detail for your partner's next date that makes you smile.
+  - Partner text: Let your partner choose one outfit detail for your next date that makes them smile.
+  - Inverse: 33b6340f-0b87-4a31-84bd-a0a72765c0c7
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fd67af27-b0fe-4600-8a6c-f0ab88a816b5`
+  - Text: Choose the dress code for a private evening, within limits you both agree first.
+  - Partner text: Let your partner choose the dress code for a private evening, within limits you both agree first.
+  - Inverse: cb2f95fc-3154-4a7f-8217-2076eeff99b2
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fffe7ca2-625c-458c-835c-cb82b3ae545f`
+  - Text: Let your partner ask you to wear the colour they most associate with you feeling confident.
+  - Partner text: Ask your partner to wear the colour you most associate with them feeling confident.
+
+## NEW CATEGORY: Sensory & Atmosphere
+
+### NEW PACK: Sensory Cues
+
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `037d46e0-3b4f-4902-896b-6bd9cf20a4f2`
+  - Text: Choose a scent that you want your partner to wear for a close evening.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `052ab928-8eea-49be-89dc-6b8a5ff3a2d1`
+  - Text: Record a few words about the kind of silence you find inviting rather than awkward.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `0b69f32e-427b-4d5e-8497-18d7b990b135`
+  - Text: Let your partner leave a note telling you one small detail they find especially attractive about you.
+  - Partner text: Leave your partner a note telling them one small detail you find especially attractive about them.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `11278a6a-a82a-427f-8562-e5300d27716e`
+  - Text: Guide your partner through a slow eyes-closed guessing game with safe household textures.
+  - Partner text: Let your partner guide you through a slow eyes-closed guessing game with safe household textures.
+  - Inverse: 995f2684-8c5f-4655-883b-442ac04d1739
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `128bf979-eba4-42d8-83ec-e033e4a47038`
+  - Text: Write about the music that would help you leave everyday stress behind together.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `1488972c-50b6-48f2-88bb-5f3b04501f46`
+  - Text: Share a photo of a lighting choice that makes you feel relaxed.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `14aab6fe-4884-450f-845a-eb6efa731907`
+  - Text: Describe a scent that instantly makes an evening feel more intimate to you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1585dcbb-e1a1-4acc-841a-3639cb93654e`
+  - Text: Ask your partner to focus only on your voice for a few uninterrupted minutes.
+  - Partner text: Let your partner ask you to focus only on their voice for a few uninterrupted minutes.
+  - Inverse: 2fc33011-085d-475e-84e0-0a6a25eebcd5
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `185c6c33-c1df-4b47-84e4-c7063c634da3`
+  - Text: Speak about a texture from everyday life that feels comforting during quiet time together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1b150b40-a1b2-4615-8d18-9e778ba692e6`
+  - Text: Let your partner choose one song and ask you to stay close with them until it ends.
+  - Partner text: Choose one song and ask your partner to stay close with you until it ends.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `23f090ec-ad76-4cf2-8622-e23ca8dddb20`
+  - Text: Let your partner choose the lighting for a close evening together.
+  - Partner text: Choose the lighting for a close evening together with your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `2c976e5c-2801-4348-8f4a-bfb5c6ac03a9`
+  - Text: Explain which sensory detail you would like checked before a bolder private plan.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2e5c4a39-9cb7-42f0-8e5d-5744ebb2bf4f`
+  - Text: Prepare a playlist that sets the mood for a more intimate evening with your partner.
+  - Partner text: Let your partner prepare a playlist that sets the mood for a more intimate evening with you.
+  - Inverse: f665cc11-9b8e-4aaa-8f00-2b515536be92
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2fc33011-085d-475e-84e0-0a6a25eebcd5`
+  - Text: Let your partner ask you to focus only on their voice for a few uninterrupted minutes.
+  - Partner text: Ask your partner to focus only on your voice for a few uninterrupted minutes.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `37a56e01-8ddf-41d5-8616-8dc95bcda995`
+  - Text: Share a photo of a texture you would include in a private setting.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `3ade39d8-a58d-418b-8ab2-78edb75bb9a4`
+  - Text: Lay out a note that says brighter, softer, or pause, then photograph it.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `3bacb807-ec73-4252-887f-a0a34b180db0`
+  - Text: Share the full sensory mood you would like your partner to create for an intimate evening.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3f120718-9dbe-4856-8186-bb103f3f04c6`
+  - Text: Choose the lighting for a close evening together with your partner.
+  - Partner text: Let your partner choose the lighting for a close evening together.
+  - Inverse: 23f090ec-ad76-4cf2-8622-e23ca8dddb20
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `42eb1ec4-a583-4d5a-8566-fe1ad30c9938`
+  - Text: Photograph an everyday object with a texture you find soothing.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `435e8c9c-cba1-45ab-89c8-efbd8176f8c5`
+  - Text: Share a photo of a private-date playlist title you created.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4616a26b-c703-476b-837c-d0d0289e1eba`
+  - Text: Create a five-sound playlist designed to help your partner relax.
+  - Partner text: Listen to the five-sound playlist your partner created to help you relax.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `46e39b4a-4355-4d6c-8538-88aaee138e01`
+  - Text: Photograph a candle, lamp, or string lights that create a calm mood for you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `59d0c220-6464-485f-8a62-04560dad04e5`
+  - Text: Listen to the five-sound playlist your partner created to help you relax.
+  - Partner text: Create a five-sound playlist designed to help your partner relax.
+  - Inverse: 4616a26b-c703-476b-837c-d0d0289e1eba
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `5ac75495-2d84-42d0-8117-f12219db00d5`
+  - Text: Lead ten quiet minutes together, then invite your partner to say how it felt.
+  - Partner text: Let your partner lead ten quiet minutes together, then tell them how it felt.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `63c2dce2-4028-48e5-8afd-5f01017a022e`
+  - Text: Record the sound, song, or kind of silence that makes an evening feel more intimate to you.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `680819eb-de39-4ddd-8761-e549e672c67c`
+  - Text: In a slow voice, describe the lighting that makes you feel most relaxed and attractive.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `68f39eed-18ff-4e07-8cf9-44592bd1bc70`
+  - Text: Share a photo of a fabric or texture that feels luxurious.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `6976eed4-12ea-44da-8d17-8006778d9458`
+  - Text: Describe a texture, fabric, or cosy detail that makes a private setting feel special.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `725168e6-9462-45f4-8f02-239248a10d88`
+  - Text: Share a photo of a song lyric that captures your private mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `75cf4a2e-4b54-466d-89bf-98220b9cc642`
+  - Text: Let your partner pick a dessert or drink for you to share slowly after your date.
+  - Partner text: Pick a dessert or drink for your partner to share slowly after your date.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `7da893d3-00eb-4c88-8d38-61663aa2c894`
+  - Text: Record the sound or music style that makes you feel gently drawn in.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `81675895-acc1-4130-8416-95a81cde2d02`
+  - Text: Choose a song for your partner to hear with their eyes closed before a date.
+  - Partner text: Listen with your eyes closed to a song your partner chose before a date.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `83fa57ab-c6bf-4a74-8477-11b1dc755112`
+  - Text: Leave a voice note about the kind of music that would make you feel more confident trying a bolder private mood together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `85ca0762-b683-4f53-8af3-6c4801a5ced1`
+  - Text: Write about the sound of your partner’s voice that you find most captivating.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `893e9af3-a736-418d-84f6-d28f30680348`
+  - Text: Leave a voice note about the lighting that makes conversation feel more intimate.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `8c6b296b-a91b-4097-80fb-df3bd256a283`
+  - Text: Share a photo of lighting that feels warm and inviting.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9446dd26-cd3f-4357-8ac0-c8551a7b8303`
+  - Text: Listen with your eyes closed to a song your partner chose before a date.
+  - Partner text: Choose a song for your partner to hear with their eyes closed before a date.
+  - Inverse: 81675895-acc1-4130-8416-95a81cde2d02
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `98dc9586-e625-475f-84a0-b8561bfd1cb5`
+  - Text: Record the scent or familiar smell that you associate with feeling especially close to your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `995f2684-8c5f-4655-883b-442ac04d1739`
+  - Text: Let your partner guide you through a slow eyes-closed guessing game with safe household textures.
+  - Partner text: Guide your partner through a slow eyes-closed guessing game with safe household textures.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `9a1d662a-9fc0-4e11-8ddf-5f8663c18acb`
+  - Text: Share a picture of a playlist screen with one song circled.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `9e0cbd50-8f29-41a9-86f9-b66788e9ef8b`
+  - Text: Photograph two scent samples or a handwritten list of scents you like.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10046-7b2d-5c4e-8f91-100000000045`
+  - Text: Describe the scent that makes an evening feel more intimate to you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10047-7b2d-5c4e-8f91-100000000046`
+  - Text: Write about the music that helps you leave daily stress behind together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10048-7b2d-5c4e-8f91-100000000047`
+  - Text: Share the lighting that makes you feel relaxed and confident.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10049-7b2d-5c4e-8f91-100000000048`
+  - Text: Describe a fabric or texture that makes a private setting feel special.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10050-7b2d-5c4e-8f91-100000000049`
+  - Text: Explain what quality in your partner’s voice pulls your attention closer.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10051-7b2d-5c4e-8f91-100000000050`
+  - Text: Write the drink or snack that would make a home date feel indulgent.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10052-7b2d-5c4e-8f91-100000000051`
+  - Text: Describe the temperature or cosy detail that helps you switch off.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10053-7b2d-5c4e-8f91-100000000052`
+  - Text: Share a sound you would love to hear while preparing for a close evening.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10054-7b2d-5c4e-8f91-100000000053`
+  - Text: Explain the full mood you would like your partner to create around you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000037`
+  - Text: Build a playlist that tells your partner when the mood is changing.
+  - Partner text: Let your partner build a playlist that tells you when the mood is changing.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000038`
+  - Text: Let your partner build a playlist that tells you when the mood is changing.
+  - Partner text: Build a playlist that tells your partner when the mood is changing.
+  - Inverse: b2000000-0000-4000-8000-000000000037
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000068`
+  - Text: Pick a scent, tea, or snack that becomes part of your private-date ritual.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000078`
+  - Text: Build a playlist that begins playful and ends calm.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b24f30ff-5d34-4fc7-8734-9ffabd67dfe9`
+  - Text: Let your partner lead ten quiet minutes together, then tell them how it felt.
+  - Partner text: Lead ten quiet minutes together, then invite your partner to say how it felt.
+  - Inverse: 5ac75495-2d84-42d0-8117-f12219db00d5
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `b4c06c1f-918b-4987-8d62-cf41b295117d`
+  - Text: Share a photo of a playlist screen that fits a private date mood.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20017-8c3e-5d4f-9a12-200000000016`
+  - Text: Who is more likely to notice that lighting changes the whole atmosphere?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20018-8c3e-5d4f-9a12-200000000017`
+  - Text: Which partner would choose the soundtrack that makes home feel less ordinary?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20019-8c3e-5d4f-9a12-200000000018`
+  - Text: Who has the strongest instinct for the small comfort detail that helps the other unwind?
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b81c2665-8e74-446e-8efb-2134d841fcaf`
+  - Text: Leave your partner a note telling them one small detail you find especially attractive about them.
+  - Partner text: Let your partner leave a note telling you one small detail they find especially attractive about you.
+  - Inverse: 0b69f32e-427b-4d5e-8497-18d7b990b135
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `bd888a3a-1257-4234-8d29-3b0f5494d400`
+  - Text: Describe a scent that helps you feel relaxed and connected.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `d2a744ca-3c30-44a3-8818-3f4017f754ed`
+  - Text: Frame a quiet table set for a drink or dessert.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `e07e3411-7991-4f2c-8212-ea36b4c132c8`
+  - Text: Choose a shared scent for your next intentional evening.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `e29075e0-b402-485c-8400-3602502521d4`
+  - Text: Who is more likely to set the mood with music?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e2a61796-2208-4795-8542-0bc4da60441b`
+  - Text: Pick a dessert or drink for your partner to share slowly after your date.
+  - Partner text: Let your partner pick a dessert or drink for you to share slowly after your date.
+  - Inverse: 75cf4a2e-4b54-466d-89bf-98220b9cc642
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e48f8ca3-1d08-478b-8671-339b12370019`
+  - Text: Share a photo of a scent or candle that sets a close atmosphere.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f0124342-e72a-4a82-8899-5f24c79611eb`
+  - Text: Choose one song and ask your partner to stay close with you until it ends.
+  - Partner text: Let your partner choose one song and ask you to stay close with them until it ends.
+  - Inverse: 1b150b40-a1b2-4615-8d18-9e778ba692e6
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `f03c2636-536f-4934-8494-b2651e53a903`
+  - Text: Take a photo of a soft blanket or favourite cushion that signals comfort to you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `f320050b-82cd-49ad-8f13-a59022500e5a`
+  - Text: Tell your partner which kind of lighting makes you feel most confident and relaxed.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `f3f58b8f-1ef3-48f8-8b78-9a7c4c0a793d`
+  - Text: Say a short cue that means the atmosphere feels too much and you want to reset.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f665cc11-9b8e-4aaa-8f00-2b515536be92`
+  - Text: Let your partner prepare a playlist that sets the mood for a more intimate evening with you.
+  - Partner text: Prepare a playlist that sets the mood for a more intimate evening with your partner.
+
+### NEW PACK: Settings Atmosphere
+
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `01dcc4d9-492a-4f06-8ea6-70a3c689bf3f`
+  - Text: Let your partner choose the route for a slow evening walk that ends somewhere cosy.
+  - Partner text: Choose the route for a slow evening walk that ends somewhere cosy with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `0ba76abb-8684-4375-8ec1-2d5ed252df2b`
+  - Text: Tell your partner what makes a hotel-style evening feel exciting to you.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `0d3ba69a-26f5-4988-84db-81fe8bf50358`
+  - Text: Explain the one condition that would make a more adventurous home date feel safe.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `135c2940-e0f6-4c2c-8670-9254bf2c09c7`
+  - Text: Say the check-in question you want asked before a private evening becomes more intense.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `1459e780-fc02-4240-8bb0-39bf51067e32`
+  - Text: Describe the room where you would most like to have an uninterrupted evening with your partner.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `175978b9-1f62-4cd3-85b6-aa7c0e0b06d5`
+  - Text: Share a photo of a space you would make more inviting.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `24514587-f67d-4188-83e8-9fd26ff9ddc3`
+  - Text: Let your partner turn one room into a date-night space before you arrive.
+  - Partner text: Turn one room into a date-night space before your partner arrives.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `248e6499-4234-4b2d-8712-56975dd00bbb`
+  - Text: Share a photo of a cosy corner you would use for a private date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `25b110f6-4696-4dda-8f0e-8d4f60775973`
+  - Text: Create a shared 'do not disturb' signal for private time at home.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `28fbf20b-b0a0-4003-8a21-ebe58ad55d3b`
+  - Text: Let your partner choose a place in your home where you are not usually romantic and make it feel special.
+  - Partner text: Choose a place in your home where you and your partner are not usually romantic and make it feel special.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `30f8d0ce-d722-41aa-815d-967b102bf3dc`
+  - Text: Photograph a lamp, playlist, and two glasses arranged for an at-home date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3501223b-e84a-4ef0-8a01-216dc04f88d3`
+  - Text: Let your partner plan a 'no agenda' hour where they only focus on making you feel looked after.
+  - Partner text: Plan a 'no agenda' hour where you only focus on making your partner feel looked after.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `37077c91-320f-4609-8674-71cb67dcb460`
+  - Text: Photograph a timer beside a note that says check in before changing plans.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `37562093-4ec8-4bd4-8daf-84b23d8ab3a2`
+  - Text: Arrange a private evening where your phones stay out of reach until you both agree to check them.
+  - Partner text: Let your partner arrange a private evening where your phones stay out of reach until you both agree to check them.
+  - Inverse: e5906dbf-1e2a-42a4-825e-824b8d7ae097
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `396709bb-16f9-41ac-878d-c579c90629f2`
+  - Text: Record a description of the room that makes you instantly want to put your phones away and focus on each other.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3d72f0df-106e-4d27-8e48-24fb147a5d09`
+  - Text: Plan a 'no agenda' hour where you only focus on making your partner feel looked after.
+  - Partner text: Let your partner plan a 'no agenda' hour where they only focus on making you feel looked after.
+  - Inverse: 3501223b-e84a-4ef0-8a01-216dc04f88d3
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `48442f1e-de0d-45c4-8673-a30d4b4343b2`
+  - Text: Share a photo of a table detail for a more intentional date.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `4b935e41-027b-4516-8ac7-a3bb2ee029cd`
+  - Text: Take a picture of a cosy chair or window seat where you would talk without rushing.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `4c7b2063-f545-4761-8438-9bbc681444fe`
+  - Text: Write the first thing you would change at home to make a regular night feel more special.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `4ed5ab78-53d8-4fcd-8128-f3f2be6ed2e0`
+  - Text: In a hushed voice, describe the kind of private escape you would like to create together without leaving home.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `55baec14-01cc-42c2-8200-8fe8cfa5e015`
+  - Text: Share a photo of a private mood board made from everyday objects.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `5633f359-3c19-483e-8c69-bf7da974d996`
+  - Text: Share a photo of a mood board for a more adventurous date.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `5a20bfe7-a72b-4736-88ff-95550fb4c92d`
+  - Text: Take a photo of two notes labelled hope and limit beside a calm setting.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `69d46c48-06c2-4ec1-8b4b-467b3624229d`
+  - Text: Record an invitation to put phones away for a while and focus on each other.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `6d1d7187-817f-44e2-8970-d37ad386c714`
+  - Text: Share the most adventurous private setting you would enjoy planning together, while staying within your comfort zone.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `6d20d750-5dad-4113-847f-b0f18ecc087c`
+  - Text: Choose a private setting for a conversation about what would make that evening feel exciting to your partner.
+  - Partner text: Let your partner choose a private setting for a conversation about what would make that evening feel exciting to you.
+  - Inverse: d74618a6-7c35-4239-839b-db893236ace0
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `7bb60622-c0ab-4bbe-83bf-2751b9d2d27d`
+  - Text: Who is more likely to choose a new private setting?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `8a55c55a-9df3-4c37-844d-40ce54eb2e1d`
+  - Text: Plan an evening with one room, one playlist, and no other plans.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `90898fa8-3ff9-451c-8e1e-c7ecaaf7d12a`
+  - Text: Share a photo of a handwritten do not disturb sign for private time at home.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `924b8e03-9d3b-4cd4-897d-0522f97b0cd8`
+  - Text: Share a photo of a room detail that creates a close mood.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `990a0232-d192-480a-85e9-9a54b3cb102d`
+  - Text: Choose a place in your home where you and your partner are not usually romantic and make it feel special.
+  - Partner text: Let your partner choose a place in your home where you are not usually romantic and make it feel special.
+  - Inverse: 28fbf20b-b0a0-4003-8a21-ebe58ad55d3b
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `9a496016-317f-40ba-8f3a-eece6bfd2bff`
+  - Text: Record the room change that would make an ordinary evening feel more deliberate.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10090-7b2d-5c4e-8f91-100000000089`
+  - Text: Describe the room where you feel most able to have uninterrupted time together.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10091-7b2d-5c4e-8f91-100000000090`
+  - Text: Write the first home detail you would change to make a regular evening special.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10092-7b2d-5c4e-8f91-100000000091`
+  - Text: Share what makes a hotel-style evening feel exciting to you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10093-7b2d-5c4e-8f91-100000000092`
+  - Text: Explain the privacy you need before you can fully relax with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10094-7b2d-5c4e-8f91-100000000093`
+  - Text: Describe a past date atmosphere you would like to recreate at home.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10095-7b2d-5c4e-8f91-100000000094`
+  - Text: Write about the most adventurous private setting you would plan within your comfort zone.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10096-7b2d-5c4e-8f91-100000000095`
+  - Text: Name the time of day that naturally feels most romantic to you.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10097-7b2d-5c4e-8f91-100000000096`
+  - Text: Explain how your partner could make a familiar room feel newly charged.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `a7ee8544-743c-45c5-8806-451a95806491`
+  - Text: Capture a simple room sketch showing how you would make space feel different.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `abb1b11c-28e2-47bd-8307-80be0ce78ece`
+  - Text: Share a photo of a detail that makes a shared space feel special.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000007`
+  - Text: Set up one corner of your shared space to feel more inviting.
+  - Partner text: Enjoy one corner of your shared space your partner has made more inviting.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000008`
+  - Text: Enjoy one corner of your shared space your partner has made more inviting.
+  - Partner text: Set up one corner of your shared space to feel more inviting.
+  - Inverse: b2000000-0000-4000-8000-000000000007
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000065`
+  - Text: Choose a song that changes the mood of an ordinary evening.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000090`
+  - Text: Make an ordinary room feel intentionally different for a private date.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20032-8c3e-5d4f-9a12-200000000031`
+  - Text: Who is more likely to transform a familiar room into a proper date setting?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20033-8c3e-5d4f-9a12-200000000032`
+  - Text: Which partner would notice first that privacy is needed for a more connected evening?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20034-8c3e-5d4f-9a12-200000000033`
+  - Text: Who has the strongest idea for recreating a favourite date atmosphere at home?
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `bd6fd867-1d0f-4c9d-8c86-a68e01d8e8b2`
+  - Text: Share a photo of a room corner you would transform for a date.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `bfcd0ebf-ccbe-4894-88c9-83387e386951`
+  - Text: Share a photo of a drink setup for a slow private conversation.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c345d9f0-83e9-45cd-8ef4-4d57b2f45f6e`
+  - Text: Let your partner plan a candlelit late-night snack for the two of you after everything else is quiet.
+  - Partner text: Plan a candlelit late-night snack for you and your partner after everything else is quiet.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `c3735637-a37e-4634-83f4-0f3f833881e0`
+  - Text: Turn off the usual lights and create a new at-home date setting together.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `c6926ddc-ccb9-4f8c-8c81-c3cfa6ea61ba`
+  - Text: Photograph a menu, dessert, or drink you would use to make an evening feel special.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `c6a7b5f8-e777-49bb-8af5-7b4b6aad7ee4`
+  - Text: Describe the kind of privacy you need before you can fully switch off together.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `c927b07b-3d02-4393-8901-6ed124e81906`
+  - Text: Leave a voice note about the kind of music that makes home feel like a date.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `cc9d5fbc-3353-4112-8330-6f4595b8a933`
+  - Text: Write about a place from a past date that you would love to recreate the feeling of at home.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `d2c09616-38ff-464d-89f1-5266d8f22ca4`
+  - Text: Leave a voice note about the time of day when you are most open to a deliberately intimate evening.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `d6dba4ff-b6b1-47b5-8cd3-a6ec71088c96`
+  - Text: Choose the route for a slow evening walk that ends somewhere cosy with your partner.
+  - Partner text: Let your partner choose the route for a slow evening walk that ends somewhere cosy.
+  - Inverse: 01dcc4d9-492a-4f06-8ea6-70a3c689bf3f
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `d74618a6-7c35-4239-839b-db893236ace0`
+  - Text: Let your partner choose a private setting for a conversation about what would make that evening feel exciting to you.
+  - Partner text: Choose a private setting for a conversation about what would make that evening feel exciting to your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `da51c45d-7419-4ccd-8c46-06d83e135c14`
+  - Text: Turn one room into a date-night space before your partner arrives.
+  - Partner text: Let your partner turn one room into a date-night space before you arrive.
+  - Inverse: 24514587-f67d-4188-83e8-9fd26ff9ddc3
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `de261d46-6afa-47af-869b-c6dac988f864`
+  - Text: Share a photo of a setting that feels calm and focused.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e460f726-87a6-4069-81f6-b6332f54baf3`
+  - Text: Plan a candlelit late-night snack for you and your partner after everything else is quiet.
+  - Partner text: Let your partner plan a candlelit late-night snack for the two of you after everything else is quiet.
+  - Inverse: c345d9f0-83e9-45cd-8ef4-4d57b2f45f6e
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `e5906dbf-1e2a-42a4-825e-824b8d7ae097`
+  - Text: Let your partner arrange a private evening where your phones stay out of reach until you both agree to check them.
+  - Partner text: Arrange a private evening where your phones stay out of reach until you both agree to check them.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `e62c8e2d-61c1-4065-8f34-7b98b79d8e31`
+  - Text: Describe a small ritual that helps you leave daily routines behind together.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `e9cc1199-ed54-4911-883a-2fde7d0b63e5`
+  - Text: Speak about the setting where you find it easiest to share a private wish.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `eac0b471-8fd1-4d34-88e2-f73fd83506e8`
+  - Text: Record the first three details you would set up to make a home evening feel like an occasion.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `edba6f87-9ae2-4eb0-8175-fab30303baa9`
+  - Text: Share a photo of a setting detail that makes you want to linger.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `f986c8c4-a6b0-4a91-8188-45e6d7db6ea4`
+  - Text: Plan a private evening where you begin by agreeing what would make each of you feel cared for.
+
+## NEW CATEGORY: Fantasy & Roleplay
+
+### NEW PACK: Fantasy Exchange
+
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `026abea8-51ac-43c1-8ef4-59f4b6bc03f2`
+  - Text: Let your partner tell you about a fictional date they would plan for the two of you with no practical limits.
+  - Partner text: Tell your partner about a fictional date you would plan for the two of you with no practical limits.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `0733a238-e6f4-4c23-8316-133881d817c6`
+  - Text: Record a fictional date-night scene you would enjoy stepping into with your partner, keeping it all about atmosphere.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `0bdc9fa0-5712-46d4-840e-2948f870f003`
+  - Text: Describe the one detail that would make an imagined scenario feel believable and exciting to you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `0c811c43-5002-478a-8402-14c92795c1b6`
+  - Text: Describe the setting of your ideal slow-burn evening with your partner.
+  - Partner text: Let your partner describe the setting of their ideal slow-burn evening with you.
+  - Inverse: 28d5df40-d8fd-4878-89fa-a60262512e1f
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `0e7fe37c-0155-4321-87f1-e7ab41f743d3`
+  - Text: Write a three-line scene about you and your partner meeting as strangers in a glamorous place.
+  - Partner text: Let your partner write a three-line scene about the two of you meeting as strangers in a glamorous place.
+  - Inverse: 5e858d42-c5c8-4020-80c8-8f50de22f454
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `16f26dd3-1e51-4a41-8a23-f7811d72bed3`
+  - Text: Name one fictional setting that makes romance feel more exciting to you.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `18e3b52c-f31d-4008-8411-d9384a6de8a3`
+  - Text: Share a photo of two paper cards labelled story and maybe, then ask which one your partner would choose first.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `1b8c4563-7aa6-44b3-802b-ac8b763d04a3`
+  - Text: Create a photo of three everyday objects arranged to suggest the mood of a shared daydream.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `1be698a7-a2b3-442b-89b6-c7725dea9180`
+  - Text: Describe the kind of imagined setting that makes you feel more adventurous with your partner.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `209ff8f4-c8c5-46ce-831b-7cf2cebbaa6a`
+  - Text: Who is more likely to turn a fantasy into a conversation?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `28d5df40-d8fd-4878-89fa-a60262512e1f`
+  - Text: Let your partner describe the setting of their ideal slow-burn evening with you.
+  - Partner text: Describe the setting of your ideal slow-burn evening with your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2be7a23c-d7b8-4d66-80c5-208a43b98cfe`
+  - Text: Finish the sentence, 'A version of us with no interruptions would...' .
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `2ea1bc1e-6bca-448f-8e88-5f449608d093`
+  - Text: Invent an imaginary getaway designed entirely around feeling close.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `30966ef4-6668-4e2e-86a4-ef8c9b37029c`
+  - Text: Leave a voice note beginning, “In our imaginary perfect evening, you would surprise me by...”
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3eebaed7-2c36-41e0-8206-940ff723758a`
+  - Text: Propose a fictional version of that evening where you get to surprise your partner, and they choose the boundaries first.
+  - Partner text: Let your partner propose a fictional version of that evening where they get to surprise you, and you choose the boundaries first.
+  - Inverse: fa8250f6-5941-4c8f-8b59-523841184235
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `44042ae7-136a-4036-82c4-6ee451d286c3`
+  - Text: Record the private wish you are ready to put into words, along with the limit that would help you feel secure discussing it.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4e5fbddd-d75d-412a-806d-9a9b9ba6d5d2`
+  - Text: Send your partner a private message that starts, 'If we had the whole evening to ourselves...' .
+  - Partner text: Let your partner send you a private message that starts, 'If we had the whole evening to ourselves...' .
+  - Inverse: acdfa262-df2f-4de1-8430-456d0f6d9b77
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `5cd2257c-506f-4f5b-8ea9-1a81062d8716`
+  - Text: Let your partner ask what kind of attention makes you feel most wanted in an imagined scenario.
+  - Partner text: Ask your partner what kind of attention makes them feel most wanted in an imagined scenario.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `5e858d42-c5c8-4020-80c8-8f50de22f454`
+  - Text: Let your partner write a three-line scene about the two of you meeting as strangers in a glamorous place.
+  - Partner text: Write a three-line scene about you and your partner meeting as strangers in a glamorous place.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `63ff5ec0-4cd3-4a8a-88e1-0dd91000a8d4`
+  - Text: Share a private fantasy premise you would like to explore only in conversation first.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `6599136d-4dd0-4afa-8b41-1bbab55d3ce5`
+  - Text: Tell your partner what role you would enjoy imagining for yourself during a playful private scenario.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `68f2b6ee-33af-4251-86e4-0724efaf0236`
+  - Text: Tell your partner about one made-up rule that would make a private story feel more exciting to you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `70ca9ee4-45cb-484c-8a64-517d8253f6c7`
+  - Text: Let your partner ask you what you would want them to take charge of in an imaginary evening.
+  - Partner text: Ask your partner what they would want you to take charge of in an imaginary evening.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `7be3b657-b01e-4c1c-8d61-5914c9f3cd22`
+  - Text: Make a shared 'maybe someday' list of private experiences you could discuss before trying.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `7fb5a3e0-7647-4e92-83f7-b5081f050e80`
+  - Text: Tell your partner about a fictional date you would plan for the two of you with no practical limits.
+  - Partner text: Let your partner tell you about a fictional date they would plan for the two of you with no practical limits.
+  - Inverse: 026abea8-51ac-43c1-8ef4-59f4b6bc03f2
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `845afe32-234c-4653-844f-a3b34a58502e`
+  - Text: Ask your partner what they would want you to take charge of in an imaginary evening.
+  - Partner text: Let your partner ask you what you would want them to take charge of in an imaginary evening.
+  - Inverse: 70ca9ee4-45cb-484c-8a64-517d8253f6c7
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `8b7afe08-5ed6-44b3-8452-53889794d327`
+  - Text: Let your partner invent a nickname for the more confident version of you.
+  - Partner text: Invent a nickname for the more confident version of your partner.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `9c0dbd9b-b28e-4a0b-8108-4f054f795817`
+  - Text: Leave a voice note asking which detail would make an imagined date feel more personal to your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `9fc5def5-b2eb-4b98-8359-4715c4b85e06`
+  - Text: Speak about the point where a private fantasy would become something you would want to discuss seriously with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10072-7b2d-5c4e-8f91-100000000071`
+  - Text: Write about a fictional romance mood you would like to borrow for a date.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10073-7b2d-5c4e-8f91-100000000072`
+  - Text: Describe an imagined setting that makes you feel more adventurous.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10074-7b2d-5c4e-8f91-100000000073`
+  - Text: Share a character energy you would enjoy trying on privately.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10075-7b2d-5c4e-8f91-100000000074`
+  - Text: Write a fictional opening line your partner could use with you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10076-7b2d-5c4e-8f91-100000000075`
+  - Text: Explain the detail that makes an imagined scenario feel believable to you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10077-7b2d-5c4e-8f91-100000000076`
+  - Text: Describe a fantasy premise you would only want to explore in conversation first.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10078-7b2d-5c4e-8f91-100000000077`
+  - Text: Write about a story you would want your partner to invent around the two of you.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10079-7b2d-5c4e-8f91-100000000078`
+  - Text: Name the kind of imagined risk that feels exciting only when it stays make-believe.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10080-7b2d-5c4e-8f91-100000000079`
+  - Text: Explain how your partner could ask about your private imagination without making assumptions.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `acdfa262-df2f-4de1-8430-456d0f6d9b77`
+  - Text: Let your partner send you a private message that starts, 'If we had the whole evening to ourselves...' .
+  - Partner text: Send your partner a private message that starts, 'If we had the whole evening to ourselves...' .
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000041`
+  - Text: Describe the atmosphere you would borrow from a fictional romance.
+  - Partner text: Hear your partner describe the atmosphere they would borrow from a fictional romance.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000042`
+  - Text: Hear your partner describe the atmosphere they would borrow from a fictional romance.
+  - Partner text: Describe the atmosphere you would borrow from a fictional romance.
+  - Inverse: b2000000-0000-4000-8000-000000000041
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000059`
+  - Text: Bring a shared fictional premise into a private date, agreeing what stays imaginary.
+  - Partner text: Shape a shared fictional premise into a private date, agreeing with your partner what stays imaginary.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000060`
+  - Text: Shape a shared fictional premise into a private date, agreeing with your partner what stays imaginary.
+  - Partner text: Bring a shared fictional premise into a private date, agreeing what stays imaginary.
+  - Inverse: b2000000-0000-4000-8000-000000000059
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000076`
+  - Text: Plan a private date around one shared fantasy atmosphere.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000089`
+  - Text: Choose a private question that you have never asked each other.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000105`
+  - Text: Set a playful rule that can be paused by either of you without explanation.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20026-8c3e-5d4f-9a12-200000000025`
+  - Text: Who is more likely to turn a fictional scene into a conversation worth having?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20027-8c3e-5d4f-9a12-200000000026`
+  - Text: Which partner is more comfortable sharing an imagined version of a date?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20028-8c3e-5d4f-9a12-200000000027`
+  - Text: Who would add the one creative detail that makes a shared story vivid?
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `b89f781c-fd79-4269-810e-35fd5722d83e`
+  - Text: Record a playful toast to an imaginary place where the two of you feel especially free to be yourselves.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `bd4c9df0-80ac-4ab9-8dff-c8bce27bb1af`
+  - Text: In a conspiratorial voice, tell your partner the private rule that would make your imaginary evening feel thrilling.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `c1dc63d9-5de3-480a-810a-f0d6c170e5ac`
+  - Text: Ask your partner what kind of attention makes them feel most wanted in an imagined scenario.
+  - Partner text: Let your partner ask what kind of attention makes you feel most wanted in an imagined scenario.
+  - Inverse: 5cd2257c-506f-4f5b-8ea9-1a81062d8716
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `c2ea8ca8-187d-412b-8156-ef93c70fddf7`
+  - Text: Write about a fictional romance scene whose mood you would love to borrow for a date.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `c387bc25-258a-4175-8096-677b7f79a7fe`
+  - Text: Photograph a handwritten name for a fictional hideaway the two of you might visit in a story.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `cf96704d-a9fc-4b1f-8743-4a695dff8771`
+  - Text: In a calm voice, name the question you would want answered before discussing a bolder imaginary scenario.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `d9d34ab1-f02f-4a96-8a02-e6fa9655ba45`
+  - Text: Describe, in your own voice, the fictional character you would enjoy discussing with your partner.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `dc97304f-e1f0-4bd1-8317-9ad473e3aaf6`
+  - Text: Record the made-up place where you and your partner would feel free to be more playful and uninhibited together.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `e454b36b-e095-4a29-80b7-144c3185eca3`
+  - Text: Photograph a book title or film poster that suggests a role you would be curious to talk through together.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `e55f9c48-997c-4c22-8647-06b1b2cf39ff`
+  - Text: Invent a nickname for the more confident version of your partner.
+  - Partner text: Let your partner invent a nickname for the more confident version of you.
+  - Inverse: 8b7afe08-5ed6-44b3-8452-53889794d327
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `e58e67e6-bb89-427c-8556-3877458e0a4d`
+  - Text: Write a fictional opening line your partner could use to begin a shared fantasy.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `f005a9e4-279b-48d7-841c-b03b1e3f2cd4`
+  - Text: Sketch and photograph a map showing three stops on an imagined private date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fa8250f6-5941-4c8f-8b59-523841184235`
+  - Text: Let your partner propose a fictional version of that evening where they get to surprise you, and you choose the boundaries first.
+  - Partner text: Propose a fictional version of that evening where you get to surprise your partner, and they choose the boundaries first.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `fea0a90c-19e2-43aa-8e1e-96bcb6aba739`
+  - Text: Photograph a postcard, book cover, or landscape that could inspire an imaginary date setting.
+
+### NEW PACK: Roleplay
+
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `0245d98b-a32d-4549-8a55-fd8c87103ac5`
+  - Text: Choose a role where you lead the conversation and your partner decides when to step out of character.
+  - Partner text: Let your partner choose a role where they lead the conversation and you decide when to step out of character.
+  - Inverse: d551985e-d719-4eb7-89cc-6c4659249728
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `06c31948-794f-4018-8279-663572fcc864`
+  - Text: Leave a voice note explaining the rule that would help a pretend scenario feel comfortable for you.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `09361ccb-7f69-4676-8a7d-0c0a016d05b8`
+  - Text: Photograph a pretend invitation to a fictional event for two.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `2305c703-6f29-4b4c-88cd-8e75562a7056`
+  - Text: Pretend you are meeting your partner for the first time and ask them out again.
+  - Partner text: Let your partner pretend they are meeting you for the first time and ask you out again.
+  - Inverse: 8c30fb8b-f87e-4809-8c7b-c4a45362fbdb
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `236a525b-94de-4613-8bfd-126ce3247a42`
+  - Text: Tell your partner the phrase that should signal it is time to step out of character.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `2ea3d0fc-ad9e-4abf-85ee-6d4ed5235b98`
+  - Text: Pretend you are on a first date and ask each other three new questions.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `36a045f7-f6d2-4903-8fcb-50828097b31e`
+  - Text: Leave a voice note as a fictional version of yourself inviting your partner on a secret date.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `3af580f6-fdfc-4c17-8f52-f08d20ba3099`
+  - Text: Choose a character who is bolder than you usually are, while your partner sets the limits of the scene.
+  - Partner text: Let your partner choose a character who is bolder than they usually are, while you set the limits of the scene.
+  - Inverse: 431b5c92-192e-4774-8b92-dab504be41af
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `42d43d70-f53d-4161-84f5-5ca3be5d0ead`
+  - Text: Let your partner take the role of your personal host for an evening at home.
+  - Partner text: Take the role of your partner's personal host for an evening at home.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `431b5c92-192e-4774-8b92-dab504be41af`
+  - Text: Let your partner choose a character who is bolder than they usually are, while you set the limits of the scene.
+  - Partner text: Choose a character who is bolder than you usually are, while your partner sets the limits of the scene.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `48d2b298-fb69-492d-84e0-81365e9973b7`
+  - Text: Choose characters for a one-hour at-home date with a clear time to step out of character.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `5089b9d6-823f-4782-8bd7-34b1193cfd56`
+  - Text: Use a voice note to describe the version of yourself that feels a little more confident than usual.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `5384d7cf-43d4-4221-8611-cc392ec9d184`
+  - Text: Play the part of a stylist who gives your partner one confidence challenge for the evening.
+  - Partner text: Let your partner play the part of a stylist who gives you one confidence challenge for the evening.
+  - Inverse: ac75a853-f73c-4db4-8a95-eaa71331897a
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `55e7916d-5fba-487b-8c96-e314c58965af`
+  - Text: Who is more likely to suggest a role change?
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `5e01ff9b-7eec-4329-8e26-6f617147305f`
+  - Text: Write the nickname you would enjoy your partner using during a playful private game.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `60c7ec38-1d73-4ed5-8196-9acac43adfbe`
+  - Text: Tell your partner the kind of made-up first meeting you would enjoy acting out together.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `6dda0d52-a102-4366-817d-c612fe15a47f`
+  - Text: Capture a handwritten name tag for a fictional character you would like to introduce.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `768a795b-71fb-4bc2-87b9-dabf94c871cb`
+  - Text: Record the character trait you would enjoy your partner pretending to have for one private evening.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `781484ce-77e4-44a3-8e20-bc42caa66f62`
+  - Text: Try a roleplay where one person leads the scene and you switch roles halfway through.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `7d0ad177-2d3b-4df7-80b3-01b1cd8654ab`
+  - Text: Describe an invented setting where it would feel easy to stay in character with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `855ffd52-2dcb-46c5-85ce-05c9e5339e0c`
+  - Text: Describe the one rule that would help roleplay feel comfortable and fun for you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `8c30fb8b-f87e-4809-8c7b-c4a45362fbdb`
+  - Text: Let your partner pretend they are meeting you for the first time and ask you out again.
+  - Partner text: Pretend you are meeting your partner for the first time and ask them out again.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `8d44ea07-ea2e-4f92-85c3-b42a3f24b15c`
+  - Text: Photograph two role cards with a question mark between them, then name the limit you would keep.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `96dda26d-39e0-4c04-8d60-bfbecaddb75a`
+  - Text: Describe a simple character trait you would enjoy your partner pretending to have for one evening.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `997cb600-2f05-434b-83bb-05c5b9445e6a`
+  - Text: Record the opening line you would use if you and your partner were meeting for the first time.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `99daac70-ce70-4019-8986-09a1efb8a570`
+  - Text: In character, record the agreement you would want before a bolder roleplay scene begins.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `a022df07-24f7-4487-89c9-c8c3246db6dc`
+  - Text: Record the check-in you would want before a more intense fictional scene begins.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a1da6834-d764-4d64-8ee0-13c63e0e498d`
+  - Text: Act as a confident stranger who has one hour to win your partner over.
+  - Partner text: Let your partner act as a confident stranger who has one hour to win you over.
+  - Inverse: ed6c8e8c-1071-46f2-863d-6b480c047e64
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10081-7b2d-5c4e-8f91-100000000080`
+  - Text: Write the nickname you would enjoy hearing in a playful private game.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10082-7b2d-5c4e-8f91-100000000081`
+  - Text: Describe a simple character trait you would enjoy your partner pretending to have.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10083-7b2d-5c4e-8f91-100000000082`
+  - Text: Share the made-up first meeting you would enjoy acting out.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10084-7b2d-5c4e-8f91-100000000083`
+  - Text: Write the setting where you would enjoy pretending you just met.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10085-7b2d-5c4e-8f91-100000000084`
+  - Text: Explain the one rule that would make roleplay comfortable for you.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10086-7b2d-5c4e-8f91-100000000085`
+  - Text: Describe a bolder character dynamic you would discuss before trying.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10087-7b2d-5c4e-8f91-100000000086`
+  - Text: Write the prop-free detail that would make a fictional scene feel vivid.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10088-7b2d-5c4e-8f91-100000000087`
+  - Text: Name the way you would like to step out of character and reconnect.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10089-7b2d-5c4e-8f91-100000000088`
+  - Text: Explain what kind of playful mystery you would enjoy your partner creating.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `abc4bf31-0a89-4f03-855a-44bbcd46f161`
+  - Text: Share a bolder character dynamic you are curious to discuss with your partner before trying it.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ac75a853-f73c-4db4-8a95-eaa71331897a`
+  - Text: Let your partner play the part of a stylist who gives you one confidence challenge for the evening.
+  - Partner text: Play the part of a stylist who gives your partner one confidence challenge for the evening.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000061`
+  - Text: Choose a character dynamic for a private conversation, with a clear exit line.
+  - Partner text: Step into a character dynamic for a private conversation with a clear exit line.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000062`
+  - Text: Step into a character dynamic for a private conversation with a clear exit line.
+  - Partner text: Choose a character dynamic for a private conversation, with a clear exit line.
+  - Inverse: b2000000-0000-4000-8000-000000000061
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000083`
+  - Text: Choose a fictional setting that makes ordinary words feel more daring.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000096`
+  - Text: Agree on a bolder private-date boundary before planning anything else.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000100`
+  - Text: Name what kind of anticipation feels exciting rather than overwhelming.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b3f0556f-806c-4114-85b8-1ea04033b6f3`
+  - Text: Let your partner write you a pretend invitation to an exclusive event for two.
+  - Partner text: Write your partner a pretend invitation to an exclusive event for two.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `b4d89b23-bfae-435c-8231-00f8e51f3117`
+  - Text: Record a playful opening line for a pretend first meeting with your partner.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20029-8c3e-5d4f-9a12-200000000028`
+  - Text: Who is more likely to stay in character during a playful made-up meeting?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20030-8c3e-5d4f-9a12-200000000029`
+  - Text: Which partner would create the most convincing first line for a fictional scenario?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20031-8c3e-5d4f-9a12-200000000030`
+  - Text: Who is best at making a playful scene feel safe enough to enjoy?
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b9d02754-6806-44ba-8f7b-3609d79fa053`
+  - Text: Write your partner a pretend invitation to an exclusive event for two.
+  - Partner text: Let your partner write you a pretend invitation to an exclusive event for two.
+  - Inverse: b3f0556f-806c-4114-85b8-1ea04033b6f3
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `c1273628-0a24-4aee-8c06-c0a8e87e45b3`
+  - Text: Create a photo of a harmless game token that could stand for a choice in a playful scenario.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `c42b18ea-70a8-4355-8e9e-b6828edda511`
+  - Text: Write the setting where you would enjoy pretending you have just met your partner.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `d321de2f-69c8-4b99-8e80-a6f613b699ee`
+  - Text: Capture a map or menu that could become a prop in an invented scene.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `d551985e-d719-4eb7-89cc-6c4659249728`
+  - Text: Let your partner choose a role where they lead the conversation and you decide when to step out of character.
+  - Partner text: Choose a role where you lead the conversation and your partner decides when to step out of character.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `d892d2e7-eddd-4ef0-88c1-d3a00bc2167c`
+  - Text: In character, record one compliment you would enjoy hearing, then add how you want your partner to check in.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `dc665989-177b-4177-8036-832815035f86`
+  - Text: Show your partner a paper card with an exit cue you would want available in any roleplay.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `eb990164-6326-4d5f-8b0d-7dc809620618`
+  - Text: Take the role of your partner's personal host for an evening at home.
+  - Partner text: Let your partner take the role of your personal host for an evening at home.
+  - Inverse: 42d43d70-f53d-4161-84f5-5ca3be5d0ead
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ed6c8e8c-1071-46f2-863d-6b480c047e64`
+  - Text: Let your partner act as a confident stranger who has one hour to win you over.
+  - Partner text: Act as a confident stranger who has one hour to win your partner over.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fb1ddb30-b6d9-408b-8f7f-a4469a631b5b`
+  - Text: Write each other an invitation from a fictional admirer.
+
+## NEW CATEGORY: Connection Dynamics
+
+### NEW PACK: Taking The Lead
+
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `024d56a6-33c0-4fe1-8812-7ae731b57ce3`
+  - Text: In a decisive voice, tell your partner one private mood you would like to set for the two of you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `03f75155-ae23-48ae-89e0-6ea310c9815d`
+  - Text: Give your partner three private options and choose which one they follow.
+  - Partner text: Let your partner give you three private options and choose which one you follow.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `0c7e230e-943d-449c-8567-87f302fe2be1`
+  - Text: Give a calm voice note explaining how you would check that your partner still likes your plan.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `0e6c9725-1a9e-496d-8d00-68f56b706a17`
+  - Text: Narrate a three-part invitation: the setting you would choose, the mood you would create, and the question you would ask.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `18ed0734-5e6b-4cba-83b7-9897ba5fb67b`
+  - Text: Record a cheerful invitation for your partner to let you choose the next date-night detail.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `1e08e814-4e89-4cd4-8faa-19964b3a5be5`
+  - Text: Record the reassurance you would give your partner before you take charge of a bolder shared experience.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1e8ee233-dc62-4577-8cfd-c09e05679956`
+  - Text: Let your partner give you three private options and choose which one you follow.
+  - Partner text: Give your partner three private options and choose which one they follow.
+  - Inverse: 03f75155-ae23-48ae-89e0-6ea310c9815d
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `2c3111af-1c51-4c94-82d9-3c830dbb1874`
+  - Text: Frame a sealed envelope marked Choose for us, without showing its contents.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `2c898902-8822-422a-8f7b-e29c889fd685`
+  - Text: Each choose one part of a private date and combine the plans.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `2ed53195-3fd3-48f0-86ed-b352d6b32d22`
+  - Text: Record a cheeky trailer for a date where you get to choose the mood and the first detail.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `2f864244-1729-4ac1-8907-0382fce611d7`
+  - Text: Say which choice you would make first if your partner handed you the lead for an evening.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `37f5e13c-709a-4668-821f-b4a4a563763f`
+  - Text: Record how you would ask your partner to trust you with planning a more adventurous evening together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4036d1e6-3135-4d6c-8130-04289df1ddc9`
+  - Text: Decide the private role you want your partner to play for you.
+  - Partner text: Play the private role your partner chooses for you.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `442ee373-6a45-428c-86cc-ad701c2b62f4`
+  - Text: Describe the opening of a private plan you would enjoy arranging, using your most decisive voice.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `4f5f81b7-2e91-44ca-83f8-c88cb1ca1d18`
+  - Text: Choose what your partner wears for a private date.
+  - Partner text: Let your partner choose what you wear for a private date.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `5efb9379-1329-4f0d-839d-c787f70121ce`
+  - Text: Offer a short recording that explains the phrase your partner can use to redirect your plan.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `612d79e9-968c-4a2f-8a33-e95fafbceb52`
+  - Text: Let your partner choose the music that sets the mood for your private time together.
+  - Partner text: Choose the music that sets the mood for your private time together.
+  - Inverse: 69ee9e79-8831-424e-8031-4083bd365b42
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `666e1b92-f288-419c-82b7-6cd85fd8c330`
+  - Text: Choose the first form of affection you give your partner in private.
+  - Partner text: Let your partner choose the first form of affection they give you in private.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `689cd3ce-f864-45d1-8b92-909be73c8101`
+  - Text: Describe a confident version of yourself you would like your partner to see more often.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `69ee9e79-8831-424e-8031-4083bd365b42`
+  - Text: Choose the music that sets the mood for your private time together.
+  - Partner text: Let your partner choose the music that sets the mood for your private time together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `6cf05ac7-eda8-471a-87c4-b1edb956d1b5`
+  - Text: Let your partner choose when you may take the next step in a private encounter.
+  - Partner text: Choose when your partner may take the next step in a private encounter.
+  - Inverse: 9eda7c6c-53bc-4481-8b13-48f8e487d040
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `745bdfed-4b68-4969-83af-5130a2f642db`
+  - Text: Leave a voice note telling your partner the first instruction you would enjoy giving in a mutually agreed private game.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `75a70ca3-c892-4876-8c75-528401d3a203`
+  - Text: Write one decision you would like to make for both of you during a private evening.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `792486d2-f455-4438-8501-0d039fc59bd0`
+  - Text: Follow your partner’s pace during a private experience they plan.
+  - Partner text: Plan a private experience where your partner follows your pace.
+  - Inverse: 925740bb-d9ac-4ef7-8bc8-7e672d5ad027
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `908c653d-bff8-4bf0-86ff-fb44dd6ee20c`
+  - Text: Play the private role your partner chooses for you.
+  - Partner text: Decide the private role you want your partner to play for you.
+  - Inverse: 4036d1e6-3135-4d6c-8130-04289df1ddc9
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `925740bb-d9ac-4ef7-8bc8-7e672d5ad027`
+  - Text: Plan a private experience where your partner follows your pace.
+  - Partner text: Follow your partner’s pace during a private experience they plan.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `97e68eda-7c65-44bc-8038-ae443d039117`
+  - Text: Let your partner choose what you wear for a private date.
+  - Partner text: Choose what your partner wears for a private date.
+  - Inverse: 4f5f81b7-2e91-44ca-83f8-c88cb1ca1d18
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `9b5a89f7-929d-484e-818b-b3531b6e1da6`
+  - Text: Who is more likely to guide a private experience?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9eda7c6c-53bc-4481-8b13-48f8e487d040`
+  - Text: Choose when your partner may take the next step in a private encounter.
+  - Partner text: Let your partner choose when you may take the next step in a private encounter.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `a00d9945-57e6-4974-8b33-56a020db8bf7`
+  - Text: Who is more likely to choose the final private detail?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `a17d98be-1fff-4fbb-8fd3-cdcf33190ffb`
+  - Text: Share an image of a playlist cover whose title captures the mood you would like to guide.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10019-7b2d-5c4e-8f91-100000000018`
+  - Text: Write a date decision you would enjoy making for both of you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10020-7b2d-5c4e-8f91-100000000019`
+  - Text: Describe how your partner can encourage you when you initiate something.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10021-7b2d-5c4e-8f91-100000000020`
+  - Text: Share a private plan you would like to design from beginning to end.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10022-7b2d-5c4e-8f91-100000000021`
+  - Text: Explain what makes you feel confident enough to make the first move.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10023-7b2d-5c4e-8f91-100000000022`
+  - Text: Write the kind of surprise you would enjoy arranging for your partner.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10024-7b2d-5c4e-8f91-100000000023`
+  - Text: Describe a rule you would like to set for one playful evening.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10025-7b2d-5c4e-8f91-100000000024`
+  - Text: Name the part of a date where you most want your choice to decide the pace.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10026-7b2d-5c4e-8f91-100000000025`
+  - Text: Write a bold request you would like to make and have taken seriously.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10027-7b2d-5c4e-8f91-100000000026`
+  - Text: Explain the version of you that appears when you feel fully in charge.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a7d96f65-6814-409d-8b54-39492da0d35f`
+  - Text: Write the private challenge you would like to set for your partner, including what would make it exciting.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a84b3102-d8ff-4165-802e-b3ef9862bc34`
+  - Text: Describe how you would like your partner to respond when you make a bold suggestion.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000025`
+  - Text: Guide the opening of a private date while your partner relaxes into it.
+  - Partner text: Relax into the opening of a private date while your partner guides it.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000026`
+  - Text: Relax into the opening of a private date while your partner guides it.
+  - Partner text: Guide the opening of a private date while your partner relaxes into it.
+  - Inverse: b2000000-0000-4000-8000-000000000025
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000027`
+  - Text: Set the pace for a private conversation about desire.
+  - Partner text: Follow the pace your partner sets for a private conversation about desire.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000028`
+  - Text: Follow the pace your partner sets for a private conversation about desire.
+  - Partner text: Set the pace for a private conversation about desire.
+  - Inverse: b2000000-0000-4000-8000-000000000027
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000047`
+  - Text: Set a clear private challenge after agreeing the limits with your partner.
+  - Partner text: Agree the limits with your partner before they set a clear private challenge.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000048`
+  - Text: Agree the limits with your partner before they set a clear private challenge.
+  - Partner text: Set a clear private challenge after agreeing the limits with your partner.
+  - Inverse: b2000000-0000-4000-8000-000000000047
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000049`
+  - Text: Lead a close-moment ritual using words your partner has approved.
+  - Partner text: Let your partner lead a close-moment ritual using words you have approved.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000050`
+  - Text: Let your partner lead a close-moment ritual using words you have approved.
+  - Partner text: Lead a close-moment ritual using words your partner has approved.
+  - Inverse: b2000000-0000-4000-8000-000000000049
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000081`
+  - Text: Decide which of you usually starts the bolder conversation.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000092`
+  - Text: Choose a low-stakes way to practise taking the lead.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `b3191b9d-f8a5-41a7-81e7-c5f408f80a50`
+  - Text: Write an invitation you would feel confident making when you want more one-to-one time.
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20008-8c3e-5d4f-9a12-200000000007`
+  - Text: Who is more likely to decide the pace when a shared plan starts to feel exciting?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20009-8c3e-5d4f-9a12-200000000008`
+  - Text: Which partner would confidently turn a vague idea into an organised private date?
+- **NEW** | Type: `who_likely` | Intensity: 2 | ID: `b6d20010-8c3e-5d4f-9a12-200000000009`
+  - Text: Who is more likely to make the first clear invitation when chemistry is building?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `bd298966-9b42-49c7-820d-92384de9c4af`
+  - Text: Use a coin toss to decide who leads the first part of your private time together.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `c28f676f-6a0a-408a-8c90-de771bb39e46`
+  - Text: Take a photo of two handwritten options for a private date, leaving space for your partner to add a third.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `c3b03f20-bf18-42b6-8103-d2c50a7388ad`
+  - Text: Who is more likely to take the lead after checking in?
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `cb6a1580-a49d-403d-8df8-65dcfe779349`
+  - Text: Photograph three face-down cards labelled setting, music, and surprise, ready for your partner to pick one.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `d91a4fec-8f78-47fb-8fe2-a136aa24b4d5`
+  - Text: Try a lower, steadier voice while naming the kind of boldness you would like permission to bring.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `de9a2323-f421-4fce-8859-7bb4ab428a4c`
+  - Text: Set the rules for a private game your partner agrees to play.
+  - Partner text: Play a private game using rules your partner sets.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e47b09a2-0c00-498b-8581-f26aacc4bca9`
+  - Text: Make a private list of three ideas each and choose one from the other person’s list.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e4f7c07d-fab7-40ed-8ab5-86a66853e141`
+  - Text: Let your partner choose the first form of affection they give you in private.
+  - Partner text: Choose the first form of affection you give your partner in private.
+  - Inverse: 666e1b92-f288-419c-82b7-6cd85fd8c330
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `e873869a-2dd8-4e19-84bc-cbb22eee9f42`
+  - Text: Show a card that reads Tell me to change course if you need to, placed beside a simple object.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `e876a50e-353e-49b2-8109-4ab6a7b4b84e`
+  - Text: Capture a small paper sign reading Your call, my care as a visual promise to listen.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `ecea7310-5c13-445d-8d81-276172f2ad6e`
+  - Text: Agree that either person can pause, redirect, or end a private experience without explanation.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `f04e87ab-3ad8-4c68-8b21-3469f80332bc`
+  - Text: Describe one part of a date where you would enjoy deciding what happens next.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `f58169f1-55b4-42b6-8529-eab6ac3a4601`
+  - Text: Tell your partner what kind of plan you would enjoy taking charge of from start to finish.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fda91b13-af5d-46c6-896c-25ffef947ff0`
+  - Text: Play a private game using rules your partner sets.
+  - Partner text: Set the rules for a private game your partner agrees to play.
+  - Inverse: de9a2323-f421-4fce-8859-7bb4ab428a4c
+
+### NEW PACK: Following
+
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `05b69bff-18d6-4b59-881f-36af5bcc052f`
+  - Text: Share one surprise choice you would enjoy your partner making for you.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `139c1b49-7dd2-4ce9-89bc-b0d33f9ecd14`
+  - Text: Record a calm invitation for your partner to choose the pace of a private moment.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `164e23bc-058a-4bd0-8f22-c7e4aaa2b1c0`
+  - Text: Record one thing your partner could choose for you that would feel like a thoughtful treat.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1ca6b528-885b-4a10-8070-0975e37ef685`
+  - Text: Let your partner decide the sequence of an agreed private experience.
+  - Partner text: Decide the sequence of an agreed private experience for your partner.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `1f9faec3-2b8d-437c-8292-f14ac068f4ba`
+  - Text: Describe one decision you would happily leave with your partner during a close evening.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `23e78a18-1a60-401b-8ec3-7d5d60f197f3`
+  - Text: Photograph a note listing two things you welcome and one to discuss first.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `25d87c85-45a5-4979-84b6-325bc635ef12`
+  - Text: Give your partner one private instruction without negotiating the details first.
+  - Partner text: Follow one private instruction from your partner without negotiating the details first.
+  - Inverse: 9c3869dd-692e-41a6-83ba-55f3b7b0f944
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `32ba1560-f05d-4065-88de-472586b64970`
+  - Text: Set a private role for your partner after discussing their limits.
+  - Partner text: Follow a private role your partner sets after discussing your limits.
+  - Inverse: 56419595-d461-487c-8f02-3429aebc8b9a
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `35b9203d-dfd0-4dec-896d-f82eb5668bab`
+  - Text: Tell your partner what would make it feel exciting to let them choose the pace for a while.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `36022040-74bd-4249-82a7-cbcf0fb6a3e4`
+  - Text: Follow a private date plan your partner creates without seeing it first.
+  - Partner text: Create a private date plan for your partner without showing it first.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `3712b318-091e-46a7-877b-a54efbbf3545`
+  - Text: Explain the kind of invitation that makes you want to be guided.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3900c5a0-d506-4826-8fd4-482ab0225215`
+  - Text: Let your partner choose the kind of attention you receive first.
+  - Partner text: Choose the kind of attention your partner receives first.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `4532252e-e722-4055-82b2-62a2614c74aa`
+  - Text: Write what helps you trust your partner’s lead during a more intimate moment.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `56419595-d461-487c-8f02-3429aebc8b9a`
+  - Text: Follow a private role your partner sets after discussing your limits.
+  - Partner text: Set a private role for your partner after discussing their limits.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `5fef9957-1b0c-4ee3-872b-61d6a397101a`
+  - Text: Tell your partner one decision you would enjoy not having to make on a date.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `626dba02-6034-4b4f-8b38-4b61104d246d`
+  - Text: Capture a comfortable corner for a quiet conversation led by your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `69100a0f-10ff-410b-8425-7c0ab313ab3c`
+  - Text: Create a private date plan for your partner without showing it first.
+  - Partner text: Follow a private date plan your partner creates without seeing it first.
+  - Inverse: 36022040-74bd-4249-82a7-cbcf0fb6a3e4
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `713a9c15-cb83-484c-85ab-e7c03898eb07`
+  - Text: Decide the sequence of an agreed private experience for your partner.
+  - Partner text: Let your partner decide the sequence of an agreed private experience.
+  - Inverse: 1ca6b528-885b-4a10-8070-0975e37ef685
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `8a0f101d-439d-4507-89ab-320dd6c61951`
+  - Text: Choose the kind of attention your partner receives first.
+  - Partner text: Let your partner choose the kind of attention you receive first.
+  - Inverse: 3900c5a0-d506-4826-8fd4-482ab0225215
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `8d5a19a3-8ca7-4681-8923-61b2617710c1`
+  - Text: Record what you would want your partner to say if they wanted you to surrender the planning for one intimate evening.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9c3869dd-692e-41a6-83ba-55f3b7b0f944`
+  - Text: Follow one private instruction from your partner without negotiating the details first.
+  - Partner text: Give your partner one private instruction without negotiating the details first.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `9dd0c438-f0c3-4b25-88a2-74433d72b6ca`
+  - Text: Let your partner choose the private setting where you spend time together.
+  - Partner text: Choose the private setting where you spend time with your partner.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `9fe99cf4-dfef-47a0-883e-25d3873b533c`
+  - Text: Say the words that help you relax when your partner takes the lead.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10028-7b2d-5c4e-8f91-100000000027`
+  - Text: Describe one choice you would happily leave to your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10029-7b2d-5c4e-8f91-100000000028`
+  - Text: Write the invitation that makes it easy for you to follow a suggestion.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10030-7b2d-5c4e-8f91-100000000029`
+  - Text: Explain what reassurance lets you relax into your partner’s plan.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10031-7b2d-5c4e-8f91-100000000030`
+  - Text: Share the kind of surprise decision you would enjoy your partner making.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10032-7b2d-5c4e-8f91-100000000031`
+  - Text: Describe how you want your partner to show they are still listening.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10033-7b2d-5c4e-8f91-100000000032`
+  - Text: Write about a private mood you would enjoy letting your partner set.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10034-7b2d-5c4e-8f91-100000000033`
+  - Text: Name a boundary that would make it easier to give your partner more control.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10035-7b2d-5c4e-8f91-100000000034`
+  - Text: Describe a bolder invitation you would be curious to accept after talking first.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10036-7b2d-5c4e-8f91-100000000035`
+  - Text: Explain what makes being guided feel affectionate rather than pressuring.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a854373f-8c19-4d76-847a-e92da9c249f6`
+  - Text: Describe the kind of invitation that makes it easy for you to say yes.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000029`
+  - Text: Let your partner choose the setting for a private date.
+  - Partner text: Choose the setting for a private date your partner has invited you to shape.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000030`
+  - Text: Choose the setting for a private date your partner has invited you to shape.
+  - Partner text: Let your partner choose the setting for a private date.
+  - Inverse: b2000000-0000-4000-8000-000000000029
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000031`
+  - Text: Follow a three-step private-date plan your partner designs.
+  - Partner text: Design a three-step private-date plan for your partner to follow.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000032`
+  - Text: Design a three-step private-date plan for your partner to follow.
+  - Partner text: Follow a three-step private-date plan your partner designs.
+  - Inverse: b2000000-0000-4000-8000-000000000031
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000051`
+  - Text: Let your partner direct a private scene after you agree a stop signal.
+  - Partner text: Direct a private scene after you and your partner agree a stop signal.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000052`
+  - Text: Direct a private scene after you and your partner agree a stop signal.
+  - Partner text: Let your partner direct a private scene after you agree a stop signal.
+  - Inverse: b2000000-0000-4000-8000-000000000051
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000093`
+  - Text: Pick a way one partner can ask the other to slow the pace.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `b6c31004-5c39-4b14-85b1-5397d1483285`
+  - Text: Record a gentle stop phrase your partner can recognise immediately.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20011-8c3e-5d4f-9a12-200000000010`
+  - Text: Who is better at relaxing into a thoughtful plan made by the other?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20012-8c3e-5d4f-9a12-200000000011`
+  - Text: Which partner is more likely to enjoy handing over one decision for an evening?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20013-8c3e-5d4f-9a12-200000000012`
+  - Text: Who notices fastest when they want reassurance before following a suggestion?
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `b9c94d35-f591-4856-8eb2-5260256e395e`
+  - Text: Frame a cup of tea beside a note that says ask me first.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `bb211547-2589-477d-8ce1-2b191f7d4564`
+  - Text: Record the kind of check-in that makes you feel safe saying yes to your partner’s idea.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `c303ffe9-6c8c-4266-82f3-e21d84a51d9f`
+  - Text: Speak one permission you want your partner to check before a bolder idea.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `c78f8fd6-81c9-4682-8f8b-c9c53a6a5f41`
+  - Text: Lay out two cards labelled choose and check in, then photograph them.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `cbfe2b11-e27d-46a9-816b-fe9edb2e5737`
+  - Text: Photograph a closed notebook labelled my pace.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `d1180967-1916-4227-8043-fa28f4d3f08a`
+  - Text: Photograph a handwritten phrase that means slow down for you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `d5f360a1-1012-44e4-89e2-a5fdaef80019`
+  - Text: Choose the private setting where you spend time with your partner.
+  - Partner text: Let your partner choose the private setting where you spend time together.
+  - Inverse: 9dd0c438-f0c3-4b25-88a2-74433d72b6ca
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d83b9cbc-7819-4bbb-8005-15be9c1af3d2`
+  - Text: Let your partner decide how slowly you take a private moment together.
+  - Partner text: Decide how slowly you take a private moment together with your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d8c77738-28c9-4b21-82ba-9d630b9cb69a`
+  - Text: Decide how slowly you take a private moment together with your partner.
+  - Partner text: Let your partner decide how slowly you take a private moment together.
+  - Inverse: d83b9cbc-7819-4bbb-8005-15be9c1af3d2
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `da103b20-737d-4fb1-845e-c2881d0803bc`
+  - Text: Describe how you want your partner to check that you are still enjoying their lead.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `e36bb2ed-4fea-4b6c-8018-35b77a0d1565`
+  - Text: Write about a private situation where you would like to be guided step by step, in your own terms.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `ed80f9cf-4180-4bb4-87c8-0e4eefae15ec`
+  - Text: Leave a voice note naming a limit that makes following feel safe for you.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `fbed814a-348b-4f7f-8c24-e8357d514ec6`
+  - Text: In a soft voice, explain what helps you enjoy letting your partner set the pace.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `ff139845-7c0a-4807-8913-0e7fb5f5411d`
+  - Text: Leave a voice note describing one daring-but-private decision you would enjoy your partner making after checking in with you first.
+
+### NEW PACK: Shared Control
+
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `0370cf39-1b50-465d-869f-7ba830fc581e`
+  - Text: Name one decision you want to make together before your next close evening.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `0e35bca4-7077-4db8-8433-bd0d87cad36e`
+  - Text: Record a two-choice question your partner can answer to shape your next cosy evening together.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `15f6ad24-1acd-4831-82bb-0d7ab179fda2`
+  - Text: Take turns setting the pace during an agreed private experience.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `211a7986-9bc1-45d9-806f-77ca21f6a405`
+  - Text: Agree that each of you gets one turn to direct part of a private experience.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `291a4c39-4a77-4fa8-86a5-948fc5a5e4fc`
+  - Text: Agree that either partner can change the direction of a private experience once.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `2b6db38d-1e09-4b94-8c0e-f91c2b6a5175`
+  - Text: Explain the check-in you want before either of you changes a shared plan.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `32bb7ce2-0b37-4aff-858e-c999c0429a35`
+  - Text: Photograph a coin beside a note that says switch roles.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `32c403bc-7434-4250-8d69-01a2db4bf761`
+  - Text: Leave a voice note describing a private game where you and your partner would alternate making one decision each.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `35074f97-aeb4-457d-8fca-632dc9c2615c`
+  - Text: Who is more likely to turn curiosity into a shared plan?
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `35e1e582-f652-4913-8282-02b3b2d2ced7`
+  - Text: Take turns planning a private date where the other person only knows the starting point.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `457e6883-a48c-4cd7-8716-6b0a696d0933`
+  - Text: Speak a short agreement about pausing and revisiting an idea.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `61b89697-782f-44f5-81fe-dff546496b56`
+  - Text: Say what makes a compromise feel caring rather than reluctant.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `6348b9b3-2ef9-4d27-8068-4d276a0b42bf`
+  - Text: Tell your partner how you would like to alternate who chooses the next part of a date.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `6e450805-7c97-42b6-885b-e3d64c9c2df4`
+  - Text: Record a private challenge that only works if both of you keep choosing the next step together.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `6f953e60-bb58-4552-8c60-525c9a39b798`
+  - Text: Describe your ideal signal for “let’s keep going” during a private moment.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `73d6a615-8ed9-4c28-8c98-02fa64a24e89`
+  - Text: Write the private agreement that would make you feel brave enough to explore more together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `7be1cdfb-06f7-4ff2-8873-03fab1c826a6`
+  - Text: Choose a private challenge for your partner and accept one from them.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `8017b57d-a438-4c50-8fe7-7bd6142c6b31`
+  - Text: Photograph a card with the words keep, change, or skip.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `80ec452b-d3b0-4a46-8c24-d51d4b55e529`
+  - Text: Share the question you want your partner to ask before either of you raises the intensity.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `83a5a524-ee2f-4a33-8b91-6590b2374793`
+  - Text: Record the one part of a date you would most enjoy choosing together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `868481ed-9eff-4c36-8ce1-a60ce329b66a`
+  - Text: Describe one moment where you would enjoy pausing together to decide what you both want.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `8727db8d-3af5-4866-8d53-c715b69fb3dc`
+  - Text: Photograph two folded notes labelled your choice and my choice.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `92035b8d-5a69-4c3e-8b29-4a327000cbe0`
+  - Text: Record a playful proposal for taking turns leading separate parts of a date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `98796017-9e54-4081-81b8-fbcd45137e3f`
+  - Text: Take turns giving one private instruction and following one.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `9d775f1f-bc40-44f9-8d68-1dcfad93ab2f`
+  - Text: Describe how you like to divide decisions when planning private time.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `9e9dac4e-a718-4573-8ab2-cca7a1c5a4ea`
+  - Text: Take turns choosing how you show affection during a private evening.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `9f1746b7-8f9a-4544-8cea-6596bc5a41f0`
+  - Text: Create a private list of three ideas and let your partner pick one for you.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10037-7b2d-5c4e-8f91-100000000036`
+  - Text: Write one decision that feels better when neither of you makes it alone.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10038-7b2d-5c4e-8f91-100000000037`
+  - Text: Describe your preferred signal for keeping a private moment going.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10039-7b2d-5c4e-8f91-100000000038`
+  - Text: Explain how you would like to trade choices during a date.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10040-7b2d-5c4e-8f91-100000000039`
+  - Text: Share a rule that would make trying something unfamiliar feel safer together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10041-7b2d-5c4e-8f91-100000000040`
+  - Text: Write the question you want asked before the mood becomes more intense.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10042-7b2d-5c4e-8f91-100000000041`
+  - Text: Describe a moment when pausing to choose together would feel exciting.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10043-7b2d-5c4e-8f91-100000000042`
+  - Text: Name a shared ritual that would make you both feel more connected.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10044-7b2d-5c4e-8f91-100000000043`
+  - Text: Write about a compromise that would make a private idea work for both of you.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10045-7b2d-5c4e-8f91-100000000044`
+  - Text: Explain how you would like to decide when a playful experiment ends.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a737ad68-0c53-4116-8ff9-cab4056c3ad1`
+  - Text: Write the rule you would like both of you to follow when trying something unfamiliar together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `aea74f87-1d6d-4538-80cd-7dc0872e149f`
+  - Text: Choose a private role for each other and agree whether to swap halfway through.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000033`
+  - Text: Invite your partner to take turns choosing one rule for a private date.
+  - Partner text: Take turns with your partner choosing one rule for a private date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000034`
+  - Text: Take turns with your partner choosing one rule for a private date.
+  - Partner text: Invite your partner to take turns choosing one rule for a private date.
+  - Inverse: b2000000-0000-4000-8000-000000000033
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000053`
+  - Text: Propose one bold rule for a private date that either of you can revisit.
+  - Partner text: Negotiate one bold rule with your partner for a private date that either of you can revisit.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000054`
+  - Text: Negotiate one bold rule with your partner for a private date that either of you can revisit.
+  - Partner text: Propose one bold rule for a private date that either of you can revisit.
+  - Inverse: b2000000-0000-4000-8000-000000000053
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000077`
+  - Text: Take turns choosing the first and last part of a private date.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000104`
+  - Text: Decide what reassurance should follow a bolder shared experience.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20014-8c3e-5d4f-9a12-200000000013`
+  - Text: Who is more likely to ask for a joint decision before changing the mood?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20015-8c3e-5d4f-9a12-200000000014`
+  - Text: Which partner is best at making room for both preferences in one plan?
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20016-8c3e-5d4f-9a12-200000000015`
+  - Text: Who would suggest alternating choices to keep a date balanced?
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `cfcadaaa-4326-49d8-8db2-cb5dbef8dec3`
+  - Text: Leave an audio message offering two ideas and asking your partner to choose.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `d391bbec-5d05-4022-8ab3-864c1382157f`
+  - Text: Record which part of a date night you would like your partner to lead and which part you would like to lead.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `d426e328-5620-406e-872b-1b06c1d31ce1`
+  - Text: Frame two mugs beside a note that says both voices count.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `d603b7c6-69be-49e7-8af1-91b70cba904c`
+  - Text: Take turns naming one thing you want and one thing you are willing to give.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `d64dba05-493f-4fbf-84ec-d68a94c97126`
+  - Text: Capture a blank two-column list titled plan together.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `db92be5f-fa43-44a4-8d10-9fc96420226b`
+  - Text: Frame a written promise to ask before changing the plan.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `fa282960-7afe-4298-836c-1b25c68ba0dd`
+  - Text: In an excited voice, explain how you would like to build a bolder shared moment one yes at a time.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `fa7f3727-9acb-4b7b-8b0d-34545647bc77`
+  - Text: Choose one element of a private date while your partner chooses the other.
+
+## NEW CATEGORY: Trust & Aftercare
+
+### NEW PACK: Boundaries Check Ins
+
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `01f8f53b-f64a-444f-89f1-af16f54de2e6`
+  - Text: Write one phrase that means “I like this, but slower” for you.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `03e5b5d7-595c-436a-881c-46a597b5b4da`
+  - Text: Say your preferred word for slowing down, then explain how you would like your partner to respond.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `0f9bd432-6251-4b62-8b92-ed95613541ba`
+  - Text: Share a quiet recording of the question that helps you feel heard after you try something new together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `1361a95f-b6b1-42ee-884c-9497040337ed`
+  - Text: Describe one topic you would prefer to discuss before, rather than during, a close moment.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `198e181b-5143-4c52-8957-3ae239d3b5cb`
+  - Text: Choose a simple phrase that means you want more reassurance.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1f47cd34-87c8-46df-8d01-1f3ae47c580e`
+  - Text: Agree on a signal that means slow down and a signal that means stop.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `21250a7e-a4d4-493f-8815-23a8f2b727c5`
+  - Text: Tell your partner what would make a new idea feel safer for you.
+  - Partner text: Invite your partner to tell you what would make a new idea feel safer.
+  - Inverse: 3cb68026-477a-41e0-8891-22b659f39bb4
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `2a16acc9-8311-4b9f-8d7a-3dbaeaa6190e`
+  - Text: Name one thing that helps you feel secure when trying something unfamiliar.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `307e35e0-1308-4333-8fcf-ba0f75d3c3bf`
+  - Text: Choose a private check-in phrase your partner can use with you.
+  - Partner text: Use a private check-in phrase your partner chooses for you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `358f7c66-5bb0-4b15-8079-325ceb8a8d14`
+  - Text: Tell your partner what would make you stop a private experience.
+  - Partner text: Ask your partner to tell you what would make them stop a private experience.
+  - Inverse: f7bc5aed-067a-482d-8f6c-fba95dcc35ff
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `38fe100d-f731-400b-8a8a-675542b10541`
+  - Text: Who is more likely to name a boundary first?
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `39f2f8a4-aad0-4c8c-887a-68d66f0184a0`
+  - Text: Make a voice note that begins with I am interested, and continues with the condition that helps you stay comfortable.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `3bd3e4da-bb26-42ca-8793-f2b3424fe0f8`
+  - Text: Tell a brief story about a time someone respected your no and why it mattered to you.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `3cb68026-477a-41e0-8891-22b659f39bb4`
+  - Text: Invite your partner to tell you what would make a new idea feel safer.
+  - Partner text: Tell your partner what would make a new idea feel safer for you.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `3ef9571b-c85c-4b7c-864f-96eac8b21203`
+  - Text: Who is more likely to suggest a bolder private agreement?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `41784c21-ddec-400b-89e2-76d133f1118e`
+  - Text: Who is more likely to suggest a clear pause signal?
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `49bbd612-4482-4dbb-806f-b859f75cc0b5`
+  - Text: Record a kind sentence your partner can use to ask whether you are still enjoying a close moment.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `4fd37913-5cca-43a2-8d9a-dcf3c781230f`
+  - Text: In your own voice, explain the difference between a surprise that delights you and one that catches you off guard.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `556780cb-f349-45ce-8da2-b6dd44321742`
+  - Text: Choose a simple signal for slowing down with your partner.
+  - Partner text: Ask your partner to choose a simple signal for slowing down.
+  - Inverse: ae0055c8-cffd-42eb-8d45-40df79522391
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `5eaef369-8ae5-42a3-8ac3-deafc1c930b1`
+  - Text: Write the reassurance you need when you suggest something that feels vulnerable to say aloud.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `5fc93734-65ca-4ca6-8c21-765db9e3beb9`
+  - Text: Show a note that says Ask before changing the plan, beside a pen and blank paper.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `6607acd3-a487-4e52-809f-a1eb25154e44`
+  - Text: Set one firm limit before your partner leads a private experience.
+  - Partner text: Ask your partner to set one firm limit before you lead a private experience.
+  - Inverse: 8ddbd259-49dc-45db-8704-a38b294c8eb6
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `6ad7a7c2-b44c-4d7f-84b6-5f30f799c29b`
+  - Text: Photograph a small card with a check-in question you would feel good receiving.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `716de817-61cb-462f-8850-1f1013bacef8`
+  - Text: Photograph a list titled What makes a yes easier, with the answers kept out of frame.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `78e4b61a-b832-4d12-8ae7-ac4dfec80557`
+  - Text: Use an even, reassuring tone to explain what a useful pause sounds like for you.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `7a8d78f4-6062-4065-8c99-f49dc2995da5`
+  - Text: Use a private check-in phrase your partner chooses for you.
+  - Partner text: Choose a private check-in phrase your partner can use with you.
+  - Inverse: 307e35e0-1308-4333-8fcf-ba0f75d3c3bf
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `8479262c-ae4d-4e6c-84e2-e835be1de445`
+  - Text: Write a kind way you would want your partner to respond if you change your mind.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `85ea36c4-f5e0-494e-82d4-d8857434fca6`
+  - Text: Record what “I am curious, but not ready yet” sounds like in words that still feel affectionate to you.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `8852660d-636d-4095-8f0b-6c13863c7a65`
+  - Text: Take a picture of two cards labelled pause and continue, arranged as a simple choice.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `89aed746-997b-4648-849e-bcf2b17a57eb`
+  - Text: Record the gentlest check-in question you would like your partner to ask before a private change of pace.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `8ddbd259-49dc-45db-8704-a38b294c8eb6`
+  - Text: Ask your partner to set one firm limit before you lead a private experience.
+  - Partner text: Set one firm limit before your partner leads a private experience.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `90c482ff-1ddc-4ad0-83de-9f7cc12988d0`
+  - Text: Discuss one private boundary you want honoured before exploring a more intense idea.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `968d443a-9011-4956-8346-7dc77296b095`
+  - Text: Leave a voice note telling your partner what they could ask before suggesting something considerably bolder than usual.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `97b2e7a3-0c35-4abe-89c6-eab6d9466265`
+  - Text: Describe the best way for your partner to ask whether you are comfortable.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a1741217-5dd7-4dd5-8c99-70002140c3da`
+  - Text: Tell your partner one thing you need before you can enjoy a more adventurous private plan.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10098-7b2d-5c4e-8f91-100000000097`
+  - Text: Write a phrase that means you like the direction but want a slower pace.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10099-7b2d-5c4e-8f91-100000000098`
+  - Text: Describe the way you prefer your partner to ask if you are comfortable.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10100-7b2d-5c4e-8f91-100000000099`
+  - Text: Share one condition you need before a more adventurous private plan.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10101-7b2d-5c4e-8f91-100000000100`
+  - Text: Write how you would like your partner to respond if you change your mind.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10102-7b2d-5c4e-8f91-100000000101`
+  - Text: Explain one subject you prefer to discuss before a close moment begins.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10103-7b2d-5c4e-8f91-100000000102`
+  - Text: Describe a boundary that makes you feel freer to be adventurous within it.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10104-7b2d-5c4e-8f91-100000000103`
+  - Text: Write the reassurance you need before suggesting something vulnerable.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10105-7b2d-5c4e-8f91-100000000104`
+  - Text: Name the sign that tells your partner you need a pause without distance.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10106-7b2d-5c4e-8f91-100000000105`
+  - Text: Explain what a good check-in conversation sounds like after trying something new.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `a88241d4-3dd0-4e5e-827c-722211067100`
+  - Text: Tell your partner the kind of reassurance you want before trying something new.
+  - Partner text: Ask your partner to name the kind of reassurance they want before trying something new.
+  - Inverse: ee1b0ff7-97d3-4162-837d-b26199fee564
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ae0055c8-cffd-42eb-8d45-40df79522391`
+  - Text: Ask your partner to choose a simple signal for slowing down.
+  - Partner text: Choose a simple signal for slowing down with your partner.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000009`
+  - Text: Name one signal that means pause when exploring a new idea.
+  - Partner text: Agree with your partner on one signal that means pause when exploring a new idea.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000010`
+  - Text: Agree with your partner on one signal that means pause when exploring a new idea.
+  - Partner text: Name one signal that means pause when exploring a new idea.
+  - Inverse: b2000000-0000-4000-8000-000000000009
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000067`
+  - Text: Create a simple signal for asking for more closeness.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000075`
+  - Text: Agree on a word that means keep going at this pace.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000085`
+  - Text: Agree on how to ask for a change without breaking the mood.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000097`
+  - Text: Choose a role for each of you in a private fantasy conversation.
+- **NEW** | Type: `who_likely` | Intensity: 3 | ID: `b6d20035-8c3e-5d4f-9a12-200000000034`
+  - Text: Who is more likely to ask the caring question before a plan becomes bolder?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20036-8c3e-5d4f-9a12-200000000035`
+  - Text: Which partner is clearest about the condition they need to feel comfortable?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20037-8c3e-5d4f-9a12-200000000036`
+  - Text: Who would notice first that a pause would help both of you stay connected?
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `ccbb0743-35cb-4bf6-8e40-a77826af6f47`
+  - Text: Tell your partner one boundary that helps you relax during private exploration.
+  - Partner text: Hear one boundary from your partner that helps them relax during private exploration.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `d51dce04-b947-49fd-8017-0990684b4c8b`
+  - Text: Hear one boundary from your partner that helps them relax during private exploration.
+  - Partner text: Tell your partner one boundary that helps you relax during private exploration.
+  - Inverse: ccbb0743-35cb-4bf6-8e40-a77826af6f47
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `d5641dac-b268-4649-8162-99611b67b406`
+  - Text: Share an image of a folded card marked Not yet is useful information.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `e09097b8-4de0-4ab3-8c3b-730380c49cea`
+  - Text: Frame a traffic-light drawing with your own meanings written underneath each colour.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e19a929d-4b56-4ead-815f-610f8285407c`
+  - Text: Share a photo of a handwritten boundary or private agreement.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `e8fc819b-ab8a-4b22-872a-042f9b04f925`
+  - Text: Share a boundary that makes you feel more able to be adventurous within it.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `ee1b0ff7-97d3-4162-837d-b26199fee564`
+  - Text: Ask your partner to name the kind of reassurance they want before trying something new.
+  - Partner text: Tell your partner the kind of reassurance you want before trying something new.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `f7bc5aed-067a-482d-8f6c-fba95dcc35ff`
+  - Text: Ask your partner to tell you what would make them stop a private experience.
+  - Partner text: Tell your partner what would make you stop a private experience.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `f9c97901-9b1d-4946-8166-949c6cfc7787`
+  - Text: Who is more likely to turn a boundary into a better plan?
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `fdf2619f-7aba-4340-8dd0-5bbd38d24f9a`
+  - Text: Record the easiest phrase for you to use when you want to slow down without ending the mood.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `fe9520cf-ea4b-48d2-8020-9c0c5d637069`
+  - Text: Speak one clear sentence that tells your partner how you prefer them to ask before trying something unfamiliar.
+
+### NEW PACK: Aftercare Reconnection
+
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `02e4f8ef-b65b-4df5-8420-e0b4fa34501e`
+  - Text: Tell your partner one thing they could say that would make you feel especially appreciated afterwards.
+  - Partner text: Hear one thing you could say that would make your partner feel especially appreciated afterwards.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `0e4a062e-d9b4-4932-8439-83e25c7aa260`
+  - Text: Hear what your partner needs if a private experience leaves them feeling exposed.
+  - Partner text: Tell your partner what you need from them if a private experience leaves you feeling exposed.
+  - Inverse: 1fea6d51-a3a8-464a-8d0e-35753249bb8e
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `0efcb697-1fab-4b80-840e-8dd2db473bf8`
+  - Text: Let your partner choose whether you stay close, talk, or have quiet space after an intimate moment.
+  - Partner text: Choose whether you stay close, talk, or have quiet space after an intimate moment with your partner.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `10818ef6-8a06-4685-8067-024f5bb74195`
+  - Text: Choose one way your partner can make you feel cared for after an intense private experience.
+  - Partner text: Ask your partner to choose one way you can make them feel cared for after an intense private experience.
+  - Inverse: 4aa7a02a-6e44-4d9a-81b2-442dd83edce7
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `15c53a3f-d4ea-4d83-8183-a02acc0d4bc0`
+  - Text: Agree to check in with each other after trying something that feels emotionally intense.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `19b38281-3788-452b-821c-efba03847e69`
+  - Text: Choose whether you stay close, talk, or have quiet space after an intimate moment with your partner.
+  - Partner text: Let your partner choose whether you stay close, talk, or have quiet space after an intimate moment.
+  - Inverse: 0efcb697-1fab-4b80-840e-8dd2db473bf8
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `1d77d3ff-d456-48fb-8324-43a92c4ec8c3`
+  - Text: Tell your partner about a quiet ritual that makes an ordinary room feel safe again.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1e64b71f-b2a0-4940-8e8e-5ad13b5eb150`
+  - Text: Tell your partner what kind of comfort helps you feel grounded afterwards.
+  - Partner text: Ask your partner to tell you what kind of comfort helps them feel grounded afterwards.
+  - Inverse: 204df340-8469-45ae-81bf-06776fcf9d00
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1fea6d51-a3a8-464a-8d0e-35753249bb8e`
+  - Text: Tell your partner what you need from them if a private experience leaves you feeling exposed.
+  - Partner text: Hear what your partner needs if a private experience leaves them feeling exposed.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `204df340-8469-45ae-81bf-06776fcf9d00`
+  - Text: Ask your partner to tell you what kind of comfort helps them feel grounded afterwards.
+  - Partner text: Tell your partner what kind of comfort helps you feel grounded afterwards.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `242fb428-622f-4156-8039-6699c59b4449`
+  - Text: Leave a voice note about the honest question you would want your partner to ask after a more daring experience.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `24db1e70-a45e-4726-8b32-e2eb905b2588`
+  - Text: Choose a shared ritual that helps you feel close after intimate time.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `255d48d0-0e45-47f2-8203-2248b06677f9`
+  - Text: Ask your partner to choose how they would like to reconnect after private time.
+  - Partner text: Choose how you would like to reconnect with your partner after private time.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `2e7af586-04b9-4dee-8877-3168eb562608`
+  - Text: In a calm voice, tell your partner what you most like hearing after you have both tried something new together.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `3930b46f-7095-4b6d-8109-518bbc815f45`
+  - Text: Share the part of a close experience you would most want to talk through afterward.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4aa7a02a-6e44-4d9a-81b2-442dd83edce7`
+  - Text: Ask your partner to choose one way you can make them feel cared for after an intense private experience.
+  - Partner text: Choose one way your partner can make you feel cared for after an intense private experience.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `4cfed6ec-4f1c-498d-8db4-500a6a1e56ac`
+  - Text: Give your partner a chance to tell you what they liked most after private exploration.
+  - Partner text: Tell your partner what you liked most after private exploration.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `5460af8a-64bb-4e50-8c86-bcba03b9ede6`
+  - Text: Frame a small table set for tea and a note that says stay a little longer.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `55407967-f4ea-4e7c-81e6-e73356ba7133`
+  - Text: Record the words that would make you feel proud and cared for after you stepped outside your comfort zone together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `5c561bb5-57f1-439f-824a-c3fa2abfbb6e`
+  - Text: Describe the kind of quiet time you would enjoy sharing once the excitement has passed.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `60369326-6435-42eb-8427-a17dd8cfa479`
+  - Text: Write one thing you would like to hear after you take a private risk together.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `65179ffc-ca2b-4b90-8bf1-605d44ecb405`
+  - Text: Write the first question you would like your partner to ask after trying something new together.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `7744165c-6f1b-48b5-856a-0dd93b8ee814`
+  - Text: Record the small affectionate gesture that helps you feel close after a playful evening together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `7c1ecd05-ed05-4be1-8a6c-880cab1bfcdb`
+  - Text: Tell your partner what you liked most after private exploration.
+  - Partner text: Give your partner a chance to tell you what they liked most after private exploration.
+  - Inverse: 4cfed6ec-4f1c-498d-8db4-500a6a1e56ac
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `84108a1f-c1c4-4ff1-8bf1-8703b3d61753`
+  - Text: Tell each other how you most like to reconnect after a private date.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `84d6eee9-69cc-4436-85f1-9010eeedfaf8`
+  - Text: Show two cards labelled listen and share beside a soft light or a familiar object.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `88c304ca-fb6f-4176-868f-1d31050570d3`
+  - Text: Choose how you would like to reconnect with your partner after private time.
+  - Partner text: Ask your partner to choose how they would like to reconnect after private time.
+  - Inverse: 255d48d0-0e45-47f2-8203-2248b06677f9
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `8b0eb2b8-48d9-4beb-8642-d37c2d5b9831`
+  - Text: Speak with a little warmth about the question that helps you sort out mixed feelings.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `923f31e2-b7c6-460e-89d5-2933a18309d6`
+  - Text: Describe how you like to reconnect after an especially close moment.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `93f9f7ee-27e2-49e7-8acf-c1c323203cd2`
+  - Text: Record how you would like your partner to check in with you the morning after an especially intimate night.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `94775d3f-5b39-44df-8883-b4731f251c59`
+  - Text: Describe how you would like your partner to check in before moving on from a charged moment.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `a55d2f56-8dc5-470b-8ba2-d7b220d09f33`
+  - Text: Record the first reassuring words you would like to hear after a vulnerable conversation with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10132-7b2d-5c4e-8f91-100000000131`
+  - Text: Write the first small kindness that helps you feel connected again after a particularly intense shared moment.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10133-7b2d-5c4e-8f91-100000000132`
+  - Text: Write the first question you would like your partner to ask after trying something new.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10134-7b2d-5c4e-8f91-100000000133`
+  - Text: Share what makes you feel appreciated after emotional openness.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10135-7b2d-5c4e-8f91-100000000134`
+  - Text: Describe the quiet time you would enjoy once excitement has passed.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10136-7b2d-5c4e-8f91-100000000135`
+  - Text: Write the thing you would like to hear after taking a private risk together.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10137-7b2d-5c4e-8f91-100000000136`
+  - Text: Explain what part of a close experience you would most want to reflect on.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10138-7b2d-5c4e-8f91-100000000137`
+  - Text: Name the small comfort you would like your partner to offer after an intense conversation.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10139-7b2d-5c4e-8f91-100000000138`
+  - Text: Describe how you would like to celebrate a shared moment that went well.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10140-7b2d-5c4e-8f91-100000000139`
+  - Text: Write the apology or repair you would need if an intimate plan missed the mark.
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `ad6be8d0-0293-4729-877f-21a3b284996e`
+  - Text: Photograph a warm drink, blanket, or lamp that represents the way you like to decompress.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000013`
+  - Text: Bring your partner a drink after a close moment.
+  - Partner text: Let your partner bring you a drink after a close moment.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000014`
+  - Text: Let your partner bring you a drink after a close moment.
+  - Partner text: Bring your partner a drink after a close moment.
+  - Inverse: b2000000-0000-4000-8000-000000000013
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000070`
+  - Text: Name the kindest way to reconnect after an intense conversation.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000091`
+  - Text: Decide how a private date should end so you both feel cared for.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000103`
+  - Text: Choose a phrase that invites a more intense private conversation.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `b65185b8-1ed2-4511-8327-dc3d0b058aa8`
+  - Text: Share a picture of a handwritten question you would want after a meaningful private conversation.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20047-8c3e-5d4f-9a12-200000000046`
+  - Text: Who is more likely to start a thoughtful debrief after a vulnerable moment?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20048-8c3e-5d4f-9a12-200000000047`
+  - Text: Which partner knows best how to make quiet reconnection feel comforting?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20049-8c3e-5d4f-9a12-200000000048`
+  - Text: Who would be first to offer the reassurance that helps the other feel proud?
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `bc715287-ba08-4eee-8460-e9a264562a2c`
+  - Text: Leave a soft voice note describing the small gesture that helps you return to yourself after closeness.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `ca459291-143d-4c7f-86c8-efbd51abc7aa`
+  - Text: Record a private thank-you for the kind of reassurance that makes you feel brave enough to be open.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `d43342d9-a4d9-4dfc-84db-57260e32a2c0`
+  - Text: Tell your partner what makes you feel appreciated after you have been emotionally open.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `e8b7c522-caa5-4550-80df-763031b360fa`
+  - Text: Set aside time to tell each other what felt especially good about a private experience.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `ed88790a-bb05-4700-8a62-21c5428397a8`
+  - Text: Take a photo of a book, playlist, or window view that helps you settle after a big feeling.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `ee6685d1-5de8-4776-8659-2ba8349c1906`
+  - Text: Capture a note that says What would help next? placed beside an everyday comfort item.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `f4fa646b-497e-4ba6-8e80-9276c635a27e`
+  - Text: Use your calmest voice to explain what kind of silence feels caring rather than distant.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `fa28f7ec-1571-4255-82c8-f201b00cf08e`
+  - Text: Hear one thing you could say that would make your partner feel especially appreciated afterwards.
+  - Partner text: Tell your partner one thing they could say that would make you feel especially appreciated afterwards.
+  - Inverse: 02e4f8ef-b65b-4df5-8420-e0b4fa34501e
+
+## NEW CATEGORY: Surprise & Play
+
+### NEW PACK: Surprise Novelty
+
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `034a8892-980a-4696-8001-a0801b97ac8b`
+  - Text: Write one small unexpected gesture that would brighten a normal day with your partner.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `03c0b530-3cce-4d0f-86cf-3dd952c67971`
+  - Text: Ask your partner to say yes to one surprise date-night detail, after you tell them the category but not the detail.
+  - Partner text: Let your partner ask you to say yes to one surprise date-night detail, after they tell you the category but not the detail.
+  - Inverse: 39013ab2-8f24-4829-85dc-a3090960331a
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `0d3c708b-6af4-4780-8c20-978922491c38`
+  - Text: Hide a clue somewhere at home that leads your partner to a compliment from you.
+  - Partner text: Let your partner hide a clue somewhere at home that leads to a compliment from them.
+  - Inverse: c43a3542-dd55-4635-8dbd-6086d2f8094e
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `0d6ee573-d10d-4d52-8e60-fce1f06a67f8`
+  - Text: Describe one familiar routine you would enjoy changing to make a private date feel fresh.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1343ab20-194f-4949-81da-6e87c175c2a1`
+  - Text: Choose a new shared ritual for the first ten minutes of date night with your partner.
+  - Partner text: Let your partner choose a new shared ritual for the first ten minutes of date night.
+  - Inverse: a00d4e27-fabd-4fe5-8a8d-22f3b1396db6
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `14d38383-fb56-4e52-80b4-7ffafdeed00a`
+  - Text: Who is more likely to plan the more daring surprise?
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `19154bf6-36a0-4256-8644-6dde731b3342`
+  - Text: Speak about the ending that would make an intense surprise feel caring and complete for you.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `1a8b81f9-8a6a-4a42-8f5e-6e83c09eb379`
+  - Text: Record a voice-only clue about a new private activity you would be curious to try together.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `1f7499bf-6879-476f-8a1d-800e0d499c32`
+  - Text: Let your partner give you a choice between two different kinds of close evening, without telling you which they hope you pick.
+  - Partner text: Give your partner a choice between two different kinds of close evening, without telling them which you hope they pick.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `20113f08-3391-46f1-8ef0-7984248a8879`
+  - Text: Leave your partner a sealed note with one romantic surprise inside.
+  - Partner text: Let your partner leave you a sealed note with one romantic surprise inside.
+  - Inverse: 82f6af1b-7dbd-4823-8bd5-727080287118
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `2d187b55-4a56-40bd-81d7-5ec80d63e5f2`
+  - Text: Who is more likely to keep the best private secret?
+- **NEW** | Type: `photo` | Intensity: 2 | ID: `2f1973fb-5e45-4e36-8712-ca43fb9e58f0`
+  - Text: Capture a sealed note containing one gentle date idea.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `313a0c60-2ab6-4140-848f-5922aad8cd15`
+  - Text: Share the bold surprise you would enjoy discovering after your partner has checked the broad limits with you.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `39013ab2-8f24-4829-85dc-a3090960331a`
+  - Text: Let your partner ask you to say yes to one surprise date-night detail, after they tell you the category but not the detail.
+  - Partner text: Ask your partner to say yes to one surprise date-night detail, after you tell them the category but not the detail.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `3b715030-5d70-44b4-8c05-346c3293f7e0`
+  - Text: Leave a voice note explaining what makes a surprise feel exciting to you instead of overwhelming.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `3f7dded0-467a-47bf-800b-7b857f572b11`
+  - Text: Share a photo of a small surprise you would prepare for your partner.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `4227c38b-e313-4601-8822-7885b00acca0`
+  - Text: Who is more likely to choose the surprise element?
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `529d5f42-8293-445f-8108-4729b296b16f`
+  - Text: Record one harmless surprise your partner could prepare that would make you feel pursued.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `5addc1d8-cf00-4d24-8630-383f7c068946`
+  - Text: Give your partner a choice between two different kinds of close evening, without telling them which you hope they pick.
+  - Partner text: Let your partner give you a choice between two different kinds of close evening, without telling you which they hope you pick.
+  - Inverse: 1f7499bf-6879-476f-8a1d-800e0d499c32
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `66175f9f-4b34-495c-8c17-8f03aaf71f9c`
+  - Text: Choose one surprise element for a future evening, with a clear option to change your mind.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `67f5b295-74db-4b64-8a44-93a4e28225d3`
+  - Text: Choose a new ritual for saying goodbye at the end of a date.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `6b57867c-d609-4880-8ec4-9c2e5bbe1ea2`
+  - Text: Photograph a token that represents a playful risk you would discuss before including it in a date.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `711717d0-ed03-4601-8a3d-9f1d9943e3b4`
+  - Text: Let your partner plan one part of your evening that they do not reveal until you have both agreed to begin.
+  - Partner text: Plan one part of your evening that you do not reveal until you and your partner have both agreed to begin.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `7da8026d-060c-4653-88e1-f26ea7b36ff7`
+  - Text: Describe a new rule for one evening that would make it feel different from your usual time together.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `81e240ed-34ad-4b06-8745-9ee71da91ded`
+  - Text: Describe the kind of spontaneous invitation you would be happy to receive.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `82f6af1b-7dbd-4823-8bd5-727080287118`
+  - Text: Let your partner leave you a sealed note with one romantic surprise inside.
+  - Partner text: Leave your partner a sealed note with one romantic surprise inside.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `882ccb65-f6f7-47c7-8670-0d8a3036e5ea`
+  - Text: Let your partner surprise you with a confidence challenge that you can change or stop at any point.
+  - Partner text: Surprise your partner with a confidence challenge that they can change or stop at any point.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `88c5da10-e8c5-48de-809b-59d7b0ba1aae`
+  - Text: In a slow voice, name the question you need answered before agreeing to a bolder surprise.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `91158c5c-2245-4f78-8238-30df59769e4c`
+  - Text: In a playful whisper, tell your partner the one advance question they should ask before planning a bolder surprise.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `9a3969cf-1bad-4c53-8c59-33f3d5ea4591`
+  - Text: Create a photo of a handwritten list of three fresh rituals you would enjoy trying together.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `9e304cde-e9ee-4028-877d-b74a067fe1d3`
+  - Text: Swap one sealed note with a date-night idea inside.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `9ef7c16d-e11d-47eb-8569-622e56acc23d`
+  - Text: Tell your partner the one agreement that would make a new date idea feel exciting rather than uncertain.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `a00d4e27-fabd-4fe5-8a8d-22f3b1396db6`
+  - Text: Let your partner choose a new shared ritual for the first ten minutes of date night.
+  - Partner text: Choose a new shared ritual for the first ten minutes of date night with your partner.
+- **NEW** | Type: `audio` | Intensity: 4 | ID: `a47ec43d-8796-4796-85f5-468a82de6e85`
+  - Text: Record the private signal that would tell your partner you are still comfortable with a planned surprise.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10107-7b2d-5c4e-8f91-100000000106`
+  - Text: Write one unexpected gesture that would brighten an ordinary day with your partner.
+- **NEW** | Type: `text_answer` | Intensity: 2 | ID: `a5c10108-7b2d-5c4e-8f91-100000000107`
+  - Text: Describe the spontaneous invitation you would be happy to receive.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10109-7b2d-5c4e-8f91-100000000108`
+  - Text: Share one familiar routine you would enjoy changing together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10110-7b2d-5c4e-8f91-100000000109`
+  - Text: Write a sealed-note prompt you would enjoy opening later.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10111-7b2d-5c4e-8f91-100000000110`
+  - Text: Describe a rule for one evening that would make it feel unlike your usual time together.
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `a5c10112-7b2d-5c4e-8f91-100000000111`
+  - Text: Explain the bold surprise you would enjoy after your partner checks broad limits with you.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10113-7b2d-5c4e-8f91-100000000112`
+  - Text: Name the kind of mystery you would enjoy your partner planning.
+- **NEW** | Type: `text_answer` | Intensity: 4 | ID: `a5c10114-7b2d-5c4e-8f91-100000000113`
+  - Text: Write about a new tradition that would make your relationship feel more playful.
+- **NEW** | Type: `audio` | Intensity: 2 | ID: `ab283cde-e221-4cfd-8542-6efb576c515a`
+  - Text: Record a cheerful clue about a harmless surprise that would make you feel especially considered.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000063`
+  - Text: Plan a bolder surprise after getting your partner's yes to the category.
+  - Partner text: Give your partner your yes to a category before they plan a bolder surprise.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000064`
+  - Text: Give your partner your yes to a category before they plan a bolder surprise.
+  - Partner text: Plan a bolder surprise after getting your partner's yes to the category.
+  - Inverse: b2000000-0000-4000-8000-000000000063
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `b2000000-0000-4000-8000-000000000071`
+  - Text: Make a tiny surprise that can be left for the other to find.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b2000000-0000-4000-8000-000000000082`
+  - Text: Plan a private date with one element neither of you chooses until the moment.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `b2000000-0000-4000-8000-000000000101`
+  - Text: Agree on a word that ends a private roleplay immediately and kindly.
+- **NEW** | Type: `swipe` | Intensity: 3 | ID: `b59c1821-27b1-4430-8ad9-d5668e17dcef`
+  - Text: Plan one part of your evening that you do not reveal until you and your partner have both agreed to begin.
+  - Partner text: Let your partner plan one part of your evening that they do not reveal until you have both agreed to begin.
+  - Inverse: 711717d0-ed03-4601-8a3d-9f1d9943e3b4
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b69350c5-9119-4d7b-8001-9b37466d1631`
+  - Text: Who is more likely to add mystery to a private date?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20038-8c3e-5d4f-9a12-200000000037`
+  - Text: Who is more likely to hide a thoughtful surprise in an ordinary week?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20039-8c3e-5d4f-9a12-200000000038`
+  - Text: Which partner would be first to suggest changing a familiar routine?
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `b6d20040-8c3e-5d4f-9a12-200000000039`
+  - Text: Who can make a small unknown feel exciting without making it stressful?
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `b89d2081-285a-4034-89e0-1c24ecb55833`
+  - Text: Write a sealed-note prompt you would enjoy your partner giving you to open later.
+- **NEW** | Type: `swipe` | Intensity: 2 | ID: `c43a3542-dd55-4635-8dbd-6086d2f8094e`
+  - Text: Let your partner hide a clue somewhere at home that leads to a compliment from them.
+  - Partner text: Hide a clue somewhere at home that leads your partner to a compliment from you.
+- **NEW** | Type: `audio` | Intensity: 3 | ID: `cdfcadf8-cf3c-4729-8586-b2f305dce5fb`
+  - Text: Leave a voice note explaining the kind of clue that makes mystery feel fun for you.
+- **NEW** | Type: `who_likely` | Intensity: 4 | ID: `d8d5d88c-1f59-4606-88b8-824b53c00a0b`
+  - Text: Who is more likely to plan a private surprise?
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `df5e25fc-3cf2-4ebc-88b7-ae02f7600fad`
+  - Text: Photograph a hand-drawn route that leads to a new shared activity.
+- **NEW** | Type: `swipe` | Intensity: 4 | ID: `e1ad7b12-e49a-4b57-8d8c-ce4452e342cb`
+  - Text: Surprise your partner with a confidence challenge that they can change or stop at any point.
+  - Partner text: Let your partner surprise you with a confidence challenge that you can change or stop at any point.
+  - Inverse: 882ccb65-f6f7-47c7-8670-0d8a3036e5ea
+- **NEW** | Type: `text_answer` | Intensity: 3 | ID: `e61695ee-30ef-448b-80e4-0a903024fc65`
+  - Text: Tell your partner one familiar routine you would enjoy changing up together.
+- **NEW** | Type: `photo` | Intensity: 3 | ID: `e7d5478a-6f18-45c1-8c25-f831e239c9cc`
+  - Text: Frame a wrapped everyday object and add one written clue about why you chose it.
+- **NEW** | Type: `photo` | Intensity: 4 | ID: `f16ba582-3dfb-4a8d-8b80-fcbc641733bd`
+  - Text: Show two cards labelled surprise and check first, then say which card matters most to you.
