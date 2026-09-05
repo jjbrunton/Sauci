@@ -36,6 +36,7 @@ partially implemented states. Confirm claims against current code.
 
 - `admin-question-types-plan.md`
 - [Universal catalogue safety plan](product/catalog-content-safety-plan.md)
+- [Sex and fun relationship market strategy](product/sex-fun-market-strategy.md)
 - `content-balance-implementation.md`
 - `dares-feature.md` (superseded by [Dares loop](dares-loop.md))
 - `live-draw-feature-plan.md`
