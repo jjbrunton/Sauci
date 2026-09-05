@@ -14,6 +14,7 @@ const banned = /\b(?:anal|anus|asshole|bdsm|bestiality|blowjob|breath play|chok(
 const timeBound = /\b(?:today|tonight|right now|\bnow\b)\b/i;
 const gendered = /\b(?:boyfriend|girlfriend|husband|wife|him|her|his|hers)\b/i;
 const photoUnsafe = /\b(?:body part|lingerie|nude|naked|proof|skin|undress|your body)\b/i;
+const artificialSuffix = /\b(?:option|response focus|voice focus|visual cue|variant|version)\s*\d+\b/i;
 
 expect(Array.isArray(draft.packs) && Array.isArray(draft.questions), 'draft must contain packs and questions arrays');
 const questions = draft.questions ?? [];
@@ -25,6 +26,8 @@ const typeCounts = Object.fromEntries([...questionTypes].map((type) => [type, 0]
 const intensityCounts = Object.fromEntries([1, 2, 3, 4, 5].map((level) => [level, 0]));
 const packCounts = new Map();
 const draftTexts = new Map();
+const openingCounts = new Map();
+const requiredFormatOpenings = new Set(['share a photo of', 'who is more likely']);
 const snapshotTexts = new Set((snapshot.tables?.questions ?? []).map((row) => normalize(row.text)));
 for (const [index, question] of questions.entries()) {
   const label = `question ${index + 1}`;
@@ -34,6 +37,7 @@ for (const [index, question] of questions.entries()) {
   expect(typeof question.pack_slug === 'string' && question.pack_slug.length > 0, `${label} has no pack_slug`);
   packCounts.set(question.pack_slug, (packCounts.get(question.pack_slug) ?? 0) + 1);
   expect(typeof question.text === 'string' && question.text.length > 0, `${label} has no text`);
+  expect(!artificialSuffix.test(question.text), `${label} contains an artificial template discriminator`);
   expect(questionTypes.has(question.question_type), `${label} has unsupported type ${question.question_type}`);
   if (questionTypes.has(question.question_type)) typeCounts[question.question_type] += 1;
   expect([2, 3, 4].includes(question.intensity), `${label} has invalid intensity ${question.intensity}`);
@@ -50,6 +54,10 @@ for (const [index, question] of questions.entries()) {
     expect(!text.includes('—'), `${label} contains an em dash`);
   }
   const normalized = normalize(question.text);
+  const opening = normalized.split(' ').slice(0, 4).join(' ');
+  if (!requiredFormatOpenings.has(opening)) {
+    openingCounts.set(opening, (openingCounts.get(opening) ?? 0) + 1);
+  }
   // An inverse row intentionally repeats its primary row's partner wording.
   // Check only primary and symmetric text here; inverse swap integrity is
   // checked below.
@@ -65,6 +73,9 @@ for (const [index, question] of questions.entries()) {
     expect(question.partner_text === null && question.inverse_of === null, `${label} non-swipe must have null partner_text and inverse_of`);
   }
   if (question.question_type === 'photo') expect(!photoUnsafe.test(question.text), `${label} photo prompt is not safely clothed/object/setting based`);
+}
+for (const [opening, count] of openingCounts) {
+  expect(count <= 30, `opening template repeats ${count} times: ${opening}`);
 }
 for (const [type, count] of Object.entries({ swipe: 300, text_answer: 100, audio: 70, photo: 40, who_likely: 40 })) expect(typeCounts[type] === count, `expected ${count} ${type}, got ${typeCounts[type]}`);
 for (const [level, count] of Object.entries({ 1: 0, 2: 120, 3: 300, 4: 130, 5: 0 })) expect(intensityCounts[level] === count, `expected ${count} intensity ${level}, got ${intensityCounts[level]}`);

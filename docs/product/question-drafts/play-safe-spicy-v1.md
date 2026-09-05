@@ -31,4 +31,5 @@ Developer-authored wording avoids named sexual acts, anatomy, sex toys, fetish l
 
 Known limitation: the current API accepts response_data loosely. This source draft assumes no structured compatibility builder or safe user-generated-content moderation envelope, and uses only existing supported question types.
 
-Run node scripts/validate-question-draft.mjs to verify this source-only contract.
+Run node scripts/validate-question-draft.mjs to verify this source-only contract,
+including artificial discriminator and repeated-opening checks.
