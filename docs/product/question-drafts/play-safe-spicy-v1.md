@@ -4,12 +4,22 @@ Status: source-only, unpublished, not approved, imported, or published. This is 
 
 ## Packs
 
-- private-signals: 92 questions.
-- spark-and-slow-burn: 92 questions.
-- lead-and-follow: 91 questions.
-- shared-curiosity: 91 questions.
-- after-dark-conversations: 92 questions.
-- private-possibilities: 92 questions.
+- Flirty Communication: 36 questions.
+- Anticipation: 34 questions.
+- Taking the Lead: 36 questions.
+- Following: 34 questions.
+- Shared Control: 36 questions.
+- Sensory Cues: 34 questions.
+- Private Performance: 35 questions.
+- Clothes and Confidence: 33 questions.
+- Fantasy Exchange: 35 questions.
+- Roleplay: 33 questions.
+- Settings and Atmosphere: 35 questions.
+- Boundaries and Check-ins: 33 questions.
+- Surprise and Novelty: 35 questions.
+- Long-distance Desire: 33 questions.
+- Giving and Receiving Attention: 35 questions.
+- Aftercare and Reconnection: 33 questions.
 
 ## Exact distribution
 
