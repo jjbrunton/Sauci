@@ -20,6 +20,7 @@ historical notes. Agents should load only the section relevant to their task.
 - [Couple pairing](couple-pairing.md)
 - [Couple streaks](couple-streaks.md)
 - [Question selection](question-selection.md)
+- [Question interaction types](question-types.md)
 - [Match notifications](match-notifications.md)
 - [Subscriptions](subscription-system.md)
 - [Redemption codes](product/redemption.md)
