@@ -40,6 +40,10 @@ MCP service in one npm/Turborepo workspace.
 11. Use high-effort reviewers only for the risk triggers in
    `docs/agents/routing.md`.
 12. Agents must not use em dash characters in text they add to this repository.
+13. Before beginning implementation, tell the user whether the proposed change
+   is likely deliverable through an Expo OTA update, likely requires a new
+   native/store build, or has no applicable OTA path, with a brief reason. If
+   uncertain, state that uncertainty and name the validation needed.
 
 ## Repository map
 
