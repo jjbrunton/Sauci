@@ -12,6 +12,7 @@ import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
 import {
     formatFeatureName,
+    featureInterestKey,
     toRecentFeatureInterest,
     type FeatureInterestRow,
     type RecentFeatureInterest,
@@ -80,7 +81,7 @@ export function DashboardPage() {
                     ? adminData.from('feature_interests').select('created_at, user_id').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString())
                     : Promise.resolve({ data: [] }),
                 canViewUsers
-                    ? adminData.from<FeatureInterestRow>('feature_interests').select('id, user_id, feature, created_at').order('created_at', { ascending: false }).limit(10)
+                    ? adminData.from<FeatureInterestRow>('feature_interests').select('user_id, feature, created_at').order('created_at', { ascending: false }).limit(10)
                     : Promise.resolve({ data: [] }),
             ]);
 
@@ -566,7 +567,7 @@ export function DashboardPage() {
                                                         .toUpperCase();
 
                                                     return (
-                                                        <div key={item.id} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
+                                                        <div key={featureInterestKey(item)} className="flex items-center justify-between gap-4 rounded-xl bg-white/5 p-3">
                                                             <div className="flex items-center gap-3 min-w-0">
                                                                 <Avatar className="h-8 w-8">
                                                                     <AvatarImage src={item.profile?.avatar_url || undefined} />

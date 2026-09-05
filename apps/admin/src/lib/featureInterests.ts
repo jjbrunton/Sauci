@@ -1,5 +1,4 @@
 export interface FeatureInterestRow {
-    id: string;
     user_id: string;
     feature: string;
     created_at: string;
@@ -16,11 +15,14 @@ export interface RecentFeatureInterest extends FeatureInterestRow {
 
 export function toRecentFeatureInterest(row: FeatureInterestRow): RecentFeatureInterest {
     return {
-        id: row.id,
         user_id: row.user_id,
         feature: row.feature,
         created_at: row.created_at,
     };
+}
+
+export function featureInterestKey(row: Pick<FeatureInterestRow, 'user_id' | 'feature'>): string {
+    return `${row.user_id}:${row.feature}`;
 }
 
 export function formatFeatureName(feature: string): string {
