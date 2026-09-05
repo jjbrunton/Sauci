@@ -162,6 +162,13 @@
       "when": 1788168150000,
       "tag": "0022_solo_sealed_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1788624000000,
+      "tag": "0023_dare_catalogue_150",
+      "breakpoints": true
     }
   ]
 }
