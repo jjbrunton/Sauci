@@ -10,35 +10,20 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recha
 import { format, subDays, startOfDay, endOfDay, formatDistanceToNow } from 'date-fns';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { RealtimeStatusIndicator } from '@/components/RealtimeStatusIndicator';
+import {
+    formatFeatureName,
+    toRecentFeatureInterest,
+    type FeatureInterestRow,
+    type RecentFeatureInterest,
+} from '@/lib/featureInterests';
 
 type FeatureInterestChartPoint = { date: string; count: number };
-
-type RecentFeatureInterest = {
-    id: string;
-    user_id: string;
-    feature_name: string;
-    created_at: string;
-    profile?: {
-        id: string;
-        name: string | null;
-        email: string | null;
-        avatar_url: string | null;
-    };
-};
 
 type FeatureInterestCountsRow = {
     feature_name: string;
     opt_in_count: number;
     opt_in_count_last_7_days: number;
 };
-
-function formatFeatureName(featureName: string) {
-    return featureName
-        .split('_')
-        .filter(Boolean)
-        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-        .join(' ');
-}
 
 export function DashboardPage() {
     const { hasPermission } = useAuth();
@@ -95,7 +80,7 @@ export function DashboardPage() {
                     ? adminData.from('feature_interests').select('created_at, user_id').gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString())
                     : Promise.resolve({ data: [] }),
                 canViewUsers
-                    ? adminData.from('feature_interests').select('id, user_id, feature_name, created_at').order('created_at', { ascending: false }).limit(10)
+                    ? adminData.from<FeatureInterestRow>('feature_interests').select('id, user_id, feature, created_at').order('created_at', { ascending: false }).limit(10)
                     : Promise.resolve({ data: [] }),
             ]);
 
@@ -158,12 +143,7 @@ export function DashboardPage() {
                 }))
             );
 
-            let recentActivity: RecentFeatureInterest[] = (recentInterests ?? []).map(item => ({
-                id: item.id,
-                user_id: item.user_id,
-                feature_name: item.feature_name,
-                created_at: item.created_at,
-            }));
+            let recentActivity: RecentFeatureInterest[] = (recentInterests ?? []).map(toRecentFeatureInterest);
 
             if (canViewUsers && recentActivity.length > 0) {
                 const userIds = Array.from(new Set(recentActivity.map(item => item.user_id)));
@@ -579,7 +559,7 @@ export function DashboardPage() {
                                                     if (item.profile?.name && item.profile.email) {
                                                         subtitleParts.push(item.profile.email);
                                                     }
-                                                    subtitleParts.push(formatFeatureName(item.feature_name));
+                                                    subtitleParts.push(formatFeatureName(item.feature));
 
                                                     const fallbackChar = (item.profile?.name || item.profile?.email || 'U')
                                                         .charAt(0)
