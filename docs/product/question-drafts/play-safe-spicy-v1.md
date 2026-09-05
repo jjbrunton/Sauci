@@ -4,22 +4,22 @@ Status: source-only, unpublished, not approved, imported, or published. This is 
 
 ## Packs
 
-- Flirty Communication: 36 questions.
-- Anticipation: 34 questions.
-- Taking the Lead: 36 questions.
-- Following: 34 questions.
-- Shared Control: 36 questions.
-- Sensory Cues: 34 questions.
-- Private Performance: 35 questions.
-- Clothes and Confidence: 33 questions.
-- Fantasy Exchange: 35 questions.
-- Roleplay: 33 questions.
-- Settings and Atmosphere: 35 questions.
-- Boundaries and Check-ins: 33 questions.
-- Surprise and Novelty: 35 questions.
-- Long-distance Desire: 33 questions.
-- Giving and Receiving Attention: 35 questions.
-- Aftercare and Reconnection: 33 questions.
+- Flirty Communication: 63 questions.
+- Anticipation: 36 questions.
+- Taking the Lead: 33 questions.
+- Following: 24 questions.
+- Shared Control: 23 questions.
+- Sensory Cues: 29 questions.
+- Private Performance: 53 questions.
+- Clothes and Confidence: 29 questions.
+- Fantasy Exchange: 25 questions.
+- Roleplay: 32 questions.
+- Settings and Atmosphere: 36 questions.
+- Boundaries and Check-ins: 41 questions.
+- Surprise and Novelty: 33 questions.
+- Long-distance Desire: 21 questions.
+- Giving and Receiving Attention: 50 questions.
+- Aftercare and Reconnection: 22 questions.
 
 ## Exact distribution
 

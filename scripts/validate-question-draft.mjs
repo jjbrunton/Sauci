@@ -4,8 +4,10 @@ import { readFile } from 'node:fs/promises';
 
 const draftPath = new URL('../docs/product/question-drafts/play-safe-spicy-v1.json', import.meta.url);
 const snapshotPath = new URL('../apps/supabase/catalog-snapshots/production-2026-08-28.json', import.meta.url);
+const markdownPath = new URL('../docs/product/question-drafts/play-safe-spicy-v1.md', import.meta.url);
 const draft = JSON.parse(await readFile(draftPath, 'utf8'));
 const snapshot = JSON.parse(await readFile(snapshotPath, 'utf8'));
+const markdown = await readFile(markdownPath, 'utf8');
 const errors = [];
 const expect = (condition, message) => { if (!condition) errors.push(message); };
 const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -15,6 +17,18 @@ const timeBound = /\b(?:today|tonight|right now|\bnow\b)\b/i;
 const gendered = /\b(?:boyfriend|girlfriend|husband|wife|him|her|his|hers)\b/i;
 const photoUnsafe = /\b(?:body part|lingerie|nude|naked|proof|skin|undress|your body)\b/i;
 const artificialSuffix = /\b(?:option|response focus|voice focus|visual cue|variant|version)\s*\d+\b/i;
+const malformedOrFallback = /\b(?:let your partner to|as they for|share this private idea|take the complementary role|response focus|voice focus|bolder mood|confident outfit|unfamiliar private dynamic)\b/i;
+const genericOutcome = /\b(?:this match reveals whether|specific written starting point|take the complementary role)\b/i;
+const markdownPackNames = {
+  'taking-the-lead': 'Taking the Lead',
+  'clothes-confidence': 'Clothes and Confidence',
+  'settings-atmosphere': 'Settings and Atmosphere',
+  'boundaries-check-ins': 'Boundaries and Check-ins',
+  'surprise-novelty': 'Surprise and Novelty',
+  'long-distance-desire': 'Long-distance Desire',
+  'giving-receiving-attention': 'Giving and Receiving Attention',
+  'aftercare-reconnection': 'Aftercare and Reconnection',
+};
 
 expect(Array.isArray(draft.packs) && Array.isArray(draft.questions), 'draft must contain packs and questions arrays');
 const questions = draft.questions ?? [];
@@ -27,6 +41,7 @@ const intensityCounts = Object.fromEntries([1, 2, 3, 4, 5].map((level) => [level
 const packCounts = new Map();
 const draftTexts = new Map();
 const openingCounts = new Map();
+const ngramRows = new Map();
 const requiredFormatOpenings = new Set(['share a photo of', 'who is more likely']);
 const snapshotTexts = new Set((snapshot.tables?.questions ?? []).map((row) => normalize(row.text)));
 for (const [index, question] of questions.entries()) {
@@ -38,6 +53,7 @@ for (const [index, question] of questions.entries()) {
   packCounts.set(question.pack_slug, (packCounts.get(question.pack_slug) ?? 0) + 1);
   expect(typeof question.text === 'string' && question.text.length > 0, `${label} has no text`);
   expect(!artificialSuffix.test(question.text), `${label} contains an artificial template discriminator`);
+  expect(!malformedOrFallback.test(question.text), `${label} contains malformed or generic fallback copy`);
   expect(questionTypes.has(question.question_type), `${label} has unsupported type ${question.question_type}`);
   if (questionTypes.has(question.question_type)) typeCounts[question.question_type] += 1;
   expect([2, 3, 4].includes(question.intensity), `${label} has invalid intensity ${question.intensity}`);
@@ -45,6 +61,7 @@ for (const [index, question] of questions.entries()) {
   expect(question.review_status === 'draft', `${label} must be draft`);
   expect(['low', 'edge'].includes(question.policy_risk), `${label} has invalid policy_risk`);
   expect(typeof question.intended_outcome === 'string' && question.intended_outcome.length > 0, `${label} has no intended_outcome`);
+  expect(!genericOutcome.test(question.intended_outcome), `${label} has a generic fallback outcome`);
   expect(question.allowed_couple_genders === null && question.target_user_genders === null && question.required_props === null, `${label} must use null targeting and props`);
   const textFields = [question.text, question.partner_text, question.intended_outcome].filter(Boolean);
   for (const text of textFields) {
@@ -64,6 +81,13 @@ for (const [index, question] of questions.entries()) {
   if (question.inverse_of === null) {
     expect(!draftTexts.has(normalized), `${label} duplicates draft text from ${draftTexts.get(normalized)}`);
     draftTexts.set(normalized, label);
+    const words = normalized.split(' ').filter(Boolean);
+    for (let start = 0; start <= words.length - 6; start += 1) {
+      const ngram = words.slice(start, start + 6).join(' ');
+      const rows = ngramRows.get(ngram) ?? [];
+      rows.push(label);
+      ngramRows.set(ngram, rows);
+    }
   }
   expect(!snapshotTexts.has(normalized), `${label} duplicates production snapshot text`);
   if (question.question_type === 'audio') expect(JSON.stringify(question.config) === JSON.stringify({ max_duration_seconds: 60 }), `${label} audio config must be max_duration_seconds 60`);
@@ -76,6 +100,9 @@ for (const [index, question] of questions.entries()) {
 }
 for (const [opening, count] of openingCounts) {
   expect(count <= 30, `opening template repeats ${count} times: ${opening}`);
+}
+for (const [ngram, rows] of ngramRows) {
+  expect(rows.length <= 10, `six-word phrase repeats ${rows.length} times across non-inverse rows: ${ngram}`);
 }
 for (const [type, count] of Object.entries({ swipe: 300, text_answer: 100, audio: 70, photo: 40, who_likely: 40 })) expect(typeCounts[type] === count, `expected ${count} ${type}, got ${typeCounts[type]}`);
 for (const [level, count] of Object.entries({ 1: 0, 2: 120, 3: 300, 4: 130, 5: 0 })) expect(intensityCounts[level] === count, `expected ${count} intensity ${level}, got ${intensityCounts[level]}`);
@@ -97,6 +124,10 @@ for (const question of inverses) {
 }
 for (const question of symmetric) expect(question.inverse_of === null, `symmetric swipe ${question.id} must have null inverse_of`);
 expect([...packCounts.values()].every((count) => count > 0), 'every declared pack must contain questions');
+for (const pack of draft.packs ?? []) {
+  const expectedLine = `- ${markdownPackNames[pack.slug] ?? pack.name}: ${packCounts.get(pack.slug) ?? 0} questions.`;
+  expect(markdown.includes(expectedLine), `markdown pack count is missing or stale: ${expectedLine}`);
+}
 if (errors.length) {
   process.stderr.write(`Question draft validation failed (${errors.length}):\n${errors.map((error) => `- ${error}`).join('\n')}\n`);
   process.exit(1);
