@@ -1,7 +1,8 @@
 import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const errors = [];
 const scoped = process.argv.includes('--scope');
 
@@ -154,6 +155,22 @@ if (!scoped) {
   for (const match of docsIndex.matchAll(/\[[^\]]+\]\(([^)]+\.md)\)/g)) {
     const target = path.resolve(root, 'docs', match[1]);
     if (!(await exists(target))) fail(path.join(root, 'docs', 'index.md'), `broken documentation link ${match[1]}`, 'correct the link or restore the maintained document');
+  }
+
+  const sharedTypesFile = path.join(root, 'packages', 'shared', 'src', 'types', 'index.ts');
+  const sharedTypes = await readFile(sharedTypesFile, 'utf8');
+  const union = sharedTypes.match(/export type QuestionType\s*=\s*([^;]+);/);
+  const canonicalQuestionTypes = union?.[1].match(/'([^']+)'/g)?.map((value) => value.slice(1, -1));
+  const questionTypesDoc = path.join(root, 'docs', 'question-types.md');
+  const questionTypesSource = await readFile(questionTypesDoc, 'utf8');
+  const documentedQuestionTypes = questionTypesSource.match(/<!-- question-types:\s*([^>]+)\s*-->/)?.[1]
+    .split(',').map((value) => value.trim()).filter(Boolean);
+  if (!canonicalQuestionTypes?.length) {
+    fail(sharedTypesFile, 'QuestionType union could not be read', 'keep QuestionType as a quoted string union');
+  } else if (!documentedQuestionTypes?.length) {
+    fail(questionTypesDoc, 'question type contract marker is missing', 'add <!-- question-types: type-a,type-b --> with every supported type');
+  } else if (canonicalQuestionTypes.join(',') !== documentedQuestionTypes.join(',')) {
+    fail(questionTypesDoc, 'documented question types differ from the shared QuestionType union', `set the contract marker to ${canonicalQuestionTypes.join(',')}`);
   }
 
   const mcpAuth = await readFile(path.join(root, 'apps', 'mcp', 'src', 'lib', 'auth.ts'), 'utf8');

@@ -87,6 +87,9 @@ environment limitation; do not call it a passing product check.
 ## Documentation discipline
 
 Update the maintained doc when a contract, command, port, or invariant changes.
+When question interaction types, response payloads, configuration, or match
+semantics change, update `docs/question-types.md` in the same change and run
+`npm run lint:harness` to prove its type list matches the shared contract.
 Plans and historical notes are evidence, not current architecture. A repeated
 lesson becomes permanent only after it is reproduced and promoted into a doc,
 skill, fixture, or executable check.

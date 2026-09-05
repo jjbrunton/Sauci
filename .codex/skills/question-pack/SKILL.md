@@ -7,6 +7,11 @@ description: Create or review Sauci question-pack content and its local migratio
 
 Inspect existing packs before generating to avoid duplication.
 
+Before creating or editing content that uses a question interaction type, read
+`docs/question-types.md`. If the type, response payload, configuration, or
+matching semantics change, update that maintained contract and run
+`npm run lint:harness` in the same task.
+
 - Write proposals, not interview questions; use gender-neutral “your partner”.
 - Avoid time-bound words such as tonight, now, or today.
 - Symmetric activities have no partner text.

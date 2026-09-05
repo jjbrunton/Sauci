@@ -47,6 +47,8 @@ erDiagram
         uuid pack_id FK
         text text
         text partner_text "for two-part questions"
+        text question_type "swipe/text_answer/audio/photo/who_likely"
+        jsonb config "type-specific configuration"
         int intensity "1-5"
         text[] allowed_couple_genders "couple composition filter"
         text[] target_user_genders "individual user filter"
@@ -70,6 +72,7 @@ erDiagram
         uuid question_id FK
         uuid couple_id FK "nullable: null is a sealed solo answer, claimed at pairing"
         answer_type answer "yes/no/maybe"
+        jsonb response_data "non-swipe answer payload"
         timestamptz created_at
     }
 
@@ -77,7 +80,8 @@ erDiagram
         uuid id PK
         uuid couple_id FK
         uuid question_id FK
-        match_type match_type "yes_yes/yes_maybe/maybe_maybe"
+        match_type match_type "yes_yes/yes_maybe/maybe_maybe/both_answered"
+        jsonb response_summary "both non-swipe payloads by user"
         boolean is_new
         timestamptz created_at
     }
@@ -161,7 +165,8 @@ erDiagram
 | Enum | Values |
 |------|--------|
 | `answer_type` | `yes`, `no`, `maybe` |
-| `match_type` | `yes_yes`, `yes_maybe`, `maybe_maybe` |
+| `question_type` | `swipe`, `text_answer`, `audio`, `photo`, `who_likely` |
+| `match_type` | `yes_yes`, `yes_maybe`, `maybe_maybe`, `both_answered` |
 | `feedback_type` | `bug`, `feature_request`, `general` |
 | `feedback_status` | `new`, `reviewed`, `in_progress`, `resolved`, `closed` |
 | `subscription_status` | `active`, `cancelled`, `expired`, `billing_issue`, `paused` |
@@ -188,11 +193,21 @@ allowed.
 
 ## Key Flows
 
+### Question interactions
+
+`questions.question_type` defaults to `swipe`; `questions.config` holds
+type-specific settings. A non-swipe response keeps its payload in
+`responses.response_data`. When a non-swipe interaction resolves as
+`both_answered`, `matches.response_summary` holds both payloads keyed by user
+ID. The complete interaction and match contract is maintained in
+[Question interaction types](question-types.md).
+
 ### Response & Match Flow
-1. User submits response via `submit-response` edge function
+1. User submits a response to the standalone API at `POST /v1/responses`
 2. Response saved to `responses` table (UPSERT on `user_id, question_id`)
-3. Function checks for partner's response on same question
-4. If both answered positively (not "no"), a `match` is created
+3. API checks for the partner's response on the same question
+4. API applies the [question interaction contract](question-types.md) to create,
+   update, or remove a `match`
 5. Match triggers push notification to both partners
 6. Match unlocks chat thread in `messages` table
 

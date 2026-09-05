@@ -1,7 +1,8 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const base = path.join(root, '.agents', 'learnings');
 const requiredSections = ['## Symptom', '## Reproduction', '## Cause', '## Remediation', '## Evidence'];
 const failures = [];
@@ -11,7 +12,7 @@ for (const state of ['inbox', 'promoted']) {
   for (const name of await readdir(directory)) {
     if (!name.endsWith('.md')) continue;
     const file = path.join(directory, name);
-    const source = await readFile(file, 'utf8');
+    const source = (await readFile(file, 'utf8')).replace(/\r\n/g, '\n');
     const frontmatter = source.match(/^---\n([\s\S]*?)\n---/);
     if (!frontmatter) { failures.push(`${file}: missing YAML frontmatter`); continue; }
     const fields = Object.fromEntries(frontmatter[1].split('\n').map((line) => {
