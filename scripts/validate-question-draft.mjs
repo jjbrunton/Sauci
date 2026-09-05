@@ -106,7 +106,7 @@ for (const [index, question] of questions.entries()) {
     expect(!banned.test(text), `${label} contains banned developer-authored term`);
     expect(!timeBound.test(text), `${label} contains time-bound language`);
     expect(!gendered.test(text), `${label} contains gendered partner language`);
-    expect(!text.includes('—'), `${label} contains an em dash`);
+    expect(!text.includes('\u2014'), `${label} contains an em dash`);
   }
   const normalized = normalize(question.text);
   if (question.question_type === 'swipe') {
