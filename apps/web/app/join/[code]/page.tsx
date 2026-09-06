@@ -3,7 +3,7 @@ import { JoinClient } from './JoinClient'
 
 export const metadata: Metadata = {
   title: 'Compare answers together on Sauci',
-  description: 'Copy your invite code, then join Sauci to discover what you both agree on.',
+  description: 'Copy your invite code, then join Sauci to make shared discoveries together.',
 }
 
 export default async function JoinPage({
