@@ -65,6 +65,13 @@ describe('/join/[code] JoinClient', () => {
     expect(source).not.toContain('glass-light')
   })
 
+  it('describes open-answer visibility truthfully', async () => {
+    const source = await readFile(componentPath, 'utf8')
+
+    expect(source).toContain('For open-answer questions, each response can be visible after you have both answered.')
+    expect(source).not.toContain('Neither of you sees the other’s individual answers.')
+  })
+
   it('shows a clear fallback message for a malformed invite code', async () => {
     const source = await readFile(componentPath, 'utf8')
 

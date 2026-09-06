@@ -124,7 +124,7 @@ export function JoinClient({ code }: { code: string }) {
   const storeUnavailableTitle = isOnline ? undefined : 'Reconnect to open the app store.'
   const desktopCopy = platform === 'desktop'
     ? 'Sauci is a phone app. Copy your code, then open this link on your phone or install from the store there.'
-    : 'They have already answered questions about you two. When you join, you will both see only the things you agree on. Neither of you sees the other’s individual answers.'
+    : 'They have already answered questions about you two. Join them to discover what you have in common. For open-answer questions, each response can be visible after you have both answered.'
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background-light to-background">
