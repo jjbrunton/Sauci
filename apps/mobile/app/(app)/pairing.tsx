@@ -52,7 +52,7 @@ export default function PairingScreen() {
         let cancelled = false;
         void (async () => {
             if (typeof params.incomingCode === "string") {
-                await clearPendingInviteCode();
+                await clearPendingInviteCode(user.id);
                 if (!cancelled) {
                     Alert.alert("You're already paired", "That invite is for a different account. You're already paired with your partner.", [{ text: "OK", onPress: () => router.replace("/(app)") }]);
                 }
@@ -86,15 +86,15 @@ export default function PairingScreen() {
             const routeCode = typeof params.code === "string" ? normalizeInviteCode(params.code) : "";
             if (isValidInviteCode(routeCode)) {
                 await applyPrefill(routeCode);
-                await clearPendingInviteCode();
+                await clearPendingInviteCode(user?.id);
                 if (!cancelled) setPrefillAttempted(true);
                 return;
             }
 
-            const stashedCode = await getPendingInviteCode();
+            const stashedCode = user?.id ? await getPendingInviteCode(user.id) : null;
             if (stashedCode) {
                 await applyPrefill(stashedCode);
-                await clearPendingInviteCode();
+                await clearPendingInviteCode(user?.id);
                 if (!cancelled) setPrefillAttempted(true);
                 return;
             }
@@ -109,7 +109,7 @@ export default function PairingScreen() {
         return () => {
             cancelled = true;
         };
-    }, [couple, params.code, prefillAttempted]);
+    }, [couple, params.code, prefillAttempted, user?.id]);
 
     const acceptClipboardOffer = () => {
         if (!clipboardOfferCode) return;
@@ -312,7 +312,7 @@ export default function PairingScreen() {
             "Cancel this invite?",
             "Your code will stop working, and the answers you've given since you created it will be deleted. Answers you gave before you created the code are kept.",
             [
-                { text: "Keep my invite", style: "cancel", onPress: () => void clearPendingInviteCode() },
+                { text: "Keep my invite", style: "cancel", onPress: () => void clearPendingInviteCode(user?.id) },
                 {
                     text: "Cancel mine and join", style: "destructive", onPress: async () => {
                         setIsSubmitting(true);
@@ -320,7 +320,7 @@ export default function PairingScreen() {
                             await cancelInvite(async () => {
                                 setInviteCode(incomingCode);
                                 setWasPrefilled(true);
-                                await clearPendingInviteCode();
+                                await clearPendingInviteCode(user?.id);
                             });
                         } finally {
                             setIsSubmitting(false);
@@ -369,7 +369,7 @@ export default function PairingScreen() {
                                 <GlassButton onPress={handleCancelOwnAndPrefill} variant="danger" fullWidth disabled={isSubmitting} testID="pairing-conflict-cancel-and-join">
                                     Cancel mine and join
                                 </GlassButton>
-                                <TouchableOpacity onPress={() => { setIsIncomingConflictDismissed(true); void clearPendingInviteCode(); }} style={styles.cancelButton} testID="pairing-conflict-keep-own">
+                                <TouchableOpacity onPress={() => { setIsIncomingConflictDismissed(true); void clearPendingInviteCode(user?.id); }} style={styles.cancelButton} testID="pairing-conflict-keep-own">
                                     <Text style={styles.cancelButtonText}>Keep my invite</Text>
                                 </TouchableOpacity>
                             </GlassCard>
@@ -400,7 +400,7 @@ export default function PairingScreen() {
                             >
                                 <GlassCard variant="elevated">
                                     <Text style={styles.sealedCountText} testID="pairing-sealed-count">
-                                        You've answered at least {sealedCount} question{sealedCount === 1 ? "" : "s"} about you two. When you both answer, shared discoveries are visible to you both.
+                                        You have saved at least {sealedCount} private question{sealedCount === 1 ? "" : "s"}. Vote-style questions show shared outcomes; open text, audio, photo, and who-likely responses can be visible to you both after you each answer.
                                     </Text>
                                 </GlassCard>
                             </Animated.View>

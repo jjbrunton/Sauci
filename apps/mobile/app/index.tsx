@@ -7,8 +7,7 @@ import { getPendingInviteCode } from "../src/lib/pendingInviteCode";
 
 export default function Index() {
     const { isAuthenticated, isLoading, user } = useAuthStore();
-    const [pendingCodeChecked, setPendingCodeChecked] = useState(false);
-    const [hasPendingInvite, setHasPendingInvite] = useState(false);
+    const [pendingInviteCheck, setPendingInviteCheck] = useState<{ userId: string; hasInvite: boolean } | null>(null);
 
     // Check once, after auth resolves, whether an invite code is waiting to be
     // applied (e.g. the user tapped a join link before signing in).
@@ -18,16 +17,17 @@ export default function Index() {
         }
 
         let cancelled = false;
-        getPendingInviteCode().then((code) => {
+        if (!user?.id) return;
+        setPendingInviteCheck(null);
+        getPendingInviteCode(user.id).then((code) => {
             if (cancelled) return;
-            setHasPendingInvite(!!code);
-            setPendingCodeChecked(true);
+            setPendingInviteCheck({ userId: user.id, hasInvite: !!code });
         });
 
         return () => {
             cancelled = true;
         };
-    }, [isLoading, isAuthenticated, user?.couple_id]);
+    }, [isLoading, isAuthenticated, user?.couple_id, user?.id]);
 
     // Show loading state while auth is being determined
     if (isLoading) {
@@ -56,7 +56,7 @@ export default function Index() {
     // Wait for the one-time pending invite code check before deciding the
     // route, so a stashed code from a join link is applied without an extra
     // trip through the home screen.
-    if (!pendingCodeChecked) {
+    if (pendingInviteCheck?.userId !== user?.id) {
         return (
             <View style={styles.container}>
                 <ActivityIndicator size="large" color="#e94560" />
@@ -64,7 +64,7 @@ export default function Index() {
         );
     }
 
-    if (hasPendingInvite) {
+    if (pendingInviteCheck?.hasInvite) {
         return <Redirect href="/(app)/pairing" />;
     }
 

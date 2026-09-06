@@ -8,7 +8,7 @@ export function buildInviteShareMessage(inviteCode: string, sealedCount: number)
     const link = `https://sauci.app/join/${inviteCode}`;
     if (sealedCount > 0) {
         const noun = sealedCount === 1 ? "question" : "questions";
-        return `Join me on Sauci! I've answered ${sealedCount} ${noun} about us. Join to compare our answers together. ${link} If the link does not open the app, enter code ${inviteCode} in Sauci.`;
+        return `Join me on Sauci! I've saved ${sealedCount} ${noun} for us to compare. Vote-style questions show shared outcomes; open answers can be visible to us both after we each answer. ${link} If the link does not open the app, enter code ${inviteCode} in Sauci.`;
     }
     return `Join me on Sauci! ${link} If the link does not open the app, enter code ${inviteCode} in Sauci.`;
 }

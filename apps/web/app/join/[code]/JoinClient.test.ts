@@ -65,11 +65,19 @@ describe('/join/[code] JoinClient', () => {
     expect(source).not.toContain('glass-light')
   })
 
-  it('describes open-answer visibility truthfully', async () => {
+  it('describes comparison and open-answer visibility truthfully', async () => {
     const source = await readFile(componentPath, 'utf8')
 
-    expect(source).toContain('For open-answer questions, each response can be visible after you have both answered.')
+    expect(source).toContain('Vote-style questions reveal shared outcomes')
+    expect(source).toContain('open text, audio, photo, and who-likely responses can be visible to you both after you have each answered.')
     expect(source).not.toContain('Neither of you sees the other’s individual answers.')
+  })
+
+  it('marks the invite-code surface out of PostHog DOM capture and replay', async () => {
+    const source = await readFile(componentPath, 'utf8')
+
+    expect(source).toContain('data-ph-no-capture')
+    expect(source).toContain('data-ph-mask')
   })
 
   it('shows a clear fallback message for a malformed invite code', async () => {

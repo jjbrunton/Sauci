@@ -50,15 +50,31 @@ describe('matchStore API behavior', () => {
             let release: (page: { matches: unknown[]; totalCount: number }) => void = () => undefined;
             (apiClient.get as jest.Mock).mockReturnValueOnce(new Promise(resolve => { release = resolve; }));
             const inFlight = useMatchStore.getState().fetchMatches(true);
-            await useMatchStore.getState().fetchMatches(true, { silent: true });
+            const overlapping = useMatchStore.getState().fetchMatches(true, { silent: true });
             expect(apiClient.get).toHaveBeenCalledTimes(1);
             release({ matches: [], totalCount: 0 });
             await inFlight;
+            await overlapping;
 
             (apiClient.get as jest.Mock).mockClear();
             useMatchStore.setState({ hasMore: false });
             await useMatchStore.getState().fetchMatches(false);
             expect(apiClient.get).not.toHaveBeenCalled();
+        });
+
+        it('makes overlapping callers await the same failed refresh', async () => {
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+            let reject!: (error: Error) => void;
+            (apiClient.get as jest.Mock).mockImplementationOnce(() => new Promise((_, rejectRequest) => { reject = rejectRequest; }));
+
+            const first = useMatchStore.getState().fetchMatches(true);
+            const second = useMatchStore.getState().fetchMatches(true, { silent: true });
+            expect(apiClient.get).toHaveBeenCalledTimes(1);
+
+            reject(new Error('network'));
+            await expect(first).resolves.toBe(false);
+            await expect(second).resolves.toBe(false);
+            expect(useMatchStore.getState().error).toBe('Failed to load matches');
         });
 
         it('appends and deduplicates later pages', async () => {

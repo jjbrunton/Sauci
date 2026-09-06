@@ -14,24 +14,31 @@ const bucket = (n: number) => n === 0 ? "0" : n <= 2 ? "1-2" : n <= 5 ? "3-5" : 
 
 export default function PairedScreen() {
     const { user, couple, partner } = useAuthStore();
-    const { newMatchesCount, fetchMatches, error } = useMatchStore();
+    const { newMatchesCount, fetchMatches } = useMatchStore();
     const [ready, setReady] = useState(false);
+    const [loadedSuccessfully, setLoadedSuccessfully] = useState(false);
     const { role: rawRole } = useLocalSearchParams<{ role?: "inviter" | "joiner" }>();
     const heading = useRef<Text>(null);
     const role = rawRole === "inviter" ? "inviter" : "joiner";
 
     useEffect(() => {
-        void fetchMatches(true).finally(() => setReady(true));
+        let cancelled = false;
+        void fetchMatches(true).then((success) => {
+            if (cancelled) return;
+            setLoadedSuccessfully(success);
+            setReady(true);
+        });
+        return () => { cancelled = true; };
     }, [fetchMatches]);
     useEffect(() => {
-        if (!ready || error || !user || !couple) return;
+        if (!ready || !loadedSuccessfully || !user || !couple) return;
         void markPairedUnlockSeen(user.id, couple.id);
         Events.pairingUnlockViewed(role, bucket(newMatchesCount));
         const timer = setTimeout(() => {
             if (heading.current) AccessibilityInfo.setAccessibilityFocus(heading.current as never);
         }, 250);
         return () => clearTimeout(timer);
-    }, [ready, error, user, couple, newMatchesCount]);
+    }, [ready, loadedSuccessfully, user, couple, newMatchesCount]);
 
     const partnerName = partner?.name?.split(" ")[0] || "your partner";
     const viewMatches = () => { Events.pairingUnlockCtaTapped(role, "view_matches"); router.replace("/(app)/matches"); };
@@ -40,8 +47,8 @@ export default function PairedScreen() {
     if (!ready) {
         return <GradientBackground><View style={styles.container}><ActivityIndicator size="large" color={colors.primary} /></View></GradientBackground>;
     }
-    if (error) {
-        return <GradientBackground><View style={styles.container}><Text style={styles.title}>We couldn't load your shared discoveries</Text><Text style={styles.body}>Check your connection and try again.</Text><GlassButton fullWidth onPress={() => { setReady(false); void fetchMatches(true).finally(() => setReady(true)); }} testID="paired-retry">Try again</GlassButton></View></GradientBackground>;
+    if (!loadedSuccessfully) {
+        return <GradientBackground><View style={styles.container}><Text style={styles.title}>We couldn't load your shared discoveries</Text><Text style={styles.body}>Check your connection and try again.</Text><GlassButton fullWidth onPress={() => { setReady(false); void fetchMatches(true).then((success) => { setLoadedSuccessfully(success); setReady(true); }); }} testID="paired-retry">Try again</GlassButton></View></GradientBackground>;
     }
     return <GradientBackground><View style={styles.container}>
         <LinearGradient colors={gradients.primary as [string, string]} style={styles.icon}><Ionicons name="heart" size={42} color={colors.text} /></LinearGradient>

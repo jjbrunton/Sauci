@@ -210,7 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (unlockUserId) {
             await clearPairedUnlockSeen(unlockUserId, unlockCoupleId);
         }
-        await clearPendingInviteCode();
+        await clearPendingInviteCode(unlockUserId);
 
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
          set({
@@ -259,7 +259,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
-            void clearPendingInviteCode();
+            void clearPendingInviteCode(priorUserId);
             if (priorUserId) {
                 void clearPairedUnlockSeen(priorUserId, priorCoupleId);
             }

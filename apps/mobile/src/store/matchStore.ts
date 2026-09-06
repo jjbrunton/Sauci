@@ -28,6 +28,7 @@ export interface FetchOptions { silent?: boolean }
 // account's request for the same key, and a stale generation's `finally` must not
 // clear an entry a newer generation just claimed.
 const inFlight = new Map<string, number>();
+const activeInFlight = new Map<string, { generation: number; promise: Promise<boolean> }>();
 
 // Rate limit: 12 hours in milliseconds
 const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -80,7 +81,7 @@ interface MatchState {
      */
     generation: number;
     // Methods
-    fetchMatches: (refresh?: boolean, options?: FetchOptions) => Promise<void>;
+    fetchMatches: (refresh?: boolean, options?: FetchOptions) => Promise<boolean>;
     markAsSeen: (matchId: string) => Promise<void>;
     markAllAsSeen: () => Promise<void>;
     addMatch: (match: Match) => void;
@@ -130,18 +131,20 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     isNudging: false,
     generation: 0,
 
-    fetchMatches: async (refresh = false, options = {}) => {
+    fetchMatches: (refresh = false, options = {}) => {
         const coupleId = useAuthStore.getState().user?.couple_id;
         const myGeneration = get().generation;
 
         // Early return if no couple - user isn't paired yet
         if (!coupleId) {
             set({ matches: [], newMatchesCount: 0, totalCount: 0, isLoading: false, isRefreshing: false });
-            return;
+            return Promise.resolve(false);
         }
 
         const state = get();
-        if (inFlight.get('active') === myGeneration || (state.isLoadingMore && !refresh)) return;
+        const activeRequest = activeInFlight.get('active');
+        if (activeRequest?.generation === myGeneration) return activeRequest.promise;
+        if (state.isLoadingMore && !refresh) return Promise.resolve(false);
 
         // Nothing on screen yet is the only case that warrants blanking the list
         // for a spinner; every other refresh leaves the cached rows in place.
@@ -149,17 +152,17 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         if (refresh) {
             set({ isLoading: initial, isRefreshing: !initial && !options.silent, error: null, page: 0, hasMore: true });
         } else {
-            if (!state.hasMore) return;
+            if (!state.hasMore) return Promise.resolve(false);
             set({ isLoadingMore: true });
         }
 
-        inFlight.set('active', myGeneration);
-        try {
+        const request = (async (): Promise<boolean> => {
+          try {
             const currentPage = refresh ? 0 : state.page;
             const result = await apiClient.get<{ matches: Match[]; totalCount: number | null; hasMore?: boolean }>(`/v1/matches?page=${currentPage}&limit=${BATCH_SIZE}`);
             // A sign-out/account switch that happened while this request was in
             // flight must not let its response populate the next account's store.
-            if (get().generation !== myGeneration) return;
+            if (get().generation !== myGeneration) return false;
             const nonArchivedMatches = result.matches;
             const totalCount = result.totalCount;
             const archivedMatchIds = state.archivedMatchIds;
@@ -174,7 +177,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                 } else {
                     set({ isLoadingMore: false, hasMore: false });
                 }
-                return;
+                return true;
             }
 
             const sortedData = nonArchivedMatches;
@@ -208,14 +211,19 @@ export const useMatchStore = create<MatchState>((set, get) => ({
                 loadedAt,
                 };
             });
+            return true;
         } catch (err) {
-            if (get().generation !== myGeneration) return;
+            if (get().generation !== myGeneration) return false;
             console.error("Error fetching matches:", err);
             set({ error: "Failed to load matches", isLoading: false, isRefreshing: false, isLoadingMore: false });
+            return false;
         } finally {
             // An old generation's cleanup must not delete a newer generation's guard.
-            if (inFlight.get('active') === myGeneration) inFlight.delete('active');
+            if (activeInFlight.get('active')?.generation === myGeneration) activeInFlight.delete('active');
         }
+        })();
+        activeInFlight.set('active', { generation: myGeneration, promise: request });
+        return request;
     },
 
     markAsSeen: async (matchId) => {
@@ -296,6 +304,7 @@ clearMatches: () => {
         // A request belonging to the signed-out user must not suppress the next
         // one: the guard is a duplicate-request check, not a lock on the data.
         inFlight.clear();
+        activeInFlight.clear();
     },
 
     // Archive methods

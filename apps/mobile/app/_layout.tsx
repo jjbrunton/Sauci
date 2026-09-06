@@ -134,12 +134,12 @@ export default function RootLayout() {
                 const { isAuthenticated, user } = useAuthStore.getState();
                 const onboardingPending = needsOnboarding(user?.onboarding_completed, user?.onboarding_version);
                 if (user?.couple_id) {
-                    await import("../src/lib/pendingInviteCode").then(({ clearPendingInviteCode }) => clearPendingInviteCode());
+                    await import("../src/lib/pendingInviteCode").then(({ clearPendingInviteCode }) => clearPendingInviteCode(user.id));
                     if (user.couple_id) {
                         router.push({ pathname: "/(app)/pairing", params: { incomingCode: inviteLink.code } });
                     }
                 } else {
-                    await stashPendingInviteCode(inviteLink.code);
+                    await stashPendingInviteCode(inviteLink.code, user?.id ?? null);
                     if (isAuthenticated && !onboardingPending) {
                         router.push({ pathname: "/(app)/pairing", params: { code: inviteLink.code } });
                     }
