@@ -5,7 +5,7 @@ describe("buildInviteShareMessage", () => {
         const message = buildInviteShareMessage("AB12CD34", 3);
         expect(message).toContain("https://sauci.app/join/AB12CD34");
         expect(message).toContain("enter code AB12CD34 in Sauci");
-        expect(message).toContain("we'll both see what we agree on");
+        expect(message).toContain("compare our answers together");
     });
 
     it("does not claim a sealed outcome before answers exist", () => {

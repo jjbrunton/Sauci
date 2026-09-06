@@ -21,12 +21,12 @@ export const SwipeSealedAnswersBanner = ({ sealedCount, onInvitePress }: SwipeSe
             onPress={onInvitePress}
             activeOpacity={0.8}
             testID="swipe-sealed-answers-banner"
-            accessibilityLabel={`Invite your partner to unlock ${sealedCount} sealed answers`}
+            accessibilityLabel={`Invite your partner to compare ${sealedCount} sealed answers`}
         >
             <Ionicons name="lock-closed" size={16} color={colors.premium.rose} />
             <View style={styles.copy}>
                 <Text style={styles.title}>{sealedCount} answer{sealedCount === 1 ? "" : "s"} sealed for your partner</Text>
-                <Text style={styles.text}>You'll both see what you agree on the moment they join.</Text>
+                <Text style={styles.text}>When you both answer, your shared discoveries are ready to compare.</Text>
             </View>
             <Text style={styles.cta}>Invite</Text>
         </TouchableOpacity>

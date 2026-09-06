@@ -8,6 +8,7 @@ import { useMessageStore } from "@/store/messageStore";
 import { usePacksStore } from "@/store/packsStore";
 import { useSubscriptionStore } from "@/store/subscriptionStore";
 import type { Profile } from "@/types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const profile = {
     id: "me",
@@ -259,6 +260,7 @@ describe("authStore", () => {
 
     it("clears sealed answers during an explicit sign-out", async () => {
         useAuthStore.setState({ user: profile, sealedCount: 3, isAuthenticated: true } as any);
+        await AsyncStorage.setItem("pending_invite_code", "ABCD1234");
 
         await useAuthStore.getState().signOut();
 
@@ -267,6 +269,7 @@ describe("authStore", () => {
             sealedCount: 0,
             isAuthenticated: false,
         });
+        await expect(AsyncStorage.getItem("pending_invite_code")).resolves.toBeNull();
     });
 
     it("clears sealed answers when the auth listener clears the user", () => {
@@ -279,6 +282,14 @@ describe("authStore", () => {
             sealedCount: 0,
             isAuthenticated: false,
         });
+    });
+
+    it("clears a pending invite when the auth listener clears the user", async () => {
+        await AsyncStorage.setItem("pending_invite_code", "ABCD1234");
+        useAuthStore.setState({ user: profile, isAuthenticated: true } as any);
+        useAuthStore.getState().setUser(null);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await expect(AsyncStorage.getItem("pending_invite_code")).resolves.toBeNull();
     });
 
     it('keeps a pending Apple name scoped to its original subject', () => {

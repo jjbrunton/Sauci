@@ -6,6 +6,7 @@ import { profileSettingsApi } from "../lib/profileSettingsApi";
 import { syncTimezone } from "../lib/reportedTimezone";
 import { Events } from "../lib/analytics";
 import { clearPairedUnlockSeen } from "../lib/pairedUnlockSeen";
+import { clearPendingInviteCode } from "../lib/pendingInviteCode";
 import type { Profile, Couple } from "@/types";
 
 export interface AuthSessionSnapshot {
@@ -209,6 +210,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (unlockUserId) {
             await clearPairedUnlockSeen(unlockUserId, unlockCoupleId);
         }
+        await clearPendingInviteCode();
 
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
          set({
@@ -257,6 +259,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
+            void clearPendingInviteCode();
             if (priorUserId) {
                 void clearPairedUnlockSeen(priorUserId, priorCoupleId);
             }
