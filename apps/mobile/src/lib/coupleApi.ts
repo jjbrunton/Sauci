@@ -24,4 +24,5 @@ export const coupleApi = {
         body: { invite_code: inviteCode },
     }),
     cancel: () => apiRequest<CoupleMutationResponse>("/v1/couple", { method: "DELETE" }),
+    cancelInvite: () => apiRequest<CoupleMutationResponse>("/v1/couple/invite", { method: "DELETE" }),
 };

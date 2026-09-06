@@ -68,6 +68,56 @@ describe.skipIf(!databaseUrl || !localDatabase)('PostgresCoupleRepository', () =
     expect((await pool.query('select count(*)::int as count from couples')).rows[0].count).toBe(0);
   });
 
+  it('cancels a waiting invite only for its creator', async () => {
+    const coupleId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const pack = 'abababab-abab-4bab-8bab-abababababab';
+    const sealedQuestion = 'acacacac-acac-4cac-8cac-acacacacacac';
+    const waitingQuestion = 'adadadad-adad-4dad-8dad-adadadadadad';
+    await pool.query('insert into question_packs(id, name) values ($1, $2)', [pack, 'Invite cancellation']);
+    await pool.query(
+      'insert into questions(id, pack_id, text) values ($1, $3, $2), ($4, $3, $5)',
+      [sealedQuestion, 'Sealed before invite', pack, waitingQuestion, 'Answered while waiting'],
+    );
+    await pool.query(
+      "insert into responses(id, user_id, question_id, couple_id, answer) values ($1, $2, $3, null, 'yes')",
+      [randomUUID(), charlie, sealedQuestion],
+    );
+    await repository.create(charlie, coupleId, 'WAIT2345');
+    await pool.query(
+      "insert into responses(id, user_id, question_id, couple_id, answer) values ($1, $2, $3, $4, 'no')",
+      [randomUUID(), charlie, waitingQuestion, coupleId],
+    );
+
+    await repository.cancelInvite(charlie);
+
+    await expect(repository.getState(charlie)).resolves.toEqual({ couple: null, partner: null, sealed_count: 1 });
+    expect((await pool.query('select count(*)::int as count from couples where id = $1', [coupleId])).rows[0].count).toBe(0);
+    expect((await pool.query('select count(*)::int as count from responses where question_id = $1', [sealedQuestion])).rows[0].count).toBe(1);
+    expect((await pool.query('select count(*)::int as count from responses where question_id = $1', [waitingQuestion])).rows[0].count).toBe(0);
+  });
+
+  it('never deletes a joined couple through the invite cancellation path', async () => {
+    const coupleId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    await repository.create(alice, coupleId, 'SAFE2345');
+    await repository.join(bob, 'SAFE2345');
+
+    const before = await pool.query<{ id: string; couple_id: string | null }>(
+      'select id, couple_id from profiles where id in ($1, $2) order by id',
+      [alice, bob],
+    );
+    await expect(repository.cancelInvite(alice)).rejects.toMatchObject({
+      code: 'invite_already_joined',
+      status: 409,
+    });
+
+    const after = await pool.query<{ id: string; couple_id: string | null }>(
+      'select id, couple_id from profiles where id in ($1, $2) order by id',
+      [alice, bob],
+    );
+    expect(after.rows).toEqual(before.rows);
+    expect((await pool.query('select count(*)::int as count from couples where id = $1', [coupleId])).rows[0].count).toBe(1);
+  });
+
   it('reports a solo answerer\'s sealed count before any couple exists', async () => {
     const pack = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
     const solo = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
