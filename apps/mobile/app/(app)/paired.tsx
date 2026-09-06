@@ -31,7 +31,7 @@ export default function PairedScreen() {
             if (heading.current) AccessibilityInfo.setAccessibilityFocus(heading.current as never);
         }, 250);
         return () => clearTimeout(timer);
-    }, [ready, user, couple, newMatchesCount]);
+    }, [ready, error, user, couple, newMatchesCount]);
 
     const partnerName = partner?.name?.split(" ")[0] || "your partner";
     const viewMatches = () => { Events.pairingUnlockCtaTapped(role, "view_matches"); router.replace("/(app)/matches"); };
