@@ -30,6 +30,7 @@ import { getPendingInviteCode, clearPendingInviteCode } from "../../src/lib/pend
 import { checkClipboardForInviteCode } from "../../src/lib/clipboardInviteOffer";
 import { ApiError } from "../../src/lib/apiClient";
 import { hasSeenPairedUnlock } from "../../src/lib/pairedUnlockSeen";
+import { PAIRING_PRIVACY_SUMMARY } from "../../src/lib/pairingPrivacyCopy";
 
 export default function PairingScreen() {
     const { fetchCouple, fetchUser, couple, partner, sealedCount, user, isLoading: isAuthLoading } = useAuthStore();
@@ -536,7 +537,7 @@ export default function PairingScreen() {
                             <Ionicons name="link" size={40} color={colors.text} />
                         </LinearGradient>
                         <Text style={styles.subtitle}>
-                            Answer privately. Compare your shared discoveries together.
+                            {PAIRING_PRIVACY_SUMMARY}
                         </Text>
                     </Animated.View>
 

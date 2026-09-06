@@ -127,7 +127,7 @@ export function JoinClient({ code }: { code: string }) {
     : 'Join to compare answers together. Vote-style questions reveal shared outcomes; open text, audio, photo, and who-likely responses can be visible to you both after you have each answered.'
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background-light to-background" data-ph-no-capture data-ph-mask>
+    <main className="min-h-screen bg-gradient-to-b from-background-light to-background ph-no-capture ph-mask">
       <header className="py-6 px-6 border-b border-white/5">
         <div className="max-w-4xl mx-auto flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
@@ -150,7 +150,7 @@ export function JoinClient({ code }: { code: string }) {
         <h1 className="text-3xl sm:text-4xl font-bold mb-3">You&apos;ve been invited to compare answers</h1>
         <p className="text-white/70 mb-10">{desktopCopy}</p>
 
-        <section className="surface-solid p-6 sm:p-8 mb-6" aria-labelledby="invite-code-heading" data-ph-no-capture data-ph-mask>
+        <section className="surface-solid p-6 sm:p-8 mb-6 ph-no-capture ph-mask" aria-labelledby="invite-code-heading">
           <h2 id="invite-code-heading" className="text-white/70 text-sm font-medium mb-3">Your invite code</h2>
           <p
             className="text-4xl sm:text-5xl font-bold tracking-[0.3em] text-primary mb-6"

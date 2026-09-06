@@ -73,11 +73,12 @@ describe('/join/[code] JoinClient', () => {
     expect(source).not.toContain('Neither of you sees the other’s individual answers.')
   })
 
-  it('marks the invite-code surface out of PostHog DOM capture and replay', async () => {
+  it('uses PostHog-recognized selectors to exclude the invite-code DOM from capture and replay', async () => {
     const source = await readFile(componentPath, 'utf8')
 
-    expect(source).toContain('data-ph-no-capture')
-    expect(source).toContain('data-ph-mask')
+    expect(source).toContain('ph-no-capture ph-mask')
+    expect(source).not.toContain('data-ph-no-capture')
+    expect(source).not.toContain('data-ph-mask')
   })
 
   it('shows a clear fallback message for a malformed invite code', async () => {
