@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import { JoinClient } from './JoinClient'
 
 export const metadata: Metadata = {
-  title: 'Join your partner on Sauci',
-  description: 'Open Sauci and pair up instantly with your invite code.',
+  title: 'Compare answers together on Sauci',
+  description: 'Copy your invite code, then join Sauci to discover what you both agree on.',
 }
 
 export default async function JoinPage({
