@@ -12,12 +12,14 @@ describe("coupleApi", () => {
         await coupleApi.getState();
         await coupleApi.create();
         await coupleApi.join("ABCD2345");
+        await coupleApi.cancelInvite();
         await coupleApi.cancel();
 
         expect(request.mock.calls).toEqual([
             ["/v1/couple"],
             ["/v1/couple", { method: "POST", body: {} }],
             ["/v1/couple", { method: "POST", body: { invite_code: "ABCD2345" } }],
+            ["/v1/couple/invite", { method: "DELETE" }],
             ["/v1/couple", { method: "DELETE" }],
         ]);
     });

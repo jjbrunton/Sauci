@@ -33,6 +33,7 @@ export interface CoupleRepository {
   getState(userId: string): Promise<CoupleStateResponse>;
   create(userId: string, coupleId: string, inviteCode: string): Promise<Couple>;
   join(userId: string, inviteCode: string): Promise<Couple>;
+  cancelInvite(userId: string): Promise<void>;
   cancel(userId: string): Promise<void>;
   close(): Promise<void>;
 }
@@ -264,6 +265,42 @@ export class PostgresCoupleRepository implements CoupleRepository {
         'update profiles set couple_id = null, updated_at = now() where couple_id = $1',
         [profile.couple_id],
       );
+      await client.query('delete from couples where id = $1', [profile.couple_id]);
+    });
+  }
+
+  async cancelInvite(userId: string): Promise<void> {
+    await transaction(this.pool, async (client) => {
+      // Lock in the same order as join(): the caller's profile first, then the
+      // couple. A concurrent join therefore either completes first and makes
+      // this a safe no-op error, or observes that the invite no longer exists.
+      const profile = await profileForUpdate(client, userId);
+      if (!profile.couple_id) {
+        throw new CoupleError('not_paired', 'You do not have an invite to cancel', 400);
+      }
+
+      const coupleResult = await client.query<{ id: string }>(
+        'select id from couples where id = $1 for update',
+        [profile.couple_id],
+      );
+      if (!coupleResult.rows[0]) {
+        throw new CoupleError('not_paired', 'You do not have an invite to cancel', 400);
+      }
+
+      const members = await client.query<{ id: string }>(
+        'select id from profiles where couple_id = $1 for update',
+        [profile.couple_id],
+      );
+      if (members.rows.length > 1) {
+        throw new CoupleError('invite_already_joined', 'This invite has already been joined', 409);
+      }
+      if (members.rows.length !== 1 || members.rows[0]?.id !== userId) {
+        throw new CoupleError('not_paired', 'You do not have an invite to cancel', 400);
+      }
+
+      // At this point the couple has precisely the authenticated creator as a
+      // member. Removing it cannot delete paired data, and the foreign key
+      // clears the creator's couple_id while leaving sealed answers intact.
       await client.query('delete from couples where id = $1', [profile.couple_id]);
     });
   }

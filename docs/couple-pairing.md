@@ -115,6 +115,23 @@ Leaves current couple (sets `couple_id` to null).
    - All messages
    - All couple_packs settings
 
+### Standalone API invite cancellation (DELETE)
+
+`DELETE /v1/couple/invite` cancels an unjoined invite for the authenticated
+creator only. It is intentionally separate from `DELETE /v1/couple`, which
+continues to end an existing relationship for legacy clients.
+
+The server locks the authenticated profile and then the couple row in one
+transaction. It deletes the invite only when that caller is the sole member.
+If another member has joined, it returns `409 invite_already_joined` and makes
+no changes. This serializes safely with a concurrent `POST /v1/couple` join:
+one operation completes first, while the other observes the resulting state.
+
+```javascript
+// Response on a cancelled waiting invite
+{ success: true, couple_id: null }
+```
+
 ## Database Schema
 
 ### Couple Record
@@ -182,8 +199,8 @@ This prevents race conditions where multiple users try to join simultaneously.
 The invite journey leads with the shared outcome, then shows the recoverable
 eight-character code. It offers both a bare-code copy and a full
 `https://sauci.app/join/{code}` link copy. Cancelling an invite warns that it
-deletes answers made after the code was created. The five-second poll surfaces
-an inline offline state but continues retrying.
+removes only an unjoined invite and retains sealed answers. The five-second
+poll surfaces an inline offline state but continues retrying.
 
 When pairing succeeds, both members are routed once per account and couple to
 the `/(app)/paired` payoff screen. It reads only `newMatchesCount`: it never
@@ -397,4 +414,5 @@ Storage (chat-media) is manually cleaned before the cascade.
 | Already paired | User tries to create/join while in couple | "You are already in a couple" |
 | Invalid code | Invite code doesn't exist | "Invalid invite code" |
 | Couple full | Couple already has 2 members | "This couple already has two partners" |
+| Invite already joined | Creator tries to cancel after a partner joins | "This invite has already been joined" |
 | DB trigger | Race condition caught | "A couple can only have 2 members" |

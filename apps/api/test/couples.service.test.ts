@@ -15,6 +15,7 @@ function repository(overrides: Partial<CoupleRepository> = {}): CoupleRepository
     getState: vi.fn(async () => ({ couple: null, partner: null, sealed_count: 0 })),
     create: vi.fn(async () => couple),
     join: vi.fn(async () => couple),
+    cancelInvite: vi.fn(async () => undefined),
     cancel: vi.fn(async () => undefined),
     close: vi.fn(async () => undefined),
     ...overrides,
@@ -60,5 +61,14 @@ describe('CoupleService', () => {
     });
     expect(create).toHaveBeenCalledTimes(2);
     expect(create.mock.calls.every(([userId]) => userId === 'user-one')).toBe(true);
+  });
+
+  it('uses the invite-only cancellation operation for a waiting creator', async () => {
+    const repo = repository();
+    const service = new CoupleService(repo);
+
+    await expect(service.cancelInvite('user-one')).resolves.toEqual({ success: true, couple_id: null });
+    expect(repo.cancelInvite).toHaveBeenCalledWith('user-one');
+    expect(repo.cancel).not.toHaveBeenCalled();
   });
 });
