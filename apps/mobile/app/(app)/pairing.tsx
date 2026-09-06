@@ -242,6 +242,38 @@ export default function PairingScreen() {
         Events.codeShared();
     };
 
+    const completeJoinedInvite = async () => {
+        await fetchUser();
+        await fetchCouple();
+        await useMatchStore.getState().fetchMatches(true);
+        router.replace("/(app)/paired" as any);
+    };
+
+    const cancelInvite = async (afterCancel?: () => Promise<void>) => {
+        try {
+            await coupleApi.cancelInvite();
+            await fetchUser();
+            await fetchCouple();
+            if (afterCancel) await afterCancel();
+            Events.pairingCancelled();
+            return true;
+        } catch (error: any) {
+            const apiCode = error instanceof ApiError
+                ? (error.details as { error?: { code?: string } } | undefined)?.error?.code
+                : undefined;
+            if (apiCode === "invite_already_joined") {
+                await completeJoinedInvite();
+                return false;
+            }
+            Alert.alert(
+                "Couldn't cancel invite",
+                "Your invite may still be active. Check your connection and try again.",
+                [{ text: "Not now", style: "cancel" }, { text: "Try again", onPress: () => { void cancelInvite(afterCancel); } }],
+            );
+            return false;
+        }
+    };
+
     const copyInviteLink = async () => {
         if (couple?.invite_code) {
             await Clipboard.setStringAsync(`https://sauci.app/join/${couple.invite_code}`);
@@ -260,13 +292,7 @@ export default function PairingScreen() {
                     onPress: async () => {
                         setIsSubmitting(true);
                         try {
-                            await coupleApi.cancel();
-
-                            await fetchUser();
-                            await fetchCouple();
-                            Events.pairingCancelled();
-                        } catch (error: any) {
-                            Alert.alert("Error", getPairingError(error));
+                            await cancelInvite();
                         } finally {
                             setIsSubmitting(false);
                         }
@@ -291,12 +317,11 @@ export default function PairingScreen() {
                     text: "Cancel mine and join", style: "destructive", onPress: async () => {
                         setIsSubmitting(true);
                         try {
-                            await coupleApi.cancel();
-                            await fetchUser();
-                            await fetchCouple();
-                            setInviteCode(incomingCode);
-                            setWasPrefilled(true);
-                            await clearPendingInviteCode();
+                            await cancelInvite(async () => {
+                                setInviteCode(incomingCode);
+                                setWasPrefilled(true);
+                                await clearPendingInviteCode();
+                            });
                         } finally {
                             setIsSubmitting(false);
                         }
