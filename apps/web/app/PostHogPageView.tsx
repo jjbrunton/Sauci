@@ -10,6 +10,10 @@ function PostHogPageViewInner() {
   const posthog = usePostHog()
 
   useEffect(() => {
+    // Invite codes are bearer-like tokens. The join route emits its own
+    // aggregate-only event, so it must never produce a URL-bearing page view.
+    if (pathname?.startsWith('/join/')) return
+
     if (pathname && posthog) {
       let url = window.origin + pathname
       if (searchParams.toString()) {
