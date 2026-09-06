@@ -2,7 +2,7 @@
 
 import posthog from 'posthog-js'
 import { PostHogProvider as PHProvider } from 'posthog-js/react'
-import type { CaptureResult } from 'posthog-js'
+import type { CapturedNetworkRequest, CaptureResult } from 'posthog-js'
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
@@ -38,6 +38,17 @@ export function redactInvitePathsBeforeSend(event: CaptureResult | null): Captur
   return event ? redactInvitePaths(event) : null
 }
 
+export function redactInviteNetworkRequest(request: CapturedNetworkRequest): CapturedNetworkRequest {
+  return {
+    ...request,
+    name: redactInvitePaths(request.name),
+    requestHeaders: request.requestHeaders ? redactInvitePaths({ ...request.requestHeaders }) : request.requestHeaders,
+    requestBody: redactInvitePaths(request.requestBody),
+    responseHeaders: request.responseHeaders ? redactInvitePaths({ ...request.responseHeaders }) : request.responseHeaders,
+    responseBody: redactInvitePaths(request.responseBody),
+  }
+}
+
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
@@ -51,6 +62,9 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         capture_pageleave: false,
         get_current_url: redactInviteUrl,
         before_send: redactInvitePathsBeforeSend,
+        session_recording: {
+          maskCapturedNetworkRequestFn: redactInviteNetworkRequest,
+        },
         // This must be part of initialization, not only the navigation effect
         // below, so an initially loaded invite page is protected before its DOM
         // can be considered for capture or recording.
