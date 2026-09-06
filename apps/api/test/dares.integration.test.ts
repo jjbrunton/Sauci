@@ -179,7 +179,10 @@ describe.skipIf(!url || !local)('dares + PostgreSQL', () => {
     const dir = new URL('../drizzle/', import.meta.url);
 
     try {
-      await migrate(drizzle(migrationPool), { migrationsFolder: fileURLToPath(dir) });
+      await migrate(drizzle(migrationPool), {
+        migrationsFolder: fileURLToPath(dir),
+        migrationsSchema: migrationSchema,
+      });
       const discovered = await migrationPool.query<{ count: string }>(
         "select count(*)::text as count from dares where id between '1f5e0000-0000-4000-8000-000000000001'::uuid and '1f5e0000-0000-4000-8000-000000000150'::uuid",
       );
