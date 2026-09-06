@@ -75,6 +75,36 @@ notification preview, and `dares.integration.test.ts` asserts no payload leaks i
 ## History durability
 
 `sent_dares` snapshots `dare_text_snapshot` and `dare_intensity_snapshot` at send time.
+
+## Editorial catalogue seed
+
+Migration `0023_dare_catalogue_150.sql` seeds ten deterministic-ID packs and 150
+dares. It is replay-safe only when the existing rows exactly match the seed; a
+deterministic-ID collision with changed content aborts the migration. The seed does
+not change the dare schema, API, or mobile behaviour.
+
+Only the 60 non-sexual rows in these packs are public and `allowed`:
+
+- Little Things, Make Me Laugh, and Sweet & Romantic: 45 free dares.
+- Surprise Me: 15 premium dares.
+
+Flirty Messages (15 premium rows) is non-public and `unreviewed` until an
+editorial line review records an allowed decision. Long-Distance Heat, Risky
+Photos & Audio, Hands On, After Dark, and Power Play (75 premium rows) are
+explicit, non-public, and `unreviewed`. They are private editorial inventory and
+cannot be returned by the current fail-closed catalogue queries.
+
+The 60 `allowed` rows carry a fixed migration review timestamp and a matching
+`content_reviews` record. `changed_by` is null because a migration has no
+authenticated human actor; the audit reason and timestamp identify this as the
+system seed decision rather than attributing it to a fabricated profile. Exact
+replay verifies this audit provenance too, so a divergent deterministic review ID
+blocks the migration rather than being silently accepted.
+
+The sender chooses a duration when sending a dare. Approved catalogue rows may
+refer to "until the dare expires", which resolves to that sender-selected deadline.
+The two private, unreviewed "within the next hour" rows remain unavailable until
+their editorial review also confirms the sending experience communicates that limit.
 Editing, archiving, or deleting a catalogue dare never rewrites what a couple was
 actually dared. This also fixes a latent defect: `dare_id` is `ON DELETE SET NULL`, and
 the old `sent_dares_dare_or_custom_check` made deleting any dare that had been sent fail

@@ -4,6 +4,7 @@ import type { AuthIdentity } from '../src/auth.js';
 import type { CoupleRepository } from '../src/domains/couples/repository.js';
 import { registerCoupleRoutes } from '../src/domains/couples/routes.js';
 import { CoupleService } from '../src/domains/couples/service.js';
+import { CoupleError } from '../src/domains/couples/types.js';
 
 const identity: AuthIdentity = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -25,6 +26,7 @@ function setup() {
       invite_code: inviteCode,
       created_at: '2026-08-27T00:00:00.000Z',
     })),
+    cancelInvite: vi.fn(async () => undefined),
     cancel: vi.fn(async () => undefined),
     close: vi.fn(async () => undefined),
   };
@@ -79,5 +81,29 @@ describe('couple routes', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true, couple_id: null });
     expect(repository.cancel).toHaveBeenCalledWith(identity.id);
+  });
+
+  it('cancels only the authenticated user\'s waiting invite on the dedicated route', async () => {
+    const { app, repository } = setup();
+    const response = await app.request('/v1/couple/invite', { method: 'DELETE' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, couple_id: null });
+    expect(repository.cancelInvite).toHaveBeenCalledWith(identity.id);
+    expect(repository.cancel).not.toHaveBeenCalled();
+  });
+
+  it('does not turn a joined invite into relationship deletion', async () => {
+    const { app, repository } = setup();
+    vi.mocked(repository.cancelInvite).mockRejectedValueOnce(
+      new CoupleError('invite_already_joined', 'This invite has already been joined', 409),
+    );
+
+    const response = await app.request('/v1/couple/invite', { method: 'DELETE' });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: { code: 'invite_already_joined', message: 'This invite has already been joined' },
+    });
+    expect(repository.cancel).not.toHaveBeenCalled();
   });
 });

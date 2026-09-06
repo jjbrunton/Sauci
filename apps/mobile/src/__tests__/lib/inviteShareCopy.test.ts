@@ -1,22 +1,15 @@
 import { buildInviteShareMessage } from "../../lib/inviteShareCopy";
 
 describe("buildInviteShareMessage", () => {
-    it("leads with a plain invite when there are no sealed answers", () => {
-        const message = buildInviteShareMessage("ABCD1234", 0);
-        expect(message).toBe(
-            "Join me on Sauci! Tap this link to pair up instantly: https://sauci.app/join/ABCD1234 (or enter code ABCD1234 in the app)"
-        );
+    it("keeps a recoverable bare code in a separate sentence", () => {
+        const message = buildInviteShareMessage("AB12CD34", 3);
+        expect(message).toContain("https://sauci.app/join/AB12CD34");
+        expect(message).toContain("enter code AB12CD34 in Sauci");
+        expect(message).toContain("Vote-style questions show shared outcomes");
+        expect(message).toContain("open answers can be visible to us both after we each answer");
     });
 
-    it("leads with earned value and singular wording for exactly one sealed answer", () => {
-        const message = buildInviteShareMessage("ABCD1234", 1);
-        expect(message).toBe(
-            "Join me on Sauci! I have already answered 1 question about us. Tap this link to unlock them: https://sauci.app/join/ABCD1234 (or enter code ABCD1234 in the app)"
-        );
-    });
-
-    it("pluralises for more than one sealed answer", () => {
-        const message = buildInviteShareMessage("ABCD1234", 5);
-        expect(message).toContain("I have already answered 5 questions about us.");
+    it("does not claim a sealed outcome before answers exist", () => {
+        expect(buildInviteShareMessage("AB12CD34", 0)).not.toContain("unlock");
     });
 });

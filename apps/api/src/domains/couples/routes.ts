@@ -50,4 +50,9 @@ export function registerCoupleRoutes(app: AuthenticatedApp, service: CoupleServi
     const result = await route(() => service.cancel(c.get('identity').id));
     return result.ok ? c.json(result.value) : c.json(result.body, result.status);
   });
+
+  app.delete('/v1/couple/invite', async (c) => {
+    const result = await route(() => service.cancelInvite(c.get('identity').id));
+    return result.ok ? c.json(result.value) : c.json(result.body, result.status);
+  });
 }

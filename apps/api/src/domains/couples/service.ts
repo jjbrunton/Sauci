@@ -41,4 +41,9 @@ export class CoupleService {
     await this.repository.cancel(userId);
     return { success: true, couple_id: null };
   }
+
+  async cancelInvite(userId: string): Promise<CoupleMutationResponse> {
+    await this.repository.cancelInvite(userId);
+    return { success: true, couple_id: null };
+  }
 }

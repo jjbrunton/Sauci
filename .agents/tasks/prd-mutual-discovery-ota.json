@@ -1,0 +1,328 @@
+{
+  "version": 1,
+  "project": "Sauci Private Mutual Discovery, OTA-first delivery plan",
+  "overview": "Evolve Sauci into a private mutual-discovery journey for adult couples: choose a mood and private shared comfort ceiling, answer a short set privately, reveal only mutual interest, then choose an optional next action. Deliver independent client slices through Expo OTA where the installed binary is compatible, while keeping session privacy, consent state, catalogue safety, API, data, and operational changes as separately gated work.",
+  "goals": [
+    "Make the first useful experience a short, mood-led Quick Spark session rather than an open-ended question feed.",
+    "Reveal only mutual interest or both-partner responses and never reveal an unmatched preference or which partner selected a lower comfort ceiling.",
+    "Let a mutual match lead to an optional talk, save, or shared action without turning either partner into an assigned recipient.",
+    "Make defer, decline, a softer alternative, and withdrawal explicit, reversible where appropriate, and free of penalties.",
+    "Keep developer-authored content non-graphic, reviewed, and eligible before it can reach a customer.",
+    "Maximize JavaScript and bundled-asset work that can ship through OTA after live compatibility is proven."
+  ],
+  "nonGoals": [
+    "No production deployment, OTA publish, store submission, migration execution, catalogue activation, or provider write is authorized by this PRD.",
+    "No explicit sexual instructions, content intended for sexual gratification, or use of UGC as a policy workaround.",
+    "No clinical relationship-repair service, coercion intervention, solo experience, points economy, or mandatory task assignment.",
+    "No disclosure of individual answers, individual comfort selections, intimate content, or prompt text through analytics or push notification previews.",
+    "No assumption that the legacy Supabase recommendation-function documentation describes the current standalone API implementation."
+  ],
+  "successMetrics": [
+    "Measure only aggregate privacy-safe events: session starts, two-partner completion, mutual matches, optional talk/save/action selections, skip/defer/decline/withdraw/report/block, and 7/28-day repeat sessions.",
+    "No analytics event contains question text, response text, audio, photo, individual answer, individual ceiling, or intimate match detail.",
+    "A paired couple can complete a reviewed Quick Spark session and see only its allowed shared outcome.",
+    "A user can stop, defer, decline, or withdraw without losing access or creating a partner-visible attribution of their private reason.",
+    "Every OTA-labelled story is released only after its platform/runtime canary and final native-surface review pass."
+  ],
+  "openQuestions": [
+    "Which reviewed mood taxonomy and initial prompt set best fit the product positioning without crossing the cross-platform content ceiling?",
+    "Should saved mutual interests expire automatically, be archived manually, or both?",
+    "What exact participant-visible wording preserves a withdrawal without falsely implying that a partner declined?",
+    "What age assurance, reporting, blocking, moderation ownership, rate limits, and incident process are effective in production for all relevant UGC surfaces?",
+    "Does the public Android build embed the same XPREM app id, channel headers, certificate, and runtime 1.0.8 configuration as the inspected source?"
+  ],
+  "stack": {
+    "framework": "Expo React Native with Expo Router and TypeScript",
+    "mobileDelivery": "Self-hosted XPREM implementing Expo Updates; iOS public source runtime is 1.0.8 and commit 3659cc8 records iOS build 49, but installed-build compatibility requires a live canary",
+    "backend": "Standalone Node HTTP API with PostgreSQL and Drizzle migrations",
+    "admin": "React/Vite content administration UI",
+    "auth": "Hosted Supabase Auth only; product data remains in the standalone API database",
+    "analytics": "Existing privacy-safe telemetry conventions, expanded only after event-schema review"
+  },
+  "routes": [
+    {
+      "path": "/(app)/swipe",
+      "name": "Quick Spark entry and session",
+      "purpose": "Mood-led private short session, reusing the existing swipe feature while a dedicated route is evaluated."
+    },
+    {
+      "path": "/(app)/matches",
+      "name": "Mutual discovery outcomes",
+      "purpose": "Show a mutual result and route to existing conversation, saving, or a future shared-action flow."
+    },
+    {
+      "path": "/(app)/dares",
+      "name": "Existing dares",
+      "purpose": "Remain a separate sender-to-recipient challenge model; it must not be relabelled as a shared action."
+    },
+    {
+      "path": "/admin/questions and /admin/packs",
+      "name": "Question catalogue authoring",
+      "purpose": "Author, review, and activate only content whose enforced eligibility contract is proven."
+    }
+  ],
+  "uiNotes": [
+    "Use the existing Swipe/Match feature colour, rose-to-purple gradient, locked flame and heart icons, dark solid surfaces, and high-contrast accessible controls.",
+    "Quick Spark should feel finite and calm: mood selection, a short 5-8 prompt progress state, private-answer reassurance, and a restrained completion state.",
+    "Comfort selection must describe a shared ceiling, not a score to compare. Never render the partner's value, a lower-value hint, or copy that attributes the ceiling to either person.",
+    "Outcome actions must be equal-weight choices. Talk opens the existing match conversation; Save is not shown until it has durable server semantics; shared action is not shown until its domain contract exists.",
+    "Safety actions must be clear, non-judgmental, and available before commitment. Avoid gamification, streak pressure, countdown pressure, or punitive copy."
+  ],
+  "dataModel": [
+    {
+      "entity": "mutual_discovery_sessions",
+      "fields": ["id", "couple_id", "created_at", "status", "mood", "shared_comfort_ceiling", "expires_at"]
+    },
+    {
+      "entity": "mutual_discovery_session_participants",
+      "fields": ["session_id", "user_id", "private_comfort_selection", "completed_at", "withdrawn_at"]
+    },
+    {
+      "entity": "shared_actions",
+      "fields": ["id", "couple_id", "match_id", "status", "created_by", "saved_at", "deferred_at", "withdrawn_at", "expires_at"]
+    },
+    {
+      "entity": "shared_action_events",
+      "fields": ["id", "shared_action_id", "actor_id", "event_type", "created_at"]
+    },
+    {
+      "entity": "catalogue_review",
+      "fields": ["content_id", "content_kind", "content_status", "reviewed_by", "reviewed_at", "review_reason"]
+    }
+  ],
+  "importFormat": {
+    "description": "No bulk import. Developer-authored prompts and packs use the existing audited admin authoring workflow and must remain unreviewed and ineligible until an editorial decision is recorded and server enforcement is verified.",
+    "example": {}
+  },
+  "rules": [
+    "Mutuality is server-calculated from couple-scoped inputs. A client must never infer mutuality from its own answer or a local cache.",
+    "The shared comfort ceiling is the minimum of two private selections, but neither private selection is returned to the partner or emitted in analytics.",
+    "A no produces no mutual match. Existing stored maybe semantics remain backwards compatible until a separately approved session contract changes them.",
+    "Existing `max_intensity` and pack selection gates are not a per-session private comfort protocol and must not be presented as one.",
+    "Current dares have sender and recipient roles. Reuse only a truthful optional handoff after the mutual shared-action domain exists; do not map shared action states onto dare states.",
+    "All API reads and writes enforce authenticated couple isolation server-side. Unauthorized or cross-couple identifiers return non-disclosing failures.",
+    "New developer-authored adult-oriented prompts cannot be activated until universal question and pack eligibility enforcement is proven in the active API path.",
+    "Push payloads remain generic and do not include question, answer, match, action, or intimate content text.",
+    "A new question interaction type, response payload, configuration shape, or match semantic updates docs/question-types.md and passes lint:harness in its implementation story.",
+    "OTA eligibility is assessed per final diff. JavaScript and assets are only OTA candidates when native code, dependencies, permissions, entitlements, config-plugin output, Expo SDK, ios/, android/, expo.version, and runtimeVersion remain unchanged."
+  ],
+  "qualityGates": [
+    "npm run lint:harness",
+    "npm run verify:fast",
+    "npm run verify:full",
+    "Focused API route and integration tests for every changed domain",
+    "Focused mobile Jest tests, TypeScript check, lint, and observable iOS/Android simulator evidence for every changed mobile UI flow",
+    "Read-only OTA preflight and doctor checks for the targeted channel and platform before any separately authorized OTA publish",
+    "Live production compatibility and end-to-end read-back before a production release, including deployed API compatibility for any client change"
+  ],
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Establish release and live-state gates for mutual discovery",
+      "status": "open",
+      "dependsOn": [],
+      "description": "As a release owner, I want a verified compatibility record before labelling a client slice OTA-safe so that an update reaches the intended installed app without assuming source equals production.",
+      "acceptanceCriteria": [
+        "Phase: 0, release readiness.",
+        "Deployment classification: operations and live-state verification, no OTA or store release in this story.",
+        "Record read-only evidence that public iOS source is version/runtime 1.0.8, commit 3659cc8 records build 49, and the production XPREM doctor serves v2 clients; separately record whether a real installed iOS build 49 receives a signed production manifest for runtime 1.0.8.",
+        "Record Android installed-build, XPREM header, certificate, channel, runtime, and manifest evidence independently; until then mark Android OTA eligibility unverified.",
+        "Map every deployed consumer for the proposed API contracts and identify backward-compatible response handling required before the first backend rollout.",
+        "Example: an installed iOS build reports runtime 1.0.8 and receives the expected signed production manifest, so a JS-only iOS Quick Spark diff may proceed to release review.",
+        "Negative case: source contains runtime 1.0.8 but the installed binary does not request or accept that manifest, so no OTA is published and a native/store remediation is planned."
+      ]
+    },
+    {
+      "id": "US-002",
+      "title": "Prove universal reviewed-question eligibility before activating new content",
+      "status": "open",
+      "dependsOn": ["US-001"],
+      "description": "As a catalogue owner, I want the active recommendation and pack APIs to fail closed on review status so that a new Quick Spark prompt cannot become customer-visible before editorial approval.",
+      "acceptanceCriteria": [
+        "Phase: 0, safety prerequisite.",
+        "Deployment classification: API/data contract work, no OTA path by itself.",
+        "Trace the active standalone API recommendation and pack endpoints, not only legacy Supabase migrations, and document the effective review-status behavior before changing it.",
+        "If enforcement is absent, implement the smallest server-side, migration-backed eligibility contract with admin authoring parity and preserve current allowed content availability.",
+        "Ensure a stale mobile client cannot retrieve or answer an unreviewed or archived developer-authored question through any recommendation, pack-detail, or answer route.",
+        "Example: an allowed question in an enabled pack remains selectable for a paired couple.",
+        "Negative case: an unreviewed question is returned by neither a direct pack request nor a recommendation, even when a stale client sends its id."
+      ]
+    },
+    {
+      "id": "US-003",
+      "title": "Add a Quick Spark mood entry shell",
+      "status": "open",
+      "dependsOn": ["US-001", "US-002"],
+      "description": "As a paired user, I want to choose a gentle mood before a short private session so that the discovery experience feels intentional rather than like an endless feed.",
+      "acceptanceCriteria": [
+        "Phase: 1, OTA-first client foundation.",
+        "Deployment classification: likely iOS OTA-compatible JavaScript and assets after US-001 canary approval; Android remains unverified; native/store build if the final diff changes the installed native surface.",
+        "Add a thin route entry and focused swipe-feature components for a reviewed fixed mood taxonomy, selected locally for this prototype with no new persistence contract.",
+        "Show paired, loading, no-pack, unpaired, and retry states using existing truthful states; do not promise mutual outcomes to an unpaired user whose answers remain sealed.",
+        "Provide stable accessibility labels or testIDs for mood choices and continue action.",
+        "Example: a paired user chooses 'playful' and continues into the existing question flow with a clear short-session explanation.",
+        "Negative case: an unpaired user cannot be shown copy implying that their private answer will match with a partner."
+      ]
+    },
+    {
+      "id": "US-004",
+      "title": "Present a finite Quick Spark card sequence",
+      "status": "open",
+      "dependsOn": ["US-003"],
+      "description": "As a user in Quick Spark, I want a finite 5-8 prompt session with honest progress so that I can participate without open-ended pressure.",
+      "acceptanceCriteria": [
+        "Phase: 1, OTA-first client foundation.",
+        "Deployment classification: likely iOS OTA-compatible JavaScript and assets after US-001 canary approval; Android remains unverified; native/store build if the final diff changes the installed native surface.",
+        "Compose the sequence only from already eligible questions returned by the current API and preserve existing answer, skip, upload, retry, and sealed-answer behavior.",
+        "Render progress as completed prompts out of the actual session length and make skip available without punitive copy or a lost-progress state.",
+        "Keep route files thin and add focused tests for sequence construction, progress, and early exit.",
+        "Example: a session with six eligible questions shows progress from 1 of 6 through 6 of 6 and ends in a completion state.",
+        "Negative case: with fewer than five eligible questions, the UI does not pad with ineligible or repeated prompts and instead gives a truthful fallback."
+      ]
+    },
+    {
+      "id": "US-005",
+      "title": "Add privacy-preserving Quick Spark completion and existing-talk handoff",
+      "status": "open",
+      "dependsOn": ["US-004"],
+      "description": "As a user who finishes a short session, I want a clear private completion state and a way to talk about an existing mutual match so that the app supports choice without inventing a new server state.",
+      "acceptanceCriteria": [
+        "Phase: 1, OTA-first client foundation.",
+        "Deployment classification: likely iOS OTA-compatible JavaScript and assets after US-001 canary approval; Android remains unverified; native/store build if the final diff changes the installed native surface.",
+        "Use only existing server-calculated match data and route Talk to the existing match conversation; do not persist a new Save or shared-action state in local storage as if it were couple-shared.",
+        "If no mutual result exists yet because the partner has not answered, show a neutral waiting state without exposing the current user's answer or implying partner rejection.",
+        "Make completion, Talk, and dismiss controls accessible and testable.",
+        "Example: both partners answer yes to an eligible swipe prompt and the completion outcome can open that existing match conversation.",
+        "Negative case: one partner answers yes and the other has not answered, so no prompt text, answer, or individual interest is disclosed."
+      ]
+    },
+    {
+      "id": "US-006",
+      "title": "Create the per-session private comfort schema and API contract",
+      "status": "open",
+      "dependsOn": ["US-001", "US-002"],
+      "description": "As a couple, I want each partner to privately choose a comfort level that produces a shared ceiling so that selection is bounded without exposing who chose the lower level.",
+      "acceptanceCriteria": [
+        "Phase: 2, server foundation.",
+        "Deployment classification: database migration and API deployment required; no OTA path by itself.",
+        "Add a committed Drizzle migration and a standalone API contract for a couple-scoped session and one private selection per participant, with idempotency and explicit session lifecycle validation.",
+        "Calculate and return only a shared ceiling suitable for the caller. Do not return either participant's private selection to the other participant or analytics payloads.",
+        "Enforce authentication, couple isolation, participant membership, duplicate-submission handling, and non-disclosing errors for foreign session ids.",
+        "Example: selections 2 and 4 yield a shared ceiling of 2 while each partner can only retrieve the shared result.",
+        "Negative case: a user outside the couple cannot read, set, or infer any session or individual selection."
+      ]
+    },
+    {
+      "id": "US-007",
+      "title": "Apply shared comfort selection to server-side Quick Spark composition",
+      "status": "open",
+      "dependsOn": ["US-006"],
+      "description": "As a session participant, I want the prompt set selected under our shared ceiling so that the content respects both private choices.",
+      "acceptanceCriteria": [
+        "Phase: 2, server foundation.",
+        "Deployment classification: API deployment required; a later compatible mobile consumer can be OTA-delivered only after US-001 platform gates pass.",
+        "Add a couple-scoped session recommendation endpoint or extend a documented endpoint so the API filters reviewed, enabled, unanswered prompts by the calculated session ceiling.",
+        "Preserve existing recommendation behavior for non-session clients and document any backward-compatible response fields before rollout.",
+        "Ensure response ordering does not leak an excluded higher-intensity prompt or either participant's private selection.",
+        "Example: a shared ceiling of 2 returns only eligible intensity 1-2 reviewed prompts from enabled inventory.",
+        "Negative case: an intensity 3 prompt is not returned or inferable when one participant privately selected 2."
+      ]
+    },
+    {
+      "id": "US-008",
+      "title": "Wire private comfort selection and server-backed Quick Spark into mobile",
+      "status": "open",
+      "dependsOn": ["US-004", "US-006", "US-007"],
+      "description": "As a paired user, I want to select my comfort privately and receive only the shared session outcome so that the client enforces the same privacy model as the API.",
+      "acceptanceCriteria": [
+        "Phase: 2, client integration.",
+        "Deployment classification: likely iOS OTA-compatible JavaScript and assets after US-001 canary approval and deployed API compatibility read-back; Android remains unverified; native/store build if the final diff changes the installed native surface.",
+        "Replace prototype-only composition with the authenticated session API and handle loading, incomplete-partner, expired-session, retry, and non-disclosing failure states.",
+        "Render only the caller's choice before submission and only the returned shared ceiling afterwards. Clear user-scoped local state at sign-out.",
+        "Do not cache, log, or send individual comfort values to analytics beyond the server request needed to create the session.",
+        "Example: a user chooses a private level, resumes later, and sees a waiting state until both participants have selected without seeing the partner's value.",
+        "Negative case: a replayed response or API error cannot leave another account's session or private value visible after sign-out/sign-in."
+      ]
+    },
+    {
+      "id": "US-009",
+      "title": "Create a durable shared-action state machine",
+      "status": "open",
+      "dependsOn": ["US-001"],
+      "description": "As a couple with a mutual match, I want a shared action record with neutral lifecycle states so that Talk, Save, Defer, softer alternative, and withdrawal are truthful and do not overload the existing dare model.",
+      "acceptanceCriteria": [
+        "Phase: 3, server foundation.",
+        "Deployment classification: database migration and API deployment required; no OTA path by itself.",
+        "Define and implement a committed migration, server-side state machine, actor permissions, expiry policy, and match linkage for shared actions independently of sent_dares.",
+        "Support the approved vocabulary for save, defer, decline, softer alternative, withdrawal, and completion only where their semantics are explicit; ensure a participant can withdraw without exposing a private reason.",
+        "Return generic, non-attributing partner-visible state copy and use generic push previews if notifications are later introduced.",
+        "Example: either member saves a mutual match for later and both can see the neutral saved state.",
+        "Negative case: a sender-to-recipient dare transition cannot be used to imply that a shared action was accepted, completed, or declined."
+      ]
+    },
+    {
+      "id": "US-010",
+      "title": "Expose couple-isolated shared-action API routes and tests",
+      "status": "open",
+      "dependsOn": ["US-009"],
+      "description": "As a mobile client, I want a documented HTTP contract for shared actions so that the UI can offer optional choices without relying on client-only truth.",
+      "acceptanceCriteria": [
+        "Phase: 3, server foundation.",
+        "Deployment classification: API deployment required; no OTA path by itself.",
+        "Provide versioned read and mutation routes with schema validation, idempotency where retries are possible, non-disclosing cross-couple failures, and backward-compatible match responses.",
+        "Test every legal and illegal state transition, both partner roles, withdrawn and expired behavior, and match ownership.",
+        "Document the participant-visible contract and any interaction-type or match-semantics change in the maintained documentation in the same implementation.",
+        "Example: either partner can defer a saved shared action and the API returns a neutral deferred representation to both.",
+        "Negative case: a caller cannot mutate, list, or learn the existence of an action outside their couple."
+      ]
+    },
+    {
+      "id": "US-011",
+      "title": "Add optional shared-action choices to mutual match outcomes",
+      "status": "open",
+      "dependsOn": ["US-005", "US-010"],
+      "description": "As a couple viewing a mutual match, I want equal, optional Talk, Save, and shared-action choices so that mutual discovery becomes a real-world possibility without pressure.",
+      "acceptanceCriteria": [
+        "Phase: 3, client integration.",
+        "Deployment classification: likely iOS OTA-compatible JavaScript and assets after US-001 canary approval and deployed API compatibility read-back; Android remains unverified; native/store build if the final diff changes the installed native surface.",
+        "Render shared-action UI only for server-confirmed mutual matches and use the shared-action API as the source of truth for save, defer, softer alternative, withdrawal, and completion state.",
+        "Keep Talk routed to existing match chat, keep existing Dares visually and semantically distinct, and make all action choices optional and dismissible.",
+        "Include accessible labels/testIDs and focused tests for loading, retry, stale response, and each safe state.",
+        "Example: a mutual match can be saved, then later shown as saved to both partners without exposing who initiated it.",
+        "Negative case: an unmatched question, a sealed solo answer, or a stale local match cannot create or display a shared action."
+      ]
+    },
+    {
+      "id": "US-012",
+      "title": "Add a reviewed Tell Me Privately session variant",
+      "status": "open",
+      "dependsOn": ["US-002", "US-008"],
+      "description": "As a couple, I want a text or audio-led private response option with a both-partner reveal so that we can share a thought without an explicit content catalogue.",
+      "acceptanceCriteria": [
+        "Phase: 4, controlled content expansion.",
+        "Deployment classification: question-type changes require shared contract, API, admin, database, and mobile deployment; it is not OTA-only. A client renderer after the deployed contract may be an OTA candidate subject to US-001 gates.",
+        "First determine whether existing text_answer and audio types can meet the approved experience without changing payload or match semantics; prefer configuration and reviewed content if they can.",
+        "If a new interaction type, payload, configuration, or match semantic is necessary, change the shared union, committed database constraint, API, admin authoring, mobile renderer, docs/question-types.md, and harness contract together.",
+        "Ensure both-partner reveal preserves existing response-summary privacy and does not put user-authored text or audio in analytics or push previews.",
+        "Example: two partners submit allowed text answers and see the existing both_answered match representation with a Talk option.",
+        "Negative case: one partner's private text or audio cannot be revealed, notified, or analytically recorded before the other required response exists."
+      ]
+    },
+    {
+      "id": "US-013",
+      "title": "Create privacy-safe measurement and release decision review",
+      "status": "open",
+      "dependsOn": ["US-008", "US-011", "US-012"],
+      "description": "As a product and safety owner, I want a reviewable aggregate measurement plan and staged release decision so that adoption never outruns consent, safety, or platform compliance.",
+      "acceptanceCriteria": [
+        "Phase: 5, controlled rollout readiness.",
+        "Deployment classification: analytics/API/client work plus release operations; OTA eligibility is evaluated per final client diff and does not authorize publishing.",
+        "Define a typed event schema containing only aggregate category and lifecycle fields, with a test that rejects prompt text, answer text, media paths, private comfort values, and intimate match detail.",
+        "Set pre-agreed stop and review thresholds for reports, blocks, skips, defers, declines, withdrawals, and error rates; do not frame safety signals as conversion loss to suppress.",
+        "Require production read-back of deployed API compatibility, content review evidence, UGC moderation and incident controls, and platform-specific OTA canary before a separately authorized staged release.",
+        "Example: an aggregate session_completed event records mood category and completion state but no prompt or response content.",
+        "Negative case: a telemetry payload containing a response text field, media path, or individual comfort value fails validation and is not sent."
+      ]
+    }
+  ]
+}

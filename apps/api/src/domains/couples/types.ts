@@ -19,6 +19,7 @@ export type CoupleErrorCode =
   | 'invalid_invite_code'
   | 'couple_full'
   | 'not_paired'
+  | 'invite_already_joined'
   | 'invite_code_collision';
 
 export class CoupleError extends Error {

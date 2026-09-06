@@ -70,6 +70,13 @@ body {
   border-radius: 16px;
 }
 
+/* Solid pairing surface. Join links must not rely on glass or blur. */
+.surface-solid {
+  background: #17171c;
+  border: 1px solid #303036;
+  border-radius: 16px;
+}
+
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #e94560 0%, #9b59b6 100%);
