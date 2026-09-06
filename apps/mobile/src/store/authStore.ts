@@ -5,6 +5,7 @@ import { coupleApi } from "../lib/coupleApi";
 import { profileSettingsApi } from "../lib/profileSettingsApi";
 import { syncTimezone } from "../lib/reportedTimezone";
 import { Events } from "../lib/analytics";
+import { clearPairedUnlockSeen } from "../lib/pairedUnlockSeen";
 import type { Profile, Couple } from "@/types";
 
 export interface AuthSessionSnapshot {
@@ -206,7 +207,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const unlockUserId = get().user?.id;
         const unlockCoupleId = get().couple?.id ?? get().user?.couple_id ?? null;
         if (unlockUserId) {
-            const { clearPairedUnlockSeen } = await import("../lib/pairedUnlockSeen");
             await clearPairedUnlockSeen(unlockUserId, unlockCoupleId);
         }
 
@@ -258,7 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Clear other stores when user signs out
         if (user === null) {
             if (priorUserId) {
-                void import("../lib/pairedUnlockSeen").then(({ clearPairedUnlockSeen }) => clearPairedUnlockSeen(priorUserId, priorCoupleId));
+                void clearPairedUnlockSeen(priorUserId, priorCoupleId);
             }
             const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
             useMatchStore.getState().clearMatches();
