@@ -41,6 +41,7 @@ export default function PairingScreen() {
     const [prefillAttempted, setPrefillAttempted] = useState(false);
     const [joinError, setJoinError] = useState<string | null>(null);
     const [isPollOffline, setIsPollOffline] = useState(false);
+    const [isIncomingConflictDismissed, setIsIncomingConflictDismissed] = useState(false);
 
     // Redirect if already paired. Pairing claims both members' sealed answers and
     // computes matches server-side, so the matches store must refetch here too:
@@ -59,7 +60,7 @@ export default function PairingScreen() {
             }
             const seen = await hasSeenPairedUnlock(user.id, couple.id);
             if (!cancelled) {
-                router.replace(seen ? "/(app)" : "/(app)/paired");
+                router.replace(seen ? "/(app)" : "/(app)/paired" as any);
             }
         })();
         return () => { cancelled = true; };
@@ -173,7 +174,7 @@ export default function PairingScreen() {
             await useMatchStore.getState().fetchMatches(true);
             Events.coupleJoined();
 
-            router.replace("/(app)/paired");
+            router.replace("/(app)/paired" as any);
         } catch (error: any) {
             const details = error instanceof ApiError ? error.details as { error?: { code?: string } } : undefined;
             const code = details?.error?.code;
@@ -336,14 +337,14 @@ export default function PairingScreen() {
                     </Animated.View>
 
                     <View style={styles.content}>
-                        {incomingCode && (
+                        {incomingCode && !isIncomingConflictDismissed && (
                             <GlassCard variant="elevated">
                                 <Text style={styles.conflictTitle}>Use this code instead?</Text>
                                 <Text style={styles.conflictBody}>You have your own invite out. To join theirs, cancel yours first. Your code will stop working, and answers you've given since you created it will be deleted.</Text>
                                 <GlassButton onPress={handleCancelOwnAndPrefill} variant="danger" fullWidth disabled={isSubmitting} testID="pairing-conflict-cancel-and-join">
                                     Cancel mine and join
                                 </GlassButton>
-                                <TouchableOpacity onPress={() => void clearPendingInviteCode()} style={styles.cancelButton} testID="pairing-conflict-keep-own">
+                                <TouchableOpacity onPress={() => { setIsIncomingConflictDismissed(true); void clearPendingInviteCode(); }} style={styles.cancelButton} testID="pairing-conflict-keep-own">
                                     <Text style={styles.cancelButtonText}>Keep my invite</Text>
                                 </TouchableOpacity>
                             </GlassCard>
