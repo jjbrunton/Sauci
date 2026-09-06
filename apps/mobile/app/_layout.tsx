@@ -21,7 +21,7 @@ import {
     handleNotificationResponse,
 } from "../src/lib/notifications";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { Platform, View, AppState, AppStateStatus, Modal, Text, StyleSheet, Pressable, TouchableOpacity } from "react-native";
 
 // Suppress useLayoutEffect warning on server-side rendering
@@ -51,7 +51,7 @@ import * as Linking from "expo-linking";
 import { useAuthStore } from "../src/store";
 import { authClient } from "../src/lib/authClient";
 import { colors, spacing, radius, typography } from "../src/theme";
-import { hasSeenGuestAccountWarning, markGuestAccountWarningSeen } from "../src/lib/guestAccountWarningSeen";
+import { useGuestAccountWarning } from "../src/hooks/useGuestAccountWarning";
 import { parseInviteLinkCode } from "../src/lib/inviteLink";
 import { stashPendingInviteCode } from "../src/lib/pendingInviteCode";
 import { needsOnboarding } from "../src/constants/onboarding";
@@ -59,18 +59,17 @@ import { needsOnboarding } from "../src/constants/onboarding";
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
-    const { fetchUser, setUser, isAuthenticated, isAnonymous } = useAuthStore();
+    const { fetchUser, setUser, user, isAuthenticated, isAnonymous } = useAuthStore();
     const pathname = usePathname();
     const appState = useRef(AppState.currentState);
     const analyticsInitialized = useRef(false);
 
-    const [showGuestWarning, setShowGuestWarning] = useState(false);
-    const [checkingGuestWarning, setCheckingGuestWarning] = useState(false);
-
-    const dismissGuestWarning = async () => {
-        await markGuestAccountWarningSeen();
-        setShowGuestWarning(false);
-    };
+    const { visible: showGuestWarning, dismiss: dismissGuestWarning } = useGuestAccountWarning({
+        isAuthenticated,
+        isAnonymous,
+        userId: user?.id,
+        pathname,
+    });
 
 
     // Initialize analytics after native modules are ready
@@ -89,22 +88,6 @@ export default function RootLayout() {
             logScreenView(pathname);
         }
     }, [pathname]);
-
-    // Warn guest users (first time only) that accounts are not recoverable
-    useEffect(() => {
-        if (!isAuthenticated || !isAnonymous) return;
-        if (checkingGuestWarning) return;
-        if (pathname?.startsWith("/(auth)")) return;
-
-        setCheckingGuestWarning(true);
-        hasSeenGuestAccountWarning()
-            .then((seen) => {
-                if (!seen) {
-                    setShowGuestWarning(true);
-                }
-            })
-            .finally(() => setCheckingGuestWarning(false));
-    }, [isAuthenticated, isAnonymous, pathname, checkingGuestWarning]);
 
     // Track warm starts when app comes back from background
     useEffect(() => {
@@ -315,8 +298,7 @@ export default function RootLayout() {
                                 <TouchableOpacity
                                     style={styles.guestWarningPrimary}
                                     onPress={async () => {
-                                        await markGuestAccountWarningSeen();
-                                        setShowGuestWarning(false);
+                                        await dismissGuestWarning();
                                         router.push("/(app)/settings/save-account" as any);
                                     }}
                                     activeOpacity={0.8}
@@ -325,10 +307,7 @@ export default function RootLayout() {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.guestWarningSecondary}
-                                    onPress={async () => {
-                                        await markGuestAccountWarningSeen();
-                                        setShowGuestWarning(false);
-                                    }}
+                                    onPress={dismissGuestWarning}
                                     activeOpacity={0.8}
                                 >
                                     <Text style={styles.guestWarningSecondaryText}>Not now</Text>
