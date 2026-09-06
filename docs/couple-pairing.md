@@ -199,8 +199,9 @@ This prevents race conditions where multiple users try to join simultaneously.
 The invite journey leads with the shared outcome, then shows the recoverable
 eight-character code. It offers both a bare-code copy and a full
 `https://sauci.app/join/{code}` link copy. Cancelling an invite warns that it
-removes only an unjoined invite and retains sealed answers. The five-second
-poll surfaces an inline offline state but continues retrying.
+removes only an unjoined invite. Sealed answers made before invite creation
+remain, while answers made while waiting are deleted with the invite. The
+five-second poll surfaces an inline offline state but continues retrying.
 
 When pairing succeeds, both members are routed once per account and couple to
 the `/(app)/paired` payoff screen. It reads only `newMatchesCount`: it never

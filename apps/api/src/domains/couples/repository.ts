@@ -288,7 +288,7 @@ export class PostgresCoupleRepository implements CoupleRepository {
       }
 
       const members = await client.query<{ id: string }>(
-        'select id from profiles where couple_id = $1 for update',
+        'select id from profiles where couple_id = $1',
         [profile.couple_id],
       );
       if (members.rows.length > 1) {
@@ -299,8 +299,9 @@ export class PostgresCoupleRepository implements CoupleRepository {
       }
 
       // At this point the couple has precisely the authenticated creator as a
-      // member. Removing it cannot delete paired data, and the foreign key
-      // clears the creator's couple_id while leaving sealed answers intact.
+      // member. Removing it cannot delete paired data. Answers made before
+      // invite creation stay sealed; answers made while waiting are coupled
+      // and are deleted with the cancelled invite.
       await client.query('delete from couples where id = $1', [profile.couple_id]);
     });
   }

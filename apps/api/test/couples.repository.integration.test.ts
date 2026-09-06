@@ -70,12 +70,30 @@ describe.skipIf(!databaseUrl || !localDatabase)('PostgresCoupleRepository', () =
 
   it('cancels a waiting invite only for its creator', async () => {
     const coupleId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const pack = 'abababab-abab-4bab-8bab-abababababab';
+    const sealedQuestion = 'acacacac-acac-4cac-8cac-acacacacacac';
+    const waitingQuestion = 'adadadad-adad-4dad-8dad-adadadadadad';
+    await pool.query('insert into question_packs(id, name) values ($1, $2)', [pack, 'Invite cancellation']);
+    await pool.query(
+      'insert into questions(id, pack_id, text) values ($1, $3, $2), ($4, $3, $5)',
+      [sealedQuestion, 'Sealed before invite', pack, waitingQuestion, 'Answered while waiting'],
+    );
+    await pool.query(
+      "insert into responses(id, user_id, question_id, couple_id, answer) values ($1, $2, $3, null, 'yes')",
+      [randomUUID(), charlie, sealedQuestion],
+    );
     await repository.create(charlie, coupleId, 'WAIT2345');
+    await pool.query(
+      "insert into responses(id, user_id, question_id, couple_id, answer) values ($1, $2, $3, $4, 'no')",
+      [randomUUID(), charlie, waitingQuestion, coupleId],
+    );
 
     await repository.cancelInvite(charlie);
 
-    await expect(repository.getState(charlie)).resolves.toEqual({ couple: null, partner: null, sealed_count: 0 });
+    await expect(repository.getState(charlie)).resolves.toEqual({ couple: null, partner: null, sealed_count: 1 });
     expect((await pool.query('select count(*)::int as count from couples where id = $1', [coupleId])).rows[0].count).toBe(0);
+    expect((await pool.query('select count(*)::int as count from responses where question_id = $1', [sealedQuestion])).rows[0].count).toBe(1);
+    expect((await pool.query('select count(*)::int as count from responses where question_id = $1', [waitingQuestion])).rows[0].count).toBe(0);
   });
 
   it('never deletes a joined couple through the invite cancellation path', async () => {
