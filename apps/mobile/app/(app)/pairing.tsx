@@ -363,7 +363,7 @@ export default function PairingScreen() {
                                 <Ionicons name="heart" size={40} color={colors.text} />
                             </LinearGradient>
                             <Text style={styles.subtitle}>
-                                They unlock your answers when they join
+                                Your answers are ready to compare when you both answer
                             </Text>
                         </Animated.View>
 
@@ -375,7 +375,7 @@ export default function PairingScreen() {
                             >
                                 <GlassCard variant="elevated">
                                     <Text style={styles.sealedCountText} testID="pairing-sealed-count">
-                                        You've answered at least {sealedCount} question{sealedCount === 1 ? "" : "s"} about you two. As soon as they join, everything you both agree on appears for both of you.
+                                        You've answered at least {sealedCount} question{sealedCount === 1 ? "" : "s"} about you two. When you both answer, shared discoveries are visible to you both.
                                     </Text>
                                 </GlassCard>
                             </Animated.View>
@@ -511,7 +511,7 @@ export default function PairingScreen() {
                             <Ionicons name="link" size={40} color={colors.text} />
                         </LinearGradient>
                         <Text style={styles.subtitle}>
-                            Answer privately. See what you agree on together.
+                            Answer privately. Compare your shared discoveries together.
                         </Text>
                     </Animated.View>
 
