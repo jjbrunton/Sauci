@@ -11,6 +11,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     TouchableOpacity,
+    AccessibilityInfo,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,26 +28,42 @@ import { colors, gradients, spacing, radius, typography, shadows } from "../../s
 import { isValidInviteCode, normalizeInviteCode } from "../../src/lib/inviteLink";
 import { getPendingInviteCode, clearPendingInviteCode } from "../../src/lib/pendingInviteCode";
 import { checkClipboardForInviteCode } from "../../src/lib/clipboardInviteOffer";
+import { ApiError } from "../../src/lib/apiClient";
+import { hasSeenPairedUnlock } from "../../src/lib/pairedUnlockSeen";
 
 export default function PairingScreen() {
-    const { fetchCouple, fetchUser, couple, partner, sealedCount, isLoading: isAuthLoading } = useAuthStore();
-    const params = useLocalSearchParams<{ code?: string }>();
+    const { fetchCouple, fetchUser, couple, partner, sealedCount, user, isLoading: isAuthLoading } = useAuthStore();
+    const params = useLocalSearchParams<{ code?: string; incomingCode?: string }>();
     const [inviteCode, setInviteCode] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [wasPrefilled, setWasPrefilled] = useState(false);
     const [clipboardOfferCode, setClipboardOfferCode] = useState<string | null>(null);
     const [prefillAttempted, setPrefillAttempted] = useState(false);
+    const [joinError, setJoinError] = useState<string | null>(null);
+    const [isPollOffline, setIsPollOffline] = useState(false);
 
     // Redirect if already paired. Pairing claims both members' sealed answers and
     // computes matches server-side, so the matches store must refetch here too:
     // whichever partner lands on this redirect first would otherwise show stale,
     // pre-pairing matches until some unrelated screen happened to refresh it.
     useEffect(() => {
-        if (couple && partner) {
-            void useMatchStore.getState().fetchMatches(true);
-            router.replace("/(app)");
-        }
-    }, [couple, partner]);
+        if (!couple || !partner || !user) return;
+        let cancelled = false;
+        void (async () => {
+            if (typeof params.incomingCode === "string") {
+                await clearPendingInviteCode();
+                if (!cancelled) {
+                    Alert.alert("You're already paired", "That invite is for a different account. You're already paired with your partner.", [{ text: "OK", onPress: () => router.replace("/(app)") }]);
+                }
+                return;
+            }
+            const seen = await hasSeenPairedUnlock(user.id, couple.id);
+            if (!cancelled) {
+                router.replace(seen ? "/(app)" : "/(app)/paired");
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [couple, partner, user, params.incomingCode]);
 
     // One-time prefill: apply a code carried by a join link (route param), then
     // a stashed code from before sign-in, and only otherwise offer a clipboard
@@ -113,7 +130,7 @@ export default function PairingScreen() {
 
         // Poll every 5 seconds as fallback
         const pollInterval = setInterval(() => {
-            fetchCouple();
+            void fetchCouple().then(() => setIsPollOffline(false)).catch(() => setIsPollOffline(true));
         }, 5000);
 
         return () => {
@@ -140,11 +157,12 @@ export default function PairingScreen() {
         // Validate invite code format (8 alphanumeric characters)
         const sanitizedCode = inviteCode.trim().toUpperCase();
         if (!/^[A-Z0-9]{8}$/.test(sanitizedCode)) {
-            Alert.alert("Invalid Code", "Please enter a valid 8-character invite code.");
+            setJoinError("That code isn't the right shape. Codes are 8 letters and numbers.");
             return;
         }
 
         setIsSubmitting(true);
+        setJoinError(null);
         try {
             await coupleApi.join(sanitizedCode);
 
@@ -152,14 +170,26 @@ export default function PairingScreen() {
             await fetchCouple(); // Fetch couple data
             // Joining claims both members' sealed answers and computes matches
             // server-side, so the joiner needs a fresh matches list too.
-            void useMatchStore.getState().fetchMatches(true);
+            await useMatchStore.getState().fetchMatches(true);
             Events.coupleJoined();
 
-            Alert.alert("Success", "You are now paired!", [
-                { text: "Let's Go", onPress: () => router.replace("/(app)") }
-            ]);
+            router.replace("/(app)/paired");
         } catch (error: any) {
-            Alert.alert("Error", getPairingError(error));
+            const details = error instanceof ApiError ? error.details as { error?: { code?: string } } : undefined;
+            const code = details?.error?.code;
+            const message = code === "couple_full"
+                ? "That code is already in use by two people."
+                : code === "already_paired"
+                    ? "You're already paired."
+                    : code === "invalid_invite_code" && error.status === 404
+                        ? "We can't find that code. It may have been cancelled. Ask them to send a new invite."
+                        : code === "invalid_invite_code"
+                            ? "That code isn't the right shape. Codes are 8 letters and numbers."
+                            : /network|fetch|timeout/i.test(error?.message ?? "")
+                                ? "Can't reach Sauci. Check your connection and try again."
+                                : getPairingError(error);
+            setJoinError(message);
+            AccessibilityInfo.announceForAccessibility(message);
         } finally {
             setIsSubmitting(false);
         }
@@ -176,6 +206,7 @@ export default function PairingScreen() {
     const handleInviteCodeChange = (value: string) => {
         setWasPrefilled(false);
         setInviteCode(value);
+        setJoinError(null);
     };
 
     const shareMessage = couple?.invite_code
@@ -210,14 +241,20 @@ export default function PairingScreen() {
         Events.codeShared();
     };
 
+    const copyInviteLink = async () => {
+        if (couple?.invite_code) {
+            await Clipboard.setStringAsync(`https://sauci.app/join/${couple.invite_code}`);
+        }
+    };
+
     const handleCancelPairing = async () => {
         Alert.alert(
-            "Cancel Pairing",
-            "Are you sure you want to cancel? Your invite code will be deleted.",
+            "Cancel this invite?",
+            "Your code will stop working, and the answers you've given since you created it will be deleted. Answers you gave before you created the code are kept.",
             [
-                { text: "Keep Waiting", style: "cancel" },
+                { text: "Keep invite", style: "cancel" },
                 {
-                    text: "Cancel Pairing",
+                    text: "Cancel invite",
                     style: "destructive",
                     onPress: async () => {
                         setIsSubmitting(true);
@@ -235,6 +272,36 @@ export default function PairingScreen() {
                     },
                 },
             ]
+        );
+    };
+
+    const incomingCode = typeof params.incomingCode === "string" && isValidInviteCode(normalizeInviteCode(params.incomingCode))
+        ? normalizeInviteCode(params.incomingCode)
+        : null;
+
+    const handleCancelOwnAndPrefill = () => {
+        if (!incomingCode) return;
+        Alert.alert(
+            "Cancel this invite?",
+            "Your code will stop working, and the answers you've given since you created it will be deleted. Answers you gave before you created the code are kept.",
+            [
+                { text: "Keep my invite", style: "cancel", onPress: () => void clearPendingInviteCode() },
+                {
+                    text: "Cancel mine and join", style: "destructive", onPress: async () => {
+                        setIsSubmitting(true);
+                        try {
+                            await coupleApi.cancel();
+                            await fetchUser();
+                            await fetchCouple();
+                            setInviteCode(incomingCode);
+                            setWasPrefilled(true);
+                            await clearPendingInviteCode();
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    },
+                },
+            ],
         );
     };
 
@@ -265,10 +332,22 @@ export default function PairingScreen() {
                         >
                             <Ionicons name="arrow-back" size={24} color={colors.text} />
                         </TouchableOpacity>
-                        <Text style={styles.title}>Partner Code</Text>
+                        <Text style={styles.title}>Your invite</Text>
                     </Animated.View>
 
                     <View style={styles.content}>
+                        {incomingCode && (
+                            <GlassCard variant="elevated">
+                                <Text style={styles.conflictTitle}>Use this code instead?</Text>
+                                <Text style={styles.conflictBody}>You have your own invite out. To join theirs, cancel yours first. Your code will stop working, and answers you've given since you created it will be deleted.</Text>
+                                <GlassButton onPress={handleCancelOwnAndPrefill} variant="danger" fullWidth disabled={isSubmitting} testID="pairing-conflict-cancel-and-join">
+                                    Cancel mine and join
+                                </GlassButton>
+                                <TouchableOpacity onPress={() => void clearPendingInviteCode()} style={styles.cancelButton} testID="pairing-conflict-keep-own">
+                                    <Text style={styles.cancelButtonText}>Keep my invite</Text>
+                                </TouchableOpacity>
+                            </GlassCard>
+                        )}
                         {/* Icon */}
                         <Animated.View
                             entering={FadeInDown.delay(200).duration(500)}
@@ -283,7 +362,7 @@ export default function PairingScreen() {
                                 <Ionicons name="heart" size={40} color={colors.text} />
                             </LinearGradient>
                             <Text style={styles.subtitle}>
-                                Share this code with your partner to link your accounts
+                                They unlock your answers when they join
                             </Text>
                         </Animated.View>
 
@@ -295,8 +374,7 @@ export default function PairingScreen() {
                             >
                                 <GlassCard variant="elevated">
                                     <Text style={styles.sealedCountText} testID="pairing-sealed-count">
-                                        You have already answered {sealedCount} question{sealedCount === 1 ? "" : "s"} about us.
-                                        They will unlock the moment your partner joins.
+                                        You've answered at least {sealedCount} question{sealedCount === 1 ? "" : "s"} about you two. As soon as they join, everything you both agree on appears for both of you.
                                     </Text>
                                 </GlassCard>
                             </Animated.View>
@@ -313,12 +391,12 @@ export default function PairingScreen() {
                                     onPress={copyToClipboard}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={styles.code}>{couple.invite_code.toUpperCase()}</Text>
+                                    <Text style={styles.code} accessibilityLabel={`Invite code ${couple.invite_code.toUpperCase().split("").join(" ")}`}>{couple.invite_code.toUpperCase()}</Text>
                                     <View style={styles.copyIcon}>
                                         <Ionicons name="copy-outline" size={20} color={colors.textSecondary} />
                                     </View>
                                 </TouchableOpacity>
-                                <Text style={styles.tapToCopy}>Tap to copy</Text>
+                                <Text style={styles.tapToCopy}>Tap to copy your code</Text>
                             </GlassCard>
                         </Animated.View>
 
@@ -341,7 +419,7 @@ export default function PairingScreen() {
                                 size="lg"
                                 icon={<Ionicons name="share-outline" size={22} color={colors.text} />}
                             >
-                                Share Invite Code
+                                Share invite
                             </GlassButton>
                         </Animated.View>
 
@@ -358,6 +436,10 @@ export default function PairingScreen() {
                                 <Ionicons name="logo-whatsapp" size={20} color={colors.text} />
                                 <Text style={styles.quickShareLabel}>WhatsApp</Text>
                             </TouchableOpacity>
+                            <TouchableOpacity style={styles.quickShareButton} onPress={copyInviteLink} activeOpacity={0.7} testID="pairing-copy-link" accessibilityLabel="Copy invite link">
+                                <Ionicons name="link-outline" size={20} color={colors.text} />
+                                <Text style={styles.quickShareLabel}>Copy link</Text>
+                            </TouchableOpacity>
                         </Animated.View>
 
                         {/* Waiting indicator */}
@@ -367,8 +449,9 @@ export default function PairingScreen() {
                         >
                             <View style={styles.waitingBadge}>
                                 <ActivityIndicator size="small" color={colors.primary} />
-                                <Text style={styles.waitingText}>Waiting for your partner to join...</Text>
+                                <Text style={styles.waitingText}>Waiting for them to join</Text>
                             </View>
+                            {isPollOffline && <Text style={styles.warningText} accessibilityLiveRegion="polite">Can't reach Sauci right now. Your code still works.</Text>}
                         </Animated.View>
 
                         {/* Cancel Button */}
@@ -382,7 +465,7 @@ export default function PairingScreen() {
                                 style={styles.cancelButton}
                                 activeOpacity={0.7}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel Pairing</Text>
+                                <Text style={styles.cancelButtonText}>Cancel invite</Text>
                             </TouchableOpacity>
                         </Animated.View>
                     </View>
@@ -427,7 +510,7 @@ export default function PairingScreen() {
                             <Ionicons name="link" size={40} color={colors.text} />
                         </LinearGradient>
                         <Text style={styles.subtitle}>
-                            Link with your partner to start matching
+                            Answer privately. See what you agree on together.
                         </Text>
                     </Animated.View>
 
@@ -481,7 +564,12 @@ export default function PairingScreen() {
                             />
                             {wasPrefilled && (
                                 <Text style={styles.prefilledCaption}>
-                                    Code applied from your invite link
+                                    Code from your invite link
+                                </Text>
+                            )}
+                            {joinError && (
+                                <Text style={styles.joinError} accessibilityLiveRegion="polite" testID="pairing-join-error">
+                                    {joinError}
                                 </Text>
                             )}
                             <GlassButton
@@ -490,7 +578,7 @@ export default function PairingScreen() {
                                 loading={isSubmitting}
                                 fullWidth
                             >
-                                Join Partner
+                                Join your partner
                             </GlassButton>
                         </GlassCard>
                     </Animated.View>
@@ -516,7 +604,7 @@ export default function PairingScreen() {
                             disabled={isSubmitting}
                             fullWidth
                         >
-                            Create New Code
+                            Create invite code
                         </GlassButton>
                     </Animated.View>
                 </View>
@@ -722,6 +810,28 @@ const styles = StyleSheet.create({
     waitingText: {
         ...typography.subhead,
         color: colors.textTertiary,
+    },
+    conflictTitle: {
+        ...typography.title3,
+        color: colors.text,
+        marginBottom: spacing.sm,
+    },
+    conflictBody: {
+        ...typography.callout,
+        color: colors.textSecondary,
+        marginBottom: spacing.md,
+    },
+    warningText: {
+        ...typography.caption1,
+        color: colors.warning,
+        textAlign: "center",
+        marginTop: spacing.sm,
+    },
+    joinError: {
+        ...typography.callout,
+        color: colors.error,
+        marginBottom: spacing.md,
+        textAlign: "center",
     },
     cancelSection: {
         alignItems: "center",

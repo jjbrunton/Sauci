@@ -76,10 +76,11 @@ export default function AppLayout() {
     const segmentStrings = segments as string[];
     const isOnOnboarding = segmentStrings.includes("onboarding");
     const isOnPairing = segmentStrings.includes("pairing");
+    const isOnPaired = segmentStrings.includes("paired");
     const isOnChat = segmentStrings.includes("chat");
     const isOnLiveDraw = segmentStrings.includes("live-draw");
     const isOnSettingsSubscreen = segmentStrings.includes("settings") && segmentStrings.length > 2;
-    const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnChat || isOnLiveDraw || isOnSettingsSubscreen;
+    const shouldHideTabBar = isOnOnboarding || isOnPairing || isOnPaired || isOnChat || isOnLiveDraw || isOnSettingsSubscreen;
 
     // Redirect to login when not authenticated, or to onboarding if not completed/outdated
     useEffect(() => {
@@ -367,6 +368,7 @@ export default function AppLayout() {
                         href: null, // Hide from tab bar
                     }}
                 />
+                <Tabs.Screen name="paired" options={{ href: null }} />
                 <Tabs.Screen
                     name="chat/[id]"
                     options={{

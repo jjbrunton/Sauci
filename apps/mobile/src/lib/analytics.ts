@@ -281,6 +281,18 @@ export const Events = {
   inviteLinkOpened: (source: "universal_link" | "scheme" | "clipboard") =>
     logEvent("invite_link_opened", { source }),
   pairingCodePrefilled: () => logEvent("pairing_code_prefilled"),
+  invitePromptViewed: (surface: "swipe_banner" | "pairing_waiting" | "swipe_no_partner", sealedBucket: string) => logEvent("invite_prompt_viewed", { surface, sealed_bucket: sealedBucket }),
+  inviteShareOpened: (surface: "pairing_waiting", channel: "system" | "sms" | "whatsapp" | "copy_link" | "copy_code") => logEvent("invite_share_opened", { surface, channel }),
+  pairingJoinAttempted: (codeSource: "link" | "stash" | "clipboard" | "manual") => logEvent("pairing_join_attempted", { code_source: codeSource }),
+  pairingJoinFailed: (reason: "invalid_shape" | "code_not_found" | "couple_full" | "already_paired" | "network" | "unknown", codeSource: "link" | "stash" | "clipboard" | "manual") => logEvent("pairing_join_failed", { reason, code_source: codeSource }),
+  pairingCompleted: (role: "inviter" | "joiner", codeSource: "link" | "stash" | "clipboard" | "manual", hadSealed: boolean) => logEvent("pairing_completed", { role, code_source: codeSource, had_sealed: hadSealed }),
+  pairingUnlockViewed: (role: "inviter" | "joiner", unlockedBucket: string) => logEvent("pairing_unlock_viewed", { role, unlocked_bucket: unlockedBucket }),
+  pairingUnlockCtaTapped: (role: "inviter" | "joiner", cta: "view_matches" | "start_session" | "dismiss") => logEvent("pairing_unlock_cta_tapped", { role, cta }),
+  pairingCancelPrompted: (surface: "waiting" | "conflict") => logEvent("pairing_cancel_prompted", { surface }),
+  clipboardInviteOfferShown: () => logEvent("clipboard_invite_offer_shown"),
+  clipboardInviteOfferResolved: (outcome: "accepted" | "dismissed") => logEvent("clipboard_invite_offer_resolved", { outcome }),
+  inviteConflictShown: (state: "already_paired" | "waiting_own_code") => logEvent("invite_conflict_shown", { state }),
+  inviteConflictResolved: (state: "already_paired" | "waiting_own_code", choice: "cancel_and_join" | "keep_own" | "acknowledged") => logEvent("invite_conflict_resolved", { state, choice }),
 
   // Quiz events
   quizStarted: () => logEvent("quiz_started"),
