@@ -21,11 +21,13 @@ export const SwipeSealedAnswersBanner = ({ sealedCount, onInvitePress }: SwipeSe
             onPress={onInvitePress}
             activeOpacity={0.8}
             testID="swipe-sealed-answers-banner"
+            accessibilityLabel={`Invite your partner to unlock ${sealedCount} sealed answers`}
         >
             <Ionicons name="lock-closed" size={16} color={colors.premium.rose} />
-            <Text style={styles.text}>
-                {sealedCount} answer{sealedCount === 1 ? "" : "s"} sealed. Your partner unlocks {sealedCount === 1 ? "it" : "them"} when they join.
-            </Text>
+            <View style={styles.copy}>
+                <Text style={styles.title}>{sealedCount} answer{sealedCount === 1 ? "" : "s"} sealed for your partner</Text>
+                <Text style={styles.text}>You'll both see what you agree on the moment they join.</Text>
+            </View>
             <Text style={styles.cta}>Invite</Text>
         </TouchableOpacity>
     );
@@ -38,11 +40,15 @@ const styles = StyleSheet.create({
         gap: spacing.sm,
         marginHorizontal: spacing.md,
         marginBottom: spacing.sm,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.md,
         paddingHorizontal: spacing.md,
-        borderRadius: radius.full,
+        borderRadius: radius.lg,
         backgroundColor: colors.backgroundLight,
+        borderWidth: 1,
+        borderColor: colors.border,
     },
+    copy: { flex: 1, gap: 2 },
+    title: { ...typography.subhead, color: colors.text, fontWeight: "700" },
     text: {
         ...typography.caption1,
         color: colors.textSecondary,

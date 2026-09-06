@@ -38,6 +38,7 @@ if (Platform.OS === "web" && typeof globalThis.window === "undefined") {
 }
 
 import { Stack, router, usePathname } from "expo-router";
+import { ReduceMotion, ReducedMotionConfig } from "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 // GestureHandlerRootView is only needed on native platforms
@@ -130,12 +131,18 @@ export default function RootLayout() {
             const inviteLink = parseInviteLinkCode(url);
             if (inviteLink) {
                 Events.inviteLinkOpened(inviteLink.source);
-                await stashPendingInviteCode(inviteLink.code);
-
                 const { isAuthenticated, user } = useAuthStore.getState();
                 const onboardingPending = needsOnboarding(user?.onboarding_completed, user?.onboarding_version);
-                if (isAuthenticated && !onboardingPending && !user?.couple_id) {
-                    router.push({ pathname: "/(app)/pairing", params: { code: inviteLink.code } });
+                if (user?.couple_id) {
+                    await import("../src/lib/pendingInviteCode").then(({ clearPendingInviteCode }) => clearPendingInviteCode());
+                    if (user.couple_id) {
+                        router.push({ pathname: "/(app)/pairing", params: { incomingCode: inviteLink.code } });
+                    }
+                } else {
+                    await stashPendingInviteCode(inviteLink.code);
+                    if (isAuthenticated && !onboardingPending) {
+                        router.push({ pathname: "/(app)/pairing", params: { code: inviteLink.code } });
+                    }
                 }
                 return;
             }
@@ -265,6 +272,7 @@ export default function RootLayout() {
     return (
         <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
+                <ReducedMotionConfig mode={ReduceMotion.System} />
                 <StatusBar style="light" />
                 <Stack
                     screenOptions={{

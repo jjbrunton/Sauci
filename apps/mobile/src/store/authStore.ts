@@ -201,6 +201,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     signOut: async () => {
         Events.signOut();
 
+        // The paired-unlock presentation is scoped to this account and current
+        // relationship. Remove it before local identity state is cleared.
+        const unlockUserId = get().user?.id;
+        const unlockCoupleId = get().couple?.id ?? get().user?.couple_id ?? null;
+        if (unlockUserId) {
+            const { clearPairedUnlockSeen } = await import("../lib/pairedUnlockSeen");
+            await clearPairedUnlockSeen(unlockUserId, unlockCoupleId);
+        }
+
         // Clear local state FIRST to ensure UI updates even if Supabase call fails
          set({
              user: null,
@@ -236,6 +245,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     setUser: (user) => {
+        const priorUserId = user === null ? get().user?.id : undefined;
+        const priorCoupleId = user === null ? (get().couple?.id ?? get().user?.couple_id ?? null) : null;
         set({
             user,
             isAuthenticated: !!user,
@@ -246,6 +257,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         });
         // Clear other stores when user signs out
         if (user === null) {
+            if (priorUserId) {
+                void import("../lib/pairedUnlockSeen").then(({ clearPairedUnlockSeen }) => clearPairedUnlockSeen(priorUserId, priorCoupleId));
+            }
             const { useMatchStore, usePacksStore, useMessageStore, useSubscriptionStore, useNotificationPreferencesStore, useStreakStore, useResponsesStore, useQuizStore } = getOtherStores();
             useMatchStore.getState().clearMatches();
             usePacksStore.getState().clearPacks();

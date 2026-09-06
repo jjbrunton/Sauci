@@ -178,6 +178,17 @@ This prevents race conditions where multiple users try to join simultaneously.
 
 **Waiting State:**
 ```
+
+The invite journey leads with the shared outcome, then shows the recoverable
+eight-character code. It offers both a bare-code copy and a full
+`https://sauci.app/join/{code}` link copy. Cancelling an invite warns that it
+deletes answers made after the code was created. The five-second poll surfaces
+an inline offline state but continues retrying.
+
+When pairing succeeds, both members are routed once per account and couple to
+the `/(app)/paired` payoff screen. It reads only `newMatchesCount`: it never
+reveals unmatched or individual answers. Existing swipe remains the named
+post-pair question entry until Quick Spark is implemented.
 ┌─────────────────────────────┐
 │      ❤️ Partner Code        │
 │                             │
@@ -359,6 +370,11 @@ The code is never applied automatically; the user must accept the offer.
 `clipboard`), `pairing_code_prefilled` (mobile, Firebase Analytics), and
 `join_page_viewed` / `join_page_code_copied` / `join_page_store_button_clicked`
 (web, PostHog).
+
+The mobile invite funnel also records aggregate-only prompt, share, join,
+failure, completion, unlock, cancellation, clipboard, and conflict events.
+Counts use fixed buckets. Invite codes, user IDs, partner IDs, questions, and
+answers are never sent as analytics properties.
 
 ## Cascade Behavior
 
