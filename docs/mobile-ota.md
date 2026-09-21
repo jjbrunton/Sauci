@@ -51,7 +51,7 @@ Channels. The client cannot create them.
 `apps/mobile/app.config.js` sets an explicit runtime string:
 
 ```js
-runtimeVersion: '1.0.7'
+runtimeVersion: '1.0.8'
 ```
 
 The release version script updates this string with `expo.version` and the
@@ -91,7 +91,7 @@ Resolved configuration:
 | `updates.requestHeaders['expo-channel-name']` | `process.env.RELEASE_CHANNEL`, defaulting to `development` |
 | `updates.requestHeaders['expo-app-id']` | `process.env.XPREM_APP_ID` |
 | `updates.requestHeaders['xprem-branch']` | `''` |
-| `runtimeVersion` | Explicit public version, currently `1.0.7` |
+| `runtimeVersion` | Explicit public version, currently `1.0.8` |
 
 `expo-updates` only sends request headers that were declared at build time, so
 `xprem-branch` is declared even though it is empty. Removing it would not disable
@@ -176,6 +176,8 @@ dashboard and supplied as `EOO_TOKEN`; it is a secret and must not be committed.
 cd apps/mobile
 
 # Verify the exact export environment without contacting the update server.
+# Production preflight fails closed unless the compiled bundle contains both
+# RevenueCat platform public keys and the entitlement identifier.
 npm run ota:preflight:production
 
 # Staging: consumed by builds made with the EAS `preview` profile.
@@ -189,7 +191,12 @@ The scripts resolve the matching EAS build profile into EOAS's export subprocess
 EOAS sets `EXPO_NO_DOTENV=1`, so invoking `eoas publish` directly does not load
 profile values from `eas.json`. The wrapper injects the selected profile's public
 configuration, including the required API and hosted Auth values, sets the
-matching `RELEASE_CHANNEL`, and fixes the target branch. It does not print
+matching `RELEASE_CHANNEL`, and fixes the target branch. Before each production
+publish, it makes an isolated Expo export and fails unless that compiled bundle
+contains the iOS and Android RevenueCat public SDK keys plus the entitlement
+identifier. EOAS is also forced through a checked-in package-runner guard, which
+receives the resolved profile environment and rejects a missing, malformed, or
+changed RevenueCat value before EOAS runs its own Expo export. It does not print
 configuration values.
 
 Production public API/Auth values come from the checked-in production profile.
@@ -230,7 +237,7 @@ production deploy and none of the review latency.
 curl -sD - "https://ota.apps.jbrunton.co.uk/manifest" \
   -H "expo-app-id: <xprem-app-id>" \
   -H "expo-channel-name: production" \
-  -H "expo-runtime-version: 1.0.7" \
+  -H "expo-runtime-version: 1.0.8" \
   -H "expo-platform: ios"
 ```
 

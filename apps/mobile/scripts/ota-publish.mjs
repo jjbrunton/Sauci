@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { accessSync, constants, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
@@ -27,6 +27,13 @@ const requiredPublicKeys = [
   'EXPO_PUBLIC_SUPABASE_URL',
   'EXPO_PUBLIC_SUPABASE_ANON_KEY',
 ];
+const requiredProductionRevenueCatConfig = [
+  ['EXPO_PUBLIC_REVENUECAT_IOS_API_KEY', 'appl_'],
+  ['EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY', 'goog_'],
+  ['EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID', null],
+];
+const EOAS_PACKAGE_RUNNER = 'sauci-eoas-npx';
+const EOAS_RUNNER_BIN_DIR = join(projectDir, 'scripts', 'bin');
 
 function fail(message) {
   throw new Error(`OTA publish preflight: ${message}`);
@@ -67,7 +74,85 @@ export function resolvePublishEnvironment(target, environment = process.env, con
   requireCanonicalHttpsRoot(env.EXPO_PUBLIC_SUPABASE_URL, profile.authOrigin, `${target} Auth URL`);
   requireCanonicalHttpsRoot(env.EXPO_PUBLIC_API_URL, profile.apiOrigin, `${target} API URL`);
 
+  if (target === 'production') {
+    for (const [key, prefix] of requiredProductionRevenueCatConfig) {
+      const value = env[key];
+      if (typeof value !== 'string' || !value.trim()) fail(`${key} is required for production export`);
+      if (prefix && !value.startsWith(prefix)) {
+        fail(`${key} must be a valid ${prefix} RevenueCat public key`);
+      }
+    }
+  }
+
   return { branch: profile.branch, env };
+}
+
+function exportFiles(outputDir) {
+  return readdirSync(outputDir, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = join(outputDir, entry.name);
+    return entry.isDirectory() ? exportFiles(entryPath) : [entryPath];
+  });
+}
+
+/**
+ * Expo inlines EXPO_PUBLIC_* values into the JavaScript bundle. Verify the
+ * isolated production export rather than trusting only the process environment:
+ * a missing key otherwise becomes an empty string on installed devices.
+ */
+export function assertProductionExportContainsRevenueCatConfig(outputDir, environment) {
+  const files = exportFiles(outputDir).filter((filePath) => statSync(filePath).isFile());
+  for (const [key] of requiredProductionRevenueCatConfig) {
+    const expectedValue = environment[key];
+    const present = files.some((filePath) => readFileSync(filePath).includes(expectedValue));
+    if (!present) fail(`production export does not contain ${key}`);
+  }
+}
+
+function resolveExecutable(command, pathValue) {
+  for (const directory of pathValue.split(delimiter)) {
+    if (!directory) continue;
+    const candidate = join(directory, command);
+    try {
+      accessSync(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Continue looking through PATH.
+    }
+  }
+  fail(`could not resolve ${command} before configuring the EOAS package runner`);
+}
+
+/**
+ * EOAS starts its own Expo subprocess with EXPO_NO_DOTENV=1. Pin its package
+ * runner to our checked-in wrapper so the actual EOAS export fails before it
+ * starts if its inherited RevenueCat configuration differs from this profile.
+ */
+export function buildEoasEnvironment(environment) {
+  const originalPath = environment.PATH || process.env.PATH || '';
+  const expected = Object.fromEntries(requiredProductionRevenueCatConfig.map(([key]) => [
+    `SAUCI_EOAS_EXPECTED_${key}`,
+    environment[key],
+  ]));
+  return {
+    ...environment,
+    EXPO_NO_DOTENV: '1',
+    EOAS_PACKAGE_RUNNER,
+    PATH: `${EOAS_RUNNER_BIN_DIR}${delimiter}${originalPath}`,
+    SAUCI_EOAS_NPX: resolveExecutable('npx', originalPath),
+    ...expected,
+  };
+}
+
+export function buildEoasPublishArgs(branch, rawPublishArgs, useProductionGuard = false) {
+  const args = [
+    'eoas',
+    'publish',
+    '--branch',
+    branch,
+    ...parsePublishArgs(rawPublishArgs),
+  ];
+  if (useProductionGuard) args.splice(4, 0, '--packageRunner', EOAS_PACKAGE_RUNNER);
+  return args;
 }
 
 export function parsePublishArgs(args) {
@@ -112,6 +197,18 @@ function run(command, args, env) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function exportAndVerify(target, environment) {
+  const outputDir = mkdtempSync(join(tmpdir(), `sauci-ota-${target}-`));
+  try {
+    run('npx', ['expo', 'export', '--output-dir', outputDir], environment);
+    if (target === 'production') {
+      assertProductionExportContainsRevenueCatConfig(outputDir, environment);
+    }
+  } finally {
+    rmSync(outputDir, { recursive: true, force: true });
+  }
+}
+
 export function main(args = process.argv.slice(2), environment = process.env) {
   const [target, ...remaining] = args;
   const preflight = remaining.includes('--preflight');
@@ -122,12 +219,7 @@ export function main(args = process.argv.slice(2), environment = process.env) {
   const { branch, env } = resolvePublishEnvironment(target, environment);
   const exportEnv = { ...env, EXPO_NO_DOTENV: '1' };
   if (preflight) {
-    const outputDir = mkdtempSync(join(tmpdir(), `sauci-ota-${target}-`));
-    try {
-      run('npx', ['expo', 'export', '--output-dir', outputDir], exportEnv);
-    } finally {
-      rmSync(outputDir, { recursive: true, force: true });
-    }
+    exportAndVerify(target, exportEnv);
     console.log(`OTA ${target} export preflight passed`);
     return;
   }
@@ -138,7 +230,9 @@ export function main(args = process.argv.slice(2), environment = process.env) {
     return;
   }
 
-  run('npx', ['eoas', 'publish', '--branch', branch, ...parsePublishArgs(rawPublishArgs)], exportEnv);
+  exportAndVerify(target, exportEnv);
+  const eoasEnvironment = target === 'production' ? buildEoasEnvironment(exportEnv) : exportEnv;
+  run('npx', buildEoasPublishArgs(branch, rawPublishArgs, target === 'production'), eoasEnvironment);
 }
 
 // Compare real filesystem paths. A URL pathname percent-encodes spaces, so

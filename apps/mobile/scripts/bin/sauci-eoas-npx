@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+
+import { spawnSync } from 'node:child_process';
+import { isAbsolute } from 'node:path';
+
+const requiredProductionRevenueCatConfig = [
+  ['EXPO_PUBLIC_REVENUECAT_IOS_API_KEY', 'appl_'],
+  ['EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY', 'goog_'],
+  ['EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID', null],
+];
+
+function fail(message) {
+  console.error(`EOAS Expo export guard: ${message}`);
+  process.exit(1);
+}
+
+for (const [key, prefix] of requiredProductionRevenueCatConfig) {
+  const value = process.env[key];
+  const expected = process.env[`SAUCI_EOAS_EXPECTED_${key}`];
+  if (typeof value !== 'string' || !value.trim()) fail(`${key} is required`);
+  if (prefix && !value.startsWith(prefix)) fail(`${key} must be a valid RevenueCat public key`);
+  if (value !== expected) fail(`${key} does not match the resolved production profile`);
+}
+
+const npx = process.env.SAUCI_EOAS_NPX;
+if (!npx || !isAbsolute(npx)) fail('missing resolved npx executable');
+
+const result = spawnSync(npx, process.argv.slice(2), { env: process.env, stdio: 'inherit' });
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);

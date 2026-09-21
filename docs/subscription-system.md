@@ -216,6 +216,11 @@ The `get_recommended_questions()` function also filters premium packs:
 > `isProUser: false`, and paying users silently appear unsubscribed with no error.
 > Confirm the variable is set on every iOS and Android build profile.
 
+Production OTA publishes also fail before upload unless an isolated compiled
+Expo bundle contains both platform public SDK keys and this entitlement
+identifier. Run `npm run ota:preflight:production` from `apps/mobile`; it
+validates presence only and never prints those values.
+
 ## Subscription Flow Diagrams
 
 ### Purchase Flow
